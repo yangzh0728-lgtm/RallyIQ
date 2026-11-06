@@ -271,6 +271,8 @@ CorrectionOp = Literal[
     "set_rally_bounds",  # payload: {rally_id, start_frame?, end_frame?}
     "set_rally_winner",  # payload: {rally_id, winner}
     "swap_player_ids",   # payload: {from_frame} swap P1/P2 from this frame on
+    "confirm_shot",      # payload: {shot_id} mark a model shot as correct
+    "confirm_rally",     # payload: {rally_id} mark a model rally as correct
 ]
 
 
@@ -278,6 +280,7 @@ class CorrectionIn(Contract):
     op: CorrectionOp
     payload: dict = Field(default_factory=dict)
     note: str | None = None
+    hard_example: bool = Field(default=True, description="collect this edit as a hard example for evaluation")
 
 
 class Correction(CorrectionIn):
