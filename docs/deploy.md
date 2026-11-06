@@ -119,7 +119,7 @@ Cloudflare R2 ◀──── Modal：GPU worker 容器（docker/worker.Dockerfi
 ## 4. 本地跑一遍线上同款环境
 
 ```bash
-docker compose up --build            # PostgreSQL + MinIO(S3) + web/API + 演示 worker（合成数据，无需 GPU）
+docker compose up --build            # PostgreSQL + S3（moto，内存存储）+ web/API + 演示 worker（合成数据，无需 GPU）
 # 打开 http://localhost:8000 ，用邀请码 rallyiq 注册
 docker compose --profile gpu up --build   # 有 NVIDIA GPU 的机器：加上真实 GPU worker
 python scripts/smoke_online.py --video clip.mp4 --invite rallyiq

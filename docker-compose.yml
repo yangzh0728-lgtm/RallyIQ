@@ -1,4 +1,5 @@
-# Production-like stack on one machine: PostgreSQL + MinIO (S3) + web/API + worker.
+# Production-like stack on one machine: PostgreSQL + S3 (moto server) + web/API + worker.
+# The S3 stand-in keeps objects in memory (reset on restart); online the bucket is Cloudflare R2.
 #
 #   docker compose up --build                 # CPU worker in demo mode (synthetic analysis), no GPU needed
 #   docker compose --profile gpu up --build   # plus the real GPU worker (NVIDIA Container Toolkit)
@@ -9,8 +10,8 @@
 x-env: &env
   RALLYIQ_DATABASE_URL: postgresql://rallyiq:rallyiq@postgres:5432/rallyiq
   RALLYIQ_STORAGE: s3://rallyiq
-  RALLYIQ_S3_ENDPOINT: http://minio:9000
-  RALLYIQ_S3_PUBLIC_ENDPOINT: http://localhost:9000   # presigned URLs the browser opens
+  RALLYIQ_S3_ENDPOINT: http://s3:5000
+  RALLYIQ_S3_PUBLIC_ENDPOINT: http://localhost:5000   # presigned URLs the browser opens
   RALLYIQ_S3_REGION: us-east-1
   AWS_ACCESS_KEY_ID: rallyiq
   AWS_SECRET_ACCESS_KEY: rallyiq-secret
@@ -28,25 +29,31 @@ services:
       interval: 2s
       retries: 30
 
-  minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    command: server /data --console-address :9001
-    environment:
-      MINIO_ROOT_USER: rallyiq
-      MINIO_ROOT_PASSWORD: rallyiq-secret
-      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:8000
-    ports: ["9000:9000", "9001:9001"]
-    volumes: [minio:/data]
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 2s
-      retries: 30
+  s3:
+    image: motoserver/moto:5.1.0
+    ports: ["5000:5000"]
 
-  minio-init:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z   # ships the mc client
-    depends_on:
-      minio: {condition: service_healthy}
-    entrypoint: ["sh", "-c", "mc alias set m http://minio:9000 rallyiq rallyiq-secret && mc mb -p m/rallyiq && mc anonymous set none m/rallyiq"]
+  s3-init:
+    image: rallyiq-api
+    depends_on: [s3]
+    environment:
+      AWS_ACCESS_KEY_ID: rallyiq
+      AWS_SECRET_ACCESS_KEY: rallyiq-secret
+    command:
+      - python
+      - -c
+      - |
+        import time, boto3
+        s3 = boto3.client("s3", endpoint_url="http://s3:5000", region_name="us-east-1")
+        for _ in range(60):
+            try:
+                s3.create_bucket(Bucket="rallyiq")
+                break
+            except Exception as e:  # s3 not up yet
+                print(e)
+                time.sleep(1)
+        else:
+            raise SystemExit("could not create bucket")
 
   api:
     build: .
@@ -60,7 +67,7 @@ services:
     ports: ["8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}
-      minio-init: {condition: service_completed_successfully}
+      s3-init: {condition: service_completed_successfully}
 
   worker-demo:
     image: rallyiq-api
@@ -83,4 +90,3 @@ services:
 
 volumes:
   pgdata:
-  minio:

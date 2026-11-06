@@ -7,7 +7,7 @@ on:
     branches: [main]
 jobs:
   stack:
-    # Full online stack (PostgreSQL + MinIO + web/API + demo worker) end to end.
+    # Full online stack (PostgreSQL + S3 stand-in + web/API + demo worker) end to end.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
