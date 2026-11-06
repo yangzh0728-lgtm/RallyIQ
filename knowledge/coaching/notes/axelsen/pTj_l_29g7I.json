@@ -12,8 +12,17 @@
   "transcript_source": "youtube_uploaded_captions",
   "level": "intermediate",
   "topic": "单打防守练习：两侧杀球 + 随机吊球",
-  "strokes": ["defense", "smash", "drop"],
-  "aspects": ["footwork", "split_step", "technique"],
+  "strokes": [
+    "defense",
+    "smash",
+    "drop",
+    "net_shot"
+  ],
+  "aspects": [
+    "footwork",
+    "split_step",
+    "technique"
+  ],
   "summary": "和教练 Lian 做单打防守练习：教练在高处向左右两侧杀球，2–3 拍杀球后突然吊网前。安赛龙的重点：每拍前做启动步，降低重心、髋向后坐，快速转体去接杀；防守时手臂和手腕动作要少，由腿部完成移动和到位，手臂伸直、用受控的短动作挡回；接完杀球要保持腿部准备，随时蹬地上前接吊球。",
   "key_points": [
     "防守前先做启动步，再转体去接两侧杀球。",
@@ -27,9 +36,68 @@
     "重心太高、腿不准备，接不到后续吊球。"
   ],
   "drills": [
-    {"name": "两侧杀球 + 随机吊球", "how": "教练站高处交替向左右杀球，每 2–3 拍后吊网前；防守方练启动步、转体接杀和上网接吊。先只练杀球热身。"}
+    {
+      "name": "两侧杀球 + 随机吊球",
+      "how": "教练站高处交替向左右杀球，每 2–3 拍后吊网前；防守方练启动步、转体接杀和上网接吊。先只练杀球热身。"
+    }
   ],
-  "coach_cues": ["启动步", "髋后坐", "腿做功", "伸直手臂", "短动作"],
-  "related_metrics": ["{pid}.pos.lateral_zones", "{pid}.move.per_rally_m", "{pid}.cover.ratio_pct"],
-  "content_caveats": "字幕为上传的人工字幕，内容较短。"
+  "coach_cues": [
+    "启动步",
+    "髋后坐",
+    "腿做功",
+    "伸直手臂",
+    "短动作"
+  ],
+  "related_metrics": [
+    "{pid}.pos.lateral_zones",
+    "{pid}.move.per_rally_m",
+    "{pid}.cover.ratio_pct"
+  ],
+  "content_caveats": "字幕为上传的人工字幕，内容较短。",
+  "shots": [
+    {
+      "name_zh": "左右两侧接杀（单打防守）",
+      "stroke": "defense",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "-"
+    },
+    {
+      "name_zh": "正手侧接杀",
+      "stroke": "defense",
+      "hand": "forehand",
+      "zone": "mid",
+      "direction": "-"
+    },
+    {
+      "name_zh": "接杀后上网接吊球",
+      "stroke": "net_shot",
+      "hand": "forehand",
+      "zone": "front",
+      "direction": "-"
+    }
+  ],
+  "footwork": [
+    "每拍前启动步，降低重心、髋后坐",
+    "接两侧杀球时快速转体（髋带动）",
+    "接完杀从边角迅速回中",
+    "接吊球时腿部蹬地向前上网"
+  ],
+  "technique_breakdown": {
+    "防守姿态": "低重心、髋后坐",
+    "击球": "手臂伸直，短而受控的动作挡回，不用太多手腕和手臂摆动",
+    "原则": "让腿做主要工作"
+  },
+  "when_to_use": [
+    "单打被动防守、对手连续杀球夹带吊球时"
+  ],
+  "progression": [
+    "只接杀热身",
+    "杀球 2–3 拍后随机吊网前"
+  ],
+  "self_check": [
+    "接杀时手臂动作是否过大？",
+    "接完杀是否保持了上网准备？"
+  ],
+  "corrections": []
 }

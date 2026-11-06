@@ -12,8 +12,15 @@
   "transcript_source": "youtube_auto_captions",
   "level": "beginner",
   "topic": "挑球（正手/反手、直线/斜线）与网前握拍，附双人练习",
-  "strokes": ["lift", "net_shot"],
-  "aspects": ["technique", "grip"],
+  "strokes": [
+    "lift",
+    "net_shot",
+    "drop"
+  ],
+  "aspects": [
+    "technique",
+    "grip"
+  ],
   "summary": "挑球被低估：它能把对手压到后场、为自己赢得回位时间，也是初学者练习“吊-放-挑”组合的基础。网前正手用中性握拍，手腕稍微内旋准备；反手区换反手握拍（拇指贴宽面），左手放在身后平衡。挑球要短、靠手指发力（后三指握紧发力、拇指和食指定位拍面），看起来和放网一样，对手难以判断；大幅手臂动作会暴露意图。斜线挑球与直线发力相同，只在最后改变拍面。",
   "key_points": [
     "网前击球通常处在弓步位；正手区中性握拍，手腕稍转准备，从这个姿态能打出所有网前球。",
@@ -33,11 +40,114 @@
     "握拍过紧、动作僵硬。"
   ],
   "drills": [
-    {"name": "一挑一吊（定点）", "how": "A 在网前只练短动作挑球，B 在后场只练挥拍 + 吊球；不要求质量，只练动作；累了交换。"},
-    {"name": "一挑一吊（后场左右移动）", "how": "A 挑球把 B 调动到后场左右两角，B 吊回 A 所在网前角；再换到反手区练反手挑。"},
-    {"name": "挑球弧度变化", "how": "熟练后交替挑高球和平挑，让同伴适应吊球或平抽。"}
+    {
+      "name": "一挑一吊（定点）",
+      "how": "A 在网前只练短动作挑球，B 在后场只练挥拍 + 吊球；不要求质量，只练动作；累了交换。"
+    },
+    {
+      "name": "一挑一吊（后场左右移动）",
+      "how": "A 挑球把 B 调动到后场左右两角，B 吊回 A 所在网前角；再换到反手区练反手挑。"
+    },
+    {
+      "name": "挑球弧度变化",
+      "how": "熟练后交替挑高球和平挑，让同伴适应吊球或平抽。"
+    }
   ],
-  "coach_cues": ["短", "手指发力", "后三指", "像放网", "伸直手臂", "先慢后快"],
-  "related_metrics": ["{pid}.hit.zones", "{pid}.pos.depth_zones", "match.rally_len.mean"],
-  "content_caveats": "开头一段与入门课（k9-vZWgVH-Q）重复。"
+  "coach_cues": [
+    "短",
+    "手指发力",
+    "后三指",
+    "像放网",
+    "伸直手臂",
+    "先慢后快"
+  ],
+  "related_metrics": [
+    "{pid}.hit.zones",
+    "{pid}.pos.depth_zones",
+    "match.rally_len.mean"
+  ],
+  "content_caveats": "开头一段与入门课（k9-vZWgVH-Q）重复。",
+  "shots": [
+    {
+      "name_zh": "正手网前直线挑球",
+      "stroke": "lift",
+      "hand": "forehand",
+      "zone": "front",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "正手网前斜线挑球",
+      "stroke": "lift",
+      "hand": "forehand",
+      "zone": "front",
+      "direction": "cross"
+    },
+    {
+      "name_zh": "反手网前直线挑球",
+      "stroke": "lift",
+      "hand": "backhand",
+      "zone": "front",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "反手网前斜线挑球",
+      "stroke": "lift",
+      "hand": "backhand",
+      "zone": "front",
+      "direction": "cross"
+    },
+    {
+      "name_zh": "平挑（逼对手平抽）",
+      "stroke": "lift",
+      "hand": "forehand",
+      "zone": "front",
+      "direction": "-"
+    },
+    {
+      "name_zh": "后场吊球（对练中的配合球）",
+      "stroke": "drop",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "-"
+    }
+  ],
+  "footwork": [
+    "网前击球用弓步位",
+    "反手网前左手放在身后平衡"
+  ],
+  "technique_breakdown": {
+    "正手握拍": "中性握拍，准备时手腕稍转",
+    "反手握拍": "拇指贴宽面（有人放侧面也可以）",
+    "手指": "后三指负责发力，拇指和食指稳定拍面；食指不要握太低，手指间留小空隙，击球瞬间收紧",
+    "动作": "手臂伸直，极短的手指+少量手腕发力，看起来像放网",
+    "斜线": "发力相同，最后一刻改变拍面"
+  },
+  "when_to_use": [
+    "把对手压到后场、为自己争取回位时间",
+    "挑高球给自己时间；挑平球逼对手平抽",
+    "初学者对练（吊-放-挑）的基础球"
+  ],
+  "corrections": [
+    {
+      "problem": "手臂动作太长",
+      "cue": "伸直手臂，用手指发力，再短一点",
+      "result": "更隐蔽，对手难判断"
+    },
+    {
+      "problem": "食指太低、手指间隙太大",
+      "cue": "握在这里，后三指发力，拇指只稳定",
+      "result": "手指发力更集中"
+    }
+  ],
+  "progression": [
+    "一人定点挑球、一人后场挥拍吊球",
+    "挑球把对方左右调动，吊回网前",
+    "换到反手区",
+    "变化挑球弧度"
+  ],
+  "self_check": [
+    "挑球动作是否和放网看起来一样？",
+    "是否靠后三指发力？",
+    "手臂是否伸直？"
+  ]
 }

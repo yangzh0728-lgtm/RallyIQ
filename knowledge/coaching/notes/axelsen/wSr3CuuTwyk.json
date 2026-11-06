@@ -12,8 +12,14 @@
   "transcript_source": "youtube_auto_captions",
   "level": "advanced",
   "topic": "背后转身防守挑球（花式球）",
-  "strokes": ["defense", "trick_shot"],
-  "aspects": ["technique", "flexibility"],
+  "strokes": [
+    "defense",
+    "trick_shot"
+  ],
+  "aspects": [
+    "technique",
+    "flexibility"
+  ],
   "summary": "背后转身的防守花式球，安赛龙在正式比赛中用成功过几次，但他强调这不是必须掌握的技术，主要是好玩。要点：背部要有足够的旋转柔韧性；先判断球的方向，然后转身，用反手握拍，凭自动化动作击球，不看球；左腿和髋部放松，髋和背部才能充分旋转。",
   "key_points": [
     "不是必会技术，偶尔能派上用场。",
@@ -27,9 +33,43 @@
     "试图回头看球，破坏动作。"
   ],
   "drills": [
-    {"name": "慢动作模仿", "how": "反复看慢动作示范后自己尝试，拍下来对比。"}
+    {
+      "name": "慢动作模仿",
+      "how": "反复看慢动作示范后自己尝试，拍下来对比。"
+    }
   ],
-  "coach_cues": ["放松髋", "转身", "别看球", "玩"],
+  "coach_cues": [
+    "放松髋",
+    "转身",
+    "别看球",
+    "玩"
+  ],
   "related_metrics": [],
-  "content_caveats": "娱乐性花式球，不适合作为常规比赛建议。"
+  "content_caveats": "娱乐性花式球，不适合作为常规比赛建议。",
+  "shots": [
+    {
+      "name_zh": "背后转身防守挑球（花式）",
+      "stroke": "defense",
+      "hand": "backhand",
+      "zone": "rear",
+      "direction": "-"
+    }
+  ],
+  "footwork": [
+    "下蹲时左腿和髋部放松，借髋和背旋转"
+  ],
+  "technique_breakdown": {
+    "前提": "背部旋转柔韧性",
+    "顺序": "先确认来球方向，再转身出拍",
+    "握拍": "反手握拍",
+    "注意": "击球时不看球，依靠动作自动化"
+  },
+  "when_to_use": [
+    "花式球，正式比赛中极少使用"
+  ],
+  "self_check": [
+    "髋部是否足够放松？"
+  ],
+  "corrections": [],
+  "progression": []
 }

@@ -12,8 +12,14 @@
   "transcript_source": "youtube_uploaded_captions",
   "level": "advanced",
   "topic": "反手后场反切（反手切吊）",
-  "strokes": ["backhand_slice", "drop"],
-  "aspects": ["technique", "deception"],
+  "strokes": [
+    "backhand_slice",
+    "drop"
+  ],
+  "aspects": [
+    "technique",
+    "deception"
+  ],
   "summary": "反手后场反切，安赛龙最喜欢的反手球之一，但难度很高。和其他反手后场球一样：快速到位、手臂伸直举高、肘部向前驱动，触球后把拍子向对侧肩方向带过去，做出切削。不能在低点打，必须在高点触球后再切。最好的学习方法是反复看慢动作找时机。",
   "key_points": [
     "与其他反手后场球同样的准备：快速到位，手臂向上伸直。",
@@ -27,9 +33,46 @@
     "手臂没有伸直。"
   ],
   "drills": [
-    {"name": "反手后场反切多球", "how": "反复观看慢动作，再由同伴喂反手后场高球，专注高点触球和向对侧肩随挥。"}
+    {
+      "name": "反手后场反切多球",
+      "how": "反复观看慢动作，再由同伴喂反手后场高球，专注高点触球和向对侧肩随挥。"
+    }
   ],
-  "coach_cues": ["快到位", "伸直", "肘向前", "带向对侧肩"],
-  "related_metrics": ["{pid}.hit.zones", "{pid}.pos.lateral_zones"],
-  "content_caveats": "字幕为上传的人工字幕；动作要点主要靠慢动作画面。"
+  "coach_cues": [
+    "快到位",
+    "伸直",
+    "肘向前",
+    "带向对侧肩"
+  ],
+  "related_metrics": [
+    "{pid}.hit.zones",
+    "{pid}.pos.lateral_zones"
+  ],
+  "content_caveats": "字幕为上传的人工字幕；动作要点主要靠慢动作画面。",
+  "shots": [
+    {
+      "name_zh": "反手后场反切（反手切吊）",
+      "stroke": "backhand_slice",
+      "hand": "backhand",
+      "zone": "rear",
+      "direction": "straight"
+    }
+  ],
+  "footwork": [
+    "快速转身退到反手后场到位"
+  ],
+  "technique_breakdown": {
+    "准备": "手臂向上伸直举高",
+    "击球": "肘向前驱动，高点触球",
+    "随挥": "触球后把拍子带向对侧肩，产生切削"
+  },
+  "when_to_use": [
+    "反手后场有高点击球机会时的突袭"
+  ],
+  "self_check": [
+    "是否在高点触球？",
+    "随挥方向是否朝对侧肩？"
+  ],
+  "corrections": [],
+  "progression": []
 }

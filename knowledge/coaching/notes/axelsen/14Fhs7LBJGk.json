@@ -56,5 +56,38 @@
     "两侧都练"
   ],
   "related_metrics": [],
-  "content_caveats": "讲解者为体能教练 Sean Casey，安赛龙示范动作。"
+  "content_caveats": "讲解者为体能教练 Sean Casey，安赛龙示范动作。",
+  "shots": [
+    {
+      "name_zh": "后场杀球（力量来源）",
+      "stroke": "smash",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "-"
+    },
+    {
+      "name_zh": "起跳杀球（下肢爆发）",
+      "stroke": "jump_smash",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "-"
+    }
+  ],
+  "footwork": [
+    "壶铃硬拉提升下肢爆发力，跳得更高、杀球角度更陡"
+  ],
+  "technique_breakdown": {
+    "1 过头斜拉": "每侧 8–15 次，先弱侧，收腹夹臀，重在稳定",
+    "2 半跪姿哑铃对角线上举": "每侧 8–15 次，拇指向后旋、眼睛跟随，练反向肌群",
+    "3 壶铃硬拉": "4–8 次，背平，站起锁髋；幅度不足就垫高起点"
+  },
+  "when_to_use": [
+    "杀球力量不足、起跳高度不够时的体能补充"
+  ],
+  "self_check": [
+    "硬拉时背是否平？",
+    "是否两侧都练？"
+  ],
+  "corrections": [],
+  "progression": []
 }

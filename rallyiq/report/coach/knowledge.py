@@ -17,7 +17,8 @@ KNOWLEDGE_DIR = Path(__file__).resolve().parents[3] / "knowledge" / "coaching"
 REQUIRED_FIELDS = (
     "id", "coach", "platform", "url", "title", "language", "transcript_source", "level", "topic",
     "strokes", "aspects", "summary", "key_points", "common_mistakes", "drills", "coach_cues",
-    "related_metrics",
+    "related_metrics", "shots", "footwork", "technique_breakdown", "when_to_use", "corrections", "progression",
+    "self_check",
 )
 
 

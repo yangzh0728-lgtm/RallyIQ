@@ -12,8 +12,13 @@
   "transcript_source": "youtube_auto_captions",
   "level": "beginner",
   "topic": "反手放网：直线与斜线",
-  "strokes": ["net_shot"],
-  "aspects": ["technique", "grip"],
+  "strokes": [
+    "net_shot"
+  ],
+  "aspects": [
+    "technique",
+    "grip"
+  ],
   "summary": "反手网前放网。反手握拍时拇指贴在拍柄宽面，握拍放松；手臂伸直，早准备，左手平衡，动作极短，拍头由右向左轻微搓动，略向下。很多人以为要大挥拍才能打出旋转，其实不需要：比赛里能打强旋转网前的机会不多，同样重要的是让球贴网翻滚。斜线放网要伪装成直线：先伸臂，肘部略沉，最后用手腕快速改变方向。",
   "key_points": [
     "反手握拍：拇指贴拍柄宽面，握拍放松；太紧会失去手感。",
@@ -31,9 +36,63 @@
     "斜线放网动作提前暴露。"
   ],
   "drills": [
-    {"name": "反手网前手抛球", "how": "同伴向反手网前抛球，先练直线，再练斜线，最后直线斜线交替；双方轮换喂球。"}
+    {
+      "name": "反手网前手抛球",
+      "how": "同伴向反手网前抛球，先练直线，再练斜线，最后直线斜线交替；双方轮换喂球。"
+    }
   ],
-  "coach_cues": ["拇指贴宽面", "放松", "伸直手臂", "短动作", "贴网", "斜线伪装"],
-  "related_metrics": ["{pid}.hit.zones", "{pid}.pos.lateral_zones"],
-  "content_caveats": "本期与正手放网（gA-Oy4xVr4I）是同一系列上下集。"
+  "coach_cues": [
+    "拇指贴宽面",
+    "放松",
+    "伸直手臂",
+    "短动作",
+    "贴网",
+    "斜线伪装"
+  ],
+  "related_metrics": [
+    "{pid}.hit.zones",
+    "{pid}.pos.lateral_zones"
+  ],
+  "content_caveats": "本期与正手放网（gA-Oy4xVr4I）是同一系列上下集。",
+  "shots": [
+    {
+      "name_zh": "反手网前直线放网",
+      "stroke": "net_shot",
+      "hand": "backhand",
+      "zone": "front",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "反手网前斜线放网（勾对角）",
+      "stroke": "net_shot",
+      "hand": "backhand",
+      "zone": "front",
+      "direction": "cross"
+    }
+  ],
+  "footwork": [
+    "反手网前弓步上网，左手向后伸展保持平衡"
+  ],
+  "technique_breakdown": {
+    "握拍": "反手握拍，拇指贴拍柄宽面，握拍放松",
+    "准备": "早准备，手臂伸直，左手平衡",
+    "击球（直线）": "拍头略向下，再由右向左轻搓，动作极短",
+    "击球（斜线）": "先伸臂做直线姿态，肘部略沉，最后用手腕快速出斜线",
+    "目标": "让球贴网翻滚，不必追求强旋转"
+  },
+  "when_to_use": [
+    "对手吊或放到反手网前时控网",
+    "比赛中能打强旋转的机会不多，贴网翻滚球更常用"
+  ],
+  "progression": [
+    "喂球往场内抛、速度放慢，先练直线",
+    "再练斜线",
+    "直线斜线交替，双方轮换喂球"
+  ],
+  "self_check": [
+    "拇指是否贴在宽面？",
+    "是否靠很短的动作完成？",
+    "斜线是否伪装成直线？"
+  ],
+  "corrections": []
 }

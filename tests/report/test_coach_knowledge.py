@@ -25,6 +25,13 @@ def test_notes_exist_and_follow_schema():
         assert n["key_points"] and n["summary"].strip(), n["id"]
         for d in n["drills"]:
             assert set(d) == {"name", "how"}, n["id"]
+        for shot in n["shots"]:
+            assert set(shot) == {"name_zh", "stroke", "hand", "zone", "direction"}, n["id"]
+            assert shot["stroke"] in tax["strokes"] and shot["hand"] in tax["shot_hand"], (n["id"], shot)
+            assert shot["zone"] in tax["shot_zone"] and shot["direction"] in tax["shot_direction"], (n["id"], shot)
+        assert {s["stroke"] for s in n["shots"]} <= set(n["strokes"]), n["id"]
+        for fix in n["corrections"]:
+            assert set(fix) == {"problem", "cue", "result"}, n["id"]
         for m in n["related_metrics"]:
             assert METRIC_KEY.match(m), (n["id"], m)
 
