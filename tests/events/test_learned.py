@@ -79,3 +79,10 @@ def test_side_model_plumbing():
     p_near = LH.oof_side(clips, folds)
     thr, s = LH.tune_side(clips, probs, p_near, EventsConfig())
     assert s["f1"] is not None and 0.5 <= thr <= 1.01
+
+
+def test_evaluate_config_runs():
+    clips = [_clip(s, dropout=0.1) for s in range(6)]
+    folds = LH.folds_by_group(clips, 3)
+    r = LH.evaluate_config(clips, replace(EventsConfig(), min_hit_gap_ms=240.0), 3, folds, 0, 1e-2)
+    assert r["hits"]["f1"] is not None and 0 < r["ceiling"] <= 1

@@ -4,6 +4,9 @@ compare rules vs learned on held-out clips.
     # 1. train on the ShuttleSet training clips built by scripts/build_train_set.py
     python scripts/learn_hits.py train --data ~/rallyiq-data/public/shuttleset_train
     #    -> rallyiq/events/models/hit_scorer.json (+ .md report next to it)
+    # 1b. optional: search candidate/rally parameters first, then train with them
+    python scripts/learn_hits.py search --n 30
+    python scripts/learn_hits.py train --config ~/rallyiq-data/public/shuttleset_train/search/best.json
     # 2. before/after on the held-out matches scored by scripts/public_eval.py
     python scripts/learn_hits.py eval --data ~/rallyiq-data/public/shuttleset
 
@@ -74,6 +77,8 @@ class Clip:
         rallies = segment_events(self.shuttle, self.poses, replace(cfg, hit_scorer="off"),
                                  video_end_ms=self.duration_ms, collect=sink)
         by_id = {r.rally_id: {"start_ms": r.start_ms, "cands": [], "serve": None} for r in rallies}
+        self.pred_rallies = [{"start_ms": self.offset + r.start_ms, "end_ms": self.offset + r.end_ms}
+                             for r in rallies if r.end_ms > r.start_ms]
         X = []
         for k, (rid, x, c, pt) in enumerate(sink):
             e = {"k": k, "c": c, "t": self.t_label(pt.frame), "frame": pt.frame, "rule": c.confidence}
@@ -306,19 +311,23 @@ def tune_thresholds(clips: list[Clip], probs: dict[str, np.ndarray], base: Event
 
 
 # ------------------------------------------------------------------ commands
+# Usage of the search step:
+#   python scripts/learn_hits.py search --n 30      # -> <data>/search/{report.md,best.json}
+#   python scripts/learn_hits.py train --config ~/rallyiq-data/public/shuttleset_train/search/best.json
 def cmd_train(a: argparse.Namespace) -> int:
     clips = load_clips(a.data.expanduser(), "index.json")
     if len(clips) < 5:
         print(f"only {len(clips)} usable clips in {a.data}", file=sys.stderr)
         return 1
-    base = EventsConfig()
+    overrides = json.loads(a.config.expanduser().read_text(encoding="utf-8")) if a.config else {}
+    base = replace(EventsConfig(), **overrides)
     for c in clips:
         c.collect(base, a.tol)
     X = np.vstack([c.X for c in clips])
     y = np.concatenate([c.y for c in clips])
     n_gt = sum(c.recall_ceiling[1] for c in clips)
     n_reach = sum(c.recall_ceiling[0] for c in clips)
-    L = ["# Hit scorer training report", "",
+    L = ["# Hit scorer training report", "", f"- event parameters: {json.dumps(overrides) if overrides else 'defaults'}",
          f"- clips: {len(clips)} from {len({c.group for c in clips})} matches; labelled hits {n_gt}",
          f"- candidates: {len(y)} ({int(y.sum())} positive); candidate recall ceiling (±{a.tol} frames): "
          f"{n_reach / max(n_gt, 1):.1%}", ""]
@@ -369,7 +378,8 @@ def cmd_train(a: argparse.Namespace) -> int:
         spec["side"] = fit_mlp(X[m], np.concatenate([c.ys for c in clips])[m], 0, 1e-2)
         th = {**th, "side_threshold": side_thr}
         cv = cv_side
-    spec["thresholds"] = th
+    # candidate-generation / rally parameters found by `search` travel with the model
+    spec["thresholds"] = {**overrides, **th}
     spec["trained_on"] = {"dataset": "ShuttleSet (CoachAI-Projects, MIT)", "clips": len(clips),
                           "matches": len({c.group for c in clips}), "candidates": int(len(y)), "positives": int(y.sum()),
                           "tol_frames": a.tol, "cv": {k: cv[k] for k in ("precision", "recall", "f1", "ok_precision")}}
@@ -378,8 +388,87 @@ def cmd_train(a: argparse.Namespace) -> int:
     out.write_text(json.dumps(spec, separators=(",", ":")), encoding="utf-8")
     md = out.with_suffix(".md")
     md.write_text("\n".join(L) + "\n", encoding="utf-8")
-    print("\n".join(L[5:]))
+    print("\n".join(L[6:]))
     print(f"model: {out}\nreport: {md}")
+    return 0
+
+
+SEARCH_SPACE: dict[str, list] = {
+    "min_shuttle_conf": [0.1, 0.15, 0.2, 0.3],
+    "outlier_jump_rel": [0.5, 0.8, 1.2],
+    "end_gap_ms": [900.0, 1200.0, 1600.0, 2000.0],
+    "static_ms": [400.0, 600.0, 900.0],
+    "min_rally_ms": [700.0, 1500.0],
+    "window_ms": [100.0, 130.0, 170.0],
+    "max_window_ms": [300.0, 450.0, 600.0],
+    "min_turn_deg": [20.0, 28.0, 35.0, 45.0],
+    "speed_jump_ratio": [1.4, 1.6, 1.8, 2.2],
+    "min_hit_gap_ms": [200.0, 240.0, 280.0, 330.0],
+    "max_hitter_dist_rel": [0.7, 0.9, 1.2, 1.5],
+}
+
+
+def evaluate_config(clips: list[Clip], cfg: EventsConfig, tol: float, folds: list[list[Clip]],
+                    hidden: int, l2: float) -> dict[str, Any]:
+    """Collect candidates under ``cfg``, cross-validate the scorer (+ side head), return the best thresholds."""
+    for c in clips:
+        c.collect(cfg, tol)
+    rally = M.RallyStats()
+    for c in clips:
+        rally.merge(M.eval_rallies(c.label, {"rallies": c.pred_rallies}))
+    n_gt = sum(c.recall_ceiling[1] for c in clips)
+    ceiling = sum(c.recall_ceiling[0] for c in clips) / max(n_gt, 1)
+    probs = oof_probs(clips, folds, hidden, l2)
+    th, cv = tune_thresholds(clips, probs, cfg)
+    side_thr, cv_side = tune_side(clips, probs, oof_side(clips, folds), replace(cfg, **th))
+    if side_thr <= 1.0 and (cv_side["f1"] or 0) > (cv["f1"] or 0):
+        th, cv = {**th, "side_threshold": side_thr}, cv_side
+    return {"hits": cv, "rally_f1": rally.summary()["f1"], "ceiling": ceiling, "thresholds": th}
+
+
+def cmd_search(a: argparse.Namespace) -> int:
+    """Random search over candidate-generation and rally parameters, scored by cross-validated hit F1
+    (learned scorer + side head) with rally F1 as a guard. Writes the best overrides for `train --config`."""
+    data = a.data.expanduser()
+    clips = load_clips(data, "index.json")
+    folds = folds_by_group(clips, a.folds)
+    rng = random.Random(a.seed)
+    names = sorted(SEARCH_SPACE)
+    configs: list[dict[str, Any]] = [{}]
+    while len(configs) < a.n:
+        k = rng.randint(2, 5)  # change a few parameters at a time around the defaults
+        configs.append({n: rng.choice(SEARCH_SPACE[n]) for n in rng.sample(names, k)})
+    out = data / "search"
+    out.mkdir(exist_ok=True)
+    rows = []
+    for i, ov in enumerate(configs):
+        try:
+            r = evaluate_config(clips, replace(EventsConfig(), **ov), a.tol, folds, a.hidden, a.l2)
+        except Exception as e:  # noqa: BLE001 - a bad combination should not end the search
+            print(f"[{i + 1}/{len(configs)}] {ov}: failed {e}", flush=True)
+            continue
+        rows.append({"overrides": ov, **r})
+        h = r["hits"]
+        print(f"[{i + 1}/{len(configs)}] hit F1 {h['f1']:.3f} (P {h['precision']:.3f} R {h['recall']:.3f}) "
+              f"rally F1 {r['rally_f1'] or 0:.3f} ceiling {r['ceiling']:.1%}  {json.dumps(ov)}", flush=True)
+        (out / "search.json").write_text(json.dumps(rows, indent=1, default=str), encoding="utf-8")
+    base_rally = rows[0]["rally_f1"] or 0
+    ok = [r for r in rows if (r["rally_f1"] or 0) >= base_rally - 0.02] or rows
+    best = max(ok, key=lambda r: r["hits"]["f1"] or 0)
+    (out / "best.json").write_text(json.dumps(best["overrides"], indent=1), encoding="utf-8")
+    rows.sort(key=lambda r: -(r["hits"]["f1"] or 0))
+    L = ["# Event parameter search (cross-validated, grouped by match)", "",
+         f"{len(clips)} clips, {len(rows)} configurations; defaults = first row of the run log.", "",
+         "| hit F1 | P | R | rally F1 | candidate ceiling | overrides |", "|---|---|---|---|---|---|"]
+    for r in rows[:15]:
+        h = r["hits"]
+        L.append(f"| {h['f1']:.3f} | {h['precision']:.3f} | {h['recall']:.3f} | {r['rally_f1'] or 0:.3f} | "
+                 f"{r['ceiling']:.1%} | `{json.dumps(r['overrides'])}` |")
+    L += ["", f"Defaults: hit F1 {rows and next(r for r in rows if not r['overrides'])['hits']['f1']:.3f}, "
+          f"rally F1 {base_rally:.3f}", f"Best (rally F1 within 0.02 of defaults): `{json.dumps(best['overrides'])}`",
+          f"Next: python scripts/learn_hits.py train --config {out / 'best.json'}"]
+    (out / "report.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+    print("\n".join(L))
     return 0
 
 
@@ -451,12 +540,21 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--folds", type=int, default=5)
     t.add_argument("--hidden", type=int, nargs="+", default=[0, 8, 16])
     t.add_argument("--l2", type=float, nargs="+", default=[1e-4, 1e-3, 1e-2])
+    t.add_argument("--config", type=Path, help="EventsConfig overrides (JSON), e.g. search/best.json")
+    s = sub.add_parser("search")
+    s.add_argument("--data", type=Path, default=Path("~/rallyiq-data/public/shuttleset_train"))
+    s.add_argument("--n", type=int, default=30, help="configurations to try (the first is the defaults)")
+    s.add_argument("--seed", type=int, default=0)
+    s.add_argument("--tol", type=float, default=3)
+    s.add_argument("--folds", type=int, default=5)
+    s.add_argument("--hidden", type=int, default=16)
+    s.add_argument("--l2", type=float, default=1e-2)
     e = sub.add_parser("eval")
     e.add_argument("--data", type=Path, default=Path("~/rallyiq-data/public/shuttleset"))
     e.add_argument("--model", type=Path, nargs="+", default=[BUNDLED], help="one or more scorer JSON files")
     e.add_argument("--out-name", default="learn_eval", help="output folder inside --data")
     a = ap.parse_args(argv)
-    return cmd_train(a) if a.cmd == "train" else cmd_eval(a)
+    return {"train": cmd_train, "search": cmd_search, "eval": cmd_eval}[a.cmd](a)
 
 
 if __name__ == "__main__":
