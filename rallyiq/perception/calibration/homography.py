@@ -186,10 +186,48 @@ def _plausible(Hs: np.ndarray, w: int, h: int, min_area_frac: float = 0.015) -> 
     sides = np.linalg.norm(e, axis=2)
     ok &= sides.min(1) > 0.02 * sides.max(1)
     ok &= metric_error(Hs, w, h)[0] < METRIC_TOL
+    ok &= upright(Hs)
     return np.nan_to_num(ok, nan=False).astype(bool)
 
 
 METRIC_TOL = 0.2
+
+
+def upright(Hs: np.ndarray) -> np.ndarray:
+    """True where the court lies below its horizon in the image, as it must for a
+    camera above the floor that is not upside down.
+
+    The horizon is the image of the floor's line at infinity: the line through
+    the vanishing points of the two court axes (columns 0 and 1 of an
+    image_from_court homography). A placement whose horizon runs *below* the
+    court can match bright lines (a thin band of floor markings, an advertising
+    board) and still pass the pinhole check, but no upright camera sees a court
+    that way (sam's DJI_0009: a 2000 x 100 px band, horizon ~60 px below it).
+    Horizons that are nearly vertical (camera rolled > ~70 degrees) or at
+    infinity (camera looking straight down) are not judged.
+    """
+    Hs = np.asarray(Hs, dtype=np.float64).reshape(-1, 3, 3)
+    corners = np.array(list(cm.CORNERS.values()))
+    ph = np.concatenate([corners, np.ones((4, 1))], 1)
+    q = np.einsum("bij,pj->bpi", Hs, ph)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        xy = q[..., :2] / q[..., 2:3]
+    line = np.cross(Hs[:, :, 0], Hs[:, :, 1])  # (B, 3): a x + b y + c = 0
+    a, b, c = line[:, 0], line[:, 1], line[:, 2]
+    norm = np.hypot(a, b)
+    cx = np.nanmean(xy[..., 0], 1)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        horizon_y = -(a * cx + c) / b
+    span = np.nanmax(xy[..., 1], 1) - np.nanmin(xy[..., 1], 1)
+    cy = np.nanmean(xy[..., 1], 1)
+    extent = np.maximum(span, np.nanmax(xy[..., 0], 1) - np.nanmin(xy[..., 0], 1))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        dist = np.abs(a * cx + b * cy + c) / norm  # court centre to horizon, px
+    # Far away (near top-down view) the horizon side is numerically meaningless.
+    judged = (np.abs(b) > 0.35 * norm) & np.isfinite(horizon_y) & (dist < 50 * np.maximum(extent, 1.0))
+    # "Below" means below the whole court, with a little slack for numerical noise.
+    below = horizon_y > np.nanmax(xy[..., 1], 1) + 0.01 * np.maximum(span, 1.0)
+    return ~(judged & below)
 _F_GRID = np.geomspace(0.35, 5.0, 40)  # focal length / image width
 
 

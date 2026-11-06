@@ -29,7 +29,7 @@ from .calibrate import (
     calibrate_frame,
     confidence_from,
 )
-from .homography import METRIC_TOL, metric_error, project, refine, score_one
+from .homography import METRIC_TOL, metric_error, project, refine, score_one, upright
 from .lines import line_evidence
 
 
@@ -96,6 +96,8 @@ def recheck(image: np.ndarray, H_full: np.ndarray, do_refine: bool = True) -> Fr
         if score_one(Hr, ev, tol).value >= score_one(Hw, ev, tol).value and metric_error(Hr[None], *wh)[0][0] < METRIC_TOL:
             Hw = Hr
     m, sc = _metrics(Hw, ev, tol, s)
+    if not upright(Hw)[0]:
+        return _failed((w0, h0), "auto", "court placement seen from below (horizon under the court)", m)
     if sc.matched < 30:
         return _failed((w0, h0), "auto", "court lines no longer match", m)
     conf = confidence_from(m)

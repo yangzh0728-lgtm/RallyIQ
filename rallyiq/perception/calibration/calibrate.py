@@ -19,6 +19,7 @@ from .homography import (
     refine,
     residual_rms,
     score_one,
+    upright,
     verified_keypoints,
 )
 from .lines import LineEvidence, detect_lines, line_evidence, sort_family, split_families
@@ -266,6 +267,12 @@ def calibrate_frame(
         s_raw, s_ref = score_one(H, ev, tol), score_one(Hr, ev, tol)
         use_ref = s_ref.value >= s_raw.value and metric_error(Hr[None], *wh)[0][0] < METRIC_TOL
         refined.append((Hr, s_ref) if use_ref else (H, s_raw))
+    # Seeds from earlier frames and refinement skip the hypothesis filter; drop any
+    # placement no upright camera could see (court above its own horizon).
+    refined = [(H, sc) for H, sc in refined if upright(H)[0]]
+    if not refined:
+        return _failed((w0, h0), method, "no court placement an upright camera could see (horizon below the court)",
+                       CalibrationMetrics(lines_detected=len(lines)))
     refined.sort(key=lambda t: -t[1].value)
     # value = matched cells - half the unmatched ones; at <= 0 the best placement
     # contradicts the image at least as much as it explains it (and the ratios
