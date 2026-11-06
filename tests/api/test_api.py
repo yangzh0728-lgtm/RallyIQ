@@ -253,3 +253,18 @@ def test_hard_examples_collected_from_corrections(client, sample_video):
 
     jl = client.get("/api/hard_examples", params={"format": "jsonl"}).text.strip().splitlines()
     assert len(jl) == 4
+
+
+def test_clip_export(client, sample_video):
+    v = upload(client, sample_video)
+    vid = v["video_id"]
+    wait_job(client, v["latest_job"]["job_id"])
+    rally = client.get(f"/api/videos/{vid}/events").json()["rallies"][0]
+    r = client.get(f"/api/videos/{vid}/clip", params={"rally_id": rally["rally_id"], "pad_ms": 0})
+    assert r.status_code == 200 and r.headers["content-type"] == "video/mp4"
+    assert "attachment" in r.headers["content-disposition"] and r.content[4:8] == b"ftyp"
+    r2 = client.get(f"/api/videos/{vid}/clip", params={"start_ms": 1000, "end_ms": 2000})
+    assert r2.status_code == 200 and len(r2.content) > 1000
+    assert client.get(f"/api/videos/{vid}/clip").status_code == 422
+    assert client.get(f"/api/videos/{vid}/clip", params={"start_ms": 2000, "end_ms": 1000}).status_code == 422
+    assert client.get(f"/api/videos/{vid}/clip", params={"rally_id": "nope"}).status_code == 404

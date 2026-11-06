@@ -39,6 +39,8 @@ export interface Api {
   reportExportUrl(videoId: string, format: "md" | "json"): string | null;
   /** Input assessment: camera view, picture, visibility and how far each output can be trusted. */
   getQuality(videoId: string): Promise<VideoQuality>;
+  /** MP4 clip of one rally (padded 1 s), or null when there is no source file (mock). */
+  clipUrl(videoId: string, rallyId: string): string | null;
   /** Corrections kept as hard examples, grouped by video condition. */
   getHardExampleSummary(): Promise<HardExampleSummary>;
   /** JSONL download of all hard examples, or null in mock mode. */
@@ -114,6 +116,7 @@ export const liveApi: Api = {
     http<CoachReport>(`/videos/${enc(id)}/report/coach`, { method: "POST", body: JSON.stringify({ provider: provider ?? null }) }),
   reportExportUrl: (id, format) => `${BASE}/videos/${enc(id)}/report/export?format=${format}`,
   getQuality: (id) => http<VideoQuality>(`/videos/${enc(id)}/quality`),
+  clipUrl: (id, rallyId) => `${BASE}/videos/${enc(id)}/clip?rally_id=${enc(rallyId)}`,
   getHardExampleSummary: () => http<HardExampleSummary>("/hard_examples/summary"),
   hardExamplesUrl: () => `${BASE}/hard_examples?format=jsonl`,
 };
@@ -324,6 +327,7 @@ export function createMockApi(): Api {
       return delay({ total: all.length, errors, videos: Object.values(corrections).filter((cs) => cs.some((c) => c.hard_example)).length, by_kind, groups: [], weakest: [] });
     },
     hardExamplesUrl: () => null,
+    clipUrl: () => null,
   };
 }
 

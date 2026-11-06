@@ -54,6 +54,7 @@ from ..contracts.geometry import COURT_CORNERS_M, homography_from_corners
 from ..ingest import quality_for
 from ..review import collect as collect_hard_examples
 from ..review import summarize as summarize_hard_examples
+from ..pipeline.clips import ClipError, cut_clip
 from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
 from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
@@ -174,6 +175,35 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
             raise HTTPException(404, "video file missing")
         media = "video/mp4" if path.suffix in {".mp4", ".m4v"} else "video/quicktime" if path.suffix == ".mov" else None
         return FileResponse(path, media_type=media)
+
+    @app.get("/api/videos/{video_id}/clip")
+    def video_clip(video_id: str, rally_id: str | None = None, start_ms: int | None = Query(None, ge=0),
+                   end_ms: int | None = Query(None, ge=0), pad_ms: int = Query(1000, ge=0, le=10_000)):
+        """MP4 clip of one rally (``rally_id``, from the corrected events) or of ``start_ms``..``end_ms``,
+        padded by ``pad_ms`` on both sides. Downloads as an attachment."""
+        video_or_404(video_id)
+        path = store.video_path(video_id)
+        if path is None or not path.exists():
+            raise HTTPException(404, "video file missing")
+        name = video_id
+        if rally_id is not None:
+            ev, _ = effective_events(video_id)
+            r = next((x for x in ev.rallies if x.rally_id == rally_id), None)
+            if r is None:
+                raise HTTPException(404, f"rally {rally_id} not found")
+            start_ms, end_ms, name = r.start_ms, r.end_ms, f"{video_id}_{rally_id}"
+        elif start_ms is None or end_ms is None:
+            raise HTTPException(422, "give rally_id, or start_ms and end_ms")
+        if end_ms <= start_ms:
+            raise HTTPException(422, "end_ms must be after start_ms")
+        meta = store.get_video_meta(video_id)
+        lo = max(0, start_ms - pad_ms)
+        hi = end_ms + pad_ms if meta is None else min(meta.duration_ms, end_ms + pad_ms)
+        try:
+            clip = cut_clip(path, store.work_dir(video_id) / "clips", lo, hi)
+        except ClipError as e:
+            raise HTTPException(422, str(e)) from e
+        return FileResponse(clip, media_type="video/mp4", filename=f"{name}_{lo}-{hi}ms.mp4")
 
     # ------------------------------------------------------------------ jobs
 
