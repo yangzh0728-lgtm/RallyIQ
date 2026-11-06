@@ -19,7 +19,7 @@
 #   RALLYIQ_REF   branch / ref to run          (default main)
 #   CLIPS         space-separated clip ids     (default: 3 eval clips, see below)
 #   POSE_VARIANT  rtmo-s | rtmo-m              (default rtmo-s)
-#   FAR_BOOST=1   second pose pass for small far-side players
+#   FAR_BOOST     auto | on | off: second pose pass for small far-side players (default auto)
 #   SKIP_DOWNLOAD=1  use only clips already in ~/rallyiq-data/bwf/clips
 set -euo pipefail
 
@@ -132,7 +132,7 @@ say "6/6 运行完整流水线"
 OUT="$DATA/runs/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 args=(--out "$OUT" --only $CLIPS)
-[ "${FAR_BOOST:-0}" = 1 ] && args+=(--far-boost)
+[ -n "${FAR_BOOST:-}" ] && args+=(--far-boost "$FAR_BOOST")
 set +e
 python scripts/real_run.py "${args[@]}" 2>&1 | tee "$OUT.log"
 rc=${PIPESTATUS[0]}
