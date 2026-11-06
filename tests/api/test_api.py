@@ -125,3 +125,47 @@ def test_confirm_ops_and_hard_example_flag(client, sample_video):
     rr = next(x for x in ev["rallies"] if x["rally_id"] == rally["rally_id"])
     assert rr["status"] == "ok" and rr["start_frame"] == rally["start_frame"]
     assert [c["hard_example"] for c in client.get(f"/api/videos/{vid}/corrections").json()] == [False, True]
+
+
+def test_doubles_match_format_rerun_heatmap_and_corrections(client, sample_video):
+    v = upload(client, sample_video)
+    vid = v["video_id"]
+    wait_job(client, v["latest_job"]["job_id"])
+    assert client.get(f"/api/videos/{vid}/match_format").json() == {"match_format": "auto"}
+    assert client.get(f"/api/videos/{vid}/artifacts/players").json()["match_format"] == "singles"
+
+    job = client.put(f"/api/videos/{vid}/match_format", json={"match_format": "doubles"}).json()
+    assert [s["name"] for s in job["stages"] if s["state"] != "skipped"][0] == "players"
+    assert wait_job(client, job["job_id"])["state"] == "succeeded"
+    assert client.put(f"/api/videos/{vid}/match_format", json={"match_format": "mixed"}).status_code == 422
+
+    players = client.get(f"/api/videos/{vid}/artifacts/players").json()
+    assert players["match_format"] == "doubles"
+    assert {p["player_id"] for p in players["frames"][0]["players"]} == {"P1", "P2", "P3", "P4"}
+    ov = client.get(f"/api/videos/{vid}/overlay").json()
+    assert ov["match_format"] == "doubles" and len(ov["court"][0]["boundary"]) == 4
+    ev = client.get(f"/api/videos/{vid}/events").json()
+    assert ev["match_format"] == "doubles"
+
+    team = client.get(f"/api/videos/{vid}/heatmap", params={"team": "A"}).json()
+    p3 = client.get(f"/api/videos/{vid}/heatmap", params={"player_id": "P3"}).json()
+    assert team["team"] == "A" and team["samples"] == 720 and p3["samples"] == 360
+
+    shot = next(s for s in ev["shots"] if s["hitter"] == "P1")
+    r = client.post(f"/api/videos/{vid}/corrections", json={"op": "set_hitter",
+                                                             "payload": {"shot_id": shot["shot_id"], "hitter": "P3"}})
+    assert r.status_code == 201
+    rid = ev["rallies"][0]["rally_id"]
+    assert client.post(f"/api/videos/{vid}/corrections", json={"op": "set_rally_winner",
+                                                               "payload": {"rally_id": rid, "winner": "A"}}).status_code == 201
+    # Partners mixed up from frame 0: swap P1/P3. Team winner stays.
+    assert client.post(f"/api/videos/{vid}/corrections", json={"op": "swap_player_ids",
+                                                               "payload": {"from_frame": 0, "a": "P1", "b": "P3"}}).status_code == 201
+    assert client.post(f"/api/videos/{vid}/corrections", json={"op": "swap_player_ids",
+                                                               "payload": {"from_frame": 0, "a": "P1", "b": "P1"}}).status_code == 422
+    ev2 = client.get(f"/api/videos/{vid}/events").json()
+    s2 = next(s for s in ev2["shots"] if s["shot_id"] == shot["shot_id"])
+    assert s2["hitter"] == "P1"
+    assert ev2["rallies"][0]["winner"] == "A"
+    csv = client.get(f"/api/videos/{vid}/export", params={"format": "csv"}).text
+    assert csv.splitlines()[0].split(",")[6] == "team"

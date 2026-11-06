@@ -9,7 +9,7 @@ from ..contracts import (
     OverlayPlayer,
     OverlayShuttle,
 )
-from ..contracts.geometry import project_court_lines
+from ..contracts.geometry import project_boundary_lines, project_court_lines
 from .context import StageContext
 
 COCO17_SKELETON = [
@@ -20,13 +20,15 @@ COCO17_SKELETON = [
 
 def run(ctx: StageContext) -> OverlayData:
     meta = ctx.require_meta()
+    fmt = ctx.players.match_format if ctx.players is not None else "singles"
     court: list[CourtLines] = []
     if (cal := ctx.calibration) is not None:
         for seg in cal.segments:
             if seg.homography is None:
                 continue
             court.append(CourtLines(start_frame=seg.start_frame, end_frame=seg.end_frame,
-                                    lines=project_court_lines(seg.homography), status=seg.status))
+                                    lines=project_court_lines(seg.homography),
+                                    boundary=project_boundary_lines(seg.homography, fmt), status=seg.status))
 
     frames: dict[int, OverlayFrame] = {}
 
@@ -40,7 +42,7 @@ def run(ctx: StageContext) -> OverlayData:
             if not pf.players:
                 continue
             at(pf.frame, pf.t_ms).players = [
-                OverlayPlayer(player_id=p.player_id, side=p.side, bbox=p.bbox, keypoints=p.keypoints,
+                OverlayPlayer(player_id=p.player_id, team=p.team, side=p.side, bbox=p.bbox, keypoints=p.keypoints,
                               foot_court=p.foot_court, interpolated=p.interpolated)
                 for p in pf.players
             ]
@@ -49,7 +51,7 @@ def run(ctx: StageContext) -> OverlayData:
             at(sp.frame, sp.t_ms).shuttle = OverlayShuttle(x=sp.x, y=sp.y, source=sp.source,
                                                            confidence=sp.confidence)
 
-    return OverlayData(video=meta, court=court, skeleton=COCO17_SKELETON,
+    return OverlayData(video=meta, match_format=fmt, court=court, skeleton=COCO17_SKELETON,
                        frames=[frames[k] for k in sorted(frames)])
 
 

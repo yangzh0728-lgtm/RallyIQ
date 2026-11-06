@@ -30,6 +30,25 @@
           "title": "Lines",
           "type": "array"
         },
+        "boundary": {
+          "description": "in-play rally boundary for the match format (singles or doubles sidelines)",
+          "items": {
+            "items": {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "title": "Boundary",
+          "type": "array"
+        },
         "status": {
           "$ref": "#/$defs/Status"
         }
@@ -89,7 +108,9 @@
             {
               "enum": [
                 "P1",
-                "P2"
+                "P2",
+                "P3",
+                "P4"
               ],
               "type": "string"
             },
@@ -98,6 +119,22 @@
             }
           ],
           "title": "Player Id"
+        },
+        "team": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team"
         },
         "side": {
           "anyOf": [
@@ -297,6 +334,15 @@
     },
     "video": {
       "$ref": "#/$defs/VideoMeta"
+    },
+    "match_format": {
+      "default": "singles",
+      "enum": [
+        "singles",
+        "doubles"
+      ],
+      "title": "Match Format",
+      "type": "string"
     },
     "court": {
       "items": {

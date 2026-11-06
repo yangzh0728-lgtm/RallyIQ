@@ -1,24 +1,31 @@
-"""Two-player (singles) identity tracker.
+"""Player identity tracker for singles (2 slots) and doubles (4 slots).
 
-Each frame the scored candidates are assigned to two persistent slots, ``P1``
-and ``P2``. Assignment combines
+Each frame the scored candidates are assigned to persistent slots: ``P1`` /
+``P2`` in singles, ``P1``..``P4`` in doubles where team A = P1 + P3 and team
+B = P2 + P4 (team A is the pair first seen on the near half). Assignment
+combines
 
 * motion continuity (court metres when calibrated, else pixels scaled by body
   height) with a speed gate,
 * torso colour similarity,
 * the candidate's player-likeness score, and
-* a soft "one player per half" prior.
+* half-court priors: opponents on opposite halves, and in doubles partners on
+  the same half (in doubles only for slots being (re-)acquired).
 
 ``player_id`` stays with the person across changes of ends; ``side`` is
 recomputed every frame from the foot position. ``track_id`` changes whenever a
 slot is re-acquired after being lost, so downstream code can tell a continuous
 track from a re-identification.
+
+All joint assignments are scored at once with numpy (at most 7^4 options in
+doubles), so the priors that couple slots stay exact.
 """
 
 from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 import numpy as np
 
@@ -27,6 +34,8 @@ from .geometry import court_side
 from .models import Candidate, PlayerState, Side
 
 SLOT_IDS = ("P1", "P2")
+DOUBLES_SLOT_IDS = ("P1", "P2", "P3", "P4")
+TEAM_OF = {"P1": "A", "P3": "A", "P2": "B", "P4": "B"}
 
 
 @dataclass
@@ -46,6 +55,11 @@ class TrackerConfig:
     # players get picked up, but less than a far-fetched match.
     empty_slot_cost: float = 0.8
     reacquire_cost: float = 0.5
+    # Doubles: partners standing on different halves (never happens in play).
+    partner_split_penalty: float = 0.8
+    first_sighting_penalty: float = 0.5
+    # Candidates considered per frame in doubles (keeps the joint search small).
+    max_doubles_candidates: int = 6
 
 
 @dataclass
@@ -81,11 +95,35 @@ def _cand_side(c: Candidate, net_y_px: float | None) -> Side | None:
     return None
 
 
-class SinglesTracker:
-    def __init__(self, cfg: TrackerConfig | None = None):
+@lru_cache(maxsize=64)
+def _assignments(n_slots: int, n_cands: int) -> np.ndarray:
+    """Every slot -> candidate assignment as rows; value ``n_cands`` = slot left empty."""
+    rows = [
+        a
+        for a in itertools.product(range(n_cands + 1), repeat=n_slots)
+        if len({x for x in a if x < n_cands}) == sum(1 for x in a if x < n_cands)
+    ]
+    return np.asarray(rows, dtype=np.int64).reshape(-1, n_slots)
+
+
+class PlayerTracker:
+    """Assigns candidates to ``len(slot_ids)`` persistent player slots."""
+
+    def __init__(self, cfg: TrackerConfig | None = None, slot_ids: tuple[str, ...] = SLOT_IDS):
         self.cfg = cfg or TrackerConfig()
-        self.slots = [_Slot(pid) for pid in SLOT_IDS]
+        self.slots = [_Slot(pid) for pid in slot_ids]
         self._next_track_id = 0
+        teams = [TEAM_OF[pid] for pid in slot_ids]
+        self._team_a = np.array([t == "A" for t in teams])
+        # Slot pairs on opposite teams / the same team.
+        n = len(slot_ids)
+        self._opp_pairs = [(i, j) for i in range(n) for j in range(i + 1, n) if teams[i] != teams[j]]
+        self._mate_pairs = [(i, j) for i in range(n) for j in range(i + 1, n) if teams[i] == teams[j]]
+        self._team_size = max(n // 2, 1)
+
+    @property
+    def doubles(self) -> bool:
+        return len(self.slots) == 4
 
     # -- cost -----------------------------------------------------------------
     def _motion_cost(self, slot: _Slot, c: Candidate, frame: int, calibrated: bool) -> float | None:
@@ -135,31 +173,7 @@ class SinglesTracker:
         sides = [_cand_side(c, net_y_px) for c in cands]
 
         never_seen = all(s.pos is None for s in self.slots)
-
-        best: tuple[float, tuple[int | None, int | None]] = (float("inf"), (None, None))
-        options = list(range(len(cands))) + [None]
-        for a, b in itertools.product(options, options):
-            if a is not None and a == b:
-                continue
-            cost = 0.0
-            for slot, ci in zip(self.slots, (a, b)):
-                if ci is None:
-                    cost += cfg.empty_slot_cost
-                    continue
-                pc = self._pair_cost(slot, cands[ci], frame, calibrated)
-                cost += pc
-            if a is not None and b is not None and sides[a] is not None and sides[a] == sides[b]:
-                cost += cfg.same_half_penalty
-            if never_seen and a is not None and b is not None:
-                # First sighting: P1 starts on the near half by convention.
-                if sides[a] == "far" and sides[b] == "near":
-                    cost += 0.5
-            if cost < best[0]:
-                best = (cost, (a, b))
-
-        # When both players were lost (camera cut, change of ends) the motion
-        # term is absent, so appearance in _pair_cost decides who is who.
-        assignment = best[1]
+        assignment = self._best_assignment(cands, sides, frame, calibrated, never_seen)
 
         out: list[PlayerState] = []
         for slot, ci in zip(self.slots, assignment):
@@ -171,6 +185,7 @@ class SinglesTracker:
                 PlayerState(
                     player_id=slot.player_id,
                     track_id=slot.track_id,
+                    team=TEAM_OF[slot.player_id],
                     side=sides[ci],
                     bbox=c.det.bbox,
                     keypoints=c.det.keypoints,
@@ -181,6 +196,56 @@ class SinglesTracker:
                 )
             )
         return out
+
+    def _best_assignment(
+        self, cands: list[Candidate], sides: list[Side | None], frame: int, calibrated: bool, never_seen: bool
+    ) -> list[int | None]:
+        cfg = self.cfg
+        n_slots = len(self.slots)
+        if self.doubles and len(cands) > cfg.max_doubles_candidates:
+            cands = cands[: cfg.max_doubles_candidates]  # sorted best first upstream
+        m = len(cands)
+        # cost[s, c]; the extra column is "leave the slot empty".
+        cost = np.full((n_slots, m + 1), cfg.empty_slot_cost)
+        for si, slot in enumerate(self.slots):
+            for ci, c in enumerate(cands):
+                cost[si, ci] = self._pair_cost(slot, c, frame, calibrated)
+        A = _assignments(n_slots, m)
+        total = cost[np.arange(n_slots), A].sum(axis=1)
+
+        # Side codes per candidate (+ empty): 0 near, 1 far, -1 unknown/empty.
+        code = np.array([{"near": 0, "far": 1}.get(s, -1) for s in sides[:m]] + [-1])
+        S = code[A]
+        known = S >= 0
+        # In doubles the half-court priors only steer slots without motion
+        # continuity (first sighting, re-acquisition). Tracked players cross
+        # the net at a change of ends, and four people moving at once would
+        # otherwise let a prior override clear motion evidence.
+        fresh = [s.pos is None or s.missed(frame) > cfg.lost_after_frames for s in self.slots]
+
+        def gated(i: int, j: int) -> bool:
+            return not self.doubles or fresh[i] or fresh[j]
+
+        for i, j in self._opp_pairs:
+            if gated(i, j):
+                same = known[:, i] & known[:, j] & (S[:, i] == S[:, j])
+                total = total + same * (cfg.same_half_penalty / self._team_size)
+        for i, j in self._mate_pairs:
+            if gated(i, j):
+                split = known[:, i] & known[:, j] & (S[:, i] != S[:, j])
+                total = total + split * cfg.partner_split_penalty
+        if never_seen:
+            # First sighting: team A (P1, P3) starts on the near half by convention.
+            assigned = A < m
+            has_a = (assigned & self._team_a).any(axis=1)
+            has_b = (assigned & ~self._team_a).any(axis=1)
+            wrong = known & np.where(self._team_a, S == 1, S == 0)
+            # All of one pair on the wrong halves costs exactly the penalty.
+            total = total + (has_a & has_b) * cfg.first_sighting_penalty * wrong.sum(axis=1) / (2 * self._team_size)
+        best = A[int(np.argmin(total))]
+        # When every slot was lost (camera cut, change of ends) the motion term is
+        # absent, so appearance in _pair_cost decides who is who.
+        return [int(ci) if ci < m else None for ci in best]
 
     def _commit(self, slot: _Slot, c: Candidate, frame: int, calibrated: bool, side: Side | None) -> None:
         cfg = self.cfg
@@ -203,3 +268,13 @@ class SinglesTracker:
             else:
                 m = cfg.appearance_momentum
                 slot.appearance = m * slot.appearance + (1 - m) * c.appearance
+
+
+class SinglesTracker(PlayerTracker):
+    def __init__(self, cfg: TrackerConfig | None = None):
+        super().__init__(cfg, SLOT_IDS)
+
+
+class DoublesTracker(PlayerTracker):
+    def __init__(self, cfg: TrackerConfig | None = None):
+        super().__init__(cfg, DOUBLES_SLOT_IDS)

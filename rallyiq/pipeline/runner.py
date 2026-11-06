@@ -15,6 +15,7 @@ from .registry import load_stage
 log = logging.getLogger("rallyiq.pipeline")
 
 MANUAL_CALIBRATION = "calibration_manual"
+MATCH_FORMAT = "match_format"  # MatchFormatSetting chosen in the UI; read by the players stage
 
 
 def run_job(store: Store, job: Job, config: dict[str, Any] | None = None) -> Job:

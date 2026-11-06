@@ -1,0 +1,18 @@
+{
+  "additionalProperties": false,
+  "description": "Per-video choice of singles / doubles. ``auto`` lets the players stage decide.",
+  "properties": {
+    "match_format": {
+      "default": "auto",
+      "enum": [
+        "auto",
+        "singles",
+        "doubles"
+      ],
+      "title": "Match Format",
+      "type": "string"
+    }
+  },
+  "title": "MatchFormatSetting",
+  "type": "object"
+}
