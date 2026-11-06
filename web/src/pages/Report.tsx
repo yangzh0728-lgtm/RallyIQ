@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MemoryCommit } from "../components/MemoryCommit";
 import { api } from "../lib/api";
 import { download } from "../lib/export";
 import { colorOf } from "../lib/players";
@@ -148,6 +149,7 @@ export function Report({ videoId }: { videoId: string }) {
       <div className="muted small">
         状态按样本量和球场标定情况给出：可用 / 待复核 / 不可判定。统计只使用修正后的事件，原始模型预测不会被改写。指纹 {stats.fingerprint}
       </div>
+      <MemoryCommit videoId={videoId} playerIds={stats.players.map((p) => p.player_id)} />
     </main>
   );
 }

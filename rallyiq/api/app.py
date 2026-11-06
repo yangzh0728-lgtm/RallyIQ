@@ -60,22 +60,29 @@ from ..contracts import (
     VideoQuality,
     HardExample,
     HardExampleSummary,
+    AnalysisEvent,
+    OpponentReport,
+    PeopleAssignment,
+    PlayerProfile,
 )
 from ..contracts.geometry import COURT_CORNERS_M, homography_from_corners
 from ..ingest import quality_for
+from ..memory import StoreMemoryLog, build_commit, build_opponent_report, build_profile, people as list_people
 from ..review import collect as collect_hard_examples
 from ..review import summarize as summarize_hard_examples
+from ..review import video_conditions
 from ..pipeline.clips import ClipError, cut_clip
 from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
 from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
 from ..report.coach import default_provider_name
-from ..store import CONTENT_TYPES, Store
+from ..store import CONTENT_TYPES, Store, now
 from ..strokes.classify import merge_strokes
 from .auth import AuthConfig, User, build_auth
 from .corrections import CorrectionError, apply_corrections, validate
 
 COACH_ARTIFACT = "coach"
+PEOPLE_ARTIFACT = "people"
 ALLOWED_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}
 log = logging.getLogger("rallyiq.api")
 
@@ -128,6 +135,11 @@ class WorkerWaker:
                 log.info("worker wake -> %s", r.status)
         except Exception as e:  # noqa: BLE001
             log.warning("worker wake failed: %s", e)
+
+
+class PeopleRequest(BaseModel):
+    people: dict[Literal["P1", "P2", "P3", "P4"], str] = Field(default_factory=dict)
+    self_player: Literal["P1", "P2", "P3", "P4"] | None = None
 
 
 class JobRequest(BaseModel):
@@ -555,6 +567,72 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
     def hard_example_summary(user: User | None = Depends(current_user)) -> HardExampleSummary:
         """Model errors per video condition (camera view, frame rate, ...) and the weakest scenarios."""
         return summarize_hard_examples(*collect_hard_examples(store, hard_example_owner(user)))
+
+    # ---------------------------------------------------------------- memory
+
+    def memory(user: User | None) -> StoreMemoryLog:
+        return StoreMemoryLog(store, owner(user))  # one log per account (the whole store when accounts are off)
+
+    @app.get("/api/videos/{video_id}/people", response_model=PeopleAssignment)
+    def get_people(video_id: str, user: User | None = Depends(current_user)) -> PeopleAssignment:
+        video_or_404(video_id, user)
+        return store.load_artifact(video_id, PEOPLE_ARTIFACT, PeopleAssignment) or PeopleAssignment(video_id=video_id)
+
+    @app.put("/api/videos/{video_id}/people", response_model=PeopleAssignment)
+    def set_people(video_id: str, req: PeopleRequest, user: User | None = Depends(current_user)) -> PeopleAssignment:
+        """Name the players of this video (e.g. P1 = 我, P2 = 对手名字) and say which one is the user."""
+        video_or_404(video_id, user)
+        a = PeopleAssignment(video_id=video_id, updated_at=now(), self_player=req.self_player,
+                             people={k: v.strip() for k, v in req.people.items() if v and v.strip()})
+        if a.self_player and a.self_player not in a.people:
+            raise HTTPException(422, "self_player must be one of the named players")
+        store.save_artifact(video_id, PEOPLE_ARTIFACT, a)
+        return a
+
+    @app.post("/api/videos/{video_id}/memory/commit", response_model=list[AnalysisEvent], status_code=201)
+    def commit_to_memory(video_id: str, user: User | None = Depends(current_user)) -> list[AnalysisEvent]:
+        """Write this match (after review) into the long-term log: one event per named player.
+        Re-committing appends a newer version; the old one stays in the log."""
+        v = video_or_404(video_id, user)
+        a = store.load_artifact(video_id, PEOPLE_ARTIFACT, PeopleAssignment)
+        if a is None or not a.people:
+            raise HTTPException(422, "name the players first (PUT /people)")
+        ev, _ = effective_events(video_id)
+        stats = match_stats(video_id)
+        coach = store.load_artifact(video_id, COACH_ARTIFACT, CoachReport)
+        if coach is not None and coach.stats_fingerprint != stats.fingerprint:
+            coach = None  # stale: its training items refer to other numbers
+        quality = quality_for(store, video_id, sample_pictures=False)
+        conditions = video_conditions(store.get_video_meta(video_id), quality, ev.match_format)
+        try:
+            rows = build_commit(v, a, stats, ev, coach, conditions, len(store.list_corrections(video_id)))
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+        return memory(user).append(rows)
+
+    @app.post("/api/videos/{video_id}/memory/withdraw", response_model=list[AnalysisEvent], status_code=201)
+    def withdraw_from_memory(video_id: str, user: User | None = Depends(current_user)) -> list[AnalysisEvent]:
+        """Exclude this video from profiles from now on (appends a withdrawal; nothing is deleted)."""
+        v = video_or_404(video_id, user)
+        return memory(user).append([dict(kind="match_withdrawn", video_id=video_id, filename=v.filename)])
+
+    @app.get("/api/memory/log", response_model=list[AnalysisEvent])
+    def memory_log(user: User | None = Depends(current_user)) -> list[AnalysisEvent]:
+        return memory(user).read()
+
+    @app.get("/api/people")
+    def people_list(user: User | None = Depends(current_user)) -> list[dict]:
+        """People with committed matches (the user first)."""
+        return list_people(memory(user).read())
+
+    @app.get("/api/profile", response_model=PlayerProfile)
+    def profile(person: str | None = None, user: User | None = Depends(current_user)) -> PlayerProfile:
+        """Profile of the user (default) or of ``person``: per-metric series, trends, changes, retests."""
+        return build_profile(memory(user).read(), person)
+
+    @app.get("/api/opponents/{person}", response_model=OpponentReport)
+    def opponent_report(person: str, user: User | None = Depends(current_user)) -> OpponentReport:
+        return build_opponent_report(memory(user).read(), person)
 
     # ---------------------------------------------------------------- report
 

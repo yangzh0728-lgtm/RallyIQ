@@ -30,6 +30,7 @@ SCHEMAS = [
     c.MatchFormatSetting,
     c.MatchStats, c.CoachReport, c.MatchReport,
     c.VideoQuality, c.HardExample, c.HardExampleSummary,
+    c.PeopleAssignment, c.AnalysisEvent, c.PlayerProfile, c.OpponentReport,
 ]
 
 

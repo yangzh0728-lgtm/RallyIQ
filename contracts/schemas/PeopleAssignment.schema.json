@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "description": "``PUT /api/videos/{id}/people``. Unnamed player ids are left out of the profile.",
+  "properties": {
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "people": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "player id -> person name",
+      "propertyNames": {
+        "enum": [
+          "P1",
+          "P2",
+          "P3",
+          "P4"
+        ]
+      },
+      "title": "People",
+      "type": "object"
+    },
+    "self_player": {
+      "anyOf": [
+        {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "which player is the user (\u6211)",
+      "title": "Self Player"
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updated At"
+    }
+  },
+  "required": [
+    "video_id"
+  ],
+  "title": "PeopleAssignment",
+  "type": "object"
+}

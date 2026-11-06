@@ -1,0 +1,427 @@
+{
+  "$defs": {
+    "ProfileMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/ProfilePoint"
+          },
+          "title": "Points",
+          "type": "array"
+        },
+        "latest": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest"
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous"
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delta"
+        },
+        "trend": {
+          "enum": [
+            "up",
+            "down",
+            "flat",
+            "new",
+            "insufficient"
+          ],
+          "title": "Trend",
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "points",
+        "trend",
+        "confidence"
+      ],
+      "title": "ProfileMetric",
+      "type": "object"
+    },
+    "ProfilePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "video_id": {
+          "title": "Video Id",
+          "type": "string"
+        },
+        "filename": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filename"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "n": {
+          "title": "N",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        }
+      },
+      "required": [
+        "video_id",
+        "recorded_at",
+        "value",
+        "n",
+        "status"
+      ],
+      "title": "ProfilePoint",
+      "type": "object"
+    },
+    "ProfileVideo": {
+      "additionalProperties": false,
+      "properties": {
+        "video_id": {
+          "title": "Video Id",
+          "type": "string"
+        },
+        "filename": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filename"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "opponents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Opponents",
+          "type": "array"
+        },
+        "conditions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "video_id",
+        "recorded_at"
+      ],
+      "title": "ProfileVideo",
+      "type": "object"
+    },
+    "RetestResult": {
+      "additionalProperties": false,
+      "description": "A training item suggested after one match, measured again on the next one.",
+      "properties": {
+        "drill": {
+          "title": "Drill",
+          "type": "string"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "from_video_id": {
+          "title": "From Video Id",
+          "type": "string"
+        },
+        "to_video_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To Video Id"
+        },
+        "before": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before"
+        },
+        "after": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After"
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delta"
+        },
+        "same_conditions": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "camera view and frame rate match (README: \u540c\u6761\u4ef6\u4e0b\u590d\u6d4b)",
+          "title": "Same Conditions"
+        },
+        "status": {
+          "description": "improved/worse only where higher is clearly better (win and coverage rates); otherwise 'changed' with the delta",
+          "enum": [
+            "improved",
+            "worse",
+            "changed",
+            "unchanged",
+            "pending",
+            "not_measurable"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "drill",
+        "why",
+        "metric",
+        "from_video_id",
+        "status"
+      ],
+      "title": "RetestResult",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``GET /api/profile``: recomputed from the append-only log.",
+  "properties": {
+    "schema_version": {
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "person": {
+      "title": "Person",
+      "type": "string"
+    },
+    "is_self": {
+      "title": "Is Self",
+      "type": "boolean"
+    },
+    "videos": {
+      "items": {
+        "$ref": "#/$defs/ProfileVideo"
+      },
+      "title": "Videos",
+      "type": "array"
+    },
+    "metrics": {
+      "items": {
+        "$ref": "#/$defs/ProfileMetric"
+      },
+      "title": "Metrics",
+      "type": "array"
+    },
+    "retests": {
+      "items": {
+        "$ref": "#/$defs/RetestResult"
+      },
+      "title": "Retests",
+      "type": "array"
+    },
+    "changes": {
+      "description": "\u65b0\u589e / \u51b2\u7a81 / \u8d8b\u52bf, plain Chinese lines",
+      "items": {
+        "type": "string"
+      },
+      "title": "Changes",
+      "type": "array"
+    },
+    "log_events": {
+      "default": 0,
+      "title": "Log Events",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "person",
+    "is_self",
+    "videos",
+    "metrics"
+  ],
+  "title": "PlayerProfile",
+  "type": "object"
+}

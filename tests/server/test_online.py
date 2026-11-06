@@ -289,3 +289,26 @@ def test_enqueue_wakes_on_demand_worker(tmp_path, monkeypatch, sample_video):
     finally:
         srv.shutdown()
     assert hits == [("/wake", "Bearer s3cret")]
+
+
+# ------------------------------------------------------------- memory log
+
+def test_memory_log_in_database_per_account(tmp_path, db_url):
+    from rallyiq.memory import MemoryLog, StoreMemoryLog
+
+    root = tmp_path / "data"
+    legacy = MemoryLog(root)  # a local log written before the database version
+    legacy.append([dict(kind="match_withdrawn", video_id="vid_old", filename="old.mp4")])
+    store = Store(root, db_url=db_url)
+
+    local = StoreMemoryLog(store)  # accounts off: imports the old file once
+    assert [e.video_id for e in local.read()] == ["vid_old"]
+    StoreMemoryLog(store)  # no second import
+    local.append([dict(kind="match_withdrawn", video_id="vid_2")])
+    assert [(e.seq, e.video_id) for e in local.read()] == [(1, "vid_old"), (2, "vid_2")]
+
+    a, b = StoreMemoryLog(store, "usr_a"), StoreMemoryLog(store, "usr_b")
+    a.append([dict(kind="match_withdrawn", video_id="vid_a")])
+    assert [e.video_id for e in a.read()] == ["vid_a"] and a.read()[0].seq == 1
+    assert b.read() == []
+    assert len(local.read()) == 2

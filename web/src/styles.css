@@ -159,6 +159,10 @@ kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-w
 .quality-checks { display: grid; gap: 6px; margin-top: 6px; }
 .quality-check .note { line-height: 1.4; margin-top: 2px; }
 
+/* Memory / profile */
+.people-grid { display: grid; gap: 6px; }
+.people-grid input[type="text"], .people-grid input:not([type]) { width: 180px; }
+
 /* login */
 .auth-page { display: flex; justify-content: center; padding-top: 10vh; }
 .auth-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }

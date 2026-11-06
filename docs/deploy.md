@@ -136,6 +136,7 @@ CI（`.github/workflows/docker.yml`）在每个相关 PR 上做同样的事：�
 - **备份**：Neon 自带时间点恢复；R2 可开启对象版本或定期 `rclone sync` 到另一个桶。
 - **换 GPU 型号**：`RALLYIQ_MODAL_GPU=T4 modal deploy deploy/modal_worker.py`（更便宜更慢）或 `A10G`（更快）。
 - **线上同样可用的功能**：回合片段导出（API 让 ffmpeg 直接按 Range 读取 R2 预签名地址，不下载整段视频）、
-  视频质量评估（缓存戳来自对象存储元数据）、难例汇总（普通用户只看自己的，管理员看全部）、赛后报告与 AI 点评。
+  视频质量评估（缓存戳来自对象存储元数据）、难例汇总（普通用户只看自己的，管理员看全部）、赛后报告与 AI 点评；
+  个人长期档案的事件日志存进数据库（每个账号一份，只追加），本地旧的 `memory/events.jsonl` 首次使用时自动导入。
 - **从本机迁移数据**：本地 `data/videos/` 的目录结构与桶里的键完全一致，可用 `rclone copy data/videos r2:rallyiq/videos`
   上传，数据库行需要另外导入（目前没有自动迁移脚本，有需要时再加）。

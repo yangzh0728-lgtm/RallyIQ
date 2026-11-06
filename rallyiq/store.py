@@ -78,6 +78,14 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TEXT NOT NULL,
     is_admin INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS memory_events (
+    event_id TEXT PRIMARY KEY,
+    owner_id TEXT,
+    seq INTEGER NOT NULL,
+    recorded_at TEXT NOT NULL,
+    body TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS memory_owner ON memory_events(owner_id, seq);
 CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(user_id),
@@ -520,6 +528,32 @@ class Store:
             )
             for r in rows
         ]
+
+    # ---------------------------------------------------------- memory (append-only)
+
+    def _owner_clause(self) -> str:
+        return "owner_id IS NOT DISTINCT FROM ?" if self.db.dialect == "postgres" else "owner_id IS ?"
+
+    def memory_read(self, owner_id: str | None) -> list[str]:
+        """Raw JSON of one account's analysis events, in log order."""
+        rows = self._q(f"SELECT body FROM memory_events WHERE {self._owner_clause()} ORDER BY seq", (owner_id,))
+        return [r["body"] for r in rows]
+
+    def memory_append(self, owner_id: str | None, make_rows) -> list:
+        """Append events atomically. ``make_rows(last_seq)`` returns ``[(event_id, seq, recorded_at, body,
+        obj)]``; the ``obj`` list is returned. Never updates or deletes existing rows."""
+        with self.db.transaction():
+            last = self.db.q(
+                f"SELECT COALESCE(MAX(seq), 0) AS n FROM memory_events WHERE {self._owner_clause()}", (owner_id,)
+            )[0]["n"]
+            rows = make_rows(int(last))
+            for event_id, seq, recorded_at, body, _ in rows:
+                self.db.q("INSERT INTO memory_events(event_id, owner_id, seq, recorded_at, body) VALUES (?,?,?,?,?)",
+                          (event_id, owner_id, seq, recorded_at, body))
+        return [r[4] for r in rows]
+
+    def memory_count(self) -> int:
+        return int(self._q("SELECT COUNT(*) AS n FROM memory_events")[0]["n"])
 
     # ------------------------------------------------------------------ users
 
