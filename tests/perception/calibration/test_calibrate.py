@@ -116,3 +116,15 @@ def test_manual_points_by_keypoint_name():
     clicks, _ = project(H_true, np.array([lookup[n] for n in names]))
     cal = calibrate_from_points(clicks, names, image_size=cam.size)
     assert keypoint_error(cal.image_from_court, H_true, cam.size) < 1.0
+
+
+def test_zero_best_score_fails_instead_of_dividing_by_zero(monkeypatch):
+    # Seen on ShuttleSet broadcast frames: lines are found, but the best placement
+    # scores 0 (as many unmatched cells as matched). That used to raise ZeroDivisionError.
+    from rallyiq.perception.calibration import calibrate as C
+    from rallyiq.perception.calibration.homography import Score
+
+    monkeypatch.setattr(C, "score_one", lambda H, ev, tol, spacing=0.1: Score(100, 200, 300, 0.0))
+    img, _ = render(Scene(CAMERAS["corner_oblique"]))
+    cal = calibrate_frame(img)
+    assert cal.status == "undeterminable"

@@ -267,7 +267,10 @@ def calibrate_frame(
         use_ref = s_ref.value >= s_raw.value and metric_error(Hr[None], *wh)[0][0] < METRIC_TOL
         refined.append((Hr, s_ref) if use_ref else (H, s_raw))
     refined.sort(key=lambda t: -t[1].value)
-    if refined[0][1].matched < 30:
+    # value = matched cells - half the unmatched ones; at <= 0 the best placement
+    # contradicts the image at least as much as it explains it (and the ratios
+    # below would divide by zero).
+    if refined[0][1].matched < 30 or refined[0][1].value <= 0:
         return _failed((w0, h0), method, "no court placement fits the detected lines")
 
     # Neighbouring courts in a hall fit just as well but do not overlap the
