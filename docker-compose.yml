@@ -64,6 +64,9 @@ services:
       RALLYIQ_AUTH: "on"
       RALLYIQ_SIGNUP: invite
       RALLYIQ_INVITE_CODE: rallyiq
+      # AI coach: the free local model runs in Ollama on the host (ollama serve; ollama pull qwen2.5:7b)
+      RALLYIQ_OLLAMA_URL: http://host.docker.internal:11434
+    extra_hosts: ["host.docker.internal:host-gateway"]
     ports: ["8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}

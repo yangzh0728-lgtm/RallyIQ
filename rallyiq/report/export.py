@@ -42,7 +42,7 @@ def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: 
         src = f"{coach.provider}" + (f" · {coach.model}" if coach.model else "")
         out += [f"_生成：{src} · {coach.created_at:%Y-%m-%d %H:%M} UTC_", ""]
         if coach.fallback_reason:
-            out += [f"> 未使用 Claude：{coach.fallback_reason}", ""]
+            out += [f"> 改用 {coach.provider}：{coach.fallback_reason}", ""]
         out += [coach.summary, ""]
         for i in coach.insights:
             who = f"{i.player_id} · " if i.player_id and not i.title.startswith(i.player_id) else ""

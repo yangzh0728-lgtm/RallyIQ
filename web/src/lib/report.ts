@@ -255,6 +255,6 @@ export function mockCoach(stats: MatchStats): CoachReport {
     schema_version: "0.1.0", video_id: stats.video_id, stats_fingerprint: stats.fingerprint, provider: "offline", model: "mock",
     created_at: new Date().toISOString(), language: "zh",
     summary: `演示模式下用规则模板生成的点评，共 ${insights.length - 1} 条数据观察。连接后端并配置 Claude API 后可得到完整的 AI 教练分析。`,
-    insights, training: [], caveats: stats.caveats, fallback_reason: "演示模式不调用 Claude API", dropped: 0,
+    insights, training: [], caveats: stats.caveats, fallback_reason: "演示模式不调用 AI 模型", dropped: 0,
   };
 }

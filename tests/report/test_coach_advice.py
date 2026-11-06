@@ -161,3 +161,120 @@ def test_loader_reads_note_dir(tmp_path, monkeypatch):
 
     assert [n["id"] for n in load_notes()] == ["a-lift"]
     _load.cache_clear()
+
+
+# --------------------------------------------------------------------------- local model (Ollama)
+
+
+class _Resp:
+    def __init__(self, body):
+        self.body = json.dumps(body).encode()
+
+    def read(self):
+        return self.body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def _ollama_out(content, done_reason="stop"):
+    return {"message": {"role": "assistant", "content": content}, "done_reason": done_reason}
+
+
+def test_ollama_provider_request_and_citations(stats):
+    from rallyiq.report.coach import OllamaProvider
+    from rallyiq.report.coach.prompt import OUTPUT_SCHEMA
+
+    calls = []
+    out = {"summary": "本地点评", "insights": [], "caveats": [], "training": [{
+        "player_id": "P1", "drill": "挑球三线", "why": "w", "evidence": [], "retest_metric": None,
+        "focus_id": "P1.lost_stroke", "key_points": ["拇指"], "sources": [{"note_id": "a-lift", "drill": None}]}]}
+
+    def opener(req, timeout):
+        if req.full_url.endswith("/api/tags"):
+            assert timeout <= 5
+            return _Resp({"models": [{"name": "qwen2.5:7b", "model": "qwen2.5:7b"}]})
+        calls.append((req.full_url, json.loads(req.data), timeout))
+        return _Resp(_ollama_out(json.dumps(out, ensure_ascii=False)))
+
+    k = knowledge_context(stats, NOTES)
+    p = OllamaProvider(url="http://mac:11434", opener=opener)
+    rep = build_report(p.generate(stats, knowledge=k), stats, p, knowledge=k)
+    url, body, _ = calls[0]
+    assert url == "http://mac:11434/api/chat"
+    assert body["model"] == "qwen2.5:7b" and body["format"] == OUTPUT_SCHEMA and body["stream"] is False
+    assert body["options"]["num_ctx"] >= 16384
+    assert "a-lift" in body["messages"][1]["content"]
+    assert rep.provider == "ollama" and rep.model == "qwen2.5:7b"
+    assert rep.training[0].sources[0].url == "https://example.com/a-lift"
+
+
+def test_ollama_errors_are_provider_errors(stats):
+    import urllib.error
+
+    from rallyiq.report.coach import OllamaProvider
+    from rallyiq.report.coach.base import CoachProviderError
+
+    def refused(req, timeout):
+        raise urllib.error.URLError(ConnectionRefusedError(61, "refused"))
+
+    with pytest.raises(CoachProviderError, match="Ollama"):
+        OllamaProvider(opener=refused).generate(stats)
+    def serve(chat, models=("qwen2.5:7b",)):
+        def opener(req, timeout):
+            if req.full_url.endswith("/api/tags"):
+                return _Resp({"models": [{"name": m, "model": m} for m in models]})
+            return _Resp(chat)
+        return opener
+
+    with pytest.raises(CoachProviderError, match="ollama pull"):
+        OllamaProvider(opener=serve(_ollama_out("{}"), models=("llama3:8b",))).generate(stats)
+    with pytest.raises(CoachProviderError, match="截断"):
+        OllamaProvider(opener=serve(_ollama_out("{", "length"))).generate(stats)
+    with pytest.raises(CoachProviderError):
+        OllamaProvider(opener=serve(_ollama_out("not json"))).generate(stats)
+
+
+def test_auto_prefers_local_then_claude_then_offline(stats, monkeypatch):
+    from rallyiq.report import register_provider
+    from rallyiq.report.coach import auto_chain
+    from rallyiq.report.coach.base import CoachProviderError
+
+    class Fake:
+        model = None
+
+        def __init__(self, name, fail=None):
+            self.name, self.fail = name, fail
+
+        def generate(self, st, knowledge=None):
+            if self.fail:
+                raise CoachProviderError(self.fail)
+            return {"summary": self.name, "insights": [], "training": [], "caveats": []}
+
+    monkeypatch.delenv("RALLYIQ_COACH_PROVIDER", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert auto_chain() == ["ollama"]
+    k = knowledge_context(stats, NOTES)
+    try:
+        register_provider("ollama", lambda: Fake("ollama"))
+        assert generate_coach_report(stats, knowledge=k).provider == "ollama"
+
+        register_provider("ollama", lambda: Fake("ollama", fail="连不上"))
+        rep = generate_coach_report(stats, knowledge=k)
+        assert rep.provider == "offline" and "本地模型不可用：连不上" in rep.fallback_reason
+        assert any(t.sources for t in rep.training)  # offline advice still cites notes
+
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+        register_provider("anthropic", lambda: Fake("anthropic"))
+        rep = generate_coach_report(stats, knowledge=k)
+        assert rep.provider == "anthropic" and "本地模型" in rep.fallback_reason
+        rep = generate_coach_report(stats, "auto", knowledge=k)
+        assert rep.provider == "anthropic"
+    finally:
+        from rallyiq.report.coach import AnthropicProvider, OllamaProvider
+
+        register_provider("ollama", OllamaProvider)
+        register_provider("anthropic", AnthropicProvider)

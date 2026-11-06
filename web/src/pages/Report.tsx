@@ -101,12 +101,16 @@ export function Report({ videoId }: { videoId: string }) {
           )}
           <span className="spacer" />
           <button className="primary" disabled={generating} onClick={() => void generate()}>
-            {generating ? "生成中…（可能需要一分钟）" : coach ? "重新生成" : "生成 AI 点评"}
+            {generating ? "生成中…（本地模型可能需要几分钟）" : coach ? "重新生成" : "生成 AI 点评"}
           </button>
         </div>
         {coachError && <div className="error">生成失败：{coachError}</div>}
         {report.coach_stale && <div className="notice warn">这份点评生成后数据又有修正（例如改了击球者或胜负），内容可能已过时，建议重新生成。</div>}
-        {coach?.fallback_reason && <div className="notice">未使用 Claude，改用离线规则模板：{coach.fallback_reason}</div>}
+        {coach?.fallback_reason && (
+          <div className="notice">
+            {coach.provider === "offline" ? "AI 模型不可用，改用离线规则模板" : `已改用 ${coach.provider}`}：{coach.fallback_reason}
+          </div>
+        )}
         {coach ? (
           <CoachView coach={coach} idx={idx} onJump={jump} />
         ) : (
