@@ -1,0 +1,101 @@
+{
+  "id": "zhengsiwei-bili-BV1AcL9zjE4Z",
+  "coach": "郑思维 (Zheng Siwei)",
+  "platform": "bilibili",
+  "channel": "郑思维 (space.bilibili.com/383058245)",
+  "url": "https://www.bilibili.com/video/BV1AcL9zjE4Z/",
+  "title": "羽球思维第五十七期🏸几种防守摆脱线路",
+  "series": "羽球思维 第57期",
+  "published": "2025-04-26",
+  "duration_s": 63,
+  "language": "zh",
+  "transcript_source": "bilibili_ai_subtitles",
+  "level": "intermediate",
+  "topic": "几种防守摆脱线路展示：左右半区抽直线后挡直线、分对角、弹挑直线/对角",
+  "strokes": [
+    "drive",
+    "defense",
+    "net_shot",
+    "lift"
+  ],
+  "aspects": [
+    "tactics"
+  ],
+  "summary": "约 1 分钟的线路展示：防守时不要只会硬顶被连贯杀死。左半区：抽直线后挡直线、抽直线后分对角、抽直线后弹挑直线、抽直线后弹挑对角；右半区：抽直线后弹挑直线、弹挑对角、挡直线、分对角。可照着练习。",
+  "key_points": [
+    "防守不要只会硬顶。",
+    "先抽直线，再根据情况变化第二拍。",
+    "第二拍可选：挡直线、分对角、弹挑直线、弹挑对角。",
+    "左右半区都要练这些组合。"
+  ],
+  "common_mistakes": [
+    "被杀时只会硬顶，被连贯杀死。"
+  ],
+  "drills": [
+    {
+      "name": "抽直线+变化",
+      "how": "同伴连续杀，防守者第一拍抽直线，第二拍依次练挡直线、分对角、弹挑直线、弹挑对角，左右半区各练一遍。"
+    }
+  ],
+  "coach_cues": [
+    "先抽直线",
+    "第二拍变线"
+  ],
+  "related_metrics": [
+    "{pid}.shot_types",
+    "{pid}.hit.zones"
+  ],
+  "content_caveats": "约 1 分钟的展示视频，没有动作讲解；正文补充部分已标明。字幕中“鲁班区”“弹涛Z9”为 AI 误识别。",
+  "shots": [
+    {
+      "name_zh": "防守抽直线",
+      "stroke": "drive",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "抽后挡直线网前",
+      "stroke": "net_shot",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "抽后分对角",
+      "stroke": "defense",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "cross"
+    },
+    {
+      "name_zh": "抽后弹挑直线",
+      "stroke": "lift",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "抽后弹挑对角",
+      "stroke": "lift",
+      "hand": "forehand",
+      "zone": "mid",
+      "direction": "cross"
+    }
+  ],
+  "footwork": [],
+  "technique_breakdown": {},
+  "when_to_use": [
+    "双打防守被连续进攻时"
+  ],
+  "corrections": [],
+  "progression": [
+    "左半区四种组合",
+    "右半区四种组合",
+    "随机组合"
+  ],
+  "self_check": [
+    "我被杀时会几种第二拍的变化？"
+  ],
+  "detailed_description": "这一期很短，大约一分钟，是一组防守摆脱线路的展示。郑思维开头问：你是不是在防守的时候，对方杀你，你只会硬顶，最后被对方连贯杀死？今天分享一些摆脱线路，大家可以照着练。画面中依次示范并配字幕：左半区抽直线、挡直线；左半区抽直线、分对角；左半区抽直线、弹挑直线；左半区抽直线、弹挑对角；右半区抽直线、弹挑直线；右半区抽直线、弹挑对角；右半区抽直线、挡直线；右半区抽直线、分对角。视频没有对每种线路的动作要领做讲解，相关技术可参考其他期：第二十八期反手挡网、第二十九期左场区摆脱对角、第三十三期和第五十一期分对角、第七十二期平抽挡卸力反击等。（以下补充说明不是视频原话，是整理者为便于教学模型理解而加的通用解释。）这些组合的共同结构是“第一拍抽直线稳住，第二拍改变线路或节奏”。抽直线是最自然、最稳的防守回球，对方往往会连续压同一线路；第二拍变成挡网会迫使对方上网起球，分对角会调动对方横向移动，弹挑直线或对角则是把球打高打深，给自己重新组织防守的时间。教学时可以把这一期作为防守线路的清单，帮助用户意识到防守也有主动选择，并按左右半区分别练习。"
+}
