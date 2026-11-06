@@ -94,3 +94,41 @@ def test_public_diag_finds_time_shift_and_flipped_court(tmp_path):
     assert c["as is"] > 100 and c["180°"] == 0.0 and c["share_ok_any_sym"] == 1.0
     h = D.hits(doc, pred)
     assert h["gt"] == len([x for x in doc["hits"]]) and h["missed"] == h["gt"] - h["tp_any_side"]
+
+
+def test_events_tune_scores_saved_artifacts(tmp_path, monkeypatch):
+    import json
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+    import events_tune as T
+    from evaluation import schema
+    from rallyiq.contracts import VideoMeta
+    from rallyiq.pipeline import demo
+
+    meta = VideoMeta(video_id="v1", filename="a.mp4", fps=30, frame_count=1800, width=1280, height=720,
+                     duration_ms=60000)
+    cal = demo.demo_calibration(meta)
+    players = demo.demo_players(meta, cal)
+    shuttle = demo.demo_shuttle(meta, players)
+    events = demo.demo_events(meta, players)
+    art = tmp_path / "data" / "videos" / "v1" / "artifacts"
+    art.mkdir(parents=True)
+    for name, m in (("probe", meta), ("players", players), ("shuttle", shuttle)):
+        (art / f"{name}.json").write_text(m.model_dump_json())
+    off = 10_000
+    t = lambda f: int(round(off + f * 1000 / 30))  # noqa: E731
+    label = schema.empty_doc("c1", "label", 1280, 720, 30.0, (off, off + 60000))
+    label["status"] = "reviewed"
+    label["hits"] = [{"t_ms": t(s.frame), "side": None, "player": None} for s in events.shots]
+    label["rallies"] = [{"start_ms": t(r.start_frame), "end_ms": t(r.end_frame)} for r in events.rallies]
+    (tmp_path / "labels").mkdir()
+    schema.save(schema.validate(label), tmp_path / "labels" / "c1.json")
+    (tmp_path / "preds").mkdir()
+    (tmp_path / "preds" / "c1.json").write_text(json.dumps({"source_video_id": "v1", "range_ms": [off, off + 60000]}))
+
+    (clip,) = T.load_clips(tmp_path)
+    s = T.score([clip], T.EventsConfig())
+    assert 0.0 <= s["hit_f1"] <= 1.0 and s["objective"] >= s["hit_f1"]
+    monkeypatch.setattr(T, "GRID", {"min_hit_gap_ms": [200.0, 400.0]})
+    cfg, best = T.descend([clip], passes=1, log=False)
+    assert best["objective"] >= s["objective"]
