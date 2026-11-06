@@ -1,10 +1,10 @@
 """AI coach: pluggable providers turn ``MatchStats`` into grounded Chinese comments.
 
 Provider selection: explicit ``provider`` argument, else ``RALLYIQ_COACH_PROVIDER``,
-else ``anthropic``. If the default provider fails (not installed, no credentials,
-API error) the rule-based ``offline`` provider is used and the reason is recorded in
-``CoachReport.fallback_reason``. An explicitly requested provider that fails raises
-``CoachUnavailable`` instead.
+else ``auto``: the local, free ``ollama`` model first, then ``anthropic`` (Claude) only
+when ``ANTHROPIC_API_KEY`` is set, then the rule-based ``offline`` provider. Whenever
+the default choice falls back, the reasons are recorded in ``CoachReport.fallback_reason``.
+An explicitly requested provider that fails raises ``CoachUnavailable`` instead.
 """
 
 from __future__ import annotations
@@ -25,11 +25,22 @@ from .base import (
 )
 from .grounding import ground_insights, ground_training
 from .offline import OfflineProvider
+from .ollama_provider import OllamaProvider
 
 register_provider("anthropic", AnthropicProvider)
 register_provider("offline", OfflineProvider)
+register_provider("ollama", OllamaProvider)
 
-DEFAULT_PROVIDER = "anthropic"
+DEFAULT_PROVIDER = "auto"
+_NAMES = {"ollama": "本地模型", "anthropic": "Claude", "offline": "离线模板"}
+
+
+def auto_chain() -> list[str]:
+    """Providers ``auto`` tries, in order (``offline`` is always the last resort)."""
+    chain = ["ollama"]
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        chain.append("anthropic")
+    return chain
 
 
 class CoachUnavailable(RuntimeError):
@@ -72,19 +83,25 @@ def generate_coach_report(stats: MatchStats, provider: str | None = None,
     retrieved for them (``advice.knowledge_context``)."""
     explicit = provider is not None
     name = provider or default_provider_name()
-    try:
-        p = make_provider(name)
-    except KeyError as e:
-        raise CoachUnavailable(f"未知的点评提供方：{name}（可用：{', '.join(list_providers())}）") from e
     if knowledge is None:
         knowledge = knowledge_context(stats)
-    try:
-        return build_report(_generate(p, stats, knowledge), stats, p, knowledge=knowledge)
-    except CoachProviderError as e:
-        if explicit or name == "offline":
-            raise CoachUnavailable(str(e)) from e
-        off = OfflineProvider()
-        return build_report(_generate(off, stats, knowledge), stats, off, fallback_reason=str(e), knowledge=knowledge)
+    chain = auto_chain() if name == "auto" else [name]
+    errors: list[str] = []
+    for n in chain:
+        try:
+            p = make_provider(n)
+        except KeyError as e:
+            raise CoachUnavailable(f"未知的点评提供方：{n}（可用：auto, {', '.join(list_providers())}）") from e
+        try:
+            return build_report(_generate(p, stats, knowledge), stats, p, knowledge=knowledge,
+                                fallback_reason="；".join(errors) or None)
+        except CoachProviderError as e:
+            if explicit and name != "auto" or n == "offline":
+                raise CoachUnavailable(str(e)) from e
+            errors.append(f"{_NAMES.get(n, n)}不可用：{e}" if name == "auto" else str(e))
+    off = OfflineProvider()
+    return build_report(_generate(off, stats, knowledge), stats, off, fallback_reason="；".join(errors) or None,
+                        knowledge=knowledge)
 
 
 __all__ = [
@@ -94,6 +111,8 @@ __all__ = [
     "CoachUnavailable",
     "Knowledge",
     "OfflineProvider",
+    "OllamaProvider",
+    "auto_chain",
     "build_report",
     "default_provider_name",
     "generate_coach_report",

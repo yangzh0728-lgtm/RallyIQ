@@ -31,9 +31,16 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 
 - Provider 协议：`generate(stats, knowledge=None) -> dict`（符合 `prompt.OUTPUT_SCHEMA`），失败抛 `CoachProviderError`。
   用 `register_provider(name, factory)` 注册新的提供方。
-- `anthropic`（默认）：Claude API，`claude-opus-5-5`，adaptive thinking，结构化 JSON 输出，启用服务端 fallback。
-  环境变量：`RALLYIQ_COACH_PROVIDER`、`RALLYIQ_COACH_MODEL`、`RALLYIQ_COACH_EFFORT`（默认 `high`）。
+- 默认 `auto`：先用**本地免费模型** `ollama`，不可用时如果设置了 `ANTHROPIC_API_KEY` 再用 `anthropic`，最后用 `offline`；改用了哪个、为什么，写在 `fallback_reason`。
+- `ollama`：本机 Ollama 运行的开源模型，默认 `qwen2.5:7b`（中文好、JSON 稳定，约 5 GB 内存），数据不出本机、不花钱。
+  安装：`brew install ollama`，`ollama serve`，`ollama pull qwen2.5:7b`。
+  环境变量：`RALLYIQ_OLLAMA_URL`（默认 `http://localhost:11434`）、`RALLYIQ_OLLAMA_MODEL`、`RALLYIQ_OLLAMA_CTX`（默认 32768）、
+  `RALLYIQ_OLLAMA_TIMEOUT`（秒，默认 900）、`RALLYIQ_OLLAMA_KEEP_ALIVE`（生成后模型在内存里留多久，默认 `5m`）。
+  内存紧张可换 `qwen2.5:3b`；内存充足可换 `qwen2.5:14b` 或 `qwen3:8b`。
+- `anthropic`（可选）：Claude API，`claude-opus-5-5`，adaptive thinking，结构化 JSON 输出，启用服务端 fallback。
+  环境变量：`RALLYIQ_COACH_MODEL`、`RALLYIQ_COACH_EFFORT`（默认 `high`）。
   需要 `pip install -e '.[coach]'` 和 `ANTHROPIC_API_KEY`（或 `ant auth login`）。
+- `RALLYIQ_COACH_PROVIDER` 可固定为 `ollama` / `anthropic` / `offline`（失败时仍回退到离线模板）。
 - `offline`：规则模板，只说能直接从指标读出的结论。默认提供方不可用时自动回退，并在报告中写明原因。
 - **防编造校验**（`grounding.py`）：引用不存在的指标会被去掉，没有有效依据的观点被删除；观点可信度不高于所引用指标中最低的一个；
   文中数字必须能在所引用的数据中找到（允许四舍五入），否则标记“含未核实数字”。
