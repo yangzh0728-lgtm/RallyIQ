@@ -273,3 +273,23 @@ def test_stage_without_model_returns_empty_tracks(tmp_path, monkeypatch):
     ctx = StageContext(video_id="v", video_path=tmp_path / "v.mp4", work_dir=tmp_path, store=NoStore(), meta=meta)
     out = stage.run(ctx)
     assert out.frames == [] and out.model is None
+
+
+def test_coreml_rejects_empty_frame_falls_back_to_cpu():
+    from rallyiq.perception.players.pose import CpuFallbackSession
+
+    class Rejects:
+        def run(self, names, feed):
+            raise RuntimeError("Input (onnx__Mul_1229) has a dynamic shape ({-1}) but the runtime shape ({0})")
+
+        def get_inputs(self):
+            return ["input"]
+
+    class Cpu:
+        def run(self, names, feed):
+            return ["cpu"]
+
+    made = []
+    s = CpuFallbackSession(Rejects(), lambda: made.append(1) or Cpu())
+    assert s.run(None, {}) == ["cpu"] and s.run(None, {}) == ["cpu"]
+    assert s.fallbacks == 2 and made == [1] and s.get_inputs() == ["input"]

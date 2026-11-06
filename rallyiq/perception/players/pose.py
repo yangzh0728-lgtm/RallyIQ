@@ -55,9 +55,6 @@ def merge_detections(dets: list[PersonDetection], iou_thr: float = 0.5) -> list[
     return keep
 
 
-_PICKED: dict[tuple[str, str], str] = {}
-
-
 def _coreml_options() -> dict[str, str]:
     """CoreML as an ML Program: the old NeuralNetwork format only took 195 of RTMO's
     656 nodes (2026-11-06) and ran no faster than the CPU. The compiled model is
@@ -83,26 +80,43 @@ def _session(ort, model_path: str, kind: str):
     return ort.InferenceSession(model_path, so, providers=["CPUExecutionProvider"])
 
 
-def _time_session(sess, input_size: tuple[int, int], runs: int = 4) -> float:
-    import time
+class CpuFallbackSession:
+    """CoreML session that hands a frame to the CPU when CoreML rejects it.
 
-    w, h = input_size
-    blob = np.full((1, 3, h, w), 114, np.float32)
-    name = sess.get_inputs()[0].name
-    sess.run(None, {name: blob})  # warm-up (CoreML compiles here)
-    t = time.perf_counter()
-    for _ in range(runs):
-        sess.run(None, {name: blob})
-    return (time.perf_counter() - t) / runs
+    RTMO has a dynamic-length tensor of person candidates; CoreML (ML Program)
+    refuses it when the length is 0, i.e. on frames with nobody in them (blank
+    frames, some crops of the far-court pass). Those frames run on the CPU, which
+    gives the same result (keypoints agree to < 0.01 px on real frames).
+    """
+
+    def __init__(self, primary, make_cpu):
+        self.primary = primary
+        self._make_cpu = make_cpu
+        self._cpu = None
+        self.fallbacks = 0
+
+    def get_inputs(self):
+        return self.primary.get_inputs()
+
+    def get_providers(self):
+        return self.primary.get_providers()
+
+    def run(self, output_names, feed):
+        try:
+            return self.primary.run(output_names, feed)
+        except Exception:  # noqa: BLE001 - onnxruntime raises a generic RuntimeException
+            if self._cpu is None:
+                self._cpu = self._make_cpu()
+            self.fallbacks += 1
+            return self._cpu.run(output_names, feed)
 
 
 def pick_session(model_path: str, input_size: tuple[int, int] = (640, 640)):
-    """onnxruntime session on the fastest backend for this machine.
+    """onnxruntime session on the best backend for this machine.
 
     ``RALLYIQ_POSE_PROVIDER``: ``auto`` (default), ``coreml``, ``cuda`` or ``cpu``.
-    ``auto`` uses CUDA when present; on a Mac it times CoreML against the CPU on a
-    few blank frames and keeps the faster one (CoreML can lose when it only takes
-    part of the graph). The choice is remembered for the process.
+    ``auto`` prefers CUDA, then CoreML as an ML Program (with a per-frame CPU
+    fallback, see ``CpuFallbackSession``), then the CPU.
     """
     import logging
 
@@ -111,34 +125,22 @@ def pick_session(model_path: str, input_size: tuple[int, int] = (640, 640)):
     log = logging.getLogger(__name__)
     want = os.environ.get("RALLYIQ_POSE_PROVIDER", "auto").lower()
     avail = ort.get_available_providers()
+    if want == "auto":
+        want = ("cuda" if "CUDAExecutionProvider" in avail
+                else "coreml" if "CoreMLExecutionProvider" in avail else "cpu")
     needs = {"coreml": "CoreMLExecutionProvider", "cuda": "CUDAExecutionProvider"}
-    if want in ("cpu", "coreml", "cuda"):
-        kind = want if want == "cpu" or needs[want] in avail else "cpu"
-        sess = _session(ort, model_path, kind)
-        return sess, sess.get_providers()[0]
-    if "CUDAExecutionProvider" in avail:
-        sess = _session(ort, model_path, "cuda")
-        return sess, sess.get_providers()[0]
-    if "CoreMLExecutionProvider" not in avail:
-        sess = _session(ort, model_path, "cpu")
-        return sess, sess.get_providers()[0]
-    key = (os.path.abspath(model_path), "auto")
-    if key in _PICKED:
-        sess = _session(ort, model_path, _PICKED[key])
-        return sess, sess.get_providers()[0]
-    cpu = _session(ort, model_path, "cpu")
-    t_cpu = _time_session(cpu, input_size)
-    try:
-        coreml = _session(ort, model_path, "coreml")
-        t_cml = _time_session(coreml, input_size)
-    except Exception as e:  # noqa: BLE001 - CoreML conversion can fail on some graphs
-        log.warning("pose: CoreML unavailable (%s); using the CPU", e)
-        _PICKED[key] = "cpu"
-        return cpu, "CPUExecutionProvider"
-    kind = "coreml" if t_cml < 0.9 * t_cpu else "cpu"
-    log.info("pose: CPU %.0f ms/frame, CoreML %.0f ms/frame -> %s", 1000 * t_cpu, 1000 * t_cml, kind)
-    _PICKED[key] = kind
-    return (coreml, "CoreMLExecutionProvider") if kind == "coreml" else (cpu, "CPUExecutionProvider")
+    if want not in ("cpu", "coreml", "cuda") or (want != "cpu" and needs[want] not in avail):
+        want = "cpu"
+    if want == "coreml":
+        try:
+            sess = CpuFallbackSession(_session(ort, model_path, "coreml"),
+                                      lambda: _session(ort, model_path, "cpu"))
+            return sess, "CoreMLExecutionProvider"
+        except Exception as e:  # noqa: BLE001 - CoreML conversion can fail on some graphs
+            log.warning("pose: CoreML unavailable (%s); using the CPU", e)
+            want = "cpu"
+    sess = _session(ort, model_path, want)
+    return sess, sess.get_providers()[0]
 
 
 class RTMOOnnx:
