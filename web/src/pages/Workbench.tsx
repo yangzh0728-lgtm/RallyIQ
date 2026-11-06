@@ -3,6 +3,7 @@ import { CorrectionPanel, StatusPill } from "../components/CorrectionPanel";
 import { HeatmapPanel } from "../components/HeatmapPanel";
 import { JobDetail, useJob } from "../components/JobProgress";
 import { MiniMap } from "../components/MiniMap";
+import { QualityPanel } from "../components/QualityPanel";
 import { StrokePanel } from "../components/StrokePanel";
 import { Timeline } from "../components/Timeline";
 import { VideoStage } from "../components/VideoStage";
@@ -284,6 +285,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
             </>
           )}
         </div>
+        <QualityPanel videoId={video.video_id} />
         <HeatmapPanel overlay={overlay} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} courtStatus={court?.status} />
         <StrokePanel shots={events.shots} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} clock={clock} />
       </aside>

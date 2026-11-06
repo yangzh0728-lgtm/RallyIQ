@@ -46,8 +46,10 @@ from ..contracts import (
     MatchReport,
     MatchStats,
     Video,
+    VideoQuality,
 )
 from ..contracts.geometry import COURT_CORNERS_M, homography_from_corners
+from ..ingest import quality_for
 from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
 from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
@@ -317,6 +319,17 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
                     n += 1
         return HeatmapData(video_id=video_id, player_id=player_id, team=team, cell_m=cell_m, nx=nx, ny=ny,
                            counts=grid.tolist(), samples=n)
+
+    # --------------------------------------------------------------- quality
+
+    @app.get("/api/videos/{video_id}/quality", response_model=VideoQuality)
+    def video_quality(video_id: str) -> VideoQuality:
+        """Input assessment: camera view, frame rate, picture, visibility, and per-output reliability."""
+        video_or_404(video_id)
+        q = quality_for(store, video_id)
+        if q is None:
+            raise HTTPException(404, "video not probed yet")
+        return q
 
     # ---------------------------------------------------------------- report
 

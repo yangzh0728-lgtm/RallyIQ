@@ -1,8 +1,9 @@
 import { applyCorrections } from "./corrections";
 import { boundaryLinesM, CORNERS_M, homographyFrom4, projectCourtLines, projectLines } from "./court";
 import { generateMock, type MockAnalysis } from "./mock";
+import { mockQuality } from "./quality";
 import { mockCoach, mockStats } from "./report";
-import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video } from "./types";
+import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality } from "./types";
 
 /** Per-video singles/doubles choice; "auto" lets the players stage decide. */
 export type MatchFormatSetting = "auto" | "singles" | "doubles";
@@ -36,6 +37,8 @@ export interface Api {
   generateCoach(videoId: string, provider?: string | null): Promise<CoachReport>;
   /** Report download URL, or null if the client renders it (mock). */
   reportExportUrl(videoId: string, format: "md" | "json"): string | null;
+  /** Input assessment: camera view, picture, visibility and how far each output can be trusted. */
+  getQuality(videoId: string): Promise<VideoQuality>;
 }
 
 // ---------------------------------------------------------------- live (FastAPI, rallyiq/api/app.py)
@@ -106,6 +109,7 @@ export const liveApi: Api = {
   generateCoach: (id, provider) =>
     http<CoachReport>(`/videos/${enc(id)}/report/coach`, { method: "POST", body: JSON.stringify({ provider: provider ?? null }) }),
   reportExportUrl: (id, format) => `${BASE}/videos/${enc(id)}/report/export?format=${format}`,
+  getQuality: (id) => http<VideoQuality>(`/videos/${enc(id)}/quality`),
 };
 
 // ---------------------------------------------------------------- mock (?mock)
@@ -302,6 +306,10 @@ export function createMockApi(): Api {
       return delay(c, 600);
     },
     reportExportUrl: () => null,
+    async getQuality(id) {
+      must(id);
+      return delay(mockQuality(analysis(id).overlay));
+    },
   };
 }
 

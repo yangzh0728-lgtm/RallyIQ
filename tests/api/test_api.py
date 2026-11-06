@@ -58,6 +58,14 @@ def test_upload_analyze_and_read_results(client, sample_video):
     hm = client.get(f"/api/videos/{vid}/heatmap", params={"player_id": "P1"}).json()
     assert hm["samples"] == 360 and sum(map(sum, hm["counts"])) == 360
 
+    q = client.get(f"/api/videos/{vid}/quality").json()
+    assert q["camera_view"] in ("end_center", "end_oblique", "side", "unknown")
+    keys = {c["key"] for c in q["checks"]}
+    assert {"fps", "resolution", "calibration"} <= keys
+    assert {c["capability"] for c in q["capabilities"]} == {"court_metrics", "players", "shuttle", "rallies", "hits"}
+    assert next(c for c in q["capabilities"] if c["capability"] == "hits")["status"] != "ok"
+    assert client.get(f"/api/videos/{vid}/quality").json()["fingerprint"] == q["fingerprint"]  # cached
+
 
 def test_corrections_layer_on_raw_events(client, sample_video):
     v = upload(client, sample_video)

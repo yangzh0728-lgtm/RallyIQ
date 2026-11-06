@@ -607,3 +607,48 @@ class MatchReport(Contract):
     coach_stale: bool = Field(default=False, description="coach was generated from different stats (e.g. before new corrections)")
 
 CalibrationSegment.model_rebuild()
+
+
+# ------------------------------------------------------------------ input quality
+
+
+CameraView = Literal["end_center", "end_oblique", "side", "unknown"]
+CameraHeight = Literal["high", "medium", "low", "unknown"]
+Capability = Literal["court_metrics", "players", "shuttle", "rallies", "hits"]
+
+
+class QualityCheck(Contract):
+    """One measured property of the input video (frame rate, camera view, blur, ...)."""
+
+    key: str = Field(description="stable key, e.g. 'fps', 'camera_view', 'far_player_rate'")
+    label: str = Field(description="Chinese display label")
+    value: str | None = Field(description="human-readable value; null if it could not be measured")
+    score: float | None = Field(default=None, description="raw number behind ``value``, when there is one")
+    status: Status
+    note: str | None = None
+
+
+class CapabilityReliability(Contract):
+    """How far one kind of output can be trusted on this particular video."""
+
+    capability: Capability
+    label: str
+    status: Status
+    reasons: list[str] = Field(default_factory=list, description="check keys / plain reasons behind the status")
+
+
+class VideoQuality(Contract):
+    """``GET /api/videos/{id}/quality``: input assessment derived from the probe and stage outputs.
+
+    Says what kind of footage this is and, per output, whether it is usable,
+    needs review, or cannot be determined here. Never blocks analysis.
+    """
+
+    schema_version: str = SCHEMA_VERSION
+    video_id: str
+    fingerprint: str = Field(description="changes when the inputs (artifacts) change")
+    camera_view: CameraView = "unknown"
+    camera_height: CameraHeight = "unknown"
+    checks: list[QualityCheck]
+    capabilities: list[CapabilityReliability]
+    summary: str

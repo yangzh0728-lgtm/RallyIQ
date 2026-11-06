@@ -13,6 +13,7 @@ from pathlib import Path
 
 from rallyiq import contracts as c
 from rallyiq.api.corrections import apply_corrections
+from rallyiq.ingest import assess_quality
 from rallyiq.contracts.geometry import project_boundary_lines, project_court_lines
 from rallyiq.pipeline import demo
 from rallyiq.pipeline.overlay import COCO17_SKELETON
@@ -28,6 +29,7 @@ SCHEMAS = [
     c.CorrectionIn, c.Correction, c.OverlayData, c.OverlayFrame, c.Job, c.Video, c.HeatmapData,
     c.MatchFormatSetting,
     c.MatchStats, c.CoachReport, c.MatchReport,
+    c.VideoQuality,
 ]
 
 
@@ -87,6 +89,8 @@ def examples() -> dict[str, object]:
     report = c.MatchReport(stats=stats, coach=coach)
     return {
         "match_report": report,
+        "quality": assess_quality(long_meta, demo.demo_calibration(long_meta), players, shuttle, events,
+                                  {"brightness": 118.0, "sharpness": 240.0, "frames": 12}, fingerprint_inputs="example"),
         "players_doubles": doubles.model_copy(update={"frames": doubles.frames[30:31]}),
         "events_doubles": doubles_events.model_copy(update={
             "rallies": doubles_events.rallies[:1], "shots": [s for s in doubles_events.shots if s.rally_id == "r001"]}),
