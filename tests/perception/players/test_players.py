@@ -204,3 +204,41 @@ def test_fill_short_gaps_respects_limit():
     assert frames[1].players[0].interpolated
     assert frames[1].players[0].foot_court[0] == pytest.approx(1.0)
     assert all(len(f.players) == 0 for f in frames[4:20])
+
+
+# -- contract adapter -------------------------------------------------------------
+
+def test_stage_output_matches_contract_and_reports_side_switch():
+    from rallyiq.contracts import PlayerTracks
+    from rallyiq.perception.players.stage import build_tracks
+
+    # Change of ends while still in view: P1 walks near -> far, P2 far -> near.
+    ys = np.linspace(2.5, 10.5, 61)
+    per_frame = [[person_at_court(1.5, y), person_at_court(4.5, 13.0 - y)] for y in ys]
+    results = track_players(_frames(len(per_frame)), FakeEstimator(per_frame), lambda f: H_IMG_TO_COURT)
+    tracks = build_tracks("vid", results, "test")
+    again = PlayerTracks.model_validate_json(tracks.model_dump_json())
+    assert again.frames[0].players[0].player_id == "P1"
+    assert len(again.frames[0].players[0].keypoints) == 17
+    assert again.frames[0].players[0].foot_court is not None
+    expected = int(np.argmax(ys >= 6.7))
+    assert tracks.side_switches == [expected]
+    assert {p.player_id for p in again.frames[-1].players if p.side == "far"} == {"P1"}
+
+
+def test_stage_without_model_returns_empty_tracks(tmp_path, monkeypatch):
+    from rallyiq.contracts import VideoMeta
+    from rallyiq.perception.players import stage
+    from rallyiq.pipeline.context import StageContext
+
+    monkeypatch.delenv("RALLYIQ_POSE_MODEL", raising=False)
+    monkeypatch.delenv("RALLYIQ_DEMO", raising=False)
+
+    class NoStore:
+        def load_artifact(self, *a):
+            return None
+
+    meta = VideoMeta(video_id="v", filename="v.mp4", fps=30, frame_count=10, width=640, height=360, duration_ms=333)
+    ctx = StageContext(video_id="v", video_path=tmp_path / "v.mp4", work_dir=tmp_path, store=NoStore(), meta=meta)
+    out = stage.run(ctx)
+    assert out.frames == [] and out.model is None

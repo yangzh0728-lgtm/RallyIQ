@@ -33,7 +33,11 @@
 
 ## 使用
 
+流水线中由 `stage.py` 的 `run(ctx)` 调用，输出共享契约 `PlayerTracks`（含 `side_switches` 换边帧）。
+未配置模型时返回空轨迹，其余阶段照常运行。单独运行：
+
 ```bash
+pip install -e '.[players]'
 # 模型文件放在 weights/（已在 .gitignore 中），只需下载一次
 export RALLYIQ_POSE_MODEL=weights/rtmo-s_body7-640x640.onnx
 python -m rallyiq.perception.players match.mp4 --homography H.json --out players.json

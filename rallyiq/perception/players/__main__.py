@@ -10,14 +10,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
 import numpy as np
 
-from .export import tracks_to_dict
 from .pose import RTMOOnnx
 from .runner import PlayerTrackingConfig, iter_video, track_players, video_fps
+from .stage import MODEL_NAME, build_tracks
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -38,10 +39,12 @@ def main(argv: list[str] | None = None) -> None:
     cfg = PlayerTrackingConfig(stride=args.stride)
     cfg.tracker.fps = video_fps(args.video)
     est = RTMOOnnx(args.model, tile_far_half=args.far_boost)
+    est_path = args.model or os.environ.get("RALLYIQ_POSE_MODEL", "")
     t0 = time.time()
     results = track_players(iter_video(args.video, args.stride), est, (lambda f: H) if H is not None else None, cfg)
     dt = time.time() - t0
-    Path(args.out).write_text(json.dumps(tracks_to_dict(results, Path(args.video).stem)))
+    tracks = build_tracks(Path(args.video).stem, results, f"{MODEL_NAME}:{Path(est_path).name}")
+    Path(args.out).write_text(tracks.model_dump_json())
     n = len(results)
     seen = sum(len(r.players) for r in results)
     print(f"{n} frames in {dt:.1f}s ({n / max(dt, 1e-6):.1f} fps); {seen / max(n, 1):.2f} players/frame -> {args.out}")

@@ -18,6 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 # Perception modules add their own heavy deps (torch, opencv, ...) here.
 vision = ["opencv-python>=4.9"]
+players = ["opencv-python>=4.9", "onnxruntime>=1.17"]
 dev = ["pytest>=8", "httpx>=0.27"]
 
 [tool.setuptools.packages.find]

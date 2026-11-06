@@ -12,15 +12,10 @@ nearer the camera, net at y=6.70.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
 
 import numpy as np
 
-COURT_WIDTH_M = 6.10
-COURT_LENGTH_M = 13.40
-NET_Y_M = COURT_LENGTH_M / 2
-
-Side = Literal["near", "far"]
+from ...contracts.models import COURT_LENGTH_M, COURT_WIDTH_M, NET_Y_M, Side  # noqa: F401
 
 # COCO-17 keypoint order.
 COCO17 = (
