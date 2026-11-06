@@ -66,7 +66,7 @@ LONG_RALLY_MIN = 7
 SHOT_TYPE_LABELS = {
     "serve": "发球", "short_serve": "发短球", "long_serve": "发高远球", "clear": "高远球", "smash": "杀球",
     "drop": "吊球", "net": "网前球", "net_shot": "网前球", "lift": "挑球", "drive": "平抽", "push": "推球",
-    "block": "挡网", "kill": "扑球", "defense": "防守", "unknown": "未识别",
+    "block": "挡网", "cross_net": "勾对角", "net_kill": "扑球", "kill": "扑球", "defense": "防守", "unknown": "未识别",
 }
 UNCLASSIFIED = "未分类"
 
@@ -335,6 +335,14 @@ def _player_stats(pid: str, events: EventsResult, rallies_by_id: dict[str, Rally
     m.append(_metric(f"{pid}.win.lost_own_last_shot_pct", "失分回合中最后一拍由本人击出的比例",
                      _pct(sum(first_last(r)[1].hitter == pid for r in lost_last), len(lost_last)), "%",
                      len(lost_last), 10, 4, note="高通常意味着本人失误（下网/出界）较多；近似判断"))
+    # which of my shots ended the rallies I lost (stroke-specific error signal for the coach)
+    lost_types = Counter(SHOT_TYPE_LABELS.get(fl[1].shot_type, fl[1].shot_type) if fl[1].shot_type else UNCLASSIFIED
+                         for r in lost_last if (fl := first_last(r))[1].hitter == pid)
+    lt = _dist(f"{pid}.lost.last_shot_types", "失分回合中本人最后一拍的击球类型", dict(lost_types.most_common()), 12, 4,
+               note="近似看作失误或被压制的那一拍；落点未识别")
+    if not any(k != UNCLASSIFIED for k in lost_types):
+        lt = lt.model_copy(update={"status": "undeterminable", "confidence": "low"})
+    d.append(lt)
     return PlayerStats(player_id=pid, metrics=m, distributions=d)
 
 

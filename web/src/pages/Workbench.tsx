@@ -3,6 +3,8 @@ import { CorrectionPanel, StatusPill } from "../components/CorrectionPanel";
 import { HeatmapPanel } from "../components/HeatmapPanel";
 import { JobDetail, useJob } from "../components/JobProgress";
 import { MiniMap } from "../components/MiniMap";
+import { QualityPanel } from "../components/QualityPanel";
+import { StrokePanel } from "../components/StrokePanel";
 import { Timeline } from "../components/Timeline";
 import { VideoStage } from "../components/VideoStage";
 import { api, type MatchFormatSetting } from "../lib/api";
@@ -14,7 +16,7 @@ import { courtAt, DEFAULT_LAYERS, frameIndexAt, type Layers } from "../lib/overl
 import { colorOf, labelOf } from "../lib/players";
 import { playerIdsFor, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
 
-export function Workbench({ videoId }: { videoId: string }) {
+export function Workbench({ videoId, startMs = null }: { videoId: string; startMs?: number | null }) {
   const [video, setVideo] = useState<Video | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function Workbench({ videoId }: { videoId: string }) {
   if (!jobId) return <Centered>这个视频还没有分析任务。</Centered>;
   if (!job) return <Centered>{jobError ? `任务状态获取失败：${jobError}` : "获取任务状态…"}</Centered>;
   if (job.state !== "succeeded") return <JobDetail job={job} />;
-  return <Analysis key={job.job_id} video={video} onRerun={(j: Job) => setJobId(j.job_id)} />;
+  return <Analysis key={job.job_id} video={video} startMs={startMs} onRerun={(j: Job) => setJobId(j.job_id)} />;
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
@@ -45,7 +47,7 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => void }) {
+function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number | null; onRerun: (job: Job) => void }) {
   const [overlay, setOverlay] = useState<OverlayData | null>(null);
   const [events, setEvents] = useState<EventsResult | null>(null);
   const [corrections, setCorrections] = useState<Correction[]>([]);
@@ -72,6 +74,9 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
 
   const duration = overlay?.video.duration_ms;
   const clock = useMemo(() => (duration ? new PlaybackClock(duration) : null), [duration]);
+  useEffect(() => {
+    if (clock && startMs != null) clock.seek(Math.max(0, startMs - 1000)); // evidence links: #/videos/<id>?t=<ms>
+  }, [clock, startMs]);
   const fps = overlay?.video.fps ?? 30;
 
   const rallyNos = useMemo(() => new Map(events?.rallies.map((r, i) => [r.rally_id, i + 1]) ?? []), [events]);
@@ -211,6 +216,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
   const court = courtAt(overlay.court, firstFrame) ?? overlay.court[0];
   const reviewShots = events.shots.filter((s) => s.status === "needs_review" && s.source === "model").length;
   const reviewRallies = events.rallies.filter((r) => r.status === "needs_review" && r.source === "model").length;
+  const reviewTypes = events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status !== "ok").length;
   const toggle = (k: keyof Omit<Layers, "opacity">) => setLayers((l) => ({ ...l, [k]: !l[k] }));
   const meta = overlay.video;
 
@@ -230,6 +236,12 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           <Stat label="待复核 回合 / 击球">
             <span style={{ color: reviewShots + reviewRallies ? "var(--warn)" : undefined }}>
               {reviewRallies} / {reviewShots}
+            </span>
+          </Stat>
+          <Stat label="击球类型 待复核 / 不可判定">
+            <span style={{ color: reviewTypes ? "var(--warn)" : undefined }}>
+              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "needs_review").length} /{" "}
+              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "undeterminable").length}
             </span>
           </Stat>
           <Stat label="已做修正">{corrections.length}</Stat>
@@ -276,7 +288,9 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
             </>
           )}
         </div>
+        <QualityPanel videoId={video.video_id} />
         <HeatmapPanel overlay={overlay} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} courtStatus={court?.status} />
+        <StrokePanel shots={events.shots} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} clock={clock} />
       </aside>
 
       <section className="wb-center">
@@ -347,6 +361,18 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           <div className="row">
             <button onClick={() => void doExport("json")}>JSON（含原始预测和修正）</button>
             <button onClick={() => void doExport("csv")}>CSV（逐拍）</button>
+          </div>
+          <div className="row" style={{ marginTop: 6 }}>
+            <button
+              disabled={!rally || !api.clipUrl(video.video_id, rally.rally_id)}
+              title={api.clipUrl(video.video_id, "x") ? "导出当前回合的视频片段（前后各留 1 秒）" : "演示模式没有原视频"}
+              onClick={() => {
+                const url = rally && api.clipUrl(video.video_id, rally.rally_id);
+                if (url) window.location.href = url;
+              }}
+            >
+              {rally ? `第 ${rallyNo(rally.rally_id)} 回合片段（MP4）` : "回合片段（先播放到某个回合）"}
+            </button>
           </div>
         </div>
       </aside>

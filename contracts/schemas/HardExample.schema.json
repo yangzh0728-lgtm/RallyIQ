@@ -1,0 +1,130 @@
+{
+  "additionalProperties": false,
+  "description": "One human correction marked ``hard_example``, with the model output it fixed and the\nvideo conditions it happened under. Collected across videos to build the evaluation set.",
+  "properties": {
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "filename": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Filename"
+    },
+    "correction_id": {
+      "title": "Correction Id",
+      "type": "string"
+    },
+    "op": {
+      "title": "Op",
+      "type": "string"
+    },
+    "kind": {
+      "description": "e.g. missed_hit, false_hit, hit_timing, wrong_hitter, missed_rally, false_rally, rally_bounds, wrong_shot_type, id_swap, confirmed, label",
+      "title": "Kind",
+      "type": "string"
+    },
+    "module": {
+      "enum": [
+        "hits",
+        "rallies",
+        "players",
+        "strokes",
+        "labels"
+      ],
+      "title": "Module",
+      "type": "string"
+    },
+    "is_error": {
+      "description": "false for confirmations and plain labels (e.g. rally winner)",
+      "title": "Is Error",
+      "type": "boolean"
+    },
+    "frame": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Frame"
+    },
+    "t_ms": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "T Ms"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "the raw model item the correction refers to",
+      "title": "Model"
+    },
+    "conditions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "camera_view, camera_height, fps, resolution, ...",
+      "title": "Conditions",
+      "type": "object"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    }
+  },
+  "required": [
+    "video_id",
+    "correction_id",
+    "op",
+    "kind",
+    "module",
+    "is_error",
+    "created_at"
+  ],
+  "title": "HardExample",
+  "type": "object"
+}

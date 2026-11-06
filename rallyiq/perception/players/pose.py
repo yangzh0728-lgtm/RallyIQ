@@ -37,13 +37,27 @@ def _box_iou(a: np.ndarray, b: np.ndarray) -> float:
     return float(inter / ua) if ua > 0 else 0.0
 
 
-def _containment(a: np.ndarray, b: np.ndarray) -> float:
-    """Share of box ``a`` that lies inside box ``b``."""
+def _overlap_small(a: np.ndarray, b: np.ndarray) -> float:
+    """Intersection over the smaller box: 1 when one box sits inside the other."""
     ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
     ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
     inter = max(ix2 - ix1, 0) * max(iy2 - iy1, 0)
-    area = (a[2] - a[0]) * (a[3] - a[1])
-    return float(inter / area) if area > 0 else 0.0
+    small = min((a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1]))
+    return float(inter / small) if small > 0 else 0.0
+
+
+def same_person(a: PersonDetection, b: PersonDetection) -> bool:
+    """Two boxes of one person from different passes. A box that includes the
+    racket arm can be twice as wide as one that does not, so plain IoU misses
+    them: compare overlap of the smaller box, and the feet."""
+    if _overlap_small(a.bbox, b.bbox) > 0.6:
+        return True
+    ha, hb = a.height, b.height
+    if min(ha, hb) <= 0 or not 0.7 <= ha / hb <= 1.4:
+        return False
+    fa = np.array([(a.bbox[0] + a.bbox[2]) / 2, a.bbox[3]])
+    fb = np.array([(b.bbox[0] + b.bbox[2]) / 2, b.bbox[3]])
+    return float(np.linalg.norm(fa - fb)) < 0.25 * max(ha, hb)
 
 
 def merge_detections(dets: list[PersonDetection], iou_thr: float = 0.5) -> list[PersonDetection]:
@@ -53,6 +67,94 @@ def merge_detections(dets: list[PersonDetection], iou_thr: float = 0.5) -> list[
         if all(_box_iou(d.bbox, k.bbox) < iou_thr for k in keep):
             keep.append(d)
     return keep
+
+
+def _coreml_options() -> dict[str, str]:
+    """CoreML as an ML Program: the old NeuralNetwork format only took 195 of RTMO's
+    656 nodes (2026-11-06) and ran no faster than the CPU. The compiled model is
+    cached so later runs skip the conversion."""
+    cache = os.path.expanduser(os.environ.get("RALLYIQ_COREML_CACHE", "~/.cache/rallyiq/coreml"))
+    opts = {"ModelFormat": "MLProgram", "MLComputeUnits": os.environ.get("RALLYIQ_COREML_UNITS", "ALL")}
+    try:
+        os.makedirs(cache, exist_ok=True)
+        opts["ModelCacheDirectory"] = cache
+    except OSError:
+        pass
+    return opts
+
+
+def _session(ort, model_path: str, kind: str):
+    so = ort.SessionOptions()
+    so.log_severity_level = 3
+    if kind == "coreml":
+        return ort.InferenceSession(model_path, so, providers=[("CoreMLExecutionProvider", _coreml_options()),
+                                                                "CPUExecutionProvider"])
+    if kind == "cuda":
+        return ort.InferenceSession(model_path, so, providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+    return ort.InferenceSession(model_path, so, providers=["CPUExecutionProvider"])
+
+
+class CpuFallbackSession:
+    """CoreML session that hands a frame to the CPU when CoreML rejects it.
+
+    RTMO has a dynamic-length tensor of person candidates; CoreML (ML Program)
+    refuses it when the length is 0, i.e. on frames with nobody in them (blank
+    frames, some crops of the far-court pass). Those frames run on the CPU, which
+    gives the same result (keypoints agree to < 0.01 px on real frames).
+    """
+
+    def __init__(self, primary, make_cpu):
+        self.primary = primary
+        self._make_cpu = make_cpu
+        self._cpu = None
+        self.fallbacks = 0
+
+    def get_inputs(self):
+        return self.primary.get_inputs()
+
+    def get_providers(self):
+        return self.primary.get_providers()
+
+    def run(self, output_names, feed):
+        try:
+            return self.primary.run(output_names, feed)
+        except Exception:  # noqa: BLE001 - onnxruntime raises a generic RuntimeException
+            if self._cpu is None:
+                self._cpu = self._make_cpu()
+            self.fallbacks += 1
+            return self._cpu.run(output_names, feed)
+
+
+def pick_session(model_path: str, input_size: tuple[int, int] = (640, 640)):
+    """onnxruntime session on the best backend for this machine.
+
+    ``RALLYIQ_POSE_PROVIDER``: ``auto`` (default), ``coreml``, ``cuda`` or ``cpu``.
+    ``auto`` prefers CUDA, then CoreML as an ML Program (with a per-frame CPU
+    fallback, see ``CpuFallbackSession``), then the CPU.
+    """
+    import logging
+
+    import onnxruntime as ort
+
+    log = logging.getLogger(__name__)
+    want = os.environ.get("RALLYIQ_POSE_PROVIDER", "auto").lower()
+    avail = ort.get_available_providers()
+    if want == "auto":
+        want = ("cuda" if "CUDAExecutionProvider" in avail
+                else "coreml" if "CoreMLExecutionProvider" in avail else "cpu")
+    needs = {"coreml": "CoreMLExecutionProvider", "cuda": "CUDAExecutionProvider"}
+    if want not in ("cpu", "coreml", "cuda") or (want != "cpu" and needs[want] not in avail):
+        want = "cpu"
+    if want == "coreml":
+        try:
+            sess = CpuFallbackSession(_session(ort, model_path, "coreml"),
+                                      lambda: _session(ort, model_path, "cpu"))
+            return sess, "CoreMLExecutionProvider"
+        except Exception as e:  # noqa: BLE001 - CoreML conversion can fail on some graphs
+            log.warning("pose: CoreML unavailable (%s); using the CPU", e)
+            want = "cpu"
+    sess = _session(ort, model_path, want)
+    return sess, sess.get_providers()[0]
 
 
 class RTMOOnnx:
@@ -79,13 +181,13 @@ class RTMOOnnx:
                 "RTMO ONNX model not found. Set RALLYIQ_POSE_MODEL or pass model_path "
                 "(see rallyiq/perception/players/README.md)."
             )
-        if providers is None:
-            avail = ort.get_available_providers()
-            pref = ["CoreMLExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"]
-            providers = [p for p in pref if p in avail] or avail
-        self.session = ort.InferenceSession(model_path, providers=providers)
-        self.input_name = self.session.get_inputs()[0].name
         self.input_size = input_size  # (w, h)
+        if providers is None:
+            self.session, self.provider = pick_session(model_path, input_size)
+        else:
+            self.session = ort.InferenceSession(model_path, providers=providers)
+            self.provider = self.session.get_providers()[0]
+        self.input_name = self.session.get_inputs()[0].name
         self.score_thr = score_thr
         self.tile_far_half = tile_far_half
 
@@ -142,7 +244,7 @@ class RTMOOnnx:
             d.bbox[[1, 3]] += y1
             d.keypoints[:, 0] += x1
             d.keypoints[:, 1] += y1
-            if any(_containment(d.bbox, f.bbox) > 0.6 for f in full):
+            if any(same_person(d, f) for f in full):
                 continue  # same person the full-frame pass already has, keep that one
             out.append(d)
         return out

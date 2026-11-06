@@ -42,7 +42,7 @@ def test_upload_analyze_and_read_results(client, sample_video):
     v = client.get(f"/api/videos/{vid}").json()
     assert v["meta"]["fps"] == pytest.approx(30)
     assert v["meta"]["frame_count"] == 360
-    assert set(v["artifacts"]) >= {"calibration", "players", "shuttle", "events", "overlay"}
+    assert set(v["artifacts"]) >= {"calibration", "players", "shuttle", "events", "strokes", "overlay"}
 
     ov = client.get(f"/api/videos/{vid}/overlay").json()
     assert ov["court"] and ov["frames"][0]["players"]
@@ -57,6 +57,14 @@ def test_upload_analyze_and_read_results(client, sample_video):
 
     hm = client.get(f"/api/videos/{vid}/heatmap", params={"player_id": "P1"}).json()
     assert hm["samples"] == 360 and sum(map(sum, hm["counts"])) == 360
+
+    q = client.get(f"/api/videos/{vid}/quality").json()
+    assert q["camera_view"] in ("end_center", "end_oblique", "side", "unknown")
+    keys = {c["key"] for c in q["checks"]}
+    assert {"fps", "resolution", "calibration"} <= keys
+    assert {c["capability"] for c in q["capabilities"]} == {"court_metrics", "players", "shuttle", "rallies", "hits"}
+    assert next(c for c in q["capabilities"] if c["capability"] == "hits")["status"] != "ok"
+    assert client.get(f"/api/videos/{vid}/quality").json()["fingerprint"] == q["fingerprint"]  # cached
 
 
 def test_corrections_layer_on_raw_events(client, sample_video):
@@ -81,10 +89,18 @@ def test_corrections_layer_on_raw_events(client, sample_video):
     # raw prediction is untouched
     assert client.get(f"/api/videos/{vid}/events", params={"raw": True}).json()["shots"][0] == first
 
+    # stroke types: model prediction merged into events, human label via set_shot_type
+    assert "stroke" in first and first["stroke"] is not None and first["stroke"]["source"] == "model"
+    assert client.post(f"/api/videos/{vid}/corrections", json={"op": "set_shot_type", "payload": {"shot_id": second["shot_id"], "shot_type": "smash"}}).status_code == 201
+    assert client.post(f"/api/videos/{vid}/corrections", json={"op": "set_shot_type", "payload": {"shot_id": second["shot_id"], "shot_type": "tweener"}}).status_code == 422
+    s2 = {s["shot_id"]: s for s in client.get(f"/api/videos/{vid}/events").json()["shots"]}[second["shot_id"]]
+    assert s2["shot_type"] == "smash" and s2["stroke"]["source"] == "human"
+
     csv_text = client.get(f"/api/videos/{vid}/export", params={"format": "csv"}).text
     assert csv_text.splitlines()[0].startswith("shot_id,rally_id")
+    assert csv_text.splitlines()[0].endswith("shot_type,shot_type_confidence,shot_type_status,shot_type_source")
     exp = client.get(f"/api/videos/{vid}/export").json()
-    assert len(exp["corrections"]) == 3 and exp["raw_events"]["shots"][0] == first
+    assert len(exp["corrections"]) == 4 and exp["raw_events"]["shots"][0] == first
 
 
 def test_manual_calibration_reruns_pipeline(client, sample_video):
@@ -206,3 +222,82 @@ def test_match_report_and_coach(client, sample_video, monkeypatch):
     assert client.post(f"/api/videos/{vid}/report/coach", json={"provider": "nope"}).status_code == 503
     providers = client.get("/api/coach/providers").json()
     assert providers["default"] == "offline" and {"anthropic", "offline"} <= set(providers["providers"])
+
+
+def test_hard_examples_collected_from_corrections(client, sample_video):
+    v = upload(client, sample_video)
+    vid = v["video_id"]
+    wait_job(client, v["latest_job"]["job_id"])
+    raw = client.get(f"/api/videos/{vid}/events").json()
+    s0, s1 = raw["shots"][0], raw["shots"][1]
+    other = "P2" if s1["hitter"] == "P1" else "P1"
+    post = lambda op, payload, **kw: client.post(f"/api/videos/{vid}/corrections", json={"op": op, "payload": payload, **kw})
+    post("delete_shot", {"shot_id": s0["shot_id"]})
+    post("set_hitter", {"shot_id": s1["shot_id"], "hitter": other})
+    post("add_shot", {"frame": 200, "hitter": "P1"})
+    post("confirm_rally", {"rally_id": raw["rallies"][0]["rally_id"]})
+    post("move_shot", {"shot_id": s1["shot_id"], "frame": s1["frame"] + 2}, hard_example=False)
+
+    ex = client.get("/api/hard_examples").json()
+    kinds = [e["kind"] for e in ex]
+    assert kinds == ["false_hit", "wrong_hitter", "missed_hit", "confirmed"]  # move_shot opted out
+    assert ex[0]["model"]["shot_id"] == s0["shot_id"] and ex[0]["frame"] == s0["frame"]
+    assert ex[2]["frame"] == 200 and ex[2]["model"] is None
+    assert ex[0]["conditions"]["fps"] == "25-35" and "camera_view" in ex[0]["conditions"]
+
+    summ = client.get("/api/hard_examples/summary").json()
+    assert summ["total"] == 4 and summ["errors"] == 3 and summ["videos"] == 1
+    fps = next(g for g in summ["groups"] if g["condition"] == "fps")
+    assert fps["errors"] == {"hits": 3} and fps["confirmed"] == 1
+    assert fps["hit_error_rate"] == pytest.approx(3 / fps["model_shots"], abs=1e-3)
+
+    jl = client.get("/api/hard_examples", params={"format": "jsonl"}).text.strip().splitlines()
+    assert len(jl) == 4
+
+
+def test_clip_export(client, sample_video):
+    v = upload(client, sample_video)
+    vid = v["video_id"]
+    wait_job(client, v["latest_job"]["job_id"])
+    rally = client.get(f"/api/videos/{vid}/events").json()["rallies"][0]
+    r = client.get(f"/api/videos/{vid}/clip", params={"rally_id": rally["rally_id"], "pad_ms": 0})
+    assert r.status_code == 200 and r.headers["content-type"] == "video/mp4"
+    assert "attachment" in r.headers["content-disposition"] and r.content[4:8] == b"ftyp"
+    r2 = client.get(f"/api/videos/{vid}/clip", params={"start_ms": 1000, "end_ms": 2000})
+    assert r2.status_code == 200 and len(r2.content) > 1000
+    assert client.get(f"/api/videos/{vid}/clip").status_code == 422
+    assert client.get(f"/api/videos/{vid}/clip", params={"start_ms": 2000, "end_ms": 1000}).status_code == 422
+    assert client.get(f"/api/videos/{vid}/clip", params={"rally_id": "nope"}).status_code == 404
+
+
+def test_memory_commit_profile_and_opponent(client, sample_video):
+    vids = []
+    for _ in range(2):
+        v = upload(client, sample_video)
+        wait_job(client, v["latest_job"]["job_id"])
+        vids.append(v["video_id"])
+    assert client.post(f"/api/videos/{vids[0]}/memory/commit").status_code == 422  # nobody named yet
+    assert client.put(f"/api/videos/{vids[0]}/people", json={"people": {"P1": "我"}, "self_player": "P2"}).status_code == 422
+    for vid in vids:
+        r = client.put(f"/api/videos/{vid}/people", json={"people": {"P1": " 我 ", "P2": "小李"}, "self_player": "P1"})
+        assert r.status_code == 200 and r.json()["people"]["P1"] == "我"
+        client.post(f"/api/videos/{vid}/report/coach", json={"provider": "offline"})
+        ev = client.post(f"/api/videos/{vid}/memory/commit")
+        assert ev.status_code == 201 and {e["person"] for e in ev.json()} == {"我", "小李"}
+    me = client.get("/api/profile").json()
+    assert me["person"] == "我" and me["is_self"] and len(me["videos"]) == 2
+    shots = next(m for m in me["metrics"] if m["key"] == "shots")
+    assert len(shots["points"]) == 2 and shots["trend"] in ("flat", "up", "down")
+    assert all(r["to_video_id"] == vids[1] or r["status"] == "pending" for r in me["retests"])
+
+    ppl = client.get("/api/people").json()
+    assert [p["person"] for p in ppl] == ["我", "小李"] and ppl[0]["is_self"]
+    opp = client.get("/api/opponents/小李").json()
+    assert opp["person"] == "小李" and len(opp["videos"]) == 2 and opp["shots"] > 0
+
+    # re-commit appends; withdraw hides the video but keeps the log
+    client.post(f"/api/videos/{vids[0]}/memory/commit")
+    client.post(f"/api/videos/{vids[1]}/memory/withdraw")
+    assert len(client.get("/api/profile").json()["videos"]) == 1
+    log = client.get("/api/memory/log").json()
+    assert len(log) == 7 and [e["seq"] for e in log] == list(range(1, 8))

@@ -2,7 +2,7 @@
 
 **个人 AI 羽毛球训练与比赛分析系统：学习正确打法，读懂比赛，预测对手战术。**
 
-> 状态：MVP 开发中。后端骨架、任务队列和共享数据契约已就绪，感知模块正在接入。本 README 是研发蓝图的摘要。
+> 状态：MVP 开发中。后端骨架、任务队列、共享数据契约、球员/羽毛球感知、回合与击球候选、击球类型分类和网页工作台已就绪。本 README 是研发蓝图的摘要。
 
 ## 项目定位
 
@@ -103,10 +103,16 @@ rallyiq/perception/calibration/ 球场标定阶段
 rallyiq/perception/players/     球员姿态与跟踪阶段
 rallyiq/perception/shuttle/     羽毛球轨迹阶段
 rallyiq/events/                 回合与击球候选阶段
+rallyiq/strokes/                击球类型分类阶段（12 类，规则 v1；可选接入 BST 模型）
+rallyiq/ingest/                 视频输入评估（机位、帧率、画质、各项输出可信度）
+rallyiq/memory/                 个人长期档案：只追加的分析事件日志、球员画像与训练复测、对手习惯报告
+rallyiq/review/                 难例收集：人工修正按视频条件分组，找出最弱场景
 rallyiq/pipeline/               阶段注册、任务执行、队列 worker、视频探测、叠加层合成
 rallyiq/report/                 赛后统计与 AI 教练点评（可插拔 LLM，默认 Claude）
 rallyiq/api/                    FastAPI 后端（上传、任务、结果、修正、报告、导出）
-rallyiq/store.py                SQLite + 本地文件存储
+rallyiq/store.py                数据库（db.py：SQLite / PostgreSQL）+ 文件存储（blobs.py：本地 / S3）
+rallyiq/api/auth.py             账号与会话（默认关闭，线上 RALLYIQ_AUTH=on）
+Dockerfile, docker/, deploy/    web+API 镜像、GPU worker 镜像、Fly.io / Modal 部署配置
 contracts/schemas, examples     由契约自动生成的 JSON Schema 和示例
 web/                            网页回放与修正界面
 ```
@@ -118,7 +124,13 @@ python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水
 pytest
 ```
 
-主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
+### 在线部署
+
+同一套代码也能作为网站运行：PostgreSQL 任务队列（多 GPU worker、租约重试）、S3 / Cloudflare R2 视频存储（浏览器直传）、
+邮箱 + 密码账号（邀请码注册，按用户隔离数据），web + API 一个 CPU 容器，分析在按需启动、空闲关机的云 GPU 上跑。
+方案、步骤和费用估算见 [`docs/deploy.md`](docs/deploy.md)；本地体验线上同款环境：`docker compose up --build`。
+
+主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/clip?rally_id=…`（或 `start_ms`/`end_ms`）导出回合片段 MP4；`GET /videos/{id}/quality` 视频条件与各项输出可信度；`PUT /videos/{id}/people` 标注谁是我、对手是谁；`POST /videos/{id}/memory/commit` 把确认过的比赛写入档案（`/memory/withdraw` 撤下，均为追加）；`GET /profile`（`?person=`）个人画像、趋势与训练复测；`GET /opponents/{name}` 对手习惯；`GET /people`；`GET /memory/log`；`GET /hard_examples`（`?format=jsonl`）与 `GET /hard_examples/summary` 难例及按条件分组的错误率（命令行：`python -m rallyiq.review export --out hard_examples/`）；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
 
 AI 教练默认调用 Claude API（`pip install -e '.[coach]'`，设置 `ANTHROPIC_API_KEY`）；未配置时自动改用离线规则模板并在报告中注明。详见 `rallyiq/report/README.md`。
 
@@ -153,7 +165,7 @@ AI 教练默认调用 Claude API（`pip install -e '.[coach]'`，设置 `ANTHROP
 
 ### 首版不做（推出后再加）
 
-击球类型分类、AI Coach、个人长期档案与对手报告、抽象 / 双屏视图、球拍检测、模型训练与微调。
+个人长期档案与对手报告、抽象 / 双屏视图、球拍检测、模型训练与微调。
 
 > 双打已提前接入：自动识别单 / 双打，四人稳定 ID 与 A/B 队伍（A = P1+P3，B = P2+P4），击球按队伍交替归属，双打边界线，热力图可按球员或队伍查看；识别不对时可在网页上强制指定。
 
@@ -169,10 +181,10 @@ AI 教练默认调用 Claude API（`pip install -e '.[coach]'`，设置 `ANTHROP
 
 ### 推出后：以提升识别能力为主线迭代
 
-- 每次使用时的人工修正自动记录为难例，积累成评估集，按机位、帧率、场馆和光照分组。
+- 每次使用时的人工修正自动记录为难例，积累成评估集，按机位、帧率、场馆和光照分组。（已实现：`rallyiq/review`，首页“难例与薄弱场景”）
 - 每周挑出最弱的场景（例如远端小球、侧面机位、30 fps）针对性改进，并用同一评估集对比前后。
 - 当击球检测 F1 ≥ 0.90、可见球召回 ≥ 0.90（同一球员 ±3 帧匹配；1080p 下 ≤ 12 像素算命中）时，该功能才去掉"待复核"标记。
-- 之后按需要依次加入击球分类、个人档案、对手报告和 AI Coach。
+- 击球类型分类已提前接入（规则 v1，见 `rallyiq/strokes/README.md`），所有类型默认待复核，直到真实标注验证；之后依次加入个人档案、对手报告和 AI Coach。
 
 ### 算力与预算
 

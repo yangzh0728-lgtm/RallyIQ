@@ -94,6 +94,13 @@ def clip_stats(art: Path) -> dict[str, Any]:
         out["rallies"] = len(ev.get("rallies", []))
         out["hits"] = len(shots)
         out["hits_ok"] = sum(1 for s in shots if s.get("status") == "ok")
+
+    st = _load(art, "strokes")
+    if st:
+        strokes = [s["stroke"] for s in st.get("shots", [])]
+        out["stroke_classifier"] = st.get("classifier")
+        out["strokes_typed"] = sum(1 for s in strokes if s.get("shot_type"))
+        out["strokes_ok"] = sum(1 for s in strokes if s.get("status") == "ok")
     return out
 
 
@@ -172,6 +179,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--far-boost", choices=("auto", "on", "off"), default="auto",
                     help="players: second pose pass on the far half of the court (auto: only when the far player is small)")
     ap.add_argument("--stride", type=int, default=1, help="players: pose every n-th frame")
+    ap.add_argument("--parallel", choices=("auto", "on", "off"), default="auto",
+                    help="run shuttle detection alongside players (auto: only when the shuttle model has a GPU)")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
@@ -179,7 +188,8 @@ def main(argv: list[str] | None = None) -> int:
     preds = out / "preds"
     preds.mkdir(parents=True, exist_ok=True)
     store = Store(out / "data")
-    config: dict[str, Any] = {"players_stride": a.stride, "players_far_boost": a.far_boost}
+    config: dict[str, Any] = {"players_stride": a.stride, "players_far_boost": a.far_boost,
+                              "parallel_stages": a.parallel}
 
     clips = sorted(p for p in a.clips.expanduser().glob("*.mp4") if not a.only or p.stem in a.only)
     if not clips:

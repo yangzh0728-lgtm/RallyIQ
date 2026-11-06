@@ -103,6 +103,37 @@ def far_boost_setting(ctx: StageContext) -> str:
     return "on" if v else "off"
 
 
+def _rechoose_court(ctx: StageContext, cal, est):
+    """Switch the target court to the one the players stand on when calibration
+    picked a neighbour (see ``court_choice``). Saves the corrected calibration so
+    the shuttle court lock and the overlay use it too."""
+    from ..court_choice import rechoose
+
+    def detect_frames(indices):
+        import cv2
+
+        cap = cv2.VideoCapture(str(ctx.video_path))
+        out = []
+        try:
+            for i in indices:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, i)
+                ok, img = cap.read()
+                if ok:
+                    out.append(est(img))
+        finally:
+            cap.release()
+        return out
+
+    new = rechoose(cal, detect_frames)
+    if new is None:
+        return cal
+    for seg in new.segments:
+        if seg.notes and seg.notes[-1].startswith("target court re-chosen"):
+            log.warning("players: %s (frames %d-%d)", seg.notes[-1], seg.start_frame, seg.end_frame)
+    ctx.store.save_artifact(ctx.video_id, "calibration", new)
+    return new
+
+
 def run(ctx: StageContext) -> PlayerTracks:
     meta = ctx.require_meta()
     cal = ctx.calibration
@@ -124,6 +155,9 @@ def run(ctx: StageContext) -> PlayerTracks:
     cfg = PlayerTrackingConfig(stride=stride, match_format=match_format_setting(ctx), far_boost=far_boost_setting(ctx))
     cfg.tracker.fps = meta.fps
     est = RTMOOnnx(model_path)
+
+    if cal is not None and str(ctx.config.get("court_choice", "auto")).lower() != "off":
+        cal = _rechoose_court(ctx, cal, est)
 
     def homography_for(frame: int):
         h = cal.homography_for(frame) if cal is not None else None

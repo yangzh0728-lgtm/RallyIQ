@@ -139,8 +139,8 @@ class HeatmapShuttleDetector:
     # ---------------------------------------------------------------- frames
 
     @staticmethod
-    def _prep(frame_bgr: np.ndarray, roi: tuple[int, int, int, int] | None) -> np.ndarray:
-        """BGR uint8 frame -> (3, 288, 512) float32 RGB in 0..1."""
+    def _prep_u8(frame_bgr: np.ndarray, roi: tuple[int, int, int, int] | None) -> np.ndarray:
+        """BGR uint8 frame -> (3, 288, 512) uint8 RGB."""
         import cv2
 
         from .model import INPUT_HEIGHT, INPUT_WIDTH
@@ -149,30 +149,62 @@ class HeatmapShuttleDetector:
             x0, y0, x1, y1 = roi
             frame_bgr = frame_bgr[y0:y1, x0:x1]
         img = cv2.resize(frame_bgr, (INPUT_WIDTH, INPUT_HEIGHT), interpolation=cv2.INTER_AREA)
-        img = img[:, :, ::-1].astype(np.float32) / 255.0
-        return np.ascontiguousarray(img.transpose(2, 0, 1))
+        return np.ascontiguousarray(img[:, :, ::-1].transpose(2, 0, 1))
+
+    @classmethod
+    def _prep(cls, frame_bgr: np.ndarray, roi: tuple[int, int, int, int] | None) -> np.ndarray:
+        """BGR uint8 frame -> (3, 288, 512) float32 RGB in 0..1."""
+        return cls._prep_u8(frame_bgr, roi).astype(np.float32) / 255.0
 
     def _medians(self, video: Path, segments: list[Segment]) -> list[np.ndarray | None]:
         import cv2
 
         if self.bg_mode != "concat":
             return [None] * len(segments)
+        # One sequential decode instead of a seek per sample: broadcast footage has
+        # dozens of short camera segments, so nearly every frame is a sample, and each
+        # seek decodes from the previous keyframe (~100 ms per seek at 1080p).
+        wanted: dict[int, list[int]] = {}  # frame -> segments that sample it
+        for si, seg in enumerate(segments):
+            n = seg.end - seg.start + 1
+            k = min(self.cfg.median_samples, n)
+            for i in np.unique(np.linspace(seg.start, seg.end, k).astype(int)):
+                wanted.setdefault(int(i), []).append(si)
+        samples: list[list[np.ndarray]] = [[] for _ in segments]
+        out: list[np.ndarray | None] = [None] * len(segments)
+        remaining = [sum(1 for v in wanted.values() if si in v) for si in range(len(segments))]
+
+        def close(si: int) -> None:
+            fr = samples[si]
+            # Stored as uint8 at network size to keep memory low; the median of
+            # the quantised values equals the old float median up to rounding.
+            out[si] = (np.median(np.stack(fr), axis=0).astype(np.float32) / 255.0) if fr else None
+            samples[si] = []
+
         cap = cv2.VideoCapture(str(video))
-        out = []
+        last = max(wanted) if wanted else -1
+        i = 0
         try:
-            for seg in segments:
-                n = seg.end - seg.start + 1
-                k = min(self.cfg.median_samples, n)
-                idx = np.unique(np.linspace(seg.start, seg.end, k).astype(int))
-                frames = []
-                for i in idx:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, int(i))
-                    ok, fr = cap.read()
-                    if ok:
-                        frames.append(self._prep(fr, seg.roi))
-                out.append(np.median(np.stack(frames), axis=0).astype(np.float32) if frames else None)
+            while i <= last:
+                if i not in wanted:
+                    if not cap.grab():
+                        break
+                    i += 1
+                    continue
+                ok, fr = cap.read()
+                if not ok:
+                    break
+                for si in wanted[i]:
+                    samples[si].append(self._prep_u8(fr, segments[si].roi))
+                    remaining[si] -= 1
+                    if remaining[si] == 0:
+                        close(si)
+                i += 1
         finally:
             cap.release()
+        for si in range(len(segments)):
+            if samples[si]:
+                close(si)
         return out
 
     # ----------------------------------------------------------------- detect
@@ -215,7 +247,7 @@ class HeatmapShuttleDetector:
         streams: dict[tuple[int, int], deque] = {}
         acc: dict[int, np.ndarray] = {}
         acc_w: dict[int, float] = {}
-        pending: list[tuple[list[int], np.ndarray, int]] = []  # (frame idxs, stacked input, n_real)
+        pending: list[tuple[list[int], np.ndarray, int, int]] = []  # (frame idxs, uint8 frames, n_real, segment)
         results: dict[int, list[Candidate]] = {}
 
         def finalize(f: int) -> None:
@@ -228,13 +260,28 @@ class HeatmapShuttleDetector:
                 for x, y, s in extract_peaks(hm, self.cfg.peak_threshold, self.cfg.top_k)
             ]
 
+        med_dev: dict = {}
+
+        def background(seg_i: int, first_frame):
+            if medians[seg_i] is None:
+                return first_frame
+            if seg_i not in med_dev:
+                med_dev[seg_i] = torch.from_numpy(medians[seg_i]).to(self.device)
+            return med_dev[seg_i]
+
         def run_batch() -> None:
             if not pending:
                 return
-            x = torch.from_numpy(np.stack([p[1] for p in pending])).to(self.device)
+            # Windows travel as uint8 and become float on the device: 4x less copying
+            # than float32 windows built on the CPU (every frame sits in L windows).
             with torch.no_grad():
+                x = torch.from_numpy(np.stack([p[1] for p in pending])).to(self.device)
+                x = x.float().div_(255.0)
+                if self.bg_mode == "concat":
+                    bg = torch.stack([background(p[3], x[i, :3]) for i, p in enumerate(pending)])
+                    x = torch.cat([bg, x], dim=1)
                 y = self.net(x).float().cpu().numpy()
-            for (idxs, _inp, n_real), hms in zip(pending, y):
+            for (idxs, _inp, n_real, _seg), hms in zip(pending, y):
                 for pos, f in enumerate(idxs[:n_real]):
                     w = float(self.weights_vec[pos])
                     if f in acc:
@@ -252,13 +299,6 @@ class HeatmapShuttleDetector:
                     finalize(idxs[0])
             pending.clear()
 
-        def window_input(frames: list[tuple[int, np.ndarray]], seg_i: int) -> np.ndarray:
-            parts = [fr for _, fr in frames]
-            if self.bg_mode == "concat":
-                med = medians[seg_i]
-                parts = [med if med is not None else parts[0]] + parts
-            return np.concatenate(parts, axis=0)
-
         def emit(key, buf: deque) -> None:
             seg_i = key[1]
             items = list(buf)
@@ -266,7 +306,7 @@ class HeatmapShuttleDetector:
             if n_real < L:
                 items = items + [items[-1]] * (L - n_real)
             idxs = [f for f, _ in items]
-            pending.append((idxs, window_input(items, seg_i), n_real))
+            pending.append((idxs, np.concatenate([fr for _, fr in items], axis=0), n_real, seg_i))
             if len(pending) >= self.cfg.batch_size:
                 run_batch()
 
@@ -282,7 +322,7 @@ class HeatmapShuttleDetector:
                 seg_i = seg_index(f)
                 key = (f % stride, seg_i)
                 buf = streams.setdefault(key, deque(maxlen=L))
-                buf.append((f, self._prep(frame, segments[seg_i].roi)))
+                buf.append((f, self._prep_u8(frame, segments[seg_i].roi)))
                 if len(buf) == L:
                     emit(key, buf)
                     if self.cfg.ensemble == "none":

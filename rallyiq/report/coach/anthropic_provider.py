@@ -34,7 +34,7 @@ class AnthropicProvider:
             self._client = anthropic.Anthropic()
         return self._client
 
-    def generate(self, stats: MatchStats) -> dict:
+    def generate(self, stats: MatchStats, knowledge=None) -> dict:
         client = self._get_client()
         try:
             import anthropic
@@ -53,7 +53,7 @@ class AnthropicProvider:
                 output_config={"effort": self.effort,
                                "format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
                 system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
-                messages=[{"role": "user", "content": user_message(stats)}],
+                messages=[{"role": "user", "content": user_message(stats, knowledge)}],
             ) as stream:
                 msg = stream.get_final_message()
         except api_errors as e:  # auth, rate limit, network, server errors

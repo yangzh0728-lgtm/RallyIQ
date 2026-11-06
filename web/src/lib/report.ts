@@ -7,6 +7,7 @@ import type {
   MatchStats,
   Metric,
   MetricConfidence,
+  NoteRef,
   OverlayData,
   PlayerId,
   PlayerStats,
@@ -14,6 +15,12 @@ import type {
 } from "./types";
 
 // ---------------------------------------------------------------- display helpers
+
+/** Source video, opened at ``t_s`` when the note knows the moment. */
+export function videoLink(r: NoteRef): string {
+  if (r.t_s == null) return r.url;
+  return `${r.url}${r.url.includes("?") ? "&" : "?"}t=${r.t_s}`;
+}
 
 export const STATUS_LABEL: Record<Status, string> = { ok: "可用", needs_review: "待复核", undeterminable: "不可判定" };
 export const CONF_LABEL: Record<MetricConfidence, string> = { high: "可信度高", medium: "可信度中", low: "可信度低" };
@@ -69,7 +76,11 @@ export function reportMarkdown(title: string, stats: MatchStats, coach: CoachRep
     });
     if (coach.training.length) {
       out.push("", "### 训练建议", "");
-      coach.training.forEach((t) => out.push(`1. ${t.player_id ? `${t.player_id}：` : ""}**${t.drill}** — ${t.why}`));
+      coach.training.forEach((t) => {
+        out.push(`1. ${t.player_id ? `${t.player_id}：` : ""}**${t.drill}** — ${t.focus ? `针对：${t.focus}。` : ""}${t.why}`);
+        if (t.key_points?.length) out.push(`   要点：${t.key_points.join("；")}`);
+        for (const r of t.sources ?? []) out.push(`   参考：${r.coach}《${r.title}》${r.drill ? ` · 练习「${r.drill}」` : ""} ${videoLink(r)}`);
+      });
     }
     out.push("");
   }

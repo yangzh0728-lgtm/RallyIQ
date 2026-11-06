@@ -15,6 +15,7 @@ import re
 
 from ...contracts import CoachInsight, Distribution, MatchStats, Metric, TrainingItem
 from ..stats import index
+from .advice import ground_sources
 
 _RANK = {"low": 0, "medium": 1, "high": 2}
 _NUM = re.compile(r"(?<![A-Za-z_])\d+(?:\.\d+)?")
@@ -105,16 +106,26 @@ def ground_insights(raw: list[dict], stats: MatchStats) -> tuple[list[CoachInsig
     return out, dropped
 
 
-def ground_training(raw: list[dict], stats: MatchStats) -> list[TrainingItem]:
+def ground_training(raw: list[dict], stats: MatchStats, knowledge=None) -> list[TrainingItem]:
     idx = index(stats)
+    focus = {f.id: f for f in knowledge.focus} if knowledge is not None else {}
     out = []
     for item in raw:
         pid = item.get("player_id")
         retest = item.get("retest_metric")
+        f = focus.get(item.get("focus_id") or "")
+        if retest not in idx and f is not None:
+            retest = f.retest_metric
+        sources, warnings = ground_sources(item.get("sources") or [], knowledge)
+        evidence = [k for k in item.get("evidence") or [] if k in idx]
+        if f is not None:
+            evidence += [k for k in f.evidence if k not in evidence and k in idx]
         out.append(TrainingItem(
-            player_id=pid if pid in ("P1", "P2", "P3", "P4") else None,
+            player_id=pid if pid in ("P1", "P2", "P3", "P4") else (f.player_id if f else None),
             drill=str(item.get("drill", "")).strip(), why=str(item.get("why", "")).strip(),
-            evidence=[k for k in item.get("evidence") or [] if k in idx],
-            retest_metric=retest if retest in idx else None,
+            evidence=evidence, retest_metric=retest if retest in idx else None,
+            focus=f.title if f else (str(item["focus"]).strip() or None if item.get("focus") else None),
+            key_points=[str(x).strip() for x in item.get("key_points") or [] if str(x).strip()][:6],
+            sources=sources, warnings=warnings,
         ))
     return [t for t in out if t.drill]

@@ -1,0 +1,183 @@
+{
+  "$defs": {
+    "CapabilityReliability": {
+      "additionalProperties": false,
+      "description": "How far one kind of output can be trusted on this particular video.",
+      "properties": {
+        "capability": {
+          "enum": [
+            "court_metrics",
+            "players",
+            "shuttle",
+            "rallies",
+            "hits"
+          ],
+          "title": "Capability",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "reasons": {
+          "description": "check keys / plain reasons behind the status",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "capability",
+        "label",
+        "status"
+      ],
+      "title": "CapabilityReliability",
+      "type": "object"
+    },
+    "QualityCheck": {
+      "additionalProperties": false,
+      "description": "One measured property of the input video (frame rate, camera view, blur, ...).",
+      "properties": {
+        "key": {
+          "description": "stable key, e.g. 'fps', 'camera_view', 'far_player_rate'",
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "description": "Chinese display label",
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "human-readable value; null if it could not be measured",
+          "title": "Value"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "raw number behind ``value``, when there is one",
+          "title": "Score"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "value",
+        "status"
+      ],
+      "title": "QualityCheck",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``GET /api/videos/{id}/quality``: input assessment derived from the probe and stage outputs.\n\nSays what kind of footage this is and, per output, whether it is usable,\nneeds review, or cannot be determined here. Never blocks analysis.",
+  "properties": {
+    "schema_version": {
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "fingerprint": {
+      "description": "changes when the inputs (artifacts) change",
+      "title": "Fingerprint",
+      "type": "string"
+    },
+    "camera_view": {
+      "default": "unknown",
+      "enum": [
+        "end_center",
+        "end_oblique",
+        "side",
+        "unknown"
+      ],
+      "title": "Camera View",
+      "type": "string"
+    },
+    "camera_height": {
+      "default": "unknown",
+      "enum": [
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ],
+      "title": "Camera Height",
+      "type": "string"
+    },
+    "checks": {
+      "items": {
+        "$ref": "#/$defs/QualityCheck"
+      },
+      "title": "Checks",
+      "type": "array"
+    },
+    "capabilities": {
+      "items": {
+        "$ref": "#/$defs/CapabilityReliability"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "video_id",
+    "fingerprint",
+    "checks",
+    "capabilities",
+    "summary"
+  ],
+  "title": "VideoQuality",
+  "type": "object"
+}

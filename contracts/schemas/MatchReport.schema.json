@@ -86,7 +86,7 @@
       "description": "LLM (or rule-based) coaching comments. Never a source of truth: every claim\ncites ``MatchStats`` keys and is validated against them.",
       "properties": {
         "schema_version": {
-          "default": "0.1.0",
+          "default": "0.2.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -246,7 +246,7 @@
       "description": "Post-match statistics computed from effective events + player tracks.\n\nPure function of the inputs (no model is called). ``fingerprint`` changes\nwhenever the inputs change, so a cached coach report can be marked stale.",
       "properties": {
         "schema_version": {
-          "default": "0.1.0",
+          "default": "0.2.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -404,6 +404,63 @@
       "title": "Metric",
       "type": "object"
     },
+    "NoteRef": {
+      "additionalProperties": false,
+      "description": "A coaching-note citation (``knowledge/coaching/notes``). Link and title come from the\nnote file, never from the model, so a citation always points at a real video.",
+      "properties": {
+        "note_id": {
+          "title": "Note Id",
+          "type": "string"
+        },
+        "coach": {
+          "title": "Coach",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "description": "source video; with ``t_s`` it opens at that moment",
+          "title": "Url",
+          "type": "string"
+        },
+        "t_s": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "seconds into the video where the cited part starts, when known",
+          "title": "T S"
+        },
+        "drill": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "name of the note's drill this advice uses, if any",
+          "title": "Drill"
+        }
+      },
+      "required": [
+        "note_id",
+        "coach",
+        "title",
+        "url"
+      ],
+      "title": "NoteRef",
+      "type": "object"
+    },
     "PlayerStats": {
       "additionalProperties": false,
       "properties": {
@@ -496,6 +553,42 @@
           "default": null,
           "description": "metric key to compare on the next upload",
           "title": "Retest Metric"
+        },
+        "focus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the weakness this item addresses, e.g. '\u5931\u5206\u591a\u5728\u7f51\u524d\u7403'",
+          "title": "Focus"
+        },
+        "key_points": {
+          "description": "technique points / cues taken from the cited notes",
+          "items": {
+            "type": "string"
+          },
+          "title": "Key Points",
+          "type": "array"
+        },
+        "sources": {
+          "description": "coaching notes this advice is based on",
+          "items": {
+            "$ref": "#/$defs/NoteRef"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
         }
       },
       "required": [

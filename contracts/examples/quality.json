@@ -1,0 +1,140 @@
+{
+  "schema_version": "0.2.0",
+  "video_id": "vid_example",
+  "fingerprint": "a3e80a04caa569e8",
+  "camera_view": "end_center",
+  "camera_height": "medium",
+  "checks": [
+    {
+      "key": "fps",
+      "label": "\u5e27\u7387",
+      "value": "30 fps",
+      "score": 30.0,
+      "status": "ok",
+      "note": "30 fps \u5de6\u53f3\uff1a\u5feb\u901f\u6740\u7403\u4f1a\u6709\u8fd0\u52a8\u6a21\u7cca\u548c\u4e22\u5e27\uff0c\u51fb\u7403\u6309\u533a\u57df\u7ea7\u7cbe\u5ea6\u7ed9\u51fa"
+    },
+    {
+      "key": "resolution",
+      "label": "\u5206\u8fa8\u7387",
+      "value": "1920\u00d71080",
+      "score": 1080.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "calibration",
+      "label": "\u7403\u573a\u6807\u5b9a",
+      "value": "100% \u65f6\u957f\u5df2\u6807\u5b9a\uff0c\u6700\u5927\u91cd\u6295\u5f71\u8bef\u5dee 0.0px",
+      "score": 1.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "camera_view",
+      "label": "\u673a\u4f4d",
+      "value": "\u540e\u573a\u6b63\u4e2d",
+      "score": 0.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "camera_height",
+      "label": "\u673a\u4f4d\u9ad8\u5ea6",
+      "value": "\u4e2d\u7b49\u9ad8\u5ea6",
+      "score": null,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "court_in_frame",
+      "label": "\u573a\u5730\u5b8c\u6574\u5ea6",
+      "value": "4/4 \u4e2a\u89d2\u5728\u753b\u9762\u5185",
+      "score": 4.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "camera_motion",
+      "label": "\u955c\u5934\u79fb\u52a8",
+      "value": "\u56fa\u5b9a",
+      "score": 0.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "near_player_rate",
+      "label": "\u8fd1\u7aef\u7403\u5458\u53ef\u89c1",
+      "value": "\u56de\u5408\u5185 100%",
+      "score": 1.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "far_player_rate",
+      "label": "\u8fdc\u7aef\u7403\u5458\u53ef\u89c1",
+      "value": "\u56de\u5408\u5185 100%",
+      "score": 1.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "shuttle_rate",
+      "label": "\u7fbd\u6bdb\u7403\u68c0\u51fa",
+      "value": "\u56de\u5408\u5185 69%",
+      "score": 0.69,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "brightness",
+      "label": "\u4eae\u5ea6",
+      "value": "\u6b63\u5e38",
+      "score": 118.0,
+      "status": "ok",
+      "note": null
+    },
+    {
+      "key": "sharpness",
+      "label": "\u6e05\u6670\u5ea6",
+      "value": "\u6e05\u6670",
+      "score": 240.0,
+      "status": "ok",
+      "note": null
+    }
+  ],
+  "capabilities": [
+    {
+      "capability": "court_metrics",
+      "label": "\u7403\u573a\u5750\u6807\uff08\u7c73\u3001m/s\u3001\u70ed\u529b\u56fe\uff09",
+      "status": "ok",
+      "reasons": []
+    },
+    {
+      "capability": "players",
+      "label": "\u7403\u5458\u8dd1\u4f4d\u4e0e\u8eab\u4efd",
+      "status": "ok",
+      "reasons": []
+    },
+    {
+      "capability": "shuttle",
+      "label": "\u7fbd\u6bdb\u7403\u8f68\u8ff9",
+      "status": "ok",
+      "reasons": []
+    },
+    {
+      "capability": "rallies",
+      "label": "\u56de\u5408\u5207\u5206",
+      "status": "ok",
+      "reasons": []
+    },
+    {
+      "capability": "hits",
+      "label": "\u51fb\u7403\u4e0e\u51fb\u7403\u8005",
+      "status": "needs_review",
+      "reasons": [
+        "\u51fb\u7403\u68c0\u6d4b\u5c1a\u672a\u8fbe\u5230 F1 \u2265 0.90 \u7684\u53bb\u590d\u6838\u95e8\u69db"
+      ]
+    }
+  ],
+  "summary": "\u540e\u573a\u6b63\u4e2d\u673a\u4f4d\uff08\u4e2d\u7b49\u9ad8\u5ea6\uff09\uff0c30 fps\uff1b\u753b\u9762\u6761\u4ef6\u826f\u597d\uff1b\u53ef\u76f4\u63a5\u4f7f\u7528\uff1a\u7403\u573a\u5750\u6807\uff08\u7c73\u3001m/s\u3001\u70ed\u529b\u56fe\uff09\u3001\u7403\u5458\u8dd1\u4f4d\u4e0e\u8eab\u4efd\u3001\u7fbd\u6bdb\u7403\u8f68\u8ff9\u3001\u56de\u5408\u5207\u5206\u3002"
+}

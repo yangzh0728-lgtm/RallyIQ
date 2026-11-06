@@ -1,4 +1,4 @@
-// Wire types for the RallyIQ API. Mirrors rallyiq/contracts/models.py (schema 0.1.0) and the
+// Wire types for the RallyIQ API. Mirrors rallyiq/contracts/models.py (schema 0.2.0) and the
 // generated contracts/schemas/*.json. Conventions:
 //   * frame = 0-based frame index, t_ms = its time in ms of the original video
 //   * image coords: px of the original video, origin top-left
@@ -31,7 +31,7 @@ export interface VideoMeta {
   variable_frame_rate?: boolean;
 }
 
-export type StageName = "probe" | "calibration" | "players" | "shuttle" | "events" | "overlay";
+export type StageName = "probe" | "calibration" | "players" | "shuttle" | "events" | "strokes" | "overlay";
 export type JobState = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export interface StageRun {
@@ -112,6 +112,51 @@ export interface OverlayData {
   frames: OverlayFrame[];
 }
 
+/** Stroke types (击球类型): the merged ShuttleSet taxonomy without the Top_/Bottom_ prefix. */
+export type ShotType =
+  | "short_serve"
+  | "long_serve"
+  | "clear"
+  | "smash"
+  | "drop"
+  | "net_shot"
+  | "cross_net"
+  | "push"
+  | "net_kill"
+  | "drive"
+  | "lift"
+  | "block";
+
+export interface ShotTypeScore {
+  shot_type: ShotType;
+  p: number;
+}
+
+/** Stroke-type prediction (stage `strokes`) or human label (`set_shot_type`). */
+export interface StrokeInfo {
+  shot_type: ShotType | null; // null = undeterminable
+  confidence: number;
+  status: Status;
+  source: Source;
+  classifier?: string | null;
+  candidates?: ShotTypeScore[];
+  reasons?: string[];
+  evidence?: Record<string, number | null>;
+}
+
+export interface ShotStroke {
+  shot_id: string;
+  frame: number;
+  stroke: StrokeInfo;
+}
+
+export interface StrokesResult {
+  schema_version?: string;
+  video_id: string;
+  classifier: string | null;
+  shots: ShotStroke[];
+}
+
 export interface ShotEvent {
   shot_id: string;
   rally_id: string | null;
@@ -122,7 +167,8 @@ export interface ShotEvent {
   shuttle_px?: Point | null;
   shuttle_court?: Point | null;
   hitter_court?: Point | null;
-  shot_type?: string | null;
+  shot_type?: ShotType | null;
+  stroke?: StrokeInfo | null;
   target_zone?: string | null;
   confidence: number;
   status: Status;
@@ -159,7 +205,7 @@ export interface EventsResult {
 }
 
 export type CorrectionOp =
-  | { op: "add_shot"; payload: { frame: number; hitter?: PlayerId | null; shuttle_px?: Point | null } }
+  | { op: "add_shot"; payload: { frame: number; hitter?: PlayerId | null; shuttle_px?: Point | null; shot_type?: ShotType | null } }
   | { op: "delete_shot"; payload: { shot_id: string } }
   | { op: "set_hitter"; payload: { shot_id: string; hitter: PlayerId | null } }
   | { op: "move_shot"; payload: { shot_id: string; frame: number } }
@@ -170,7 +216,8 @@ export type CorrectionOp =
   /** Swap ids a/b (default P1/P2) from this frame on. */
   | { op: "swap_player_ids"; payload: { from_frame: number; a?: PlayerId; b?: PlayerId } }
   | { op: "confirm_shot"; payload: { shot_id: string } }
-  | { op: "confirm_rally"; payload: { rally_id: string } };
+  | { op: "confirm_rally"; payload: { rally_id: string } }
+  | { op: "set_shot_type"; payload: { shot_id: string; shot_type: ShotType | null } };
 
 /** hard_example (default true on the backend): the fix also goes into the evaluation set. */
 export type CorrectionIn = CorrectionOp & { note?: string | null; hard_example?: boolean };
@@ -250,12 +297,25 @@ export interface CoachInsight {
   warnings: string[];
 }
 
+export interface NoteRef {
+  note_id: string;
+  coach: string;
+  title: string;
+  url: string;
+  t_s: number | null;
+  drill: string | null;
+}
+
 export interface TrainingItem {
   player_id: PlayerId | null;
   drill: string;
   why: string;
   evidence: string[];
   retest_metric: string | null;
+  focus?: string | null;
+  key_points?: string[];
+  sources?: NoteRef[];
+  warnings?: string[];
 }
 
 export interface CoachReport {
@@ -292,3 +352,159 @@ export const TEAM_COLORS: Record<TeamId, string> = { A: "#38bdf8", B: "#f472b6" 
 export const TEAM_LABELS: Record<TeamId, string> = { A: "A 队（P1+P3）", B: "B 队（P2+P4）" };
 
 export const playerIdsFor = (format: MatchFormat | undefined): PlayerId[] => (format === "doubles" ? DOUBLES_PLAYER_IDS : PLAYER_IDS);
+
+// ------------------------------------------------------------------ input quality (GET /videos/{id}/quality)
+
+export type CameraView = "end_center" | "end_oblique" | "side" | "unknown";
+export type CameraHeight = "high" | "medium" | "low" | "unknown";
+
+export interface QualityCheck {
+  key: string;
+  label: string;
+  value: string | null;
+  score?: number | null;
+  status: Status;
+  note?: string | null;
+}
+
+export interface CapabilityReliability {
+  capability: "court_metrics" | "players" | "shuttle" | "rallies" | "hits";
+  label: string;
+  status: Status;
+  reasons: string[];
+}
+
+export interface VideoQuality {
+  schema_version: string;
+  video_id: string;
+  fingerprint: string;
+  camera_view: CameraView;
+  camera_height: CameraHeight;
+  checks: QualityCheck[];
+  capabilities: CapabilityReliability[];
+  summary: string;
+}
+
+// ------------------------------------------------------------------ hard examples (GET /hard_examples/summary)
+
+export interface ConditionGroup {
+  condition: string;
+  value: string;
+  videos: number;
+  model_shots: number;
+  model_rallies: number;
+  errors: Record<string, number>;
+  confirmed: number;
+  hit_error_rate: number | null;
+}
+
+export interface HardExampleSummary {
+  total: number;
+  errors: number;
+  videos: number;
+  by_kind: Record<string, number>;
+  groups: ConditionGroup[];
+  weakest: ConditionGroup[];
+}
+
+// ------------------------------------------------------------------ memory (rallyiq/contracts/memory.py)
+
+export interface PeopleAssignment {
+  video_id: string;
+  people: Partial<Record<PlayerId, string>>;
+  self_player: PlayerId | null;
+  updated_at?: string | null;
+}
+
+export interface PersonSummary {
+  person: string;
+  videos: number;
+  is_self: boolean;
+  last: string | null;
+}
+
+export interface ProfilePoint {
+  video_id: string;
+  filename: string | null;
+  recorded_at: string;
+  value: number | null;
+  n: number;
+  status: Status;
+}
+
+export interface ProfileMetric {
+  key: string;
+  label: string;
+  unit: string | null;
+  points: ProfilePoint[];
+  latest: number | null;
+  previous: number | null;
+  delta: number | null;
+  trend: "up" | "down" | "flat" | "new" | "insufficient";
+  confidence: "high" | "medium" | "low";
+  note: string | null;
+}
+
+export interface RetestResult {
+  drill: string;
+  why: string;
+  metric: string;
+  label: string | null;
+  unit: string | null;
+  from_video_id: string;
+  to_video_id: string | null;
+  before: number | null;
+  after: number | null;
+  delta: number | null;
+  same_conditions: boolean | null;
+  focus?: string | null;
+  sources?: NoteRef[];
+  status: "improved" | "worse" | "changed" | "unchanged" | "pending" | "not_measurable";
+}
+
+export interface ProfileVideo {
+  video_id: string;
+  filename: string | null;
+  recorded_at: string;
+  player_id: PlayerId | null;
+  opponents: string[];
+  conditions: Record<string, string>;
+}
+
+export interface PlayerProfile {
+  person: string;
+  is_self: boolean;
+  videos: ProfileVideo[];
+  metrics: ProfileMetric[];
+  retests: RetestResult[];
+  changes: string[];
+  log_events: number;
+}
+
+export interface HabitEvidence {
+  video_id: string;
+  shot_id: string;
+  t_ms: number;
+}
+
+export interface Habit {
+  condition: string;
+  outcome: string;
+  p: number;
+  n: number;
+  hits: number;
+  confidence: "high" | "medium" | "low";
+  evidence: HabitEvidence[];
+  counter_examples: HabitEvidence[];
+}
+
+export interface OpponentReport {
+  person: string;
+  videos: ProfileVideo[];
+  shots: number;
+  typed_shots: number;
+  distributions: Distribution[];
+  habits: Habit[];
+  next_shot: Habit[];
+  caveats: string[];
+}
