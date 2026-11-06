@@ -104,6 +104,7 @@ rallyiq/perception/players/     球员姿态与跟踪阶段
 rallyiq/perception/shuttle/     羽毛球轨迹阶段
 rallyiq/events/                 回合与击球候选阶段
 rallyiq/strokes/                击球类型分类阶段（12 类，规则 v1；可选接入 BST 模型）
+rallyiq/ingest/                 视频输入评估（机位、帧率、画质、各项输出可信度）
 rallyiq/pipeline/               阶段注册、任务执行、队列 worker、视频探测、叠加层合成
 rallyiq/report/                 赛后统计与 AI 教练点评（可插拔 LLM，默认 Claude）
 rallyiq/api/                    FastAPI 后端（上传、任务、结果、修正、报告、导出）
@@ -119,7 +120,7 @@ python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水
 pytest
 ```
 
-主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
+主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/quality` 视频条件与各项输出可信度；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
 
 AI 教练默认调用 Claude API（`pip install -e '.[coach]'`，设置 `ANTHROPIC_API_KEY`）；未配置时自动改用离线规则模板并在报告中注明。详见 `rallyiq/report/README.md`。
 

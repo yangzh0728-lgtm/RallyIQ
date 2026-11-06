@@ -151,3 +151,10 @@ kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-w
 .evidence { gap: 4px; }
 .training li { margin: 4px 0; line-height: 1.5; }
 .caveats { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+
+/* Input quality */
+.quality h3 .muted { font-weight: 400; font-size: 12px; }
+.quality-summary { line-height: 1.5; margin-bottom: 6px; }
+.quality-caps { display: grid; gap: 4px; margin-bottom: 6px; }
+.quality-checks { display: grid; gap: 6px; margin-top: 6px; }
+.quality-check .note { line-height: 1.4; margin-top: 2px; }

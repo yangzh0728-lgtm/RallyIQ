@@ -339,3 +339,35 @@ export const TEAM_COLORS: Record<TeamId, string> = { A: "#38bdf8", B: "#f472b6" 
 export const TEAM_LABELS: Record<TeamId, string> = { A: "A 队（P1+P3）", B: "B 队（P2+P4）" };
 
 export const playerIdsFor = (format: MatchFormat | undefined): PlayerId[] => (format === "doubles" ? DOUBLES_PLAYER_IDS : PLAYER_IDS);
+
+// ------------------------------------------------------------------ input quality (GET /videos/{id}/quality)
+
+export type CameraView = "end_center" | "end_oblique" | "side" | "unknown";
+export type CameraHeight = "high" | "medium" | "low" | "unknown";
+
+export interface QualityCheck {
+  key: string;
+  label: string;
+  value: string | null;
+  score?: number | null;
+  status: Status;
+  note?: string | null;
+}
+
+export interface CapabilityReliability {
+  capability: "court_metrics" | "players" | "shuttle" | "rallies" | "hits";
+  label: string;
+  status: Status;
+  reasons: string[];
+}
+
+export interface VideoQuality {
+  schema_version: string;
+  video_id: string;
+  fingerprint: string;
+  camera_view: CameraView;
+  camera_height: CameraHeight;
+  checks: QualityCheck[];
+  capabilities: CapabilityReliability[];
+  summary: string;
+}
