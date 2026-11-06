@@ -178,7 +178,7 @@ def main(argv: list[str] | None = None) -> int:
             run_times.append(r["wall_s"])
             todo -= 1
             avg = sum(run_times) / len(run_times)
-            done = sum(1 for v in index.values() if v.get("state") == "succeeded") + (r["state"] == "succeeded")
+            done = sum(1 for v in index.values() if v.get("state") == "succeeded")
             print(f"    {cid}: {r['state']}{'（' + str(r['error']) + '）' if r['error'] else ''}  用时 {r['wall_s']:.0f}s", flush=True)
             if r["state"] == "succeeded":
                 print(clip_summary(r, doc, preds / f"{cid}.json"), flush=True)
