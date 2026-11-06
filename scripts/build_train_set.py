@@ -117,12 +117,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-run", action="store_true", help="download + label only")
     ap.add_argument("--split", choices=("train", "test"), default="train",
                     help="test: every set of the 6 held-out matches -> ~/rallyiq-data/public/shuttleset_test")
+    ap.add_argument("--out", type=Path, help="output folder (default shuttleset_train / shuttleset_test); "
+                    "point a new folder's clips/ at an old one to re-run the pipeline without downloading again")
     ap.add_argument("--quiet", action="store_true", help="no per-stage progress lines")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(message)s")
 
     set_dir = public_eval.shuttleset_dir(a.shuttleset)
-    out = OUT if a.split == "train" else DATA / "shuttleset_test"
+    out = a.out.expanduser() if a.out else (OUT if a.split == "train" else DATA / "shuttleset_test")
     clips, labels, preds = out / "clips", out / "labels", out / "preds"
     for d in (clips, labels, preds):
         d.mkdir(parents=True, exist_ok=True)
