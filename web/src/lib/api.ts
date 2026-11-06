@@ -3,7 +3,7 @@ import { boundaryLinesM, CORNERS_M, homographyFrom4, projectCourtLines, projectL
 import { generateMock, type MockAnalysis } from "./mock";
 import { mockQuality } from "./quality";
 import { mockCoach, mockStats } from "./report";
-import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality, HardExampleSummary } from "./types";
+import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality, HardExampleSummary, OpponentReport, PeopleAssignment, PersonSummary, PlayerProfile } from "./types";
 
 /** Per-video singles/doubles choice; "auto" lets the players stage decide. */
 export type MatchFormatSetting = "auto" | "singles" | "doubles";
@@ -41,6 +41,17 @@ export interface Api {
   getQuality(videoId: string): Promise<VideoQuality>;
   /** MP4 clip of one rally (padded 1 s), or null when there is no source file (mock). */
   clipUrl(videoId: string, rallyId: string): string | null;
+  /** Who P1..P4 are in this video, and which one is the user. */
+  getPeople(videoId: string): Promise<PeopleAssignment>;
+  setPeople(videoId: string, people: PeopleAssignment["people"], selfPlayer: PeopleAssignment["self_player"]): Promise<PeopleAssignment>;
+  /** Append this reviewed match to the long-term log (one event per named player). */
+  commitMemory(videoId: string): Promise<unknown[]>;
+  /** Exclude this video from profiles from now on (appends a withdrawal). */
+  withdrawMemory(videoId: string): Promise<unknown[]>;
+  listPeople(): Promise<PersonSummary[]>;
+  /** The user's profile, or ``person``'s. */
+  getProfile(person?: string | null): Promise<PlayerProfile>;
+  getOpponent(person: string): Promise<OpponentReport>;
   /** Corrections kept as hard examples, grouped by video condition. */
   getHardExampleSummary(): Promise<HardExampleSummary>;
   /** JSONL download of all hard examples, or null in mock mode. */
@@ -116,6 +127,14 @@ export const liveApi: Api = {
     http<CoachReport>(`/videos/${enc(id)}/report/coach`, { method: "POST", body: JSON.stringify({ provider: provider ?? null }) }),
   reportExportUrl: (id, format) => `${BASE}/videos/${enc(id)}/report/export?format=${format}`,
   getQuality: (id) => http<VideoQuality>(`/videos/${enc(id)}/quality`),
+  getPeople: (id) => http<PeopleAssignment>(`/videos/${enc(id)}/people`),
+  setPeople: (id, people, self_player) =>
+    http<PeopleAssignment>(`/videos/${enc(id)}/people`, { method: "PUT", body: JSON.stringify({ people, self_player }) }),
+  commitMemory: (id) => http<unknown[]>(`/videos/${enc(id)}/memory/commit`, { method: "POST" }),
+  withdrawMemory: (id) => http<unknown[]>(`/videos/${enc(id)}/memory/withdraw`, { method: "POST" }),
+  listPeople: () => http<PersonSummary[]>("/people"),
+  getProfile: (person) => http<PlayerProfile>(`/profile${person ? `?person=${enc(person)}` : ""}`),
+  getOpponent: (person) => http<OpponentReport>(`/opponents/${enc(person)}`),
   clipUrl: (id, rallyId) => `${BASE}/videos/${enc(id)}/clip?rally_id=${enc(rallyId)}`,
   getHardExampleSummary: () => http<HardExampleSummary>("/hard_examples/summary"),
   hardExamplesUrl: () => `${BASE}/hard_examples?format=jsonl`,
@@ -328,9 +347,29 @@ export function createMockApi(): Api {
     },
     hardExamplesUrl: () => null,
     clipUrl: () => null,
+    ...mockMemory(),
   };
 }
 
 const useMock =
   import.meta.env.VITE_USE_MOCK === "1" || (typeof location !== "undefined" && new URLSearchParams(location.search).has("mock"));
 export const api: Api = useMock ? createMockApi() : liveApi;
+
+/** Demo mode has no backend log: people can be named, but profiles need the real service. */
+function mockMemory(): Pick<Api, "getPeople" | "setPeople" | "commitMemory" | "withdrawMemory" | "listPeople" | "getProfile" | "getOpponent"> {
+  const people = new Map<string, PeopleAssignment>();
+  const unavailable = () => Promise.reject(new Error("演示模式没有个人档案：连接后端后，确认过的比赛才会写入只追加的档案日志"));
+  return {
+    getPeople: async (id) => people.get(id) ?? { video_id: id, people: {}, self_player: null },
+    setPeople: async (id, p, self_player) => {
+      const a = { video_id: id, people: p, self_player };
+      people.set(id, a);
+      return a;
+    },
+    commitMemory: unavailable,
+    withdrawMemory: unavailable,
+    listPeople: async () => [],
+    getProfile: unavailable,
+    getOpponent: unavailable,
+  };
+}

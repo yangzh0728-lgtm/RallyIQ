@@ -268,3 +268,36 @@ def test_clip_export(client, sample_video):
     assert client.get(f"/api/videos/{vid}/clip").status_code == 422
     assert client.get(f"/api/videos/{vid}/clip", params={"start_ms": 2000, "end_ms": 1000}).status_code == 422
     assert client.get(f"/api/videos/{vid}/clip", params={"rally_id": "nope"}).status_code == 404
+
+
+def test_memory_commit_profile_and_opponent(client, sample_video):
+    vids = []
+    for _ in range(2):
+        v = upload(client, sample_video)
+        wait_job(client, v["latest_job"]["job_id"])
+        vids.append(v["video_id"])
+    assert client.post(f"/api/videos/{vids[0]}/memory/commit").status_code == 422  # nobody named yet
+    assert client.put(f"/api/videos/{vids[0]}/people", json={"people": {"P1": "我"}, "self_player": "P2"}).status_code == 422
+    for vid in vids:
+        r = client.put(f"/api/videos/{vid}/people", json={"people": {"P1": " 我 ", "P2": "小李"}, "self_player": "P1"})
+        assert r.status_code == 200 and r.json()["people"]["P1"] == "我"
+        client.post(f"/api/videos/{vid}/report/coach", json={"provider": "offline"})
+        ev = client.post(f"/api/videos/{vid}/memory/commit")
+        assert ev.status_code == 201 and {e["person"] for e in ev.json()} == {"我", "小李"}
+    me = client.get("/api/profile").json()
+    assert me["person"] == "我" and me["is_self"] and len(me["videos"]) == 2
+    shots = next(m for m in me["metrics"] if m["key"] == "shots")
+    assert len(shots["points"]) == 2 and shots["trend"] in ("flat", "up", "down")
+    assert all(r["to_video_id"] == vids[1] or r["status"] == "pending" for r in me["retests"])
+
+    ppl = client.get("/api/people").json()
+    assert [p["person"] for p in ppl] == ["我", "小李"] and ppl[0]["is_self"]
+    opp = client.get("/api/opponents/小李").json()
+    assert opp["person"] == "小李" and len(opp["videos"]) == 2 and opp["shots"] > 0
+
+    # re-commit appends; withdraw hides the video but keeps the log
+    client.post(f"/api/videos/{vids[0]}/memory/commit")
+    client.post(f"/api/videos/{vids[1]}/memory/withdraw")
+    assert len(client.get("/api/profile").json()["videos"]) == 1
+    log = client.get("/api/memory/log").json()
+    assert len(log) == 7 and [e["seq"] for e in log] == list(range(1, 8))

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./lib/api";
 import { Home } from "./pages/Home";
+import { Profile } from "./pages/Profile";
 import { Report } from "./pages/Report";
 import { Workbench } from "./pages/Workbench";
 
@@ -16,7 +17,10 @@ function useHashRoute(): string {
 
 export function App() {
   const route = useHashRoute();
-  const m = route.match(/^\/videos\/([^/]+)(\/report)?/);
+  const [path, query = ""] = route.split("?");
+  const m = path.match(/^\/videos\/([^/]+)(\/report)?/);
+  const pm = path.match(/^\/profile(?:\/(.+))?$/);
+  const startMs = Number(new URLSearchParams(query).get("t")) || null;
   return (
     <>
       <header className="topbar">
@@ -25,6 +29,7 @@ export function App() {
         </a>
         <span className="muted small">单打 / 双打分析工作台</span>
         <span className="spacer" />
+        <a className="small" href="#/profile">我的档案</a>
         {api.mode === "mock" ? (
           <span className="mode-badge" title="使用前端合成数据，未连接后端">演示模式 · 合成数据</span>
         ) : (
@@ -37,8 +42,10 @@ export function App() {
         m[2] ? (
           <Report key={m[1]} videoId={decodeURIComponent(m[1])} />
         ) : (
-          <Workbench key={m[1]} videoId={decodeURIComponent(m[1])} />
+          <Workbench key={m[1]} videoId={decodeURIComponent(m[1])} startMs={startMs} />
         )
+      ) : pm ? (
+        <Profile key={pm[1] ?? ""} person={pm[1] ? decodeURIComponent(pm[1]) : null} />
       ) : (
         <Home />
       )}

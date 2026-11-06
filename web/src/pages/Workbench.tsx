@@ -16,7 +16,7 @@ import { courtAt, DEFAULT_LAYERS, frameIndexAt, type Layers } from "../lib/overl
 import { colorOf, labelOf } from "../lib/players";
 import { playerIdsFor, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
 
-export function Workbench({ videoId }: { videoId: string }) {
+export function Workbench({ videoId, startMs = null }: { videoId: string; startMs?: number | null }) {
   const [video, setVideo] = useState<Video | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export function Workbench({ videoId }: { videoId: string }) {
   if (!jobId) return <Centered>这个视频还没有分析任务。</Centered>;
   if (!job) return <Centered>{jobError ? `任务状态获取失败：${jobError}` : "获取任务状态…"}</Centered>;
   if (job.state !== "succeeded") return <JobDetail job={job} />;
-  return <Analysis key={job.job_id} video={video} onRerun={(j: Job) => setJobId(j.job_id)} />;
+  return <Analysis key={job.job_id} video={video} startMs={startMs} onRerun={(j: Job) => setJobId(j.job_id)} />;
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
@@ -47,7 +47,7 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => void }) {
+function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number | null; onRerun: (job: Job) => void }) {
   const [overlay, setOverlay] = useState<OverlayData | null>(null);
   const [events, setEvents] = useState<EventsResult | null>(null);
   const [corrections, setCorrections] = useState<Correction[]>([]);
@@ -74,6 +74,9 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
 
   const duration = overlay?.video.duration_ms;
   const clock = useMemo(() => (duration ? new PlaybackClock(duration) : null), [duration]);
+  useEffect(() => {
+    if (clock && startMs != null) clock.seek(Math.max(0, startMs - 1000)); // evidence links: #/videos/<id>?t=<ms>
+  }, [clock, startMs]);
   const fps = overlay?.video.fps ?? 30;
 
   const rallyNos = useMemo(() => new Map(events?.rallies.map((r, i) => [r.rally_id, i + 1]) ?? []), [events]);
