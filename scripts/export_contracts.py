@@ -90,14 +90,37 @@ def _round(x):
     if isinstance(x, list):
         return [_round(v) for v in x]
     if isinstance(x, dict):
-        return {k: (v if k == "homography" else _round(v)) for k, v in x.items()}
+        return {k: (_round_sig(v) if k == "homography" else _round(v)) for k, v in x.items()}
     return x
+
+
+def _round_sig(x, sig: int = 9):
+    if isinstance(x, list):
+        return [_round_sig(v, sig) for v in x]
+    return float(f"{x:.{sig}g}") if isinstance(x, float) else x
+
+
+def _close(a, b, tol: float = 1e-6) -> bool:
+    """Structural equality with float tolerance (numpy/BLAS builds differ in the last digits)."""
+    if isinstance(a, float) or isinstance(b, float):
+        return isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) <= tol * max(1, abs(a), abs(b)) + 2e-3
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_close(x, y, tol) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_close(a[k], b[k], tol) for k in a)
+    return a == b
+
+
+def _stale(p: Path, s: str) -> bool:
+    if not p.exists():
+        return True
+    return not _close(json.loads(p.read_text()), json.loads(s))
 
 
 def main() -> int:
     files = render()
     if "--check" in sys.argv:
-        stale = [str(p) for p, s in files.items() if not p.exists() or p.read_text() != s]
+        stale = [str(p) for p, s in files.items() if _stale(p, s)]
         if stale:
             print("stale contract files, run scripts/export_contracts.py:\n" + "\n".join(stale))
             return 1

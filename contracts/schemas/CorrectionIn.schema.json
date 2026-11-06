@@ -11,7 +11,9 @@
         "delete_rally",
         "set_rally_bounds",
         "set_rally_winner",
-        "swap_player_ids"
+        "swap_player_ids",
+        "confirm_shot",
+        "confirm_rally"
       ],
       "title": "Op",
       "type": "string"
@@ -32,6 +34,12 @@
       ],
       "default": null,
       "title": "Note"
+    },
+    "hard_example": {
+      "default": true,
+      "description": "collect this edit as a hard example for evaluation",
+      "title": "Hard Example",
+      "type": "boolean"
     }
   },
   "required": [

@@ -107,3 +107,21 @@ def test_rejects_unknown_type_and_missing(client, tmp_path):
         assert client.post("/api/videos", files={"file": ("x.txt", f)}).status_code == 415
     assert client.get("/api/videos/nope").status_code == 404
     assert client.get("/api/jobs/nope").status_code == 404
+
+
+def test_confirm_ops_and_hard_example_flag(client, sample_video):
+    v = upload(client, sample_video)
+    vid = v["video_id"]
+    wait_job(client, v["latest_job"]["job_id"])
+    raw = client.get(f"/api/videos/{vid}/events").json()
+    shot, rally = raw["shots"][0], raw["rallies"][0]
+    r = client.post(f"/api/videos/{vid}/corrections",
+                    json={"op": "confirm_shot", "payload": {"shot_id": shot["shot_id"]}, "hard_example": False})
+    assert r.status_code == 201 and r.json()["hard_example"] is False
+    client.post(f"/api/videos/{vid}/corrections", json={"op": "confirm_rally", "payload": {"rally_id": rally["rally_id"]}})
+    ev = client.get(f"/api/videos/{vid}/events").json()
+    s = next(x for x in ev["shots"] if x["shot_id"] == shot["shot_id"])
+    assert s["status"] == "ok" and s["source"] == "human" and s["hitter"] == shot["hitter"] and s["frame"] == shot["frame"]
+    rr = next(x for x in ev["rallies"] if x["rally_id"] == rally["rally_id"])
+    assert rr["status"] == "ok" and rr["start_frame"] == rally["start_frame"]
+    assert [c["hard_example"] for c in client.get(f"/api/videos/{vid}/corrections").json()] == [False, True]
