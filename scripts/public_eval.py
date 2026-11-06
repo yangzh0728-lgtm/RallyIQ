@@ -85,8 +85,7 @@ def run_shuttleset(a: argparse.Namespace) -> int:
     for d in (labels, preds, clips):
         d.mkdir(parents=True, exist_ok=True)
     matches = SS.load_matches(set_dir)
-    step = max(1, len(matches) // a.matches)
-    chosen = matches[::step][: a.matches]
+    chosen = SS.eval_matches(matches, a.matches)
     manifest, results = {}, []
     store = Store(out / "data")
     for m in chosen:

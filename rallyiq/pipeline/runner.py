@@ -21,12 +21,19 @@ MANUAL_CALIBRATION = "calibration_manual"
 MATCH_FORMAT = "match_format"  # MatchFormatSetting chosen in the UI; read by the players stage
 
 
-def run_job(store: Store, job: Job, config: dict[str, Any] | None = None, worker_id: str | None = None) -> Job:
+def run_job(store: Store, job: Job, config: dict[str, Any] | None = None, worker_id: str | None = None,
+            on_progress: Callable[[str, float], None] | None = None) -> Job:
     """Run ``job`` to completion. With ``worker_id`` every progress write also renews the job lease
-    (see ``Store.claim_next_job``) and is dropped if the lease was lost to another worker."""
+    (see ``Store.claim_next_job``) and is dropped if the lease was lost to another worker.
+    ``on_progress(stage, fraction)``: optional console hook for scripts, called on every (throttled)
+    progress write for each running or finished stage."""
 
     def save(j: Job) -> None:
         store.update_job(j, worker_id)
+        if on_progress is not None:
+            for r in j.stages:
+                if r.state in ("running", "succeeded"):
+                    on_progress(r.name, 1.0 if r.state == "succeeded" else r.progress)
 
     try:
         video_path = store.video_path(job.video_id)  # downloads from object storage when needed

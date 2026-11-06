@@ -58,6 +58,19 @@ def load_matches(set_dir: Path) -> list[dict[str, Any]]:
     return out
 
 
+def eval_matches(matches: list[dict[str, Any]], n: int = 6) -> list[dict[str, Any]]:
+    """The held-out matches scored by scripts/public_eval.py (every k-th match). Never train on these."""
+    step = max(1, len(matches) // n)
+    return matches[::step][:n]
+
+
+def train_matches(matches: list[dict[str, Any]], n_eval: int = 6) -> list[dict[str, Any]]:
+    """Every match not held out for evaluation. The split is by match, so no player/venue/broadcast
+    of an evaluation match leaks into training."""
+    held = {m["id"] for m in eval_matches(matches, n_eval)}
+    return [m for m in matches if m["id"] not in held]
+
+
 def load_strokes(set_csv: Path) -> list[dict[str, Any]]:
     rows = []
     for r in csv.DictReader(open(set_csv, encoding="utf-8")):

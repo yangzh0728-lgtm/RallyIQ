@@ -104,7 +104,7 @@ def clip_stats(art: Path) -> dict[str, Any]:
     return out
 
 
-def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path) -> dict[str, Any]:
+def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path, on_progress=None) -> dict[str, Any]:
     meta_p = clip.with_suffix(".meta.json")
     cmeta = json.loads(meta_p.read_text(encoding="utf-8")) if meta_p.exists() else {}
     clip_id = cmeta.get("clip_id", clip.stem)
@@ -114,7 +114,7 @@ def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path) -> d
     job = store.create_job(video_id, list(STAGES))
 
     t0 = time.monotonic()
-    job = run_job(store, job, config)
+    job = run_job(store, job, config, on_progress=on_progress)
     wall = time.monotonic() - t0
     art = store.video_dir(video_id) / "artifacts"
     res: dict[str, Any] = {

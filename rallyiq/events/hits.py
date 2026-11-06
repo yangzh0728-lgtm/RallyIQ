@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .config import EventsConfig
+from .learned import features, get_scorer
 from .players import PoseIndex, Proximity
 from .rallies import RallySpan
 from .trajectory import Track, angle_deg, norm
@@ -41,6 +42,7 @@ R_SAME_HITTER = "same_hitter_consecutive"  # singles: same player twice; doubles
 R_TEAMMATE_AMBIGUOUS = "teammate_ambiguous"  # doubles: both partners equally close to the shuttle
 R_HITTER_FROM_ALTERNATION = "hitter_from_alternation"  # nearest player broke alternation; next-nearest used
 R_INFERRED_SERVE = "inferred_from_rally_start"
+R_HITTER_FROM_TRAJECTORY = "hitter_from_trajectory"  # learned side model overruled the nearest player
 
 WEIGHTS = {"change": 0.35, "proximity": 0.35, "sharpness": 0.15, "track_quality": 0.15}
 
@@ -60,6 +62,29 @@ class Candidate:
     @property
     def best(self) -> Optional[Proximity]:
         return self.prox[0] if self.prox else None
+
+    @property
+    def hitter_known(self) -> bool:
+        b = self.best
+        return b is not None and (b.score > 0 or R_HITTER_FROM_TRAJECTORY in self.reasons)
+
+
+def apply_side_model(c: "Candidate", p_near: float, threshold: float) -> None:
+    """When the learned side model is confident the hit came from the other end of the court than the
+    nearest player's, hand the hit to the best player on that end (trajectory direction and contact height
+    say which end hit it even when two players overlap on screen)."""
+    b = c.best
+    if b is None or b.pose.side not in ("near", "far"):
+        return
+    want = "near" if p_near >= 0.5 else "far"
+    if b.pose.side == want or max(p_near, 1 - p_near) < threshold:
+        return
+    for k, alt in enumerate(c.prox[1:], start=1):
+        if alt.pose.side == want:
+            c.prox.insert(0, c.prox.pop(k))
+            c.reasons = [r for r in c.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
+            c.reasons.append(R_HITTER_FROM_TRAJECTORY)
+            return
 
 
 def _clip(x: float) -> float:
@@ -121,7 +146,13 @@ def detect_hits(
     poses: PoseIndex,
     cfg: EventsConfig,
     fps_ms: float,
+    collect: Optional[list] = None,
 ) -> list[Candidate]:
+    """Hit candidates of one rally.
+
+    ``collect``: if given, (features, candidate) of every candidate after non-maximum suppression is
+    appended to it, before any filtering (training data for ``learned.py``).
+    """
     pts = track.points
     raw: list[Candidate] = []
     for i in range(span.start, span.end + 1):
@@ -144,16 +175,37 @@ def detect_hits(
             picked.append(c)
     picked.sort(key=lambda c: c.idx)
 
+    scorer = get_scorer(cfg.hit_scorer)
     no_pose = poses.empty
     out: list[Candidate] = []
     for c in picked:
-        _decide(c, track, span, cfg, no_pose)
-        if c.confidence >= cfg.min_candidate_conf:
+        rule_conf, landing, rejected = _decide(c, track, span, cfg, no_pose)
+        if scorer is not None or collect is not None:
+            x = features(c, track, span, poses, cfg, rule_conf, landing, no_pose)
+            if collect is not None:
+                collect.append((x, c))
+            if scorer is not None:
+                rejected = False
+                c.confidence = round(float(scorer.predict([x])[0]), 3)
+                if scorer.side is not None:
+                    apply_side_model(c, float(scorer.side.predict([x])[0]), cfg.side_threshold)
+        if not rejected and c.confidence >= cfg.min_candidate_conf:
             out.append(c)
 
-    if not out or pts[out[0].idx].t_ms - pts[span.start].t_ms > cfg.min_hit_gap_ms:
+    serve = None
+    if collect is not None or not out or pts[out[0].idx].t_ms - pts[span.start].t_ms > cfg.min_hit_gap_ms:
         serve = _inferred_serve(track, span, poses, cfg, fps_ms)
-        if serve is not None:
+    if serve is not None:
+        if scorer is not None or collect is not None:
+            x = features(serve, track, span, poses, cfg, serve.confidence, False, no_pose)
+            if collect is not None:
+                collect.append((x, serve))
+            if scorer is not None:
+                serve.confidence = round(float(scorer.predict([x])[0]), 3)
+                if scorer.side is not None:
+                    apply_side_model(serve, float(scorer.side.predict([x])[0]), cfg.side_threshold)
+        needed = not out or pts[out[0].idx].t_ms - pts[span.start].t_ms > cfg.min_hit_gap_ms
+        if needed and (scorer is None or serve.confidence >= cfg.min_candidate_conf):
             out.insert(0, serve)
 
     out = _alternating_subset(out, cfg)
@@ -162,29 +214,33 @@ def detect_hits(
     return out
 
 
-def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_pose: bool) -> None:
+def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_pose: bool) -> tuple[float, bool, bool]:
+    """Set reasons and the rule confidence of a candidate.
+
+    Returns (rule confidence before rejection, is a landing, rejected by the rules). A rejected
+    candidate gets confidence 0; the learned scorer sees the same facts as features instead.
+    """
     pts = track.points
     best = c.best
     p = best.score if best else 0.0
+    rejected = False
 
     if no_pose or not c.prox:
         # No pose around this frame: only the trajectory speaks. Keep strong,
         # sharp changes for review; the hitter stays unknown.
         if c.change * c.sharpness < 0.5:
-            c.confidence = 0.0
-            return
+            rejected = True
         c.reasons.append(R_NO_POSE)
     elif p <= 0.0:
         # Players are visible but none is near: floor landing, net cord, lob
         # apex or a false detection. Not a hit.
-        c.confidence = 0.0
-        return
+        rejected = True
 
     # A change right where the rally stops on the floor is the landing.
     is_last = pts[span.end].t_ms - pts[c.idx].t_ms <= cfg.landing_window_ms
-    if is_last and span.end_reason == RallyEndReason.SHUTTLE_STATIC and p < 0.7:
-        c.confidence = 0.0
-        return
+    landing = is_last and span.end_reason == RallyEndReason.SHUTTLE_STATIC
+    if landing and p < 0.7:
+        rejected = True
 
     if best is not None and not best.used_wrist:
         c.reasons.append(R_WRIST_NOT_VISIBLE)
@@ -201,13 +257,15 @@ def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_p
         c.reasons.append(R_WEAK_CHANGE)
 
     w = WEIGHTS
-    c.confidence = round(
+    conf = round(
         w["change"] * c.change
         + w["proximity"] * p
         + w["sharpness"] * c.sharpness
         + w["track_quality"] * c.track_quality,
         3,
     )
+    c.confidence = 0.0 if rejected else conf
+    return conf, landing, rejected
 
 
 def _inferred_serve(
@@ -228,12 +286,12 @@ def _inferred_serve(
 
 
 def _hitter(c: Candidate) -> Optional[str]:
-    return c.best.player_id if c.best and c.best.score > 0 else None
+    return c.best.player_id if c.hitter_known else None
 
 
 def _side_key(c: Candidate) -> Optional[str]:
     """What must alternate between consecutive hits: player (singles) or team (doubles)."""
-    return c.best.pose.team_key if c.best and c.best.score > 0 else None
+    return c.best.pose.team_key if c.hitter_known else None
 
 
 def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
