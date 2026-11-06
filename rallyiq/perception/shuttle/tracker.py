@@ -50,7 +50,7 @@ class TrackerConfig:
     # Candidate scores. ``strong`` is the usual heatmap threshold; weaker candidates
     # are only kept if they belong to a tracklet with enough support.
     strong_score: float = 0.5
-    weak_score: float = 0.2
+    weak_score: float = 0.1  # follows the detector peak_threshold (stage.tracker_config)
     weak_min_len: int = 3
     min_len: int = 3
     # Fastest plausible image-space speed, in image diagonals per second. A smash

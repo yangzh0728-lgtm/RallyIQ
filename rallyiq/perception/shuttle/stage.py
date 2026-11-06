@@ -40,8 +40,13 @@ log = logging.getLogger("rallyiq.shuttle")
 CANDIDATES_FILE = "shuttle_candidates.json"
 
 
-def tracker_config(overrides: dict | None) -> TrackerConfig:
+def tracker_config(overrides: dict | None, peak_threshold: float | None = None) -> TrackerConfig:
+    """Tracker settings. ``peak_threshold`` is the detector's: the tracker keeps weak
+    candidates down to it (unless ``weak_score`` is overridden), otherwise lowering the
+    detector threshold would only add candidates the tracker throws away."""
     cfg = TrackerConfig()
+    if peak_threshold is not None:
+        cfg.weak_score = float(peak_threshold)
     names = {f.name for f in fields(TrackerConfig)}
     for k, v in (overrides or {}).items():
         if k not in names:
@@ -182,7 +187,7 @@ def run(ctx: StageContext) -> ShuttleTrack:
         region, support, mode = court_lock(ctx.calibration, ctx.players)
         log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
-                                  tracker_config(cfg.get("tracker")), region, support)
+                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support)
     save_candidates(Path(ctx.work_dir) / CANDIDATES_FILE, candidates, selected, detector.name, size)
     ctx.report(1.0)
     return track

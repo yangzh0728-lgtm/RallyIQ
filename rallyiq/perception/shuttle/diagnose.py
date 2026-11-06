@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 
 from ...contracts import CourtCalibration, EventsResult, PlayerTracks, VideoMeta
-from .tracker import Candidate, TrackerConfig
+from .tracker import Candidate
 
 
 @dataclass
@@ -65,7 +65,7 @@ def coverage(
     events: EventsResult | None = None,
     court_lock: bool = True,
 ) -> Coverage:
-    from .stage import build_track
+    from .stage import build_track, tracker_config
     from .stage import court_lock as make_lock
 
     n = max(meta.frame_count, 1)
@@ -80,8 +80,8 @@ def coverage(
         raw_target = sum(
             1 for f in raw if any(region(f, x * sx, y * sy) > 0.0 for x, y, _s in cands[f])
         ) / n
-    # Let weak candidates down to the threshold form trajectories too.
-    cfg = TrackerConfig(weak_score=min(TrackerConfig.weak_score, threshold))
+    # Same coupling as the stage: weak candidates down to the threshold may form trajectories.
+    cfg = tracker_config(None, threshold)
     track, _sel = build_track(meta, cands, size[0], size[1], variant, cfg, region, support)
     det = {p.frame for p in track.points if p.source == "detected"}
     rf = rally_frames(events)
