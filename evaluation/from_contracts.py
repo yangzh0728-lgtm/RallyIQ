@@ -3,7 +3,7 @@
     python -m evaluation.from_contracts data/videos/<video_id>/artifacts \
         --clip-meta ~/rallyiq-data/bwf/clips/ae26_ms_f.meta.json --out preds/
 
-读取 artifacts 目录下的 video_meta / calibration / shuttle / events / players（缺的跳过），
+读取 artifacts 目录下的 probe（VideoMeta）/ calibration / shuttle / events / players（缺的跳过），
 写出 preds/<clip_id>.json。
 
 时间换算：流水线处理的是抽出来的片段文件，它的 t_ms 从片段开头算起；
@@ -61,9 +61,10 @@ def _side_lookup(players: dict[str, Any] | None) -> dict[tuple[int, str], str]:
 
 
 def convert(art: Path, clip_id: str, offset_ms: int, include_interpolated: bool = False) -> dict[str, Any]:
-    meta = _read(art, "video_meta")
+    # 流水线把 VideoMeta 存为 probe.json（产物以阶段命名）；video_meta.json 兼容旧写法
+    meta = _read(art, "probe") or _read(art, "video_meta")
     if meta is None:
-        raise SystemExit(f"{art} 里没有 video_meta.json")
+        raise SystemExit(f"{art} 里没有 probe.json")
     fps, n = float(meta["fps"]), int(meta["frame_count"])
     t = lambda f: int(round(offset_ms + f * 1000.0 / fps))  # noqa: E731
     doc = schema.empty_doc(clip_id, "prediction", meta["width"], meta["height"], fps,
