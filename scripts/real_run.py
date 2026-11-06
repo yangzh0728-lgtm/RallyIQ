@@ -82,6 +82,13 @@ def clip_stats(art: Path) -> dict[str, Any]:
         out["rallies"] = len(ev.get("rallies", []))
         out["hits"] = len(shots)
         out["hits_ok"] = sum(1 for s in shots if s.get("status") == "ok")
+
+    st = _load(art, "strokes")
+    if st:
+        strokes = [s["stroke"] for s in st.get("shots", [])]
+        out["stroke_classifier"] = st.get("classifier")
+        out["strokes_typed"] = sum(1 for s in strokes if s.get("shot_type"))
+        out["strokes_ok"] = sum(1 for s in strokes if s.get("status") == "ok")
     return out
 
 

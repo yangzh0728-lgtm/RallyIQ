@@ -1,4 +1,4 @@
-// Wire types for the RallyIQ API. Mirrors rallyiq/contracts/models.py (schema 0.1.0) and the
+// Wire types for the RallyIQ API. Mirrors rallyiq/contracts/models.py (schema 0.2.0) and the
 // generated contracts/schemas/*.json. Conventions:
 //   * frame = 0-based frame index, t_ms = its time in ms of the original video
 //   * image coords: px of the original video, origin top-left
@@ -28,7 +28,7 @@ export interface VideoMeta {
   variable_frame_rate?: boolean;
 }
 
-export type StageName = "probe" | "calibration" | "players" | "shuttle" | "events" | "overlay";
+export type StageName = "probe" | "calibration" | "players" | "shuttle" | "events" | "strokes" | "overlay";
 export type JobState = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export interface StageRun {
@@ -101,6 +101,51 @@ export interface OverlayData {
   frames: OverlayFrame[];
 }
 
+/** Stroke types (击球类型): the merged ShuttleSet taxonomy without the Top_/Bottom_ prefix. */
+export type ShotType =
+  | "short_serve"
+  | "long_serve"
+  | "clear"
+  | "smash"
+  | "drop"
+  | "net_shot"
+  | "cross_net"
+  | "push"
+  | "net_kill"
+  | "drive"
+  | "lift"
+  | "block";
+
+export interface ShotTypeScore {
+  shot_type: ShotType;
+  p: number;
+}
+
+/** Stroke-type prediction (stage `strokes`) or human label (`set_shot_type`). */
+export interface StrokeInfo {
+  shot_type: ShotType | null; // null = undeterminable
+  confidence: number;
+  status: Status;
+  source: Source;
+  classifier?: string | null;
+  candidates?: ShotTypeScore[];
+  reasons?: string[];
+  evidence?: Record<string, number | null>;
+}
+
+export interface ShotStroke {
+  shot_id: string;
+  frame: number;
+  stroke: StrokeInfo;
+}
+
+export interface StrokesResult {
+  schema_version?: string;
+  video_id: string;
+  classifier: string | null;
+  shots: ShotStroke[];
+}
+
 export interface ShotEvent {
   shot_id: string;
   rally_id: string | null;
@@ -111,7 +156,8 @@ export interface ShotEvent {
   shuttle_px?: Point | null;
   shuttle_court?: Point | null;
   hitter_court?: Point | null;
-  shot_type?: string | null;
+  shot_type?: ShotType | null;
+  stroke?: StrokeInfo | null;
   target_zone?: string | null;
   confidence: number;
   status: Status;
@@ -146,7 +192,7 @@ export interface EventsResult {
 }
 
 export type CorrectionOp =
-  | { op: "add_shot"; payload: { frame: number; hitter?: PlayerId | null; shuttle_px?: Point | null } }
+  | { op: "add_shot"; payload: { frame: number; hitter?: PlayerId | null; shuttle_px?: Point | null; shot_type?: ShotType | null } }
   | { op: "delete_shot"; payload: { shot_id: string } }
   | { op: "set_hitter"; payload: { shot_id: string; hitter: PlayerId | null } }
   | { op: "move_shot"; payload: { shot_id: string; frame: number } }
@@ -156,7 +202,8 @@ export type CorrectionOp =
   | { op: "set_rally_winner"; payload: { rally_id: string; winner: PlayerId | null } }
   | { op: "swap_player_ids"; payload: { from_frame: number } }
   | { op: "confirm_shot"; payload: { shot_id: string } }
-  | { op: "confirm_rally"; payload: { rally_id: string } };
+  | { op: "confirm_rally"; payload: { rally_id: string } }
+  | { op: "set_shot_type"; payload: { shot_id: string; shot_type: ShotType | null } };
 
 /** hard_example (default true on the backend): the fix also goes into the evaluation set. */
 export type CorrectionIn = CorrectionOp & { note?: string | null; hard_example?: boolean };

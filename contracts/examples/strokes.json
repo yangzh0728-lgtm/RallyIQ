@@ -1,0 +1,253 @@
+{
+  "schema_version": "0.2.0",
+  "video_id": "vid_example",
+  "classifier": "rules_v1",
+  "shots": [
+    {
+      "shot_id": "s0001",
+      "frame": 30,
+      "stroke": {
+        "shot_type": "long_serve",
+        "confidence": 0.703,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "long_serve",
+            "p": 0.703
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 3.16,
+          "receiver_depth_m": 3.79,
+          "lateral_m": 1.64,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 7.14,
+          "rise": 1.77,
+          "left_frame": 0.0
+        }
+      }
+    },
+    {
+      "shot_id": "s0002",
+      "frame": 60,
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.353,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.353
+          },
+          {
+            "shot_type": "short_serve",
+            "p": 0.059
+          },
+          {
+            "shot_type": "long_serve",
+            "p": 0.059
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 3.79,
+          "receiver_depth_m": 3.59,
+          "lateral_m": 1.01,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 7.45,
+          "rise": 1.7,
+          "left_frame": 0.0
+        }
+      }
+    },
+    {
+      "shot_id": "s0003",
+      "frame": 90,
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.353,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.353
+          },
+          {
+            "shot_type": "short_serve",
+            "p": 0.059
+          },
+          {
+            "shot_type": "long_serve",
+            "p": 0.059
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 3.59,
+          "receiver_depth_m": 2.9,
+          "lateral_m": 0.14,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 6.49,
+          "rise": 1.772,
+          "left_frame": 0.0
+        }
+      }
+    },
+    {
+      "shot_id": "s0004",
+      "frame": 120,
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.823,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.823
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 2.9,
+          "receiver_depth_m": 5.27,
+          "lateral_m": 1.58,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 8.33,
+          "rise": 1.46,
+          "left_frame": 0.0
+        }
+      }
+    },
+    {
+      "shot_id": "s0005",
+      "frame": 150,
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.543,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.543
+          },
+          {
+            "shot_type": "drive",
+            "p": 0.061
+          },
+          {
+            "shot_type": "block",
+            "p": 0.057
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 5.27,
+          "receiver_depth_m": 4.0,
+          "lateral_m": 1.2,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 9.35,
+          "rise": 1.379,
+          "left_frame": 0.0
+        }
+      }
+    },
+    {
+      "shot_id": "s0006",
+      "frame": 180,
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.628,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.628
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 4.0,
+          "receiver_depth_m": 4.08,
+          "lateral_m": 1.04,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 8.15,
+          "rise": 1.598,
+          "left_frame": 0.0
+        }
+      }
+    },
+    {
+      "shot_id": "s0007",
+      "frame": 210,
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.261,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.373
+          },
+          {
+            "shot_type": "drive",
+            "p": 0.231
+          },
+          {
+            "shot_type": "block",
+            "p": 0.12
+          }
+        ],
+        "reasons": [
+          "last_shot_of_rally",
+          "flight_not_observed",
+          "ambiguous_types",
+          "incomplete_evidence",
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 4.08,
+          "receiver_depth_m": null,
+          "lateral_m": null,
+          "flight_ms": null,
+          "court_speed_mps": null,
+          "rise": null,
+          "left_frame": 0.0
+        }
+      }
+    }
+  ]
+}

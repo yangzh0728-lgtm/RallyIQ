@@ -30,12 +30,19 @@ Court geometry helpers (line model, DLT homography fit, projection, reprojection
 | `players` | `rallyiq/perception/players/stage.py` | `PlayerTracks` | `players.json` |
 | `shuttle` | `rallyiq/perception/shuttle/stage.py` | `ShuttleTrack` | `shuttle.json` |
 | `events` | `rallyiq/events/stage.py` | `EventsResult` (`Rally`, `ShotEvent`) | `events.json` |
+| `strokes` | `rallyiq/strokes/stage.py` | `StrokesResult` (`StrokeInfo` per shot) | `strokes.json` |
 | `overlay` | `rallyiq/pipeline/overlay.py` | `OverlayData` (`OverlayFrame`) | `overlay.json` |
 
 Every stage is `run(ctx: StageContext) -> Model`. `ctx` gives `video_path`, `meta`, `work_dir`,
 `config`, `report(progress)` and lazily loaded upstream artifacts (`ctx.calibration`,
-`ctx.players`, `ctx.shuttle`, `ctx.events`). The runner saves the return value as
+`ctx.players`, `ctx.shuttle`, `ctx.events`, `ctx.strokes`). The runner saves the return value as
 `data/videos/<id>/artifacts/<stage>.json`.
 
-Human edits are append-only `Correction`s (`corrections.json`); the API layers them on the raw
-`events` artifact to produce the effective events (`events_effective.json`).
+The raw model prediction served by the API is the `events` artifact with `strokes` merged in by
+`shot_id` (`ShotEvent.shot_type` + `ShotEvent.stroke`). Human edits are append-only `Correction`s
+(`corrections.json`, including `set_shot_type`); the API layers them on that raw prediction to produce
+the effective events (`events_effective.json`).
+
+Stroke types (`ShotType`): `short_serve`, `long_serve`, `clear`, `smash`, `drop`, `net_shot`,
+`cross_net`, `push`, `net_kill`, `drive`, `lift`, `block` (the merged ShuttleSet classes);
+`shot_type: null` = undeterminable. Schema 0.2.0 added these fields; 0.1.0 files without them still load.

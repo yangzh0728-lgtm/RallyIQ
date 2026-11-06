@@ -86,7 +86,7 @@ export const liveApi: Api = {
 
 // ---------------------------------------------------------------- mock (?mock)
 
-const STAGES: StageName[] = ["probe", "calibration", "players", "shuttle", "events", "overlay"];
+const STAGES: StageName[] = ["probe", "calibration", "players", "shuttle", "events", "strokes", "overlay"];
 const STAGE_MS = 900;
 const LS_KEY = "rallyiq.mock.corrections.v2";
 

@@ -15,6 +15,7 @@ export function exportJson(video: Video, effective: EventsResult, raw: EventsRes
 export const CSV_HEADER = [
   "shot_id", "rally_id", "frame", "t_ms", "time", "hitter", "confidence", "status", "source",
   "shuttle_x", "shuttle_y", "hitter_court_x", "hitter_court_y",
+  "shot_type", "shot_type_confidence", "shot_type_status", "shot_type_source",
 ];
 
 function cell(v: unknown): string {
@@ -31,6 +32,7 @@ export function exportCsv(ev: EventsResult): string {
     return [
       s.shot_id, s.rally_id, s.frame, s.t_ms, time, s.hitter, s.confidence.toFixed(3), s.status, s.source,
       ...(s.shuttle_px ?? [null, null]), ...(s.hitter_court ?? [null, null]),
+      s.shot_type, s.stroke ? s.stroke.confidence.toFixed(3) : null, s.stroke?.status, s.stroke?.source,
     ];
   });
   return [CSV_HEADER, ...rows].map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";

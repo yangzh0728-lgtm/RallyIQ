@@ -1,13 +1,85 @@
 import type { PlaybackClock } from "../lib/clock";
 import { describeCorrection, formatMs } from "../lib/corrections";
 import { colorOf, labelOf } from "../lib/players";
+import { evidenceRows, reasonLabel, SHOT_TYPE_COLOR, SHOT_TYPE_ZH, SHOT_TYPES, typeLabel } from "../lib/strokes";
 import { useClockMs } from "../lib/useClock";
-import { PLAYER_IDS, type Correction, type CorrectionOp, type PlayerId, type Rally, type ShotEvent, type Source, type Status } from "../lib/types";
+import { PLAYER_IDS, type Correction, type CorrectionOp, type PlayerId, type Rally, type ShotEvent, type ShotType, type Source, type Status } from "../lib/types";
 
 const STATUS_LABEL: Record<Status, string> = { ok: "可用", needs_review: "待复核", undeterminable: "不可判定" };
 
 export function StatusPill({ status, source }: { status: Status; source?: Source }) {
   return source === "human" ? <span className="pill human">人工</span> : <span className={`pill ${status}`}>{STATUS_LABEL[status] ?? status}</span>;
+}
+
+/** Stroke-type chip: coloured by type; dashed outline while the model's label still needs review. */
+export function TypeChip({ shot }: { shot: Pick<ShotEvent, "shot_type" | "stroke"> }) {
+  const st = shot.stroke;
+  if (!st) return null;
+  const t = shot.shot_type ?? null;
+  const review = st.source === "model" && st.status !== "ok";
+  const title = t
+    ? `${typeLabel(t)} · ${st.source === "human" ? "人工标注" : `置信度 ${Math.round(st.confidence * 100)}%${review ? " · 待复核" : ""}`}`
+    : "击球类型不可判定";
+  return (
+    <span className={`type-chip ${review ? "review" : ""} ${t ? "" : "none"}`} style={t ? { borderColor: SHOT_TYPE_COLOR[t], color: SHOT_TYPE_COLOR[t] } : undefined} title={title}>
+      {t ? SHOT_TYPE_ZH[t] : "?"}
+      {review && "?"}
+    </span>
+  );
+}
+
+function StrokeEditor({ shot, busy, submit }: { shot: ShotEvent; busy: boolean; submit: (op: CorrectionOp) => void }) {
+  const st = shot.stroke;
+  const set = (t: ShotType | null) => submit({ op: "set_shot_type", payload: { shot_id: shot.shot_id, shot_type: t } });
+  const cands = st?.source === "model" ? (st.candidates ?? []) : [];
+  return (
+    <div className="stroke-box">
+      <div className="row small">
+        <span className="muted">击球类型</span>
+        <TypeChip shot={shot} />
+        {st && <StatusPill status={st.status} source={st.source} />}
+        {st?.source === "model" && <span className="muted mono">{Math.round(st.confidence * 100)}%</span>}
+        <span className="spacer" />
+        <select disabled={busy} value={shot.shot_type ?? ""} title="改成正确的击球类型（追加修正，原始预测保留）" onChange={(e) => set((e.target.value || null) as ShotType | null)}>
+          <option value="">未判定</option>
+          {SHOT_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {SHOT_TYPE_ZH[t]}
+            </option>
+          ))}
+        </select>
+        <button disabled={busy || !shot.shot_type || st?.source === "human"} onClick={() => set(shot.shot_type ?? null)}>
+          类型正确
+        </button>
+      </div>
+      {!st && <div className="muted small">没有类型预测（这一拍是人工新增的，或分析结果早于击球分类）。</div>}
+      {cands.length > 1 && (
+        <div className="row small">
+          <span className="muted">候选</span>
+          {cands.map((c) => (
+            <button key={c.shot_type} className="link-btn" disabled={busy} title={`改为${SHOT_TYPE_ZH[c.shot_type]}`} onClick={() => set(c.shot_type)}>
+              {SHOT_TYPE_ZH[c.shot_type]} {Math.round(c.p * 100)}%
+            </button>
+          ))}
+        </div>
+      )}
+      {st?.reasons?.length ? <div className="small warn-text">待复核原因：{st.reasons.map(reasonLabel).join("；")}</div> : null}
+      {st?.source === "model" && st.evidence && Object.keys(st.evidence).length > 0 && (
+        <details className="small">
+          <summary className="muted">判断依据{st.classifier ? `（${st.classifier}）` : ""}</summary>
+          <div className="evidence">
+            {evidenceRows(st.evidence).map(([k, v]) => (
+              <div key={k} className="row">
+                <span className="muted">{k}</span>
+                <span className="spacer" />
+                <span className="mono">{v}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
 }
 
 interface Props {
@@ -111,6 +183,7 @@ export function CorrectionPanel(p: Props) {
               <span className="row small" style={{ gap: 6 }}>
                 <span className="dot" style={{ background: colorOf(s.hitter) }} />
                 {labelOf(s.hitter)}
+                <TypeChip shot={s} />
               </span>
               <span className="row" style={{ gap: 4 }}>
                 {s.source === "model" && <span className="muted small mono">{Math.round(s.confidence * 100)}%</span>}
@@ -125,6 +198,7 @@ export function CorrectionPanel(p: Props) {
               选中 {shot.shot_id} · {formatMs(shot.t_ms)} · 第 {shot.frame} 帧
               {shot.reasons?.length ? ` · 依据：${shot.reasons.join("；")}` : ""}
             </div>
+            <StrokeEditor shot={shot} busy={p.busy} submit={p.submit} />
             <div className="row small">
               击球者
               {PLAYER_IDS.map((id) => (

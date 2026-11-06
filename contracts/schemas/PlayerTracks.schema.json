@@ -167,7 +167,7 @@
   "description": "Stage ``players`` output. Frames without detections may be omitted.",
   "properties": {
     "schema_version": {
-      "default": "0.1.0",
+      "default": "0.2.0",
       "title": "Schema Version",
       "type": "string"
     },

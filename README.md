@@ -2,7 +2,7 @@
 
 **个人 AI 羽毛球训练与比赛分析系统：学习正确打法，读懂比赛，预测对手战术。**
 
-> 状态：MVP 开发中。后端骨架、任务队列和共享数据契约已就绪，感知模块正在接入。本 README 是研发蓝图的摘要。
+> 状态：MVP 开发中。后端骨架、任务队列、共享数据契约、球员/羽毛球感知、回合与击球候选、击球类型分类和网页工作台已就绪。本 README 是研发蓝图的摘要。
 
 ## 项目定位
 
@@ -103,6 +103,7 @@ rallyiq/perception/calibration/ 球场标定阶段
 rallyiq/perception/players/     球员姿态与跟踪阶段
 rallyiq/perception/shuttle/     羽毛球轨迹阶段
 rallyiq/events/                 回合与击球候选阶段
+rallyiq/strokes/                击球类型分类阶段（12 类，规则 v1；可选接入 BST 模型）
 rallyiq/pipeline/               阶段注册、任务执行、队列 worker、视频探测、叠加层合成
 rallyiq/api/                    FastAPI 后端（上传、任务、结果、修正、导出）
 rallyiq/store.py                SQLite + 本地文件存储
@@ -117,7 +118,7 @@ python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水
 pytest
 ```
 
-主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正；`PUT /videos/{id}/calibration/manual` 点选四角；`GET /videos/{id}/heatmap`；`GET /videos/{id}/export?format=json|csv`。完整文档见运行后的 `/docs`。
+主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`GET /videos/{id}/heatmap`；`GET /videos/{id}/export?format=json|csv`。完整文档见运行后的 `/docs`。
 
 ## 界面设计
 
@@ -150,7 +151,7 @@ pytest
 
 ### 首版不做（推出后再加）
 
-击球类型分类、AI Coach、个人长期档案与对手报告、抽象 / 双屏视图、球拍检测、双打、模型训练与微调。
+AI Coach、个人长期档案与对手报告、抽象 / 双屏视图、球拍检测、双打、模型训练与微调。
 
 ### 排期（约 30 小时）
 
@@ -167,7 +168,7 @@ pytest
 - 每次使用时的人工修正自动记录为难例，积累成评估集，按机位、帧率、场馆和光照分组。
 - 每周挑出最弱的场景（例如远端小球、侧面机位、30 fps）针对性改进，并用同一评估集对比前后。
 - 当击球检测 F1 ≥ 0.90、可见球召回 ≥ 0.90（同一球员 ±3 帧匹配；1080p 下 ≤ 12 像素算命中）时，该功能才去掉"待复核"标记。
-- 之后按需要依次加入击球分类、个人档案、对手报告和 AI Coach。
+- 击球类型分类已提前接入（规则 v1，见 `rallyiq/strokes/README.md`），所有类型默认待复核，直到真实标注验证；之后依次加入个人档案、对手报告和 AI Coach。
 
 ### 算力与预算
 

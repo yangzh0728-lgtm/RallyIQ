@@ -7,13 +7,18 @@ Corrections that refer to unknown ids are ignored (reported in ``skipped``).
 
 from __future__ import annotations
 
-from ..contracts import Correction, EventsResult, Rally, ShotEvent, VideoMeta
+from ..contracts import SHOT_TYPES, Correction, EventsResult, Rally, ShotEvent, StrokeInfo, VideoMeta
 
 _SWAP = {"P1": "P2", "P2": "P1", None: None}
 
 
 class CorrectionError(ValueError):
     pass
+
+
+def _human_stroke(shot_type: str | None) -> StrokeInfo:
+    return StrokeInfo(shot_type=shot_type, confidence=1.0, status="ok" if shot_type else "undeterminable",
+                      source="human")
 
 
 def validate(op: str, payload: dict) -> None:
@@ -29,6 +34,7 @@ def validate(op: str, payload: dict) -> None:
         "swap_player_ids": ["from_frame"],
         "confirm_shot": ["shot_id"],
         "confirm_rally": ["rally_id"],
+        "set_shot_type": ["shot_id", "shot_type"],
     }[op]
     missing = [k for k in need if k not in payload]
     if missing:
@@ -36,6 +42,8 @@ def validate(op: str, payload: dict) -> None:
     for k in ("hitter", "winner"):
         if k in payload and payload[k] not in ("P1", "P2", None):
             raise CorrectionError(f"{k} must be 'P1', 'P2' or null")
+    if "shot_type" in payload and payload["shot_type"] is not None and payload["shot_type"] not in SHOT_TYPES:
+        raise CorrectionError(f"shot_type must be one of {', '.join(SHOT_TYPES)} or null")
 
 
 def apply_corrections(
@@ -57,6 +65,15 @@ def apply_corrections(
                 shuttle_px=p.get("shuttle_px"), confidence=1.0, status="ok", source="human",
                 reasons=[f"added by {c.correction_id}"],
             )
+            if p.get("shot_type"):
+                shots[sid].shot_type, shots[sid].stroke = p["shot_type"], _human_stroke(p["shot_type"])
+        elif c.op == "set_shot_type":
+            s = shots.get(p["shot_id"])
+            if s is None:
+                skipped.append(c.correction_id)
+                continue
+            # Only the stroke label changes: the hit itself keeps its own status/source.
+            s.shot_type, s.stroke = p["shot_type"], _human_stroke(p["shot_type"])
         elif c.op in ("delete_shot", "set_hitter", "move_shot", "confirm_shot"):
             s = shots.get(p["shot_id"])
             if s is None:

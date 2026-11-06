@@ -1,5 +1,40 @@
 {
   "$defs": {
+    "ShotTypeScore": {
+      "additionalProperties": false,
+      "properties": {
+        "shot_type": {
+          "enum": [
+            "short_serve",
+            "long_serve",
+            "clear",
+            "smash",
+            "drop",
+            "net_shot",
+            "cross_net",
+            "push",
+            "net_kill",
+            "drive",
+            "lift",
+            "block"
+          ],
+          "title": "Shot Type",
+          "type": "string"
+        },
+        "p": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "P",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shot_type",
+        "p"
+      ],
+      "title": "ShotTypeScore",
+      "type": "object"
+    },
     "Source": {
       "enum": [
         "model",
@@ -16,10 +51,106 @@
       ],
       "title": "Status",
       "type": "string"
+    },
+    "StrokeInfo": {
+      "additionalProperties": false,
+      "description": "Stroke-type prediction (or human label) for one shot.",
+      "properties": {
+        "shot_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "short_serve",
+                "long_serve",
+                "clear",
+                "smash",
+                "drop",
+                "net_shot",
+                "cross_net",
+                "push",
+                "net_kill",
+                "drive",
+                "lift",
+                "block"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null = undeterminable from this video",
+          "title": "Shot Type"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "status": {
+          "$ref": "#/$defs/Status",
+          "default": "needs_review"
+        },
+        "source": {
+          "$ref": "#/$defs/Source",
+          "default": "model"
+        },
+        "classifier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. rules_v1, bst@shuttleset25; null for human",
+          "title": "Classifier"
+        },
+        "candidates": {
+          "description": "top candidates, best first",
+          "items": {
+            "$ref": "#/$defs/ShotTypeScore"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "reasons": {
+          "description": "review reason codes",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "evidence": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "measured features behind the prediction (null = not measurable)",
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "shot_type",
+        "confidence"
+      ],
+      "title": "StrokeInfo",
+      "type": "object"
     }
   },
   "additionalProperties": false,
-  "description": "A hit (\u51fb\u7403) candidate. MVP: no shot type / landing zone yet (kept nullable).",
+  "description": "A hit (\u51fb\u7403) candidate. ``shot_type``/``stroke`` come from stage ``strokes``; no landing zone yet.",
   "properties": {
     "shot_id": {
       "title": "Shot Id",
@@ -134,6 +265,20 @@
     "shot_type": {
       "anyOf": [
         {
+          "enum": [
+            "short_serve",
+            "long_serve",
+            "clear",
+            "smash",
+            "drop",
+            "net_shot",
+            "cross_net",
+            "push",
+            "net_kill",
+            "drive",
+            "lift",
+            "block"
+          ],
           "type": "string"
         },
         {
@@ -141,7 +286,20 @@
         }
       ],
       "default": null,
+      "description": "effective stroke type (= stroke.shot_type)",
       "title": "Shot Type"
+    },
+    "stroke": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StrokeInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "stroke-type prediction or human label"
     },
     "target_zone": {
       "anyOf": [

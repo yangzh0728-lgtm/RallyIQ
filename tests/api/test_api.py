@@ -42,7 +42,7 @@ def test_upload_analyze_and_read_results(client, sample_video):
     v = client.get(f"/api/videos/{vid}").json()
     assert v["meta"]["fps"] == pytest.approx(30)
     assert v["meta"]["frame_count"] == 360
-    assert set(v["artifacts"]) >= {"calibration", "players", "shuttle", "events", "overlay"}
+    assert set(v["artifacts"]) >= {"calibration", "players", "shuttle", "events", "strokes", "overlay"}
 
     ov = client.get(f"/api/videos/{vid}/overlay").json()
     assert ov["court"] and ov["frames"][0]["players"]
@@ -81,10 +81,18 @@ def test_corrections_layer_on_raw_events(client, sample_video):
     # raw prediction is untouched
     assert client.get(f"/api/videos/{vid}/events", params={"raw": True}).json()["shots"][0] == first
 
+    # stroke types: model prediction merged into events, human label via set_shot_type
+    assert "stroke" in first and first["stroke"] is not None and first["stroke"]["source"] == "model"
+    assert client.post(f"/api/videos/{vid}/corrections", json={"op": "set_shot_type", "payload": {"shot_id": second["shot_id"], "shot_type": "smash"}}).status_code == 201
+    assert client.post(f"/api/videos/{vid}/corrections", json={"op": "set_shot_type", "payload": {"shot_id": second["shot_id"], "shot_type": "tweener"}}).status_code == 422
+    s2 = {s["shot_id"]: s for s in client.get(f"/api/videos/{vid}/events").json()["shots"]}[second["shot_id"]]
+    assert s2["shot_type"] == "smash" and s2["stroke"]["source"] == "human"
+
     csv_text = client.get(f"/api/videos/{vid}/export", params={"format": "csv"}).text
     assert csv_text.splitlines()[0].startswith("shot_id,rally_id")
+    assert csv_text.splitlines()[0].endswith("shot_type,shot_type_confidence,shot_type_status,shot_type_source")
     exp = client.get(f"/api/videos/{vid}/export").json()
-    assert len(exp["corrections"]) == 3 and exp["raw_events"]["shots"][0] == first
+    assert len(exp["corrections"]) == 4 and exp["raw_events"]["shots"][0] == first
 
 
 def test_manual_calibration_reruns_pipeline(client, sample_video):

@@ -2,7 +2,7 @@
 // the Python service (open the app with ?mock).
 import { applyH, COURT_L, COURT_W, CORNERS_M, homographyFrom4, projectCourtLines } from "./court";
 import { COCO_LIMBS } from "./overlay";
-import type { EventsResult, Keypoint, OverlayData, OverlayFrame, PlayerId, Point, Rally, ShotEvent, VideoMeta } from "./types";
+import type { EventsResult, Keypoint, OverlayData, OverlayFrame, PlayerId, Point, Rally, ShotEvent, ShotType, StrokeInfo, VideoMeta } from "./types";
 
 function rng(seed: number) {
   let s = seed >>> 0 || 1;
@@ -84,12 +84,13 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
 
   // Shots, with a few realistic model errors to correct.
   const shots: ShotEvent[] = [];
-  const addShot = (ri: number, tm: number, hitter: PlayerId, conf: number, reasons: string[], forceReview = false) => {
+  const rs = rng(hash(videoId) + 1); // separate stream so stroke types do not shift the rest of the mock
+  const addShot = (ri: number, tm: number, hitter: PlayerId, conf: number, reasons: string[], forceReview = false, stroke: StrokeInfo | null = null) => {
     const f = frameOf(tm);
     const id = `s${String(shots.length + 1).padStart(4, "0")}`;
     shots.push({
       shot_id: id, rally_id: rallies[ri].rally_id, frame: f, t_ms: tOf(f), hitter, hitter_confidence: round2(0.5 + r() * 0.5),
-      shuttle_px: null, shuttle_court: null, hitter_court: null, shot_type: null, target_zone: null,
+      shuttle_px: null, shuttle_court: null, hitter_court: null, shot_type: stroke?.shot_type ?? null, stroke, target_zone: null,
       confidence: round2(conf), status: conf < 0.6 || forceReview ? "needs_review" : "ok", source: "model", reasons,
     });
     rallies[ri].shot_ids.push(id);
@@ -98,7 +99,7 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
     rh.forEach((h, i) => {
       if (ri % 3 === 1 && i === 2) return; // missed hit (false negative)
       const wrongHitter = ri % 4 === 2 && i === 1;
-      addShot(ri, h.t + (r() - 0.5) * 60, PID[wrongHitter ? 1 - h.hitter : h.hitter], 0.45 + r() * 0.55, ["mock: trajectory turn", "mock: wrist near shuttle"], wrongHitter);
+      addShot(ri, h.t + (r() - 0.5) * 60, PID[wrongHitter ? 1 - h.hitter : h.hitter], 0.45 + r() * 0.55, ["mock: trajectory turn", "mock: wrist near shuttle"], wrongHitter, mockStroke(rs, i, h));
     });
     if (ri % 5 === 3) {
       const last = rh[rh.length - 1];
@@ -166,14 +167,45 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
   };
   return {
     overlay: {
-      schema_version: "0.1.0",
+      schema_version: "0.2.0",
       video,
       court: [{ start_frame: 0, end_frame: nFrames - 1, lines: projectCourtLines(H), status: "ok" }],
       keypoint_format: "coco17",
       skeleton: COCO_LIMBS,
       frames,
     },
-    events: { schema_version: "0.1.0", video_id: videoId, rallies, shots },
+    events: { schema_version: "0.2.0", video_id: videoId, rallies, shots },
+  };
+}
+
+const MOCK_TYPES: Record<"serve" | "back" | "mid" | "front", ShotType[]> = {
+  serve: ["short_serve", "short_serve", "long_serve"],
+  back: ["clear", "smash", "drop", "smash"],
+  mid: ["drive", "block", "push", "lift", "smash"],
+  front: ["net_shot", "lift", "cross_net", "push", "net_kill"],
+};
+
+/** A plausible stroke prediction from where the hitter stands (fake: there is no model in mock mode). */
+function mockStroke(r: () => number, index: number, h: Hit): StrokeInfo | null {
+  const depth = Math.abs(h.pos[1] - COURT_L / 2);
+  const zone = index === 0 ? "serve" : depth > 4.2 ? "back" : depth < 2.2 ? "front" : "mid";
+  const pool = MOCK_TYPES[zone];
+  const order = [...pool].sort(() => r() - 0.5);
+  if (r() < 0.06) {
+    return { shot_type: null, confidence: 0.2, status: "undeterminable", source: "model", classifier: "mock", candidates: [], reasons: ["insufficient_evidence"], evidence: {} };
+  }
+  const p1 = round2(0.35 + r() * 0.6);
+  const p2 = round2(Math.min(p1 - 0.05, r() * (1 - p1)));
+  const ok = p1 >= 0.6 && p1 - p2 >= 0.2;
+  return {
+    shot_type: order[0],
+    confidence: p1,
+    status: ok ? "ok" : "needs_review",
+    source: "model",
+    classifier: "mock",
+    candidates: [{ shot_type: order[0], p: p1 }, ...(p2 >= 0.05 && order[1] !== order[0] ? [{ shot_type: order[1], p: p2 }] : [])],
+    reasons: ok ? [] : ["ambiguous_types"],
+    evidence: { hitter_depth_m: round2(depth) },
   };
 }
 
