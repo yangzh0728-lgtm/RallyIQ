@@ -252,3 +252,22 @@ def test_output_schema_is_strict():
                 walk(v)
 
     walk(OUTPUT_SCHEMA)
+
+
+def test_doubles_stats_cover_four_players_and_team_wins():
+    meta = c.VideoMeta(video_id="v", filename="a.mp4", fps=30, frame_count=900, width=1920, height=1080,
+                     duration_ms=30000)
+    cal = demo.demo_calibration(meta)
+    players = demo.demo_players(meta, cal, "doubles")
+    events = demo.demo_events(meta, players)
+    assert events.match_format == "doubles"
+    events = events.model_copy(update={"rallies": [
+        r.model_copy(update={"winner": "A" if i % 2 == 0 else "B"}) for i, r in enumerate(events.rallies)]})
+    st = compute_match_stats(events, players, cal, meta)
+    assert [p.player_id for p in st.players] == ["P1", "P3", "P2", "P4"]
+    ix = index(st)
+    n = len(events.rallies)
+    # Partners share the team's record.
+    assert ix["P1.win.won"].value == ix["P3.win.won"].value == (n + 1) // 2
+    assert ix["P2.win.won"].value == ix["P4.win.won"].value == n // 2
+    assert ix["P4.move.distance_m"].value > 0

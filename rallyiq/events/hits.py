@@ -37,7 +37,9 @@ R_OCCLUDED = "shuttle_occluded_at_hit"
 R_INTERPOLATED = "interpolated_shuttle_at_hit"
 R_LOW_TRACK_QUALITY = "low_track_quality"
 R_WEAK_CHANGE = "weak_direction_change"
-R_SAME_HITTER = "same_hitter_consecutive"
+R_SAME_HITTER = "same_hitter_consecutive"  # singles: same player twice; doubles: same team twice
+R_TEAMMATE_AMBIGUOUS = "teammate_ambiguous"  # doubles: both partners equally close to the shuttle
+R_HITTER_FROM_ALTERNATION = "hitter_from_alternation"  # nearest player broke alternation; next-nearest used
 R_INFERRED_SERVE = "inferred_from_rally_start"
 
 WEIGHTS = {"change": 0.35, "proximity": 0.35, "sharpness": 0.15, "track_quality": 0.15}
@@ -155,6 +157,7 @@ def detect_hits(
             out.insert(0, serve)
 
     out = _alternating_subset(out, cfg)
+    _reattribute(out, cfg)
     _check_alternation(out)
     return out
 
@@ -186,7 +189,8 @@ def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_p
     if best is not None and not best.used_wrist:
         c.reasons.append(R_WRIST_NOT_VISIBLE)
     if len(c.prox) > 1 and c.prox[1].score > 0 and best.score - c.prox[1].score < cfg.hitter_margin:
-        c.reasons.append(R_HITTER_AMBIGUOUS)
+        same_team = best.pose.team is not None and best.pose.team == c.prox[1].pose.team
+        c.reasons.append(R_TEAMMATE_AMBIGUOUS if same_team else R_HITTER_AMBIGUOUS)
     if track.gap_around(c.idx) > cfg.occlusion_gap_ms:
         c.reasons.append(R_OCCLUDED)
     if pts[c.idx].interpolated:
@@ -227,10 +231,15 @@ def _hitter(c: Candidate) -> Optional[str]:
     return c.best.player_id if c.best and c.best.score > 0 else None
 
 
-def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
-    """Pick the subset of candidates that best explains a singles rally.
+def _side_key(c: Candidate) -> Optional[str]:
+    """What must alternate between consecutive hits: player (singles) or team (doubles)."""
+    return c.best.pose.team_key if c.best and c.best.score > 0 else None
 
-    In singles the hitter must alternate. Dynamic programming chooses the
+
+def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Pick the subset of candidates that best explains the rally.
+
+    The hitting side must alternate: the player in singles, the team in doubles. Dynamic programming chooses the
     candidates maximising sum(confidence - keep_threshold) under that rule,
     so a weak hit survives when it is needed between two strong hits by the
     other player, and a weak spurious hit is dropped when it would break the
@@ -243,10 +252,10 @@ def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candi
     best = [0.0] * n
     prev: list[Optional[int]] = [None] * n
     for i in range(n):
-        hi = _hitter(cands[i])
+        hi = _side_key(cands[i])
         best[i], prev[i] = w[i], None
         for j in range(i):
-            hj = _hitter(cands[j])
+            hj = _side_key(cands[j])
             if hi is not None and hi == hj:
                 continue
             if best[j] + w[i] > best[i]:
@@ -264,10 +273,32 @@ def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candi
     ]
 
 
-def _check_alternation(hits: list[Candidate]) -> None:
-    """Singles: consecutive hits by the same player mean a missed or spurious hit."""
+def _reattribute(hits: list[Candidate], cfg: EventsConfig) -> None:
+    """Fix a hitter that breaks alternation when another player of the right side is nearly as close.
+
+    Partners and opponents often overlap on screen near the net or in a
+    doubles front/back rotation. When the nearest player belongs to the side
+    that just hit, and a player of the other side is within ``2 * hitter_margin``
+    of the same proximity, the other side's player is the more plausible hitter.
+    """
     for a, b in zip(hits, hits[1:]):
-        if a.best and b.best and a.best.player_id == b.best.player_id:
+        ka, kb = _side_key(a), _side_key(b)
+        if ka is None or kb is None or ka != kb:
+            continue
+        best = b.best
+        for k, alt in enumerate(b.prox[1:], start=1):
+            if alt.score > 0 and alt.pose.team_key != ka and best.score - alt.score < 2 * cfg.hitter_margin:
+                b.prox.insert(0, b.prox.pop(k))
+                b.reasons = [r for r in b.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
+                b.reasons.append(R_HITTER_FROM_ALTERNATION)
+                break
+
+
+def _check_alternation(hits: list[Candidate]) -> None:
+    """Consecutive hits by the same side (player in singles, team in doubles) mean a missed or spurious hit."""
+    for a, b in zip(hits, hits[1:]):
+        ka, kb = _side_key(a), _side_key(b)
+        if ka is not None and ka == kb:
             for c in (a, b):
                 if R_SAME_HITTER not in c.reasons:
                     c.reasons.append(R_SAME_HITTER)

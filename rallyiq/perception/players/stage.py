@@ -1,6 +1,6 @@
 """Pipeline stage ``players``: ``run(ctx) -> PlayerTracks``.
 
-Runs pose estimation + singles tracking on the video, using the court
+Runs pose estimation + player tracking (singles or doubles) on the video, using the court
 calibration from the previous stage when it is available.
 
 Configuration (``ctx.config`` or environment):
@@ -10,6 +10,8 @@ Configuration (``ctx.config`` or environment):
   runs, and the ``model`` field stays ``None`` to show nothing was detected.
 * ``players_stride`` - run pose on every n-th frame (default 1).
 * ``players_far_boost`` - second pass for small far-side players.
+* ``match_format`` / ``RALLYIQ_MATCH_FORMAT`` - ``auto`` (default), ``singles``
+  or ``doubles``. ``auto`` decides from the first seconds of the video.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ import os
 import numpy as np
 
 from ...contracts import PlayerTracks
-from ...contracts.models import PlayerDetection, PlayerFrame
+from ...contracts.models import PlayerDetection, PlayerFrame, team_of
 from ...pipeline.context import StageContext, demo_mode
 from .models import PlayerFrameResult, PlayerState
 
@@ -37,6 +39,7 @@ def to_contract(p: PlayerState) -> PlayerDetection:
     return PlayerDetection(
         player_id=p.player_id,
         track_id=p.track_id,
+        team=p.team or team_of(p.player_id),
         side=p.side,
         bbox=_r(p.bbox, 1),
         keypoints=[[round(float(x), 1), round(float(y), 1), round(float(min(max(c, 0.0), 1.0)), 3)]
@@ -67,7 +70,25 @@ def build_tracks(video_id: str, results: list[PlayerFrameResult], model: str | N
         PlayerFrame(frame=r.frame, t_ms=max(int(round(r.t_ms)), 0), players=[to_contract(p) for p in r.players])
         for r in results
     ]
-    return PlayerTracks(video_id=video_id, model=model, frames=frames, side_switches=side_switches(results))
+    fmt = getattr(results, "match_format", "singles")
+    conf = getattr(results, "format_confidence", None)
+    return PlayerTracks(
+        video_id=video_id, model=model, match_format=fmt,
+        format_confidence=None if conf is None else round(float(conf), 3),
+        frames=frames, side_switches=side_switches(results),
+    )
+
+
+def match_format_setting(ctx: StageContext) -> str:
+    """Per-video setting from the UI, else config / environment, else ``auto``."""
+    from ...contracts import MatchFormatSetting
+    from ...pipeline.runner import MATCH_FORMAT
+
+    chosen = ctx.store.load_artifact(ctx.video_id, MATCH_FORMAT, MatchFormatSetting)
+    if chosen is not None and chosen.match_format != "auto":
+        return chosen.match_format
+    fmt = str(ctx.config.get("match_format") or os.environ.get("RALLYIQ_MATCH_FORMAT") or "auto").lower()
+    return fmt if fmt in ("auto", "singles", "doubles") else "auto"
 
 
 def run(ctx: StageContext) -> PlayerTracks:
@@ -76,7 +97,8 @@ def run(ctx: StageContext) -> PlayerTracks:
     if demo_mode(ctx) and cal is not None and cal.segments and cal.segments[0].homography:
         from ...pipeline.demo import demo_players
 
-        return demo_players(meta, cal)
+        fmt = match_format_setting(ctx)
+        return demo_players(meta, cal, "doubles" if fmt == "doubles" else "singles")
 
     model_path = ctx.config.get("pose_model") or os.environ.get("RALLYIQ_POSE_MODEL")
     if not model_path or not os.path.exists(model_path):
@@ -87,7 +109,7 @@ def run(ctx: StageContext) -> PlayerTracks:
     from .runner import PlayerTrackingConfig, iter_video, track_players
 
     stride = int(ctx.config.get("players_stride", 1))
-    cfg = PlayerTrackingConfig(stride=stride)
+    cfg = PlayerTrackingConfig(stride=stride, match_format=match_format_setting(ctx))
     cfg.tracker.fps = meta.fps
     est = RTMOOnnx(model_path, tile_far_half=bool(ctx.config.get("players_far_boost", False)))
 

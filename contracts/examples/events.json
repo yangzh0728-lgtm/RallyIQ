@@ -1,6 +1,7 @@
 {
   "schema_version": "0.1.0",
   "video_id": "vid_example",
+  "match_format": "singles",
   "rallies": [
     {
       "rally_id": "r001",

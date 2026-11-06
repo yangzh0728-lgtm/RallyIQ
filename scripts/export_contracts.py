@@ -13,7 +13,7 @@ from pathlib import Path
 
 from rallyiq import contracts as c
 from rallyiq.api.corrections import apply_corrections
-from rallyiq.contracts.geometry import project_court_lines
+from rallyiq.contracts.geometry import project_boundary_lines, project_court_lines
 from rallyiq.pipeline import demo
 from rallyiq.pipeline.overlay import COCO17_SKELETON
 from rallyiq.report import compute_match_stats
@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1] / "contracts"
 SCHEMAS = [
     c.VideoMeta, c.CourtCalibration, c.PlayerTracks, c.ShuttleTrack, c.EventsResult, c.ShotEvent, c.Rally,
     c.CorrectionIn, c.Correction, c.OverlayData, c.OverlayFrame, c.Job, c.Video, c.HeatmapData,
+    c.MatchFormatSetting,
     c.MatchStats, c.CoachReport, c.MatchReport,
 ]
 
@@ -43,9 +44,10 @@ def examples() -> dict[str, object]:
     overlay = c.OverlayData(
         video=meta, skeleton=COCO17_SKELETON,
         court=[c.CourtLines(start_frame=0, end_frame=74, status="ok",
-                            lines=project_court_lines(cal.segments[0].homography))],
+                            lines=project_court_lines(cal.segments[0].homography),
+                            boundary=project_boundary_lines(cal.segments[0].homography, "singles"))],
         frames=[c.OverlayFrame(frame=pf.frame, t_ms=pf.t_ms,
-                               players=[c.OverlayPlayer(player_id=p.player_id, side=p.side, bbox=p.bbox,
+                               players=[c.OverlayPlayer(player_id=p.player_id, team=p.team, side=p.side, bbox=p.bbox,
                                                         keypoints=p.keypoints, foot_court=p.foot_court)
                                         for p in pf.players],
                                shuttle=next((c.OverlayShuttle(x=s.x, y=s.y, source=s.source, confidence=s.confidence)
@@ -67,6 +69,8 @@ def examples() -> dict[str, object]:
                         c.StageRun(name="calibration", state="succeeded", progress=1.0, started_at=ts, finished_at=ts),
                         c.StageRun(name="players", state="running", progress=0.42, started_at=ts),
                         c.StageRun(name="shuttle"), c.StageRun(name="events"), c.StageRun(name="overlay")])
+    doubles = demo.demo_players(long_meta, cal, "doubles")
+    doubles_events = demo.demo_events(long_meta, doubles)
     # report: winners entered for every rally, coach from the offline rule provider
     decided = effective.model_copy(update={"rallies": [
         r.model_copy(update={"winner": "P1" if i % 3 else "P2"}) for i, r in enumerate(effective.rallies)]})
@@ -77,6 +81,9 @@ def examples() -> dict[str, object]:
     report = c.MatchReport(stats=stats, coach=coach)
     return {
         "match_report": report,
+        "players_doubles": doubles.model_copy(update={"frames": doubles.frames[30:31]}),
+        "events_doubles": doubles_events.model_copy(update={
+            "rallies": doubles_events.rallies[:1], "shots": [s for s in doubles_events.shots if s.rally_id == "r001"]}),
         "video_meta": meta, "calibration": cal, "players": players_small, "shuttle": shuttle_small,
         "events": events.model_copy(update={"rallies": events.rallies[:1],
                                             "shots": [s for s in events.shots if s.rally_id == "r001"]}),

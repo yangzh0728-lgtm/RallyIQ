@@ -36,10 +36,12 @@ from ..contracts import (
     Rally,
     ShotEvent,
     VideoMeta,
+    team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
 
 PLAYERS = ("P1", "P2")
+DOUBLES_PLAYERS = ("P1", "P3", "P2", "P4")
 
 # Movement filtering.
 MAX_SPEED_MPS = 8.0  # faster foot "moves" between samples are tracking glitches
@@ -285,9 +287,17 @@ def _player_stats(pid: str, events: EventsResult, rallies_by_id: dict[str, Rally
     d.append(st)
 
     # ---- win / loss patterns (only rallies with a known winner)
+    # Doubles: rallies are won by a team, serve/receive is decided by the team.
+    doubles = events.match_format == "doubles"
+
+    def side(x: str | None) -> str | None:
+        # Winners are already teams ("A"/"B"); hitters are players.
+        return (team_of(x) or x) if doubles else x
+
+    me = side(pid)
     decided = [r for r in rallies_by_id.values() if r.winner is not None]
     nd = len(decided)
-    won = [r for r in decided if r.winner == pid]
+    won = [r for r in decided if side(r.winner) == me]
     m.append(_metric(f"{pid}.win.won", "得分回合数", len(won) if nd else None, "分", nd, 15, 5, digits=0,
                      note=None if nd else "尚未标注回合胜负（在修正面板里设置胜者）"))
     m.append(_metric(f"{pid}.win.rate_pct", "回合胜率", _pct(len(won), nd), "%", nd, 15, 5))
@@ -300,7 +310,7 @@ def _player_stats(pid: str, events: EventsResult, rallies_by_id: dict[str, Rally
         ("win.long_rate_pct", f"长回合（≥{LONG_RALLY_MIN}拍）胜率", lambda r: rally_len(r) >= LONG_RALLY_MIN),
     ]:
         sub = [r for r in decided if sel(r)]
-        m.append(_metric(f"{pid}.{key}", label, _pct(sum(r.winner == pid for r in sub), len(sub)), "%", len(sub), 10, 4))
+        m.append(_metric(f"{pid}.{key}", label, _pct(sum(side(r.winner) == me for r in sub), len(sub)), "%", len(sub), 10, 4))
 
     shots_by_id = {s.shot_id: s for s in events.shots}
 
@@ -308,17 +318,19 @@ def _player_stats(pid: str, events: EventsResult, rallies_by_id: dict[str, Rally
         ss = sorted((shots_by_id[i] for i in r.shot_ids if i in shots_by_id), key=lambda s: s.frame)
         return (ss[0], ss[-1]) if ss else (None, None)
 
-    serve = [r for r in decided if (fl := first_last(r))[0] is not None and fl[0].hitter == pid]
-    recv = [r for r in decided if (fl := first_last(r))[0] is not None and fl[0].hitter not in (pid, None)]
-    m.append(_metric(f"{pid}.win.serve_rate_pct", "发球回合胜率", _pct(sum(r.winner == pid for r in serve), len(serve)),
+    serve = [r for r in decided if (fl := first_last(r))[0] is not None and fl[0].hitter is not None
+             and side(fl[0].hitter) == me]
+    recv = [r for r in decided if (fl := first_last(r))[0] is not None and fl[0].hitter is not None
+            and side(fl[0].hitter) != me]
+    m.append(_metric(f"{pid}.win.serve_rate_pct", "发球回合胜率", _pct(sum(side(r.winner) == me for r in serve), len(serve)),
                      "%", len(serve), 10, 4, note="以回合第一拍的击球者视为发球方"))
     m.append(_metric(f"{pid}.win.receive_rate_pct", "接发球回合胜率",
-                     _pct(sum(r.winner == pid for r in recv), len(recv)), "%", len(recv), 10, 4))
+                     _pct(sum(side(r.winner) == me for r in recv), len(recv)), "%", len(recv), 10, 4))
     won_last = [r for r in won if (fl := first_last(r))[1] is not None and fl[1].hitter is not None]
     m.append(_metric(f"{pid}.win.own_last_shot_pct", "得分回合中最后一拍由本人击出的比例",
                      _pct(sum(first_last(r)[1].hitter == pid for r in won_last), len(won_last)), "%", len(won_last),
                      10, 4, note="高说明多靠主动进攻得分，低说明多靠对手失误；落点未识别，仅为近似"))
-    lost = [r for r in decided if r.winner != pid]
+    lost = [r for r in decided if side(r.winner) != me]
     lost_last = [r for r in lost if (fl := first_last(r))[1] is not None and fl[1].hitter is not None]
     m.append(_metric(f"{pid}.win.lost_own_last_shot_pct", "失分回合中最后一拍由本人击出的比例",
                      _pct(sum(first_last(r)[1].hitter == pid for r in lost_last), len(lost_last)), "%",
@@ -389,7 +401,7 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
         caveats.append("击球类型分类尚未接入，暂不评价具体技术动作或球路选择。")
 
     player_stats = [_player_stats(pid, events, rallies_by_id, players, spans, fps, metric_ok, rally_minutes)
-                    for pid in PLAYERS]
+                    for pid in (DOUBLES_PLAYERS if events.match_format == "doubles" else PLAYERS)]
     return MatchStats(
         video_id=events.video_id, fingerprint=fingerprint(events, players, calibration),
         duration_ms=meta.duration_ms if meta else None, calibration_status=cal_status,

@@ -24,9 +24,9 @@ SYSTEM_PROMPT = """你是 RallyIQ 的羽毛球单打教练助手。你会收到�
 - insights：3–8 条，覆盖优势、问题、规律和战术建议；kind 取 strength / weakness / pattern / tactic / data_quality；如果数据质量明显限制了结论，加一条 data_quality。
 - training：1–3 项可执行的训练建议，说明理由，并在 retest_metric 里给出下次上传后用来复测的指标 key（可为 null）。
 - caveats：需要提醒使用者的数据局限。
-- 球员用 P1、P2 称呼。语言简洁、具体，像教练当面讲解，不要空话。"""
+- 球员用 P1、P2 称呼（双打还有 P3、P4：A 队 = P1+P3，B 队 = P2+P4，回合胜负记在队伍上）。语言简洁、具体，像教练当面讲解，不要空话。"""
 
-_PLAYER = {"anyOf": [{"type": "string", "enum": ["P1", "P2"]}, {"type": "null"}]}
+_PLAYER = {"anyOf": [{"type": "string", "enum": ["P1", "P2", "P3", "P4"]}, {"type": "null"}]}
 
 OUTPUT_SCHEMA: dict = {
     "type": "object",

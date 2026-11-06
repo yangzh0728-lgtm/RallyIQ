@@ -25,7 +25,7 @@ export function MiniMap({ overlay, clock }: { overlay: OverlayData; clock: Playb
       <h3>球场小地图</h3>
       <CourtView height={220}>
         {[...trails].map(([id, d]) => (
-          <path key={id} d={d} fill="none" stroke={colorOf(id as "P1")} strokeWidth={0.06} opacity={0.6} />
+          <path key={id} d={d} fill="none" stroke={colorOf(id)} strokeWidth={0.06} opacity={0.6} />
         ))}
         {frame?.players.map((p, i) =>
           p.foot_court ? (

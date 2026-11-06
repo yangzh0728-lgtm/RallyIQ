@@ -105,3 +105,43 @@ def project_court_lines(h_img_to_court) -> list[list[list[float]]]:
 def on_court(xy, margin_m: float = 0.5) -> bool:
     x, y = xy
     return -margin_m <= x <= W + margin_m and -margin_m <= y <= L + margin_m
+
+
+def boundary_corners_m(match_format: str = "singles") -> list[list[float]]:
+    """In-play rally boundary (after the serve) for a format, same corner order as ``COURT_CORNERS_M``.
+
+    Singles uses the inner (singles) sidelines, doubles the outer ones; both use
+    the back boundary line for rallies.
+    """
+    x0 = 0.0 if match_format == "doubles" else SINGLES_INSET
+    return [[x0, 0.0], [W - x0, 0.0], [W - x0, L], [x0, L]]
+
+
+def boundary_lines_m(match_format: str = "singles") -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    c = [tuple(p) for p in boundary_corners_m(match_format)]
+    return [(c[i], c[(i + 1) % 4]) for i in range(4)]
+
+
+def project_boundary_lines(h_img_to_court, match_format: str = "singles") -> list[list[list[float]]]:
+    inv = invert_homography(h_img_to_court)
+    return [apply_homography(inv, [a, b]) for a, b in boundary_lines_m(match_format)]
+
+
+def in_bounds(xy, match_format: str = "singles", serve: bool = False) -> bool:
+    """Whether a landing point (court metres) is in for this format.
+
+    ``serve=True`` applies the service rules on the receiving half: the short
+    service line in front, and for doubles the doubles long service line behind.
+    Which service box (left/right) is not checked here because it depends on the
+    score.
+    """
+    x, y = float(xy[0]), float(xy[1])
+    x0 = 0.0 if match_format == "doubles" else SINGLES_INSET
+    if not (x0 <= x <= W - x0 and 0.0 <= y <= L):
+        return False
+    if not serve:
+        return True
+    back = DOUBLES_LONG_SERVICE if match_format == "doubles" else 0.0
+    if y < NET:
+        return back <= y <= NET - SHORT_SERVICE
+    return NET + SHORT_SERVICE <= y <= L - back

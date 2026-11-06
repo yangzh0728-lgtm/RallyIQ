@@ -113,6 +113,16 @@ export function drawOverlay(
         ctx.lineTo(x2, y2);
       }
       ctx.stroke();
+      // The in-play boundary for this format (singles: inner sidelines, doubles: outer) drawn bolder.
+      if (cal.boundary?.length) {
+        ctx.lineWidth = 3 * px;
+        ctx.beginPath();
+        for (const [[x1, y1], [x2, y2]] of cal.boundary) {
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+        }
+        ctx.stroke();
+      }
       ctx.setLineDash([]);
     }
   }

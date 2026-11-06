@@ -26,9 +26,13 @@ are in milliseconds, so nothing depends on the frame rate.
 5. **Hitter.** Distance from the shuttle to each player's wrists and extrapolated
    racket head (wrist + k·(wrist − elbow)). Beyond `max_hitter_dist_rel` H nobody hit
    it, so the candidate is dropped (landing, lob apex, false detection).
-6. **Singles alternation.** A small dynamic program keeps the candidates that best
-   explain a rally in which hitters alternate: a weak hit survives when it is needed
-   between two hits of the other player, a weak duplicate is dropped.
+6. **Alternation.** A small dynamic program keeps the candidates that best
+   explain a rally in which the hitting side alternates (the player in singles, the
+   team in doubles): a weak hit survives when it is needed between two hits of the
+   other side, a weak duplicate is dropped. In doubles the hitter is the nearest of
+   the four players; if that player's team just hit and a player of the other team
+   is nearly as close (within `2·hitter_margin`), the other team's player is used
+   and the hit carries `hitter_from_alternation`.
 7. **Serve fallback.** If the shuttle is first seen already at the server's racket,
    a hit is proposed there for review.
 
@@ -49,15 +53,17 @@ Reason codes (stable strings for the review UI):
 | `interpolated_shuttle_at_hit` | the hit point was filled in by the tracker |
 | `low_track_quality` | few confident detections around the hit |
 | `weak_direction_change` | the trajectory barely changes |
-| `same_hitter_consecutive` | two hits in a row by the same player (one missed or spurious) |
+| `teammate_ambiguous` | doubles: both partners about equally close to the shuttle |
+| `hitter_from_alternation` | doubles/singles: nearest player broke alternation, next-nearest of the other side used |
+| `same_hitter_consecutive` | two hits in a row by the same player (singles) or team (doubles) |
 | `inferred_from_rally_start` | serve proposed from the rally start, not seen |
 | `no_pose_data` | no pose near this frame; hitter unknown |
-| `hitter_identity_unresolved` | nearest track has no P1/P2 identity yet |
+| `hitter_identity_unresolved` | nearest track has no P1–P4 identity yet |
 | `no_hits_detected` / `possible_missed_hit` / `hits_need_review` | rally-level |
 
 ## Synthetic benchmark
 
-`synthetic.py` renders singles rallies (shuttle + COCO-17 poses, behind-baseline
+`synthetic.py` renders singles or doubles (`doubles=True`) rallies (shuttle + COCO-17 poses, behind-baseline
 camera) with ground truth; `metrics.py` scores hits with the README rule (±3
 frames, same player). Current numbers (10 seeds × 4 rallies):
 

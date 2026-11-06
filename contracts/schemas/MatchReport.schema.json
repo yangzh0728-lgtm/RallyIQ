@@ -19,7 +19,9 @@
             {
               "enum": [
                 "P1",
-                "P2"
+                "P2",
+                "P3",
+                "P4"
               ],
               "type": "string"
             },
@@ -408,7 +410,9 @@
         "player_id": {
           "enum": [
             "P1",
-            "P2"
+            "P2",
+            "P3",
+            "P4"
           ],
           "title": "Player Id",
           "type": "string"
@@ -452,7 +456,9 @@
             {
               "enum": [
                 "P1",
-                "P2"
+                "P2",
+                "P3",
+                "P4"
               ],
               "type": "string"
             },

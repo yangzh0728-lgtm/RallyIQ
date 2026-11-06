@@ -23,7 +23,7 @@ export function App() {
         <a href="#/" className="brand">
           Rally<b>IQ</b>
         </a>
-        <span className="muted small">单打分析工作台</span>
+        <span className="muted small">单打 / 双打分析工作台</span>
         <span className="spacer" />
         {api.mode === "mock" ? (
           <span className="mode-badge" title="使用前端合成数据，未连接后端">演示模式 · 合成数据</span>

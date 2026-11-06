@@ -54,6 +54,7 @@ def fill_short_gaps(frames: list[PlayerFrameResult], max_gap: int = 6) -> list[P
                                 on_court=ps.on_court if ps.on_court == p.on_court else None,
                                 confidence=0.5 * min(ps.confidence, p.confidence),
                                 interpolated=True,
+                                team=ps.team,
                             )
                         )
             last_seen[p.player_id] = (fi, p)

@@ -64,8 +64,20 @@ class Source(str, Enum):
     human = "human"
 
 
-PlayerId = Literal["P1", "P2"]
+PlayerId = Literal["P1", "P2", "P3", "P4"]
+TeamId = Literal["A", "B"]
 Side = Literal["near", "far"]
+MatchFormat = Literal["singles", "doubles"]
+
+SINGLES_PLAYER_IDS: list[str] = ["P1", "P2"]
+DOUBLES_PLAYER_IDS: list[str] = ["P1", "P2", "P3", "P4"]
+# Fixed team membership: team A = P1 + P3 (the pair first seen on the near half),
+# team B = P2 + P4. In singles each team has one player.
+TEAM_OF: dict[str, str] = {"P1": "A", "P3": "A", "P2": "B", "P4": "B"}
+
+
+def team_of(player_id: str | None) -> str | None:
+    return TEAM_OF.get(player_id) if player_id else None
 
 
 # --------------------------------------------------------------------------- video
@@ -154,6 +166,7 @@ class PlayerDetection(Contract):
         default=None, description="stable identity across side switches; null if unresolved"
     )
     track_id: int = Field(description="raw tracker id")
+    team: TeamId | None = Field(default=None, description="A = P1/P3, B = P2/P4; null if unresolved")
     side: Side | None = None
     bbox: BBox
     keypoints: list[Keypoint] = Field(
@@ -179,8 +192,14 @@ class PlayerTracks(Contract):
     video_id: str
     model: str | None = Field(default=None, description="pose model name@version")
     keypoint_format: Literal["coco17"] = "coco17"
+    match_format: MatchFormat = Field(
+        default="singles", description="singles: P1/P2; doubles: P1+P3 (team A) vs P2+P4 (team B)"
+    )
+    format_confidence: Confidence | None = Field(
+        default=None, description="how sure the automatic singles/doubles decision is; null if set by config"
+    )
     frames: list[PlayerFrame]
-    side_switches: list[int] = Field(default_factory=list, description="frames where P1/P2 swap sides")
+    side_switches: list[int] = Field(default_factory=list, description="frames where the teams swap sides")
 
 
 # ------------------------------------------------------------------------- shuttle
@@ -248,7 +267,9 @@ class Rally(Contract):
     end_ms: int = Field(ge=0)
     shot_ids: list[str] = Field(default_factory=list)
     end_reason: RallyEndReason = "unknown"
-    winner: PlayerId | None = None
+    winner: PlayerId | TeamId | None = Field(
+        default=None, description="singles: P1/P2; doubles: team A/B"
+    )
     confidence: Confidence
     status: Status = Status.needs_review
     source: Source = Source.model
@@ -259,6 +280,7 @@ class EventsResult(Contract):
 
     schema_version: str = SCHEMA_VERSION
     video_id: str
+    match_format: MatchFormat = "singles"
     rallies: list[Rally]
     shots: list[ShotEvent]
 
@@ -269,13 +291,13 @@ class EventsResult(Contract):
 CorrectionOp = Literal[
     "add_shot",       # payload: {frame, hitter?, shuttle_px?}
     "delete_shot",    # payload: {shot_id}
-    "set_hitter",     # payload: {shot_id, hitter: "P1"|"P2"|null}
+    "set_hitter",     # payload: {shot_id, hitter: "P1".."P4"|null}
     "move_shot",      # payload: {shot_id, frame}
     "add_rally",      # payload: {start_frame, end_frame}
     "delete_rally",   # payload: {rally_id}
     "set_rally_bounds",  # payload: {rally_id, start_frame?, end_frame?}
     "set_rally_winner",  # payload: {rally_id, winner}
-    "swap_player_ids",   # payload: {from_frame} swap P1/P2 from this frame on
+    "swap_player_ids",   # payload: {from_frame, a?, b?} swap two ids (default P1/P2) from this frame on
     "confirm_shot",      # payload: {shot_id} mark a model shot as correct
     "confirm_rally",     # payload: {rally_id} mark a model rally as correct
 ]
@@ -302,6 +324,7 @@ class Correction(CorrectionIn):
 
 class OverlayPlayer(Contract):
     player_id: PlayerId | None
+    team: TeamId | None = None
     side: Side | None = None
     bbox: BBox
     keypoints: list[Keypoint]
@@ -335,6 +358,9 @@ class CourtLines(Contract):
     start_frame: int
     end_frame: int
     lines: list[Annotated[list[Point2], Field(min_length=2, max_length=2)]]
+    boundary: list[Annotated[list[Point2], Field(min_length=2, max_length=2)]] = Field(
+        default_factory=list, description="in-play rally boundary for the match format (singles or doubles sidelines)"
+    )
     status: Status
     image_corners: list[Point2] | None = Field(
         default=None, description="outer corners of the analysed court, near-left, near-right, far-right, far-left")
@@ -347,6 +373,7 @@ class OverlayData(Contract):
 
     schema_version: str = SCHEMA_VERSION
     video: VideoMeta
+    match_format: MatchFormat = "singles"
     court: list[CourtLines] = Field(default_factory=list)
     keypoint_format: Literal["coco17"] = "coco17"
     skeleton: list[Annotated[list[int], Field(min_length=2, max_length=2)]] = Field(
@@ -394,11 +421,18 @@ class Video(Contract):
     artifacts: list[StageName] = Field(default_factory=list)
 
 
+class MatchFormatSetting(Contract):
+    """Per-video choice of singles / doubles. ``auto`` lets the players stage decide."""
+
+    match_format: Literal["auto", "singles", "doubles"] = "auto"
+
+
 class HeatmapData(Contract):
-    """Court occupancy grid in court metres for one player."""
+    """Court occupancy grid in court metres for one player, one team, or everyone."""
 
     video_id: str
     player_id: PlayerId | None
+    team: TeamId | None = None
     cell_m: float
     nx: int
     ny: int

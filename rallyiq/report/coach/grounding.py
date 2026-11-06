@@ -98,7 +98,7 @@ def ground_insights(raw: list[dict], stats: MatchStats) -> tuple[list[CoachInsig
         pid = item.get("player_id")
         out.append(CoachInsight(
             kind=kind if kind in ("strength", "weakness", "pattern", "tactic", "data_quality") else "pattern",
-            player_id=pid if pid in ("P1", "P2") else None,
+            player_id=pid if pid in ("P1", "P2", "P3", "P4") else None,
             title=str(item.get("title", "")).strip(), detail=str(item.get("detail", "")).strip(),
             evidence=keys, confidence=conf, grounded=not bad, warnings=warnings,
         ))
@@ -112,7 +112,7 @@ def ground_training(raw: list[dict], stats: MatchStats) -> list[TrainingItem]:
         pid = item.get("player_id")
         retest = item.get("retest_metric")
         out.append(TrainingItem(
-            player_id=pid if pid in ("P1", "P2") else None,
+            player_id=pid if pid in ("P1", "P2", "P3", "P4") else None,
             drill=str(item.get("drill", "")).strip(), why=str(item.get("why", "")).strip(),
             evidence=[k for k in item.get("evidence") or [] if k in idx],
             retest_metric=retest if retest in idx else None,

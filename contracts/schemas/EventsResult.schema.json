@@ -51,7 +51,16 @@
             {
               "enum": [
                 "P1",
-                "P2"
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "A",
+                "B"
               ],
               "type": "string"
             },
@@ -60,6 +69,7 @@
             }
           ],
           "default": null,
+          "description": "singles: P1/P2; doubles: team A/B",
           "title": "Winner"
         },
         "confidence": {
@@ -123,7 +133,9 @@
             {
               "enum": [
                 "P1",
-                "P2"
+                "P2",
+                "P3",
+                "P4"
               ],
               "type": "string"
             },
@@ -286,6 +298,15 @@
     },
     "video_id": {
       "title": "Video Id",
+      "type": "string"
+    },
+    "match_format": {
+      "default": "singles",
+      "enum": [
+        "singles",
+        "doubles"
+      ],
+      "title": "Match Format",
       "type": "string"
     },
     "rallies": {

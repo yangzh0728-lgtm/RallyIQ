@@ -95,8 +95,25 @@ export function invertH(H: number[]): number[] | null {
   return inv.map((v) => v / inv[8]);
 }
 
+/** In-play rally boundary: singles uses the inner sidelines, doubles the outer ones (back boundary = baseline). */
+export function boundaryLinesM(format: "singles" | "doubles"): [Point, Point][] {
+  const x0 = format === "doubles" ? 0 : SIDE_ALLEY;
+  const c: Point[] = [
+    [x0, 0],
+    [COURT_W - x0, 0],
+    [COURT_W - x0, COURT_L],
+    [x0, COURT_L],
+  ];
+  return c.map((p, i) => [p, c[(i + 1) % 4]] as [Point, Point]);
+}
+
+/** Segments in court metres projected to image px through H (court meters -> image). */
+export function projectLines(H: number[], segs: [Point, Point][]): [Point, Point][] {
+  return segs.map(([p, q]) => [applyH(H, p), applyH(H, q)].map(([x, y]) => [r1(x), r1(y)]) as [Point, Point]);
+}
+
 /** Court lines projected to image px through H (court meters -> image). */
 export function projectCourtLines(H: number[]): [Point, Point][] {
-  return [...courtLinesM(), NET_LINE_M].map(([p, q]) => [applyH(H, p), applyH(H, q)].map(([x, y]) => [r1(x), r1(y)]) as [Point, Point]);
+  return projectLines(H, [...courtLinesM(), NET_LINE_M]);
 }
 const r1 = (v: number) => Math.round(v * 10) / 10;

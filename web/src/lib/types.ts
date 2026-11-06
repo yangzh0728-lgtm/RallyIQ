@@ -12,7 +12,10 @@ export type BBox = [number, number, number, number]; // [x1, y1, x2, y2] px
 /** README levels: ok 可用 / needs_review 待复核 / undeterminable 不可判定. */
 export type Status = "ok" | "needs_review" | "undeterminable";
 export type Source = "model" | "human";
-export type PlayerId = "P1" | "P2";
+/** Singles: P1/P2. Doubles: team A = P1 + P3, team B = P2 + P4. */
+export type PlayerId = "P1" | "P2" | "P3" | "P4";
+export type TeamId = "A" | "B";
+export type MatchFormat = "singles" | "doubles";
 export type Side = "near" | "far";
 
 export interface VideoMeta {
@@ -63,6 +66,7 @@ export interface Video {
 
 export interface OverlayPlayer {
   player_id: PlayerId | null;
+  team?: TeamId | null;
   side?: Side | null;
   bbox: BBox;
   keypoints: Keypoint[];
@@ -88,6 +92,8 @@ export interface CourtLines {
   start_frame: number;
   end_frame: number; // inclusive
   lines: [Point, Point][];
+  /** In-play rally boundary for the match format (singles or doubles sidelines). */
+  boundary?: [Point, Point][];
   status: Status;
   /** Outer corners of the analysed court: near-left, near-right, far-right, far-left. */
   image_corners?: Point[] | null;
@@ -98,6 +104,7 @@ export interface CourtLines {
 export interface OverlayData {
   schema_version?: string;
   video: VideoMeta;
+  match_format?: MatchFormat;
   court: CourtLines[];
   keypoint_format?: "coco17";
   /** Keypoint index pairs to draw as bones. */
@@ -133,7 +140,8 @@ export interface Rally {
   end_ms: number;
   shot_ids: string[];
   end_reason: RallyEndReason;
-  winner: PlayerId | null;
+  /** Singles: P1/P2. Doubles: team A/B. */
+  winner: PlayerId | TeamId | null;
   confidence: number;
   status: Status;
   source: Source;
@@ -142,6 +150,7 @@ export interface Rally {
 export interface EventsResult {
   schema_version?: string;
   video_id: string;
+  match_format?: MatchFormat;
   rallies: Rally[];
   shots: ShotEvent[];
   /** Only on GET /events (effective). */
@@ -157,8 +166,9 @@ export type CorrectionOp =
   | { op: "add_rally"; payload: { start_frame: number; end_frame: number } }
   | { op: "delete_rally"; payload: { rally_id: string } }
   | { op: "set_rally_bounds"; payload: { rally_id: string; start_frame?: number; end_frame?: number } }
-  | { op: "set_rally_winner"; payload: { rally_id: string; winner: PlayerId | null } }
-  | { op: "swap_player_ids"; payload: { from_frame: number } }
+  | { op: "set_rally_winner"; payload: { rally_id: string; winner: PlayerId | TeamId | null } }
+  /** Swap ids a/b (default P1/P2) from this frame on. */
+  | { op: "swap_player_ids"; payload: { from_frame: number; a?: PlayerId; b?: PlayerId } }
   | { op: "confirm_shot"; payload: { shot_id: string } }
   | { op: "confirm_rally"; payload: { rally_id: string } };
 
@@ -175,6 +185,7 @@ export type Correction = CorrectionIn & {
 export interface HeatmapData {
   video_id: string;
   player_id: PlayerId | null;
+  team?: TeamId | null;
   cell_m: number;
   nx: number;
   ny: number;
@@ -270,5 +281,14 @@ export interface MatchReport {
 }
 
 export const PLAYER_IDS: PlayerId[] = ["P1", "P2"];
-export const PLAYER_COLORS: Record<PlayerId, string> = { P1: "#38bdf8", P2: "#f472b6" };
-export const PLAYER_LABELS: Record<PlayerId, string> = { P1: "P1", P2: "P2" };
+export const DOUBLES_PLAYER_IDS: PlayerId[] = ["P1", "P3", "P2", "P4"];
+export const TEAM_IDS: TeamId[] = ["A", "B"];
+export const TEAM_OF: Record<PlayerId, TeamId> = { P1: "A", P3: "A", P2: "B", P4: "B" };
+export const TEAM_MEMBERS: Record<TeamId, PlayerId[]> = { A: ["P1", "P3"], B: ["P2", "P4"] };
+// Team A in cool colours, team B in warm ones, so partners read as a pair.
+export const PLAYER_COLORS: Record<PlayerId, string> = { P1: "#38bdf8", P3: "#a78bfa", P2: "#f472b6", P4: "#fb923c" };
+export const PLAYER_LABELS: Record<PlayerId, string> = { P1: "P1", P2: "P2", P3: "P3", P4: "P4" };
+export const TEAM_COLORS: Record<TeamId, string> = { A: "#38bdf8", B: "#f472b6" };
+export const TEAM_LABELS: Record<TeamId, string> = { A: "A 队（P1+P3）", B: "B 队（P2+P4）" };
+
+export const playerIdsFor = (format: MatchFormat | undefined): PlayerId[] => (format === "doubles" ? DOUBLES_PLAYER_IDS : PLAYER_IDS);

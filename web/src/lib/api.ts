@@ -1,8 +1,11 @@
 import { applyCorrections } from "./corrections";
-import { CORNERS_M, homographyFrom4, projectCourtLines } from "./court";
+import { boundaryLinesM, CORNERS_M, homographyFrom4, projectCourtLines, projectLines } from "./court";
 import { generateMock, type MockAnalysis } from "./mock";
 import { mockCoach, mockStats } from "./report";
 import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video } from "./types";
+
+/** Per-video singles/doubles choice; "auto" lets the players stage decide. */
+export type MatchFormatSetting = "auto" | "singles" | "doubles";
 
 export interface Api {
   readonly mode: "live" | "mock";
@@ -20,6 +23,9 @@ export interface Api {
   /** Corners in px, order near-left, near-right, far-right, far-left. Re-runs analysis from calibration. */
   /** ``otherCourts``: courts in view to keep ignoring (e.g. the one analysed before switching). */
   setManualCalibration(videoId: string, corners: Point[], otherCourts?: Point[][]): Promise<Job>;
+  getMatchFormat(videoId: string): Promise<MatchFormatSetting>;
+  /** Force singles/doubles (or back to auto). Re-runs analysis from the players stage. */
+  setMatchFormat(videoId: string, format: MatchFormatSetting): Promise<Job>;
   /** URL for the <video> element; null when there is no file (synthetic demo). */
   videoFileUrl(videoId: string): string | null;
   /** Server export URL, or null if the client builds the export itself (mock). */
@@ -91,6 +97,9 @@ export const liveApi: Api = {
       method: "PUT",
       body: JSON.stringify({ corners, other_courts: otherCourts }),
     }),
+  getMatchFormat: async (id) => (await http<{ match_format: MatchFormatSetting }>(`/videos/${enc(id)}/match_format`)).match_format,
+  setMatchFormat: (id, format) =>
+    http<Job>(`/videos/${enc(id)}/match_format`, { method: "PUT", body: JSON.stringify({ match_format: format }) }),
   videoFileUrl: (id) => `${BASE}/videos/${enc(id)}/file`,
   exportUrl: (id, format) => `${BASE}/videos/${enc(id)}/export?format=${format}`,
   getReport: (id) => http<MatchReport>(`/videos/${enc(id)}/report`),
@@ -109,6 +118,7 @@ interface MockVideo {
   video: Omit<Video, "latest_job">;
   objectUrl: string | null;
   job: { id: string; startedAt: number; from: number };
+  format?: MatchFormatSetting;
 }
 
 function loadCorrections(): Record<string, Correction[]> {
@@ -150,18 +160,26 @@ export function createMockApi(): Api {
     objectUrl: null,
     job: { id: "job_demo_1", startedAt: 0, from: 0 },
   });
+  videos.set("demo_doubles", {
+    video: { video_id: "demo_doubles", filename: "示例双打（合成数据）.mp4", size_bytes: 0, created_at: iso(demoAt + 1000), meta: null, artifacts: [] },
+    objectUrl: null,
+    job: { id: "job_demo_doubles_1", startedAt: 0, from: 0 },
+    format: "doubles",
+  });
 
   const analysis = (id: string, dims?: { w: number; h: number; d: number }) => {
     let a = analyses.get(id);
     if (!a) {
-      const v = videos.get(id)!.video;
-      a = generateMock(id, { width: dims?.w, height: dims?.h, durationMs: dims?.d, filename: v.filename });
+      const mv = videos.get(id)!;
+      const v = mv.video;
+      a = generateMock(id, { width: dims?.w ?? v.meta?.width, height: dims?.h ?? v.meta?.height, durationMs: dims?.d ?? v.meta?.duration_ms, filename: v.filename, doubles: mv.format === "doubles" });
       analyses.set(id, a);
       v.meta = a.overlay.video;
     }
     return a;
   };
   analysis("demo");
+  analysis("demo_doubles");
 
   const must = (id: string) => {
     const v = videos.get(id);
@@ -251,11 +269,22 @@ export function createMockApi(): Api {
         ...a.overlay,
         court: [{
           start_frame: 0, end_frame: a.overlay.video.frame_count - 1, lines: projectCourtLines(H), status: "ok",
+          boundary: projectLines(H, boundaryLinesM(a.overlay.match_format === "doubles" ? "doubles" : "singles")),
           image_corners: corners, other_courts: otherCourts,
         }],
       };
       const n = Number(mv.job.id.split("_").pop()) + 1;
       mv.job = { id: `job_${id}_${n}`, startedAt: Date.now(), from: 1 };
+      return delay(jobOf(mv));
+    },
+    getMatchFormat: async (id) => delay(must(id).format ?? "auto"),
+    async setMatchFormat(id, format) {
+      const mv = must(id);
+      mv.format = format;
+      analyses.delete(id); // regenerate with the new number of players
+      analysis(id);
+      const n = Number(mv.job.id.split("_").pop()) + 1;
+      mv.job = { id: `job_${id}_${n}`, startedAt: Date.now(), from: STAGES.indexOf("players") };
       return delay(jobOf(mv));
     },
     videoFileUrl: (id) => videos.get(id)?.objectUrl ?? null,
