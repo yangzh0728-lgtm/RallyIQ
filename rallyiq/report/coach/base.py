@@ -16,8 +16,11 @@ class CoachProvider(Protocol):
     name: str
     model: str | None
 
-    def generate(self, stats: MatchStats) -> dict:
-        """Return raw JSON matching ``prompt.OUTPUT_SCHEMA``; raise ``CoachProviderError`` on failure."""
+    def generate(self, stats: MatchStats, knowledge=None) -> dict:
+        """Return raw JSON matching ``prompt.OUTPUT_SCHEMA``; raise ``CoachProviderError`` on failure.
+
+        ``knowledge`` (``advice.Knowledge``) holds the detected weaknesses and the coaching
+        notes retrieved for them; training items cite those notes by id."""
         ...
 
 

@@ -33,7 +33,7 @@ class OfflineProvider:
     name = "offline"
     model = "rules@1"
 
-    def generate(self, stats: MatchStats) -> dict:
+    def generate(self, stats: MatchStats, knowledge=None) -> dict:
         idx = index(stats)
 
         def m(key: str) -> Metric | None:
@@ -126,8 +126,36 @@ class OfflineProvider:
                                  detail="还没有标注任何回合的胜者。在修正面板中为回合设置胜者后，可分析得失分规律。",
                                  evidence=[winners.key], confidence="high"))
 
+        noted = _knowledge_training(knowledge)
+        if noted:
+            training = noted + [t for t in training if t["player_id"] not in {n["player_id"] for n in noted}]
+
         n_main = sum(1 for i in insights if i["kind"] != "data_quality")
         summary = (f"本场共 {_fmt(rallies.value)} 个回合。" if rallies is not None else "") + (
             f"根据规则模板得到 {n_main} 条数据观察。" if n_main else "现有数据不足以给出可靠的观察。"
         ) + "这是离线规则生成的点评，配置 Claude API 后可获得更完整的教练分析。"
-        return {"summary": summary, "insights": insights, "training": training[:3], "caveats": []}
+        return {"summary": summary, "insights": insights, "training": training[:4], "caveats": []}
+
+
+def _knowledge_training(knowledge) -> list[dict]:
+    """One drill per weakness, taken from the best-matching coaching note."""
+    if knowledge is None:
+        return []
+    out = []
+    for f in knowledge.focus:
+        ids = knowledge.by_focus.get(f.id) or []
+        if not ids:
+            continue
+        note = knowledge.notes[ids[0]]
+        drills = note.get("drills") or []
+        d = drills[0] if drills else None
+        drill = f"{d['name']}：{d['how']}" if d else str(note.get("topic", ""))
+        hedge = "" if f.confidence == "high" else "（样本较少，先当作观察）"
+        out.append(dict(
+            player_id=f.player_id, focus_id=f.id, drill=drill,
+            why=f"{f.title}{hedge}。参考{note.get('coach', '')}《{note.get('title', '')}》：{note.get('topic', '')}",
+            evidence=f.evidence, retest_metric=f.retest_metric,
+            key_points=list(note.get("coach_cues") or note.get("key_points") or [])[:4],
+            sources=[{"note_id": i, "drill": d["name"] if d and i == ids[0] else None} for i in ids[:2]],
+        ))
+    return out

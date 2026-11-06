@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { formatMs } from "../lib/corrections";
+import { videoLink } from "../lib/report";
 import type { Habit, OpponentReport, PersonSummary, PlayerProfile, ProfileMetric, RetestResult } from "../lib/types";
 
 const TREND: Record<ProfileMetric["trend"], string> = { up: "↑", down: "↓", flat: "→", new: "新", insufficient: "—" };
@@ -71,7 +72,17 @@ export function Profile({ person }: { person: string | null }) {
                 <tbody>
                   {profile.retests.map((r, i) => (
                     <tr key={i}>
-                      <td title={r.why}>{r.drill}</td>
+                      <td title={r.why}>
+                        {r.drill}
+                        {r.focus && <div className="small muted">针对：{r.focus}</div>}
+                        {r.sources?.map((s) => (
+                          <div key={s.note_id} className="small">
+                            <a href={videoLink(s)} target="_blank" rel="noreferrer">
+                              {s.coach.split(" (")[0]} · {s.title}
+                            </a>
+                          </div>
+                        ))}
+                      </td>
                       <td className="small">{r.label ?? r.metric}</td>
                       <td className="mono">{fmt(r.before, r.unit)}</td>
                       <td className="mono">{fmt(r.after, r.unit)}</td>

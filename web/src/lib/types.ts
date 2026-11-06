@@ -297,12 +297,25 @@ export interface CoachInsight {
   warnings: string[];
 }
 
+export interface NoteRef {
+  note_id: string;
+  coach: string;
+  title: string;
+  url: string;
+  t_s: number | null;
+  drill: string | null;
+}
+
 export interface TrainingItem {
   player_id: PlayerId | null;
   drill: string;
   why: string;
   evidence: string[];
   retest_metric: string | null;
+  focus?: string | null;
+  key_points?: string[];
+  sources?: NoteRef[];
+  warnings?: string[];
 }
 
 export interface CoachReport {
@@ -444,6 +457,8 @@ export interface RetestResult {
   after: number | null;
   delta: number | null;
   same_conditions: boolean | null;
+  focus?: string | null;
+  sources?: NoteRef[];
   status: "improved" | "worse" | "changed" | "unchanged" | "pending" | "not_measurable";
 }
 

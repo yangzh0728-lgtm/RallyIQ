@@ -17,7 +17,17 @@ from typing import Literal
 
 from pydantic import Field
 
-from .models import SCHEMA_VERSION, Contract, Distribution, Metric, MetricConfidence, PlayerId, Status, TrainingItem
+from .models import (
+    SCHEMA_VERSION,
+    Contract,
+    Distribution,
+    Metric,
+    MetricConfidence,
+    NoteRef,
+    PlayerId,
+    Status,
+    TrainingItem,
+)
 
 
 class PeopleAssignment(Contract):
@@ -110,6 +120,8 @@ class RetestResult(Contract):
     before: float | None = None
     after: float | None = None
     delta: float | None = None
+    focus: str | None = None
+    sources: list[NoteRef] = Field(default_factory=list, description="coaching notes the drill came from")
     same_conditions: bool | None = Field(default=None, description="camera view and frame rate match (README: 同条件下复测)")
     status: Literal["improved", "worse", "changed", "unchanged", "pending", "not_measurable"] = Field(
         description="improved/worse only where higher is clearly better (win and coverage rates); "

@@ -22,9 +22,17 @@ SYSTEM_PROMPT = """你是 RallyIQ 的羽毛球单打教练助手。你会收到�
 内容要求：
 - summary：3–5 句话的总体评价，先说最重要的发现。
 - insights：3–8 条，覆盖优势、问题、规律和战术建议；kind 取 strength / weakness / pattern / tactic / data_quality；如果数据质量明显限制了结论，加一条 data_quality。
-- training：1–3 项可执行的训练建议，说明理由，并在 retest_metric 里给出下次上传后用来复测的指标 key（可为 null）。
+- training：1–5 项可执行的训练建议，说明理由，并在 retest_metric 里给出下次上传后用来复测的指标 key（可为 null）。
 - caveats：需要提醒使用者的数据局限。
-- 球员用 P1、P2 称呼（双打还有 P3、P4：A 队 = P1+P3，B 队 = P2+P4，回合胜负记在队伍上）。语言简洁、具体，像教练当面讲解，不要空话。"""
+- 球员用 P1、P2 称呼（双打还有 P3、P4：A 队 = P1+P3，B 队 = P2+P4，回合胜负记在队伍上）。语言简洁、具体，像教练当面讲解，不要空话。
+
+教学笔记（knowledge 字段，可能为空）：
+- 系统已根据数据找出每位球员的问题（focus），并为每个问题检索了职业球员（安赛龙、郑思维等）公开教学视频的中文学习笔记（notes）。
+- training 优先针对这些 focus：每项填 focus_id，drill 写具体练法（组数/次数/要点，可改编笔记里的 drills），why 说明数据上的问题和这个练习为什么对症，key_points 写 2–4 条取自笔记的技术要点或口令（coach_cues），sources 列出所依据笔记的 note_id（以及用到的 drill 名称，没有则为 null）。
+- 只能引用 knowledge 里给出的 note_id，不要编造视频、链接或时间点；笔记是改写的学习笔记，不要写成球员原话，可以说“安赛龙在视频里强调……”。
+- 笔记只说明“怎么练”，不能当作数据证据：evidence 仍然只能是统计指标 key；retest_metric 优先用 focus 给出的复测指标。
+- 如果某个 focus 的数据可信度低，可以写进 training，但在 why 里说明“样本较少，先当作观察”；没有合适笔记时 sources 留空。
+- training 最多 5 项，按重要性排序；insights 中对应的问题可以简要提一句“见训练建议”。"""
 
 _PLAYER = {"anyOf": [{"type": "string", "enum": ["P1", "P2", "P3", "P4"]}, {"type": "null"}]}
 
@@ -58,8 +66,23 @@ OUTPUT_SCHEMA: dict = {
                     "why": {"type": "string"},
                     "evidence": {"type": "array", "items": {"type": "string"}},
                     "retest_metric": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                    "focus_id": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                    "key_points": {"type": "array", "items": {"type": "string"}},
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "note_id": {"type": "string"},
+                                "drill": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                            },
+                            "required": ["note_id", "drill"],
+                            "additionalProperties": False,
+                        },
+                    },
                 },
-                "required": ["player_id", "drill", "why", "evidence", "retest_metric"],
+                "required": ["player_id", "drill", "why", "evidence", "retest_metric", "focus_id", "key_points",
+                             "sources"],
                 "additionalProperties": False,
             },
         },
@@ -76,5 +99,13 @@ def stats_payload(stats: MatchStats) -> str:
     return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def user_message(stats: MatchStats) -> str:
-    return "以下是本场统计数据（JSON）。请按要求输出点评。\n\n" + stats_payload(stats)
+def knowledge_payload(knowledge) -> str:
+    items = knowledge.prompt_payload() if knowledge is not None else []
+    return json.dumps(items, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def user_message(stats: MatchStats, knowledge=None) -> str:
+    msg = "以下是本场统计数据（JSON）。请按要求输出点评。\n\n" + stats_payload(stats)
+    if knowledge is not None and knowledge.focus:
+        msg += "\n\n以下是系统找出的问题（focus）和检索到的教学笔记（knowledge，JSON）：\n\n" + knowledge_payload(knowledge)
+    return msg
