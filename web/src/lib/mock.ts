@@ -187,15 +187,13 @@ export function generateMock(
       schema_version: "0.1.0",
       video,
       match_format: doubles ? "doubles" : "singles",
-      court: [
-        {
-          start_frame: 0,
-          end_frame: nFrames - 1,
-          lines: projectCourtLines(H),
-          boundary: projectLines(H, boundaryLinesM(doubles ? "doubles" : "singles")),
-          status: "ok",
-        },
-      ],
+      court: [{
+        start_frame: 0, end_frame: nFrames - 1, lines: projectCourtLines(H), status: "ok",
+        boundary: projectLines(H, boundaryLinesM(doubles ? "doubles" : "singles")),
+        image_corners: imgCorners,
+        // A neighbouring court 2 m to the right, as in a sports hall.
+        other_courts: [CORNERS_M.map(([x, y]) => applyH(H, [x + COURT_W + 2, y]))],
+      }],
       keypoint_format: "coco17",
       skeleton: COCO_LIMBS,
       frames,

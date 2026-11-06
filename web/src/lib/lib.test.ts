@@ -184,3 +184,20 @@ describe("doubles", () => {
     expect(across.rallies.map((r) => r.winner)).toEqual(["B", "B"]);
   });
 });
+
+describe("switching the analysed court", () => {
+  it("finds the other court under a click and keeps ignoring the old one", async () => {
+    const { otherCourtAt, courtsAfterSwitch, pointInPolygon } = await import("./overlay");
+    const m = generateMock("vid_multi", { durationMs: 5_000, width: 1280, height: 720 });
+    const cal = m.overlay.court[0];
+    expect(cal.other_courts?.length).toBe(1);
+    const other = cal.other_courts![0];
+    const cx = other.reduce((s, p) => s + p[0], 0) / 4;
+    const cy = other.reduce((s, p) => s + p[1], 0) / 4;
+    expect(otherCourtAt(cal, [cx, cy])).toBe(other);
+    expect(otherCourtAt(cal, [640, 500])).toBeNull(); // our own court
+    const after = courtsAfterSwitch(cal, other);
+    expect(after).toEqual([cal.image_corners]);
+    expect(pointInPolygon(cal.image_corners!, [640, 500])).toBe(true);
+  });
+});

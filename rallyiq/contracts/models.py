@@ -120,6 +120,11 @@ class CalibrationSegment(Contract):
         description="outer court corners in px, order: near-left, near-right, far-right, far-left",
     )
     keypoints: list[CourtKeypoint] = Field(default_factory=list)
+    other_courts: list[Annotated[list[Point2], Field(min_length=4, max_length=4)]] = Field(
+        default_factory=list,
+        description="other courts detected in view (not analysed), outer corners in px, same order as "
+        "image_corners; used to reject their players and shuttles and to offer switching court",
+    )
     reprojection_error_px: float | None = None
     method: Literal["auto", "manual"] = "auto"
     mirrored: bool = False
@@ -357,6 +362,10 @@ class CourtLines(Contract):
         default_factory=list, description="in-play rally boundary for the match format (singles or doubles sidelines)"
     )
     status: Status
+    image_corners: list[Point2] | None = Field(
+        default=None, description="outer corners of the analysed court, near-left, near-right, far-right, far-left")
+    other_courts: list[Annotated[list[Point2], Field(min_length=4, max_length=4)]] = Field(
+        default_factory=list, description="other courts in view (ignored); the UI lets the user switch to one")
 
 
 class OverlayData(Contract):

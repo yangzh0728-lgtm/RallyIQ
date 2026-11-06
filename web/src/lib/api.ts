@@ -21,7 +21,8 @@ export interface Api {
   listCorrections(videoId: string): Promise<Correction[]>;
   postCorrection(videoId: string, c: CorrectionIn): Promise<Correction>;
   /** Corners in px, order near-left, near-right, far-right, far-left. Re-runs analysis from calibration. */
-  setManualCalibration(videoId: string, corners: Point[]): Promise<Job>;
+  /** ``otherCourts``: courts in view to keep ignoring (e.g. the one analysed before switching). */
+  setManualCalibration(videoId: string, corners: Point[], otherCourts?: Point[][]): Promise<Job>;
   getMatchFormat(videoId: string): Promise<MatchFormatSetting>;
   /** Force singles/doubles (or back to auto). Re-runs analysis from the players stage. */
   setMatchFormat(videoId: string, format: MatchFormatSetting): Promise<Job>;
@@ -91,8 +92,11 @@ export const liveApi: Api = {
   getRawEvents: (id) => http<EventsResult>(`/videos/${enc(id)}/events?raw=true`),
   listCorrections: (id) => http<Correction[]>(`/videos/${enc(id)}/corrections`),
   postCorrection: (id, c) => http<Correction>(`/videos/${enc(id)}/corrections`, { method: "POST", body: JSON.stringify(c) }),
-  setManualCalibration: (id, corners) =>
-    http<Job>(`/videos/${enc(id)}/calibration/manual`, { method: "PUT", body: JSON.stringify({ corners }) }),
+  setManualCalibration: (id, corners, otherCourts = []) =>
+    http<Job>(`/videos/${enc(id)}/calibration/manual`, {
+      method: "PUT",
+      body: JSON.stringify({ corners, other_courts: otherCourts }),
+    }),
   getMatchFormat: async (id) => (await http<{ match_format: MatchFormatSetting }>(`/videos/${enc(id)}/match_format`)).match_format,
   setMatchFormat: (id, format) =>
     http<Job>(`/videos/${enc(id)}/match_format`, { method: "PUT", body: JSON.stringify({ match_format: format }) }),
@@ -256,13 +260,19 @@ export function createMockApi(): Api {
       saveCorrections(corrections);
       return delay(c);
     },
-    async setManualCalibration(id, corners) {
+    async setManualCalibration(id, corners, otherCourts = []) {
       const mv = must(id);
       const H = homographyFrom4(CORNERS_M, corners);
       if (!H) throw new Error("422 四个角点无效（共线或重复）");
       const a = analysis(id);
-      const boundary = projectLines(H, boundaryLinesM(a.overlay.match_format === "doubles" ? "doubles" : "singles"));
-      a.overlay = { ...a.overlay, court: [{ start_frame: 0, end_frame: a.overlay.video.frame_count - 1, lines: projectCourtLines(H), boundary, status: "ok" }] };
+      a.overlay = {
+        ...a.overlay,
+        court: [{
+          start_frame: 0, end_frame: a.overlay.video.frame_count - 1, lines: projectCourtLines(H), status: "ok",
+          boundary: projectLines(H, boundaryLinesM(a.overlay.match_format === "doubles" ? "doubles" : "singles")),
+          image_corners: corners, other_courts: otherCourts,
+        }],
+      };
       const n = Number(mv.job.id.split("_").pop()) + 1;
       mv.job = { id: `job_${id}_${n}`, startedAt: Date.now(), from: 1 };
       return delay(jobOf(mv));

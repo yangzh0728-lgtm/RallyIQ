@@ -9,11 +9,15 @@ reason instead of silently deleting, so the review UI can explain decisions.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .geometry import PlayArea, apply_homography, foot_point
 from .models import KP, Candidate, PersonDetection
+
+if TYPE_CHECKING:
+    from ..target_court import CourtRegion
 
 TYPICAL_PLAYER_HEIGHT_M = 1.72
 
@@ -84,8 +88,13 @@ def build_candidates(
     H_img_to_court: np.ndarray | None,
     image_size: tuple[int, int],
     cfg: FilterConfig | None = None,
+    region: "CourtRegion | None" = None,
 ) -> list[Candidate]:
-    """Score detections; returns candidates sorted best first (rejected ones removed)."""
+    """Score detections; returns candidates sorted best first (rejected ones removed).
+
+    ``region`` (optional) knows the other courts calibration found; anyone whose
+    feet are on one of them is a player of another match and is dropped.
+    """
     cfg = cfg or FilterConfig()
     w, h = image_size
     out: list[Candidate] = []
@@ -129,6 +138,8 @@ def build_candidates(
                     reasons.append("outside_play_area")
             else:
                 continue  # projects behind the camera / horizon
+            if region is not None and region.on_other_court(fp):
+                continue
             exp_h = expected_pixel_height(H_img_to_court, fp)
             if exp_h:
                 ratio = det.height / exp_h

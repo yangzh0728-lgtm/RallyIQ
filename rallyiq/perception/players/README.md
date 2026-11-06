@@ -54,6 +54,11 @@ python -m rallyiq.perception.players match.mp4 --homography H.json --out players
 （body7 训练、640×640 输入），解压后取 `end2end.onnx`。先用 `rtmo-s` 实测速度，
 远端球员漏检多时换 `rtmo-m` 或开 `--far-boost`。
 
+## 多场地
+
+标定给出其他场地（`other_courts`）时，脚站在其他场地上的人直接排除；跟踪结束后按整段轨迹再查一次：
+同一 `track_id` 大部分时间站在本场缓冲区外的整段删除（偶尔扑出界不受影响）。见 `postprocess.drop_offcourt_runs`。
+
 ## 已知限制（首版）
 
 - 双打搭档常穿同色队服，颜色特征区分不了搭档，交叉跑位时只靠运动连续性；跟错时用

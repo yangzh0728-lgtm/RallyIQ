@@ -28,7 +28,8 @@ def run(ctx: StageContext) -> OverlayData:
                 continue
             court.append(CourtLines(start_frame=seg.start_frame, end_frame=seg.end_frame,
                                     lines=project_court_lines(seg.homography),
-                                    boundary=project_boundary_lines(seg.homography, fmt), status=seg.status))
+                                    boundary=project_boundary_lines(seg.homography, fmt), status=seg.status,
+                                    image_corners=seg.image_corners, other_courts=seg.other_courts))
 
     frames: dict[int, OverlayFrame] = {}
 

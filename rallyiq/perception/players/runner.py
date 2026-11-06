@@ -7,16 +7,19 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from ..target_court import CourtRegion
+
 from .appearance import colour_histogram
 from .filtering import FilterConfig, build_candidates
 from .geometry import image_net_y
 from .match_format import FORMATS, FormatConfig, FormatDecision, decide_format
 from .models import PlayerFrameResult
 from .pose import PoseEstimator
-from .postprocess import fill_short_gaps
+from .postprocess import drop_offcourt_runs, fill_short_gaps
 from .tracker import DoublesTracker, PlayerTracker, SinglesTracker, TrackerConfig
 
 HomographyFn = Callable[[int], "np.ndarray | None"]
+RegionFn = Callable[[int], "CourtRegion | None"]
 
 
 @dataclass
@@ -84,13 +87,15 @@ def track_players(
     estimator: PoseEstimator,
     homography_for: HomographyFn | None = None,
     cfg: PlayerTrackingConfig | None = None,
+    region_for: RegionFn | None = None,
 ) -> PlayerTrackingOutput:
     """Detect, filter and track the players (2 in singles, 4 in doubles) on every given frame.
 
     ``homography_for(frame)`` returns the 3x3 image->court homography valid for
     that frame, or None when calibration is unavailable (e.g. right after a
     camera cut). Without it, output stays in pixels and ``foot_court`` /
-    ``on_court`` are None.
+    ``on_court`` are None. ``region_for(frame)`` adds the other courts in view so
+    their players are rejected (see ``target_court``).
 
     With ``cfg.match_format == "auto"`` the first ``format_probe_frames``
     processed frames are buffered (candidates only, not images), the format is
@@ -124,7 +129,8 @@ def track_players(
     for frame_idx, t_ms, img in frames:
         H = homography_for(frame_idx) if homography_for else None
         dets = estimator(img)
-        cands = build_candidates(dets, H, (img.shape[1], img.shape[0]), cfg.filter)
+        region = region_for(frame_idx) if region_for else None
+        cands = build_candidates(dets, H, (img.shape[1], img.shape[0]), cfg.filter, region)
         for c in cands:
             c.appearance = colour_histogram(img, c.det)
         net_y = image_net_y(H) if H is not None else None
@@ -132,6 +138,7 @@ def track_players(
         if tracker is not None or len(pending) >= cfg.format_probe_frames:
             flush()
     flush()
+    drop_offcourt_runs(out, cfg.filter.play_area)
     gap = cfg.max_interp_gap // max(cfg.stride, 1)
     if gap > 0:
         fill_short_gaps(out, gap)

@@ -55,6 +55,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
   const [hardExample, setHardExample] = useState(true);
   const [layers, setLayers] = useState<Layers>(DEFAULT_LAYERS);
   const [calibrating, setCalibrating] = useState(false);
+  const [choosingCourt, setChoosingCourt] = useState(false);
   const [selRally, setSelRally] = useState<string | null>(null);
   const [selShot, setSelShot] = useState<string | null>(null);
 
@@ -124,10 +125,11 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
     }
   };
 
-  const onCalibrated = async (corners: Point[]) => {
+  const onCalibrated = async (corners: Point[], otherCourts: Point[][] = []) => {
     setCalibrating(false);
+    setChoosingCourt(false);
     try {
-      onRerun(await api.setManualCalibration(video.video_id, corners));
+      onRerun(await api.setManualCalibration(video.video_id, corners, otherCourts));
     } catch (e) {
       setActionError(`标定失败：${(e as Error).message}`);
     }
@@ -256,6 +258,23 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
             {calibrating ? "取消点选" : "球场线不对？手动点选四角"}
           </button>
           {calibrating && <div className="muted" style={{ marginTop: 4 }}>按 {CORNER_NAMES.join(" → ")} 的顺序点击外框四角；提交后会从标定开始重新分析。</div>}
+          {!!court?.other_courts?.length && (
+            <>
+              <div className="muted" style={{ marginTop: 8 }}>
+                画面里还有 {court.other_courts.length} 块场地（虚线框），它们的球员和球已被排除。
+              </div>
+              <button
+                style={{ marginTop: 4, width: "100%" }}
+                className={choosingCourt ? "active" : ""}
+                onClick={() => {
+                  setCalibrating(false);
+                  setChoosingCourt((c) => !c);
+                }}
+              >
+                {choosingCourt ? "取消选择" : "分析的不是这块场地？换一块"}
+              </button>
+            </>
+          )}
         </div>
         <HeatmapPanel overlay={overlay} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} courtStatus={court?.status} />
       </aside>
@@ -295,7 +314,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
             </span>
           </span>
         </div>
-        <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} />
+        <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} choosingCourt={choosingCourt} onCourtChosen={onCalibrated} />
       </section>
 
       <aside className="wb-right">
