@@ -348,36 +348,49 @@ def orientation_preserving(H: np.ndarray) -> bool:
     return np.sign(np.linalg.det(H)) * np.sign(wz) < 0
 
 
+# Relative near/far baseline length difference above which perspective alone
+# says which end is nearer the camera (broadcast and elevated views: ~0.3-0.6).
+PERSPECTIVE_CUE = 0.1
+
+
 def canonicalize(H: np.ndarray, previous: np.ndarray | None = None) -> tuple[np.ndarray, str]:
     """Pick one of the four symmetric labellings of the court.
 
-    With a previous calibration, keep the labelling closest to it so player
-    sides stay stable across camera moves. Otherwise choose the physically
-    plausible orientation with y = 0 at the end nearer the camera (whose
-    baseline appears longer).
+    Only labellings a camera above the floor can produce are considered (x to
+    the right, y away). Of those, y = 0 goes at the end nearer the camera, whose
+    baseline appears longer. Only when perspective cannot tell the ends apart
+    (both baselines about as long, e.g. a camera level with the net) does the
+    previous calibration decide, to keep player sides stable.
+
+    The previous calibration must not override a clear perspective cue: after a
+    scene cut it comes from another shot, and matching corners across shots
+    flipped whole stretches of broadcast video to the 180-degree or mirrored
+    labelling.
     Returns (H, symmetry name applied).
     """
     corners = np.array(list(cm.CORNERS.values()))
     variants = {name: H @ S for name, S in cm.SYMMETRIES.items()}
-    if previous is not None:
-        prev_xy, _ = project(previous, corners)
-
-        def dist(item):
-            xy, _ = project(item[1], corners)
-            return float(np.nanmax(np.linalg.norm(xy - prev_xy, axis=1)))
-
-        name, Hv = min(variants.items(), key=dist)
-        return Hv, name
-
     candidates = {n: v for n, v in variants.items() if orientation_preserving(v)} or variants
 
-    def near_baseline_shorter(Hv):
+    def baselines(Hv):
         xy, _ = project(Hv, corners)
-        near = np.linalg.norm(xy[1] - xy[0])
-        far = np.linalg.norm(xy[2] - xy[3])
-        return -(near - far)
+        return np.linalg.norm(xy[1] - xy[0]), np.linalg.norm(xy[2] - xy[3])  # near, far
 
-    name = min(candidates, key=lambda n: near_baseline_shorter(candidates[n]))
+    def far_longer(Hv):
+        near, far = baselines(Hv)
+        return far - near
+
+    name = min(candidates, key=lambda n: far_longer(candidates[n]))
+    near, far = baselines(candidates[name])
+    cue = (near - far) / max(near, far, 1e-9)
+    if previous is not None and not cue > PERSPECTIVE_CUE:
+        prev_xy, _ = project(previous, corners)
+
+        def dist(n):
+            xy, _ = project(candidates[n], corners)
+            return float(np.nanmax(np.linalg.norm(xy - prev_xy, axis=1)))
+
+        name = min(candidates, key=dist)
     return candidates[name], name
 
 
