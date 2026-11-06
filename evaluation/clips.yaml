@@ -1,0 +1,196 @@
+# RallyIQ 评测集片段清单（BWF TV 官方 YouTube 频道 @BWF）
+#
+# 版权说明：这些视频归 BWF 所有，YouTube 服务条款限制下载。
+# 本仓库只保存 URL、时间段和人工标注，不保存任何视频或帧图像。
+# 素材仅用于个人内部研究与识别精度评测，不得再分发或用于商业用途。
+#
+# 字段：
+#   id            片段编号（标注文件名 labels/<id>.json）
+#   video_id      YouTube 视频 ID
+#   start_s       片段在原视频中的起点（秒）
+#   duration_s    片段时长（秒）
+#   segment_verified  false = 时间段按经验估计（比赛开始后 10 分钟左右），
+#                 尚未人工确认画面里是比赛回合；抽片后请快速确认，必要时调整 start_s
+#   split         eval（只评测，不训练）/ train（可用于微调）
+#   conditions    用于分组报告精度的条件标签
+#
+# 选片原则：单打/双打/混双均覆盖；场馆覆盖伯明翰、巴黎、东京、雅加达、
+# 欧登塞、萨尔布吕肯、丽水、杭州等；包含非主场地固定机位（副场直播流）
+# 和剪辑过的集锦（频繁切镜头，用于测试重新标定和"不可判定"）。
+
+clips:
+  # ---------------- 男单 / 女单：主转播机位 ----------------
+  - id: ae26_ms_f
+    video_id: 7Q5JTy88JfQ
+    title: "YONEX All England Open 2026 | Lakshya Sen vs Lin Chun-Yi | F"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: all_england_2026, venue: "Utilita Arena, Birmingham", discipline: MS, camera: broadcast_main, source: full_match}
+
+  - id: ae26_ws_f
+    video_id: XVi5mtZYxE4
+    title: "YONEX All England Open 2026 | An Se Young vs Wang Zhi Yi | F"
+    start_s: 1500
+    duration_s: 90
+    segment_verified: false
+    split: train
+    conditions: {event: all_england_2026, venue: "Utilita Arena, Birmingham", discipline: WS, camera: broadcast_main, source: full_match}
+
+  - id: wc25_ms_f
+    video_id: KgH2FQwZXG0
+    title: "BWF World Championships 2025 | Shi Yu Qi vs Kunlavut Vitidsarn | F"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: world_championships_2025, venue: "Paris", discipline: MS, camera: broadcast_main, source: full_match}
+
+  - id: wc25_ws_f
+    video_id: DJvvstCZnN8
+    title: "BWF World Championships 2025 | Chen Yu Fei vs Akane Yamaguchi | F"
+    start_s: 1200
+    duration_s: 90
+    segment_verified: false
+    split: train
+    conditions: {event: world_championships_2025, venue: "Paris", discipline: WS, camera: broadcast_main, source: full_match}
+
+  - id: jo26_ws_f
+    video_id: VUOTqliXFs4
+    title: "DAIHATSU Japan Open 2026 | Pusarla V. Sindhu vs Akane Yamaguchi | F"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: japan_open_2026, venue: "Tokyo", discipline: WS, camera: broadcast_main, source: full_match}
+
+  - id: jo26_ms_f
+    video_id: o34W2SvMj2s
+    title: "DAIHATSU Japan Open 2026 | Christo Popov vs Koki Watanabe | F"
+    start_s: 1500
+    duration_s: 90
+    segment_verified: false
+    split: train
+    conditions: {event: japan_open_2026, venue: "Tokyo", discipline: MS, camera: broadcast_main, source: full_match}
+
+  - id: hylo26_ms_f
+    video_id: _5ViUMrytXw
+    title: "HYLO Open 2026 | Jonatan Christie vs Lakshya Sen | F"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: hylo_open_2026, venue: "Saarbrücken", discipline: MS, camera: broadcast_main, source: full_match}
+
+  - id: wtf25_ms_f
+    video_id: mMp8XfBXde4
+    title: "HSBC BWF World Tour Finals 2025 | Christo Popov vs Shi Yu Qi | F"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: train
+    conditions: {event: world_tour_finals_2025, venue: "Hangzhou", discipline: MS, camera: broadcast_main, source: full_match}
+
+  - id: ko26_ws_r16
+    video_id: thS7WyrvVXE
+    title: "YEOSU VICTOR Korea Open 2026 | An Se Young vs Karupathevan Letshanaa | R16"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: WS, camera: broadcast_main, source: full_match}
+
+  # ---------------- 双打 / 混双：主转播机位 ----------------
+  - id: ae26_md_f
+    video_id: tmF3lazS2r0
+    title: "YONEX All England Open 2026 | Kim/Seo vs Chia/Soh | F"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: all_england_2026, venue: "Utilita Arena, Birmingham", discipline: MD, camera: broadcast_main, source: full_match}
+
+  - id: io26_md_f
+    video_id: CzxDJyz95Hc
+    title: "POLYTRON Indonesia Open 2026 | Goh/Izzuddin vs Indra/Joaquin | F"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: indonesia_open_2026, venue: "Jakarta", discipline: MD, camera: broadcast_main, source: full_match}
+
+  - id: io26_wd_f
+    video_id: hJeWTVoXKdc
+    title: "POLYTRON Indonesia Open 2026 | Liu/Tan vs Fukushima/Matsumoto | F"
+    start_s: 1500
+    duration_s: 90
+    segment_verified: false
+    split: train
+    conditions: {event: indonesia_open_2026, venue: "Jakarta", discipline: WD, camera: broadcast_main, source: full_match}
+
+  - id: do26_md_sf
+    video_id: CFmV6MN8NbI
+    title: "VICTOR Denmark Open 2026 | Alfian/Fikri vs Liang/Wang | SF"
+    start_s: 900
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: denmark_open_2026, venue: "Odense", discipline: MD, camera: broadcast_main, source: full_match}
+
+  - id: jo26_wd_f
+    video_id: HycCF1t6kxg
+    title: "DAIHATSU Japan Open 2026 | Kim/Kong vs Jia/Zhang | F"
+    start_s: 2400
+    duration_s: 90
+    segment_verified: false
+    split: train
+    conditions: {event: japan_open_2026, venue: "Tokyo", discipline: WD, camera: broadcast_main, source: full_match}
+
+  - id: ae26_xd_f
+    video_id: gRKUbDh5MRE
+    title: "YONEX All England Open 2026 | Ye/Chan vs Gicquel/Delrue | F"
+    start_s: 1200
+    duration_s: 90
+    segment_verified: false
+    split: eval
+    conditions: {event: all_england_2026, venue: "Utilita Arena, Birmingham", discipline: XD, camera: broadcast_main, source: full_match}
+
+  - id: wc25_wd_f
+    video_id: 1KbD8ZhLmGQ
+    title: "BWF World Championships 2025 | Liu/Tan vs Tan/Muralitharan | F"
+    start_s: 1200
+    duration_s: 90
+    segment_verified: false
+    split: train
+    conditions: {event: world_championships_2025, venue: "Paris", discipline: WD, camera: broadcast_main, source: full_match}
+
+  # ---------------- 困难条件 ----------------
+  # 副场直播流：非主转播机位、画质和角度不同，最接近"非理想机位"
+  - id: ko26_court2
+    video_id: vxn0Xlw_GE4
+    title: "YEOSU VICTOR Korea Open 2026 | Day 4 | Court 2 | Quarterfinals"
+    start_s: 3600
+    duration_s: 120
+    segment_verified: false
+    split: eval
+    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: unknown, camera: side_court_fixed, source: day_stream}
+
+  - id: ko26_court3
+    video_id: vtXgAfNbzlA
+    title: "YEOSU VICTOR Korea Open 2026 | Day 4 | Court 3 | Quarterfinals"
+    start_s: 3600
+    duration_s: 120
+    segment_verified: false
+    split: eval
+    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: unknown, camera: side_court_fixed, source: day_stream}
+
+  # 剪辑集锦：频繁切镜头、慢放回放，用于测试镜头切换检测和重新标定
+  - id: ko26_ms_hl
+    video_id: -9r6UTOrzBc
+    title: "Ng Ka Long Angus vs Anthony Sinisuka Ginting | Powerful play at high speed"
+    start_s: 0
+    duration_s: 120
+    segment_verified: false
+    split: eval
+    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: MS, camera: broadcast_edited, source: highlights}
