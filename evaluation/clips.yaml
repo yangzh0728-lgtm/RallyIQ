@@ -168,22 +168,26 @@ clips:
   # ---------------- 困难条件 ----------------
   # 副场直播流：非主转播机位、画质和角度不同，最接近"非理想机位"
   - id: ko26_court2
+    # 男单 Tzu Wei vs Hae Deun，第 3 局约 3:1→3:3（2026-11-06 核实）
+    # 来自直播回看窗口的 HLS 分片 3676–3693（5 s/片），start_s = 序号×5，是相对直播开始的偏移；直播转点播后需按点播版本再核对
     video_id: vxn0Xlw_GE4
     title: "YEOSU VICTOR Korea Open 2026 | Day 4 | Court 2 | Quarterfinals"
-    start_s: 3600
-    duration_s: 120
-    segment_verified: false
+    start_s: 18380
+    duration_s: 90
+    segment_verified: true
     split: eval
-    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: unknown, camera: side_court_fixed, source: day_stream}
+    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: MS, camera: side_court_fixed, source: day_stream}
 
   - id: ko26_court3
+    # 女单 Miyazaki vs Akechi，第 3 局 6:11→6:15（2026-11-06 核实）
+    # 来自直播回看窗口的 HLS 分片 3668–3685（5 s/片），start_s = 序号×5，是相对直播开始的偏移；直播转点播后需按点播版本再核对
     video_id: vtXgAfNbzlA
     title: "YEOSU VICTOR Korea Open 2026 | Day 4 | Court 3 | Quarterfinals"
-    start_s: 3600
-    duration_s: 120
-    segment_verified: false
+    start_s: 18340
+    duration_s: 90
+    segment_verified: true
     split: eval
-    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: unknown, camera: side_court_fixed, source: day_stream}
+    conditions: {event: korea_open_2026, venue: "Yeosu", discipline: WS, camera: side_court_fixed, source: day_stream}
 
   # 剪辑集锦：频繁切镜头、慢放回放，用于测试镜头切换检测和重新标定
   - id: ko26_ms_hl
