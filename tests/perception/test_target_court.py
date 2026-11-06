@@ -2,8 +2,17 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
+
+# The benchmark and report live in evaluation/ and scripts/ at the repo root, which
+# is not on sys.path when pytest runs as a console script.
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from evaluation.multicourt import make_scene, run
 from rallyiq.contracts.geometry import apply_homography, invert_homography
