@@ -416,7 +416,7 @@ def cmd_train(a: argparse.Namespace) -> int:
 
 
 SEARCH_SPACE: dict[str, list] = {
-    "min_shuttle_conf": [0.1, 0.15, 0.2, 0.3],
+    "min_shuttle_conf": [0.1, 0.15, 0.2, 0.3, 0.35, 0.4],
     "outlier_jump_rel": [0.5, 0.8, 1.2],
     "end_gap_ms": [900.0, 1200.0, 1600.0, 2000.0],
     "static_ms": [400.0, 600.0, 900.0],
@@ -425,7 +425,7 @@ SEARCH_SPACE: dict[str, list] = {
     "max_window_ms": [300.0, 450.0, 600.0],
     "min_turn_deg": [20.0, 28.0, 35.0, 45.0],
     "speed_jump_ratio": [1.4, 1.6, 1.8, 2.2],
-    "min_hit_gap_ms": [200.0, 240.0, 280.0, 330.0],
+    "min_hit_gap_ms": [200.0, 240.0, 280.0, 330.0, 400.0, 500.0],
     "max_hitter_dist_rel": [0.7, 0.9, 1.2, 1.5],
 }
 
