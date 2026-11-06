@@ -58,6 +58,10 @@ class TrackerConfig:
     # Doubles: partners standing on different halves (never happens in play).
     partner_split_penalty: float = 0.8
     first_sighting_penalty: float = 0.5
+    # Re-acquired slots prefer the half they were last seen on: camera cuts
+    # happen far more often than changes of ends. Distinct clothing colours
+    # (appearance term, up to w_appearance per slot) still override it.
+    side_memory_penalty: float = 0.5
     # Candidates considered per frame in doubles (keeps the joint search small).
     max_doubles_candidates: int = 6
 
@@ -193,6 +197,7 @@ class PlayerTracker:
                     foot_court=c.foot_court,
                     on_court=c.on_court,
                     confidence=float(np.clip(c.player_score, 0.0, 1.0)),
+                    appearance=c.appearance,
                 )
             )
         return out
@@ -234,6 +239,11 @@ class PlayerTracker:
             if gated(i, j):
                 split = known[:, i] & known[:, j] & (S[:, i] != S[:, j])
                 total = total + split * cfg.partner_split_penalty
+        if not never_seen and cfg.side_memory_penalty:
+            for i, slot in enumerate(self.slots):
+                if fresh[i] and slot.side is not None:
+                    want = 0 if slot.side == "near" else 1
+                    total = total + (known[:, i] & (S[:, i] != want)) * cfg.side_memory_penalty
         if never_seen:
             # First sighting: team A (P1, P3) starts on the near half by convention.
             assigned = A < m

@@ -11,11 +11,12 @@ from ..target_court import CourtRegion
 
 from .appearance import colour_histogram
 from .filtering import FilterConfig, build_candidates
-from .geometry import image_net_y
+from .geometry import far_court_roi, image_net_y
 from .match_format import FORMATS, FormatConfig, FormatDecision, decide_format
 from .models import PlayerFrameResult
 from .pose import PoseEstimator
 from .postprocess import drop_offcourt_runs, fill_short_gaps
+from .sides import SideConfig, stabilise_sides
 from .tracker import DoublesTracker, PlayerTracker, SinglesTracker, TrackerConfig
 
 HomographyFn = Callable[[int], "np.ndarray | None"]
@@ -32,6 +33,12 @@ class PlayerTrackingConfig:
     match_format: str = "auto"
     format_probe_frames: int = 90
     format: FormatConfig = field(default_factory=FormatConfig)
+    sides: SideConfig = field(default_factory=SideConfig)
+    # Second pose pass on an upscaled crop of the far half of the court, for
+    # estimators that support it: "auto" only when the far player would be
+    # small in the model input, "on" on every calibrated frame, "off" never.
+    far_boost: str = "auto"
+    far_boost_max_px: float = 110.0  # "auto": boost when the far player is shorter than this in the model input
 
 
 class PlayerTrackingOutput(list):
@@ -40,6 +47,7 @@ class PlayerTrackingOutput(list):
     match_format: str = "singles"
     format_confidence: float | None = None  # None when the format was given, not detected
     format_decision: FormatDecision | None = None
+    side_switches: list[int] | None = None  # frames where the teams really changed ends
 
 
 def iter_video(path: str, stride: int = 1) -> Iterator[tuple[int, float, np.ndarray]]:
@@ -128,7 +136,13 @@ def track_players(
 
     for frame_idx, t_ms, img in frames:
         H = homography_for(frame_idx) if homography_for else None
-        dets = estimator(img)
+        roi = None
+        if H is not None and cfg.far_boost != "off" and getattr(estimator, "supports_far_roi", False):
+            roi = far_court_roi(H, (img.shape[1], img.shape[0]))
+            if roi is not None and cfg.far_boost == "auto":
+                need = estimator.far_player_px(img.shape, roi)  # far player height in the model input
+                roi = roi if need is not None and need < cfg.far_boost_max_px else None
+        dets = estimator(img, far_roi=roi) if roi is not None else estimator(img)
         region = region_for(frame_idx) if region_for else None
         cands = build_candidates(dets, H, (img.shape[1], img.shape[0]), cfg.filter, region)
         for c in cands:
@@ -139,6 +153,7 @@ def track_players(
             flush()
     flush()
     drop_offcourt_runs(out, cfg.filter.play_area)
+    out.side_switches = stabilise_sides(out, cfg.sides)
     gap = cfg.max_interp_gap // max(cfg.stride, 1)
     if gap > 0:
         fill_short_gaps(out, gap)

@@ -73,6 +73,7 @@ class PlayerState:
     confidence: float
     interpolated: bool = False  # True when filled across a short gap, not observed
     team: str | None = None  # "A" (P1/P3) or "B" (P2/P4)
+    appearance: np.ndarray | None = None  # torso colour histogram (internal, not in the contract)
 
 
 @dataclass
