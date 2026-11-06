@@ -1,0 +1,507 @@
+{
+  "$defs": {
+    "Distribution": {
+      "additionalProperties": false,
+      "description": "Counts over named categories (e.g. shot types, court zones, rally lengths).",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "n": {
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "counts",
+        "n",
+        "status",
+        "confidence"
+      ],
+      "title": "Distribution",
+      "type": "object"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "One computed number with its evidence size and reliability.\n\n``value`` is null when the metric cannot be computed (e.g. no calibration, no\nwinners entered). ``status`` follows the README levels; ``confidence`` is the\nplain-language reliability used by the coach to phrase caveats.",
+      "properties": {
+        "key": {
+          "description": "stable dotted key, e.g. 'P1.movement.distance_m'",
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "description": "Chinese display label",
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "n": {
+          "description": "sample size the value is computed from",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "value",
+        "n",
+        "status",
+        "confidence"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "ShotRecord": {
+      "additionalProperties": false,
+      "description": "Snapshot of one of this player's shots at commit time (evidence for opponent habits).",
+      "properties": {
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "rally_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rally Id"
+        },
+        "t_ms": {
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "index_in_rally": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "0 = serve",
+          "title": "Index In Rally"
+        },
+        "shot_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shot Type"
+        },
+        "shot_type_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Status"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "zone": {
+          "anyOf": [
+            {
+              "enum": [
+                "\u540e\u573a",
+                "\u4e2d\u573a",
+                "\u524d\u573a"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "hitter depth in own half",
+          "title": "Zone"
+        },
+        "prev_shot_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the opponent's shot just before, in the same rally",
+          "title": "Prev Shot Type"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        }
+      },
+      "required": [
+        "shot_id",
+        "t_ms",
+        "status"
+      ],
+      "title": "ShotRecord",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "TrainingItem": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "drill": {
+          "title": "Drill",
+          "type": "string"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "retest_metric": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "metric key to compare on the next upload",
+          "title": "Retest Metric"
+        }
+      },
+      "required": [
+        "drill",
+        "why"
+      ],
+      "title": "TrainingItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "seq": {
+      "title": "Seq",
+      "type": "integer"
+    },
+    "kind": {
+      "enum": [
+        "match_committed",
+        "match_withdrawn"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "recorded_at": {
+      "format": "date-time",
+      "title": "Recorded At",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "filename": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Filename"
+    },
+    "video_created_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Video Created At"
+    },
+    "person": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Person"
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player Id"
+    },
+    "is_self": {
+      "default": false,
+      "title": "Is Self",
+      "type": "boolean"
+    },
+    "opponents": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Opponents",
+      "type": "array"
+    },
+    "partner": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Partner"
+    },
+    "conditions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Conditions",
+      "type": "object"
+    },
+    "stats_fingerprint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stats Fingerprint"
+    },
+    "metrics": {
+      "description": "this player's metrics, keys without the 'P1.' prefix",
+      "items": {
+        "$ref": "#/$defs/Metric"
+      },
+      "title": "Metrics",
+      "type": "array"
+    },
+    "distributions": {
+      "items": {
+        "$ref": "#/$defs/Distribution"
+      },
+      "title": "Distributions",
+      "type": "array"
+    },
+    "match_metrics": {
+      "items": {
+        "$ref": "#/$defs/Metric"
+      },
+      "title": "Match Metrics",
+      "type": "array"
+    },
+    "training": {
+      "description": "coach suggestions for this player at commit time",
+      "items": {
+        "$ref": "#/$defs/TrainingItem"
+      },
+      "title": "Training",
+      "type": "array"
+    },
+    "shots": {
+      "items": {
+        "$ref": "#/$defs/ShotRecord"
+      },
+      "title": "Shots",
+      "type": "array"
+    },
+    "corrections": {
+      "default": 0,
+      "title": "Corrections",
+      "type": "integer"
+    },
+    "confirmation": {
+      "const": "human_committed",
+      "default": "human_committed",
+      "title": "Confirmation",
+      "type": "string"
+    },
+    "model_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Model Versions",
+      "type": "object"
+    }
+  },
+  "required": [
+    "event_id",
+    "seq",
+    "kind",
+    "recorded_at",
+    "video_id"
+  ],
+  "title": "AnalysisEvent",
+  "type": "object"
+}

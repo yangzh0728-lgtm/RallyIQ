@@ -393,3 +393,103 @@ export interface HardExampleSummary {
   groups: ConditionGroup[];
   weakest: ConditionGroup[];
 }
+
+// ------------------------------------------------------------------ memory (rallyiq/contracts/memory.py)
+
+export interface PeopleAssignment {
+  video_id: string;
+  people: Partial<Record<PlayerId, string>>;
+  self_player: PlayerId | null;
+  updated_at?: string | null;
+}
+
+export interface PersonSummary {
+  person: string;
+  videos: number;
+  is_self: boolean;
+  last: string | null;
+}
+
+export interface ProfilePoint {
+  video_id: string;
+  filename: string | null;
+  recorded_at: string;
+  value: number | null;
+  n: number;
+  status: Status;
+}
+
+export interface ProfileMetric {
+  key: string;
+  label: string;
+  unit: string | null;
+  points: ProfilePoint[];
+  latest: number | null;
+  previous: number | null;
+  delta: number | null;
+  trend: "up" | "down" | "flat" | "new" | "insufficient";
+  confidence: "high" | "medium" | "low";
+  note: string | null;
+}
+
+export interface RetestResult {
+  drill: string;
+  why: string;
+  metric: string;
+  label: string | null;
+  unit: string | null;
+  from_video_id: string;
+  to_video_id: string | null;
+  before: number | null;
+  after: number | null;
+  delta: number | null;
+  same_conditions: boolean | null;
+  status: "improved" | "worse" | "changed" | "unchanged" | "pending" | "not_measurable";
+}
+
+export interface ProfileVideo {
+  video_id: string;
+  filename: string | null;
+  recorded_at: string;
+  player_id: PlayerId | null;
+  opponents: string[];
+  conditions: Record<string, string>;
+}
+
+export interface PlayerProfile {
+  person: string;
+  is_self: boolean;
+  videos: ProfileVideo[];
+  metrics: ProfileMetric[];
+  retests: RetestResult[];
+  changes: string[];
+  log_events: number;
+}
+
+export interface HabitEvidence {
+  video_id: string;
+  shot_id: string;
+  t_ms: number;
+}
+
+export interface Habit {
+  condition: string;
+  outcome: string;
+  p: number;
+  n: number;
+  hits: number;
+  confidence: "high" | "medium" | "low";
+  evidence: HabitEvidence[];
+  counter_examples: HabitEvidence[];
+}
+
+export interface OpponentReport {
+  person: string;
+  videos: ProfileVideo[];
+  shots: number;
+  typed_shots: number;
+  distributions: Distribution[];
+  habits: Habit[];
+  next_shot: Habit[];
+  caveats: string[];
+}
