@@ -25,16 +25,19 @@ def test_notes_exist_and_follow_schema():
         assert n["key_points"] and n["summary"].strip(), n["id"]
         assert len(n["detailed_description"]) >= 400, n["id"]
         for d in n["drills"]:
-            assert set(d) == {"name", "how"}, n["id"]
+            assert {"name", "how"} <= set(d) <= {"name", "how", "t_s"}, n["id"]
+            assert isinstance(d.get("t_s", 0), int), n["id"]
         for shot in n["shots"]:
             assert set(shot) == {"name_zh", "stroke", "hand", "zone", "direction"}, n["id"]
             assert shot["stroke"] in tax["strokes"] and shot["hand"] in tax["shot_hand"], (n["id"], shot)
             assert shot["zone"] in tax["shot_zone"] and shot["direction"] in tax["shot_direction"], (n["id"], shot)
         assert {s["stroke"] for s in n["shots"]} <= set(n["strokes"]), n["id"]
         for fix in n["corrections"]:
-            assert set(fix) == {"problem", "cue", "result"}, n["id"]
+            assert {"problem", "cue", "result"} <= set(fix) <= {"problem", "cue", "result", "t_s"}, n["id"]
+            assert isinstance(fix.get("t_s", 0), int), n["id"]
         for m in n["related_metrics"]:
             assert METRIC_KEY.match(m), (n["id"], m)
+            assert not m.startswith("{pid}.match."), (n["id"], m)  # match.* keys are match-level
 
 
 def test_note_file_name_matches_source_id():

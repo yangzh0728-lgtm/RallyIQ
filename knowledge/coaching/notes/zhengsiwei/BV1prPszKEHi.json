@@ -56,7 +56,7 @@
   ],
   "related_metrics": [
     "{pid}.win.receive_rate_pct",
-    "{pid}.match.rally_len.mean"
+    "match.rally_len.mean"
   ],
   "content_caveats": "Q&A 特辑，含抽奖、基地参观、邀请蔡侑玎等非教学内容，笔记只整理教学部分。",
   "shots": [

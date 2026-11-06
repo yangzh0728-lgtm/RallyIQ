@@ -25,17 +25,17 @@
 | `summary` | 3–5 句概述 |
 | `key_points` | 技术要点 |
 | `common_mistakes` | 常见错误 |
-| `drills` | 练习方法，`{name, how}` |
+| `drills` | 练习方法，`{name, how}`，可选 `t_s`（该练习在视频里的秒数，用于生成带时间点的链接） |
 | `coach_cues` | 简短口令，适合直接放进点评 |
 | `shots` | 具体击球：`name_zh` 中文名、`stroke` 类型、`hand` 正手/反手/头顶区、`zone` 前/中/后场、`direction` 直线/斜线 |
 | `footwork` | 具体步法（启动步、上网步序、退后场转体并步等） |
 | `technique_breakdown` | 动作分解：握拍 / 准备 / 引拍 / 击球 / 随挥 等阶段 |
 | `when_to_use` | 使用时机和战术情境 |
-| `corrections` | 纠错实例：`problem` 问题、`cue` 他给的提示、`result` 效果 |
+| `corrections` | 纠错实例：`problem` 问题、`cue` 他给的提示、`result` 效果，可选 `t_s` |
 | `progression` | 进阶练习顺序 |
 | `self_check` | 自查清单 |
 | `detailed_description` | 详细描述，按视频顺序讲清楚这一期教了什么、怎么做、为什么，至少 400 字 |
-| `related_metrics` | 与这期内容相关、可用来复测的 RallyIQ 指标 key（`{pid}` 为球员前缀） |
+| `related_metrics` | 与这期内容相关、可用来复测的 RallyIQ 指标 key（`{pid}` 为球员前缀；`match.*` 是整场指标，不加前缀） |
 | `content_caveats` | 字幕局限、个人习惯不宜照搬等提醒 |
 
 `tests/report/test_coach_knowledge.py` 会检查字段齐全、标签合法、目录与笔记一致。
