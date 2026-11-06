@@ -64,6 +64,10 @@ class ManualCalibration(BaseModel):
                                   description="near-left, near-right, far-right, far-left (px)")
     start_frame: int = 0
     end_frame: int | None = None
+    other_courts: list[list[Point2]] = Field(
+        default_factory=list,
+        description="other courts in view, 4 corners each (e.g. the court analysed before switching), "
+        "so their players and shuttles keep being rejected")
 
 
 def create_app(store: Store | None = None, start_worker: bool | None = None) -> FastAPI:
@@ -234,6 +238,7 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
             start_frame=req.start_frame, end_frame=end, homography=h, image_corners=req.corners,
             keypoints=[CourtKeypoint(name=n, image=i, court=c) for n, i, c in zip(names, req.corners, COURT_CORNERS_M)],
             reprojection_error_px=0.0, method="manual", confidence=1.0, status="ok",
+            other_courts=[c for c in req.other_courts if len(c) == 4],
             notes=["4 corners picked by user"],
         )
         cal = CourtCalibration(video_id=video_id, segments=[seg])

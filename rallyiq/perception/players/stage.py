@@ -104,6 +104,9 @@ def run(ctx: StageContext) -> PlayerTracks:
             # Prefer the probe's timeline so all stages agree on t_ms.
             yield i, float(meta.t_ms(i)) if not meta.variable_frame_rate else t_ms, img
 
-    results = track_players(frames(), est, homography_for, cfg)
+    from ..target_court import SegmentRegions
+
+    regions = SegmentRegions(cal)
+    results = track_players(frames(), est, homography_for, cfg, regions.for_frame if regions else None)
     ctx.report(1.0)
     return build_tracks(meta.video_id, results, f"{MODEL_NAME}:{os.path.basename(model_path)}")

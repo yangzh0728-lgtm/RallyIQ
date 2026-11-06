@@ -90,6 +90,7 @@
           "used_for_fit": true
         }
       ],
+      "other_courts": [],
       "reprojection_error_px": 0.0,
       "method": "auto",
       "mirrored": false,

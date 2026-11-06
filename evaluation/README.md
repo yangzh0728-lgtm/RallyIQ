@@ -71,6 +71,13 @@ python -m evaluation.benchmark --pred preds --markdown out/bench.md --json out/b
 报告按项目、机位、来源、场馆分组，并列出最弱的 3 个条件，作为下一轮改进的优先级。
 没有预测文件的片段按全部漏检计分。门槛：击球 F1 ≥ 0.90、可见球召回 ≥ 0.90。
 
+## 多场地串场（`multicourt.py`）
+
+副场片段（`ko26_court2/3`）还没有标注，先用合成场景量化"把邻场的球当成本场的"：
+`python -m evaluation.multicourt` 打印开/关目标场地锁定时的精度、召回和串场率
+（两种机位 × 左右相邻 / 前后相邻）。真实片段跑完流水线后，用
+`python scripts/court_lock_report.py <视频目录>` 看锁定去掉了多少点、其中多少在其他场地上方。
+
 ## 测试
 
 ```bash

@@ -32,6 +32,47 @@
         },
         "status": {
           "$ref": "#/$defs/Status"
+        },
+        "image_corners": {
+          "anyOf": [
+            {
+              "items": {
+                "description": "[x, y]",
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "outer corners of the analysed court, near-left, near-right, far-right, far-left",
+          "title": "Image Corners"
+        },
+        "other_courts": {
+          "description": "other courts in view (ignored); the UI lets the user switch to one",
+          "items": {
+            "items": {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "type": "array"
+          },
+          "title": "Other Courts",
+          "type": "array"
         }
       },
       "required": [

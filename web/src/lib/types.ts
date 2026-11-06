@@ -89,6 +89,10 @@ export interface CourtLines {
   end_frame: number; // inclusive
   lines: [Point, Point][];
   status: Status;
+  /** Outer corners of the analysed court: near-left, near-right, far-right, far-left. */
+  image_corners?: Point[] | null;
+  /** Other courts in view (ignored by the analysis); the user can switch to one. */
+  other_courts?: Point[][];
 }
 
 export interface OverlayData {

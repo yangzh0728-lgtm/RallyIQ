@@ -9,6 +9,11 @@
 * ``roi``: ``"off"`` (default) or ``"auto"``: crop to the calibrated court plus the air
   above it, which enlarges small far-court shuttles. Experimental until measured.
 * ``tracker``: overrides for ``TrackerConfig`` fields.
+* ``court_lock``: ``"auto"`` (default) or ``"off"``. When several courts are in view,
+  keep only trajectories over the target court: the air box above the calibrated
+  court (or, without calibration, the band spanned by the tracked players), with a
+  bonus for trajectories that pass within reach of our players. Shuttles over the
+  other courts listed by calibration are rejected. See ``target_court.py``.
 
 Besides the contract output, every raw candidate (including rejected ones) is written
 to ``<work_dir>/shuttle_candidates.json`` so nothing the model saw is lost.
@@ -25,9 +30,10 @@ from collections.abc import Sequence
 from dataclasses import fields
 from pathlib import Path
 
-from ...contracts import CourtCalibration, FrameGap, ShuttlePoint, ShuttleTrack, VideoMeta
+from ...contracts import CourtCalibration, FrameGap, PlayerTracks, ShuttlePoint, ShuttleTrack, VideoMeta
 from ...pipeline.context import StageContext, demo_mode
-from .tracker import Candidate, ShuttleTracker, TrackerConfig
+from ..target_court import PlayerProximity, PlayerSpanRegion, SegmentRegions
+from .tracker import Candidate, RegionFn, ShuttleTracker, SupportFn, TrackerConfig
 
 log = logging.getLogger("rallyiq.shuttle")
 
@@ -44,6 +50,34 @@ def tracker_config(overrides: dict | None) -> TrackerConfig:
     return cfg
 
 
+def court_lock(
+    calibration: CourtCalibration | None, players: PlayerTracks | None
+) -> tuple[RegionFn | None, SupportFn | None, str]:
+    """Region and player-support functions that keep the tracker on the target court.
+
+    Returns ``(region, support, mode)``; ``mode`` says which evidence was used.
+    """
+    regions = SegmentRegions(calibration)
+    span = PlayerSpanRegion.from_players(players)
+    region: RegionFn | None = None
+    if regions:
+        def region(frame: int, x: float, y: float) -> float:
+            r = regions.for_frame(frame)
+            if r is not None:
+                return r.air_weight(x, y)
+            return span.air_weight(x, y) if span is not None else 1.0
+        mode = "calibration"
+    elif span is not None:
+        def region(frame: int, x: float, y: float) -> float:
+            return span.air_weight(x, y)
+        mode = "player_span"
+    else:
+        mode = "none"
+    prox = PlayerProximity(players)
+    support = prox.near if prox else None
+    return region, support, mode
+
+
 def build_track(
     meta: VideoMeta,
     candidates: dict[int, Sequence[Candidate]],
@@ -51,6 +85,8 @@ def build_track(
     height: int,
     detector: str | None,
     config: TrackerConfig | None = None,
+    region: RegionFn | None = None,
+    support: SupportFn | None = None,
 ) -> tuple[ShuttleTrack, dict[int, int]]:
     """Run the tracker and convert to the contract. Also returns the selected
     candidate index per frame (for the raw-candidates file)."""
@@ -62,9 +98,11 @@ def build_track(
         )
     # Coordinates are in decoded-frame px; scale if the decoder's size differs from the probe.
     sx, sy = meta.width / width, meta.height / height
-    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config)
+    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support)
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in candidates.items()}
     res = tracker.track(scaled, frame_count)
+    if tracker.rejected_foreign:
+        log.info("shuttle: dropped %d trajectories outside the target court", tracker.rejected_foreign)
     points = [
         ShuttlePoint(
             frame=p.frame, t_ms=meta.t_ms(p.frame), x=round(p.x, 2), y=round(p.y, 2),
@@ -139,8 +177,12 @@ def run(ctx: StageContext) -> ShuttleTrack:
     candidates, size = detector.detect(
         ctx.video_path, meta.fps, meta.frame_count, segments, progress=lambda p: ctx.report(0.95 * p)
     )
+    region = support = None
+    if cfg.get("court_lock", "auto") != "off":
+        region, support, mode = court_lock(ctx.calibration, ctx.players)
+        log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
-                                  tracker_config(cfg.get("tracker")))
+                                  tracker_config(cfg.get("tracker")), region, support)
     save_candidates(Path(ctx.work_dir) / CANDIDATES_FILE, candidates, selected, detector.name, size)
     ctx.report(1.0)
     return track
