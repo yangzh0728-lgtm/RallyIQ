@@ -2,7 +2,7 @@
   "stats": {
     "schema_version": "0.1.0",
     "video_id": "vid_example",
-    "fingerprint": "ad22d9ccc4def45c",
+    "fingerprint": "0123456789abcdef",
     "duration_ms": 15000,
     "calibration_status": "ok",
     "shot_types_available": false,
@@ -599,7 +599,7 @@
   "coach": {
     "schema_version": "0.1.0",
     "video_id": "vid_example",
-    "stats_fingerprint": "ad22d9ccc4def45c",
+    "stats_fingerprint": "0123456789abcdef",
     "provider": "offline",
     "model": "rules@1",
     "created_at": "2026-11-06T08:00:00Z",

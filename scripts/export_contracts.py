@@ -70,7 +70,8 @@ def examples() -> dict[str, object]:
     # report: winners entered for every rally, coach from the offline rule provider
     decided = effective.model_copy(update={"rallies": [
         r.model_copy(update={"winner": "P1" if i % 3 else "P2"}) for i, r in enumerate(effective.rallies)]})
-    stats = compute_match_stats(decided, players, cal, long_meta)
+    # fingerprint hashes float-exact inputs (BLAS-dependent in the last digits): pin it for the example
+    stats = compute_match_stats(decided, players, cal, long_meta).model_copy(update={"fingerprint": "0123456789abcdef"})
     coach = build_report(OfflineProvider().generate(stats), stats, OfflineProvider()).model_copy(
         update={"created_at": ts})
     report = c.MatchReport(stats=stats, coach=coach)
