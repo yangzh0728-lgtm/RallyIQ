@@ -1,0 +1,95 @@
+{
+  "id": "zhengsiwei-bili-BV1MQ2bY9ENU",
+  "coach": "郑思维 (Zheng Siwei)",
+  "platform": "bilibili",
+  "channel": "郑思维 (space.bilibili.com/383058245)",
+  "url": "https://www.bilibili.com/video/BV1MQ2bY9ENU/",
+  "title": "欢迎进入羽球思维第十期🏸混双队中训练防守的方法",
+  "series": "羽球思维 第10期",
+  "published": "2024-10-12",
+  "duration_s": 64,
+  "language": "zh",
+  "transcript_source": "bilibili_ai_subtitles",
+  "level": "intermediate",
+  "topic": "混双队内常规防守训练：上下手（女封网、男防守）及加难摆脱",
+  "strokes": [
+    "defense",
+    "drive",
+    "net_shot"
+  ],
+  "aspects": [
+    "training_habits",
+    "technique"
+  ],
+  "summary": "运动队最常规的防守训练“上下手”：封网的一方叫上手，防守的一方叫下手。混双可以女生上手练封网、男生下手练防守，然后互换。熟练后男生加大难度：抽两拍后做摆脱，例如弹球（挑高）或分球（挡/分到别的落点）。",
+  "key_points": [
+    "“上下手”是运动队最常规的防守训练方法。",
+    "封网的叫上手，防守的叫下手。",
+    "混双可以女生封网、男生防守，然后互换角色。",
+    "熟练后加难度：抽两拍之后做摆脱。",
+    "摆脱方式可以是弹球（把球打高打远）或分球。"
+  ],
+  "common_mistakes": [],
+  "drills": [
+    {
+      "name": "上下手基础版",
+      "how": "女生站网前连续封压，男生在中后场连续防守抽挡，固定时间后互换。"
+    },
+    {
+      "name": "上下手加摆脱",
+      "how": "防守方抽两拍后主动变线：弹高球到后场或把球分到另一侧，练习从对抽中摆脱。"
+    }
+  ],
+  "coach_cues": [
+    "上手封网",
+    "下手防守",
+    "抽两拍再摆脱"
+  ],
+  "related_metrics": [
+    "{pid}.pos.depth_zones",
+    "match.rally_len.mean"
+  ],
+  "content_caveats": "视频中段为配乐对练画面，字幕内容较少；正文补充部分已标明。",
+  "shots": [
+    {
+      "name_zh": "下手防守抽挡",
+      "stroke": "drive",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "防守弹球摆脱到后场",
+      "stroke": "defense",
+      "hand": "forehand",
+      "zone": "mid",
+      "direction": "-"
+    },
+    {
+      "name_zh": "上手网前封压",
+      "stroke": "net_shot",
+      "hand": "forehand",
+      "zone": "front",
+      "direction": "-"
+    }
+  ],
+  "footwork": [
+    "下手方保持防守低重心，小范围左右调整",
+    "上手方在网前保持封网准备姿势"
+  ],
+  "technique_breakdown": {},
+  "when_to_use": [
+    "混双搭档一起练防守和封网时"
+  ],
+  "corrections": [],
+  "progression": [
+    "基础上下手对抽",
+    "交换角色",
+    "加入抽两拍后的摆脱"
+  ],
+  "self_check": [
+    "我们有没有交换角色练？",
+    "抽两拍后我能否主动摆脱？"
+  ],
+  "detailed_description": "这一期郑思维分享一种运动队里最常规的防守训练方法，适合和混双女搭档一起练。他们把这个练习叫做“上下手”：在网前封网的一方叫上手，在后面防守的一方叫下手。混双的话，可以让女生上手练封网，男生下手练防守；练完之后可以调过来，男生封网、女生下手，这样两个人的防守能力和封网能力都能得到训练。视频中间有一段两人对练的画面，配了音乐，没有解说。在熟练了这个基础练习之后，他建议男生可以加大难度：在对抽两拍之后做一些摆脱练习，比如抽两拍之后把球弹出去，或者抽两拍之后分球，从相持中摆脱出来。（以下补充说明不是视频原话，是整理者为便于教学模型理解而加的通用解释。）上下手练习的价值在于它模拟了双打中最常见的场景：一方压在网前快速封堵，另一方在中场被迫连续抽挡。下手方要练的是稳定的拍面和连续还击，上手方要练的是封网的手上反应和预判。加入“摆脱”之后，下手方不再只是被动地把球挡回去，而是练习在相持中找到时机改变节奏，这正是比赛里由守转攻需要的能力。"
+}

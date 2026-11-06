@@ -1,0 +1,84 @@
+{
+  "id": "zhengsiwei-bili-BV1vE1dYME52",
+  "coach": "郑思维 (Zheng Siwei)",
+  "platform": "bilibili",
+  "channel": "郑思维 (space.bilibili.com/383058245)",
+  "url": "https://www.bilibili.com/video/BV1vE1dYME52/",
+  "title": "欢迎来到羽球思维第八期🏸几种后场进攻方式",
+  "series": "羽球思维 第8期",
+  "published": "2024-10-05",
+  "duration_s": 39,
+  "language": "zh",
+  "transcript_source": "bilibili_ai_subtitles",
+  "level": "intermediate",
+  "topic": "几种后场进攻方式展示：滑拍吊、霸王杀、甩大臂、侧跳杀",
+  "strokes": [
+    "slice",
+    "smash",
+    "jump_smash"
+  ],
+  "aspects": [
+    "technique"
+  ],
+  "summary": "约 40 秒的展示短片，郑思维依次示范滑拍吊、霸王杀、甩大臂杀球、侧跳杀等几种后场进攻方式，邀请观众在评论区选择想学的动作，后续期数再分别讲解（如第 12 期甩大臂重杀、第 18 期滑拍吊与劈吊）。",
+  "key_points": [
+    "后场进攻可以有多种方式：滑拍吊、霸王杀、甩大臂杀、侧跳杀等。",
+    "本期只展示不讲解，具体技术见后续期数。",
+    "需要充分热身后再做大强度杀球。"
+  ],
+  "common_mistakes": [],
+  "drills": [],
+  "coach_cues": [
+    "先热身再上强度"
+  ],
+  "related_metrics": [
+    "{pid}.shot_types",
+    "{pid}.hit.zones"
+  ],
+  "content_caveats": "本期为约 40 秒的动作展示，几乎没有讲解；描述中对动作名称的解释为整理者补充的通用说明，已在正文标明。",
+  "shots": [
+    {
+      "name_zh": "后场滑拍吊",
+      "stroke": "slice",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "cross"
+    },
+    {
+      "name_zh": "霸王杀（头顶突击杀）",
+      "stroke": "smash",
+      "hand": "around_head",
+      "zone": "rear",
+      "direction": "-"
+    },
+    {
+      "name_zh": "甩大臂重杀",
+      "stroke": "smash",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "侧跳杀",
+      "stroke": "jump_smash",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "-"
+    }
+  ],
+  "footwork": [
+    "侧跳杀需要侧向起跳到球下"
+  ],
+  "technique_breakdown": {},
+  "when_to_use": [
+    "进攻阶段处理后场高球"
+  ],
+  "corrections": [],
+  "progression": [
+    "本期为导览，按后续期数逐个学习"
+  ],
+  "self_check": [
+    "我目前掌握了几种后场进攻方式？"
+  ],
+  "detailed_description": "这一期非常短，只有大约四十秒，是一个后场进攻方式的展示合集。郑思维在开头说要给大家分享自己的几种进攻方式，看看哪一种大家能学会，然后在画面中依次示范：滑拍吊、霸王杀、甩大臂杀球、侧跳杀。字幕里还提到一种“妖王杀”（可能是 AI 字幕的误识别），他说这个今天就不展示了，因为自己还没活动开，强度比较大。最后他请观众在评论区留言，告诉他喜欢哪一种、想学哪一种，后面再出专门的教学。从系列后续来看，第十二期讲了“甩大臂”的重杀，第十八期讲了滑拍吊和劈吊的区别与运用，正是对这一期展示内容的展开。以下是对这些名称的补充说明（不是视频原话，是笔记整理者为了让教学模型能理解而补充的一般常识）：滑拍吊是在后场用拍面侧向擦球，让球减速并带旋转落到网前；霸王杀通常指在头顶区域突击压下的杀球；甩大臂杀是以大臂带动、充分挥动的重杀；侧跳杀是侧身起跳在空中击球的杀球。这一期本身不提供动作要领，教学建议时应引导用户去看对应的专题期数，而不是只依据这一期。"
+}
