@@ -114,9 +114,14 @@ def load_clips(data: Path, index_name: str) -> list[Clip]:
     if index_name == "index.json":  # build_train_set.py
         index = json.loads((data / "index.json").read_text(encoding="utf-8"))
         items = [(cid, Path(v["artifacts"]), str(v["match_id"])) for cid, v in index.items() if v.get("state") == "succeeded"]
-    else:  # public_eval.py results.json
-        res = json.loads((data / "results.json").read_text(encoding="utf-8"))
-        items = [(r["clip_id"], Path(r["artifacts"]), r["clip_id"]) for r in res if r.get("state") == "succeeded"]
+    else:  # public_eval.py output: every labelled clip whose prediction points at a stored video
+        # (results.json only lists the clips of the last run, e.g. with --skip-run, so it is not used)
+        items = []
+        for lp in sorted((data / "labels").glob("*.json")):
+            pp = data / "preds" / lp.name
+            vid = json.loads(pp.read_text(encoding="utf-8")).get("source_video_id") if pp.exists() else None
+            if vid:
+                items.append((lp.stem, data / "data" / "videos" / vid / "artifacts", lp.stem))
     for cid, art, group in sorted(items):
         lp = data / "labels" / f"{cid}.json"
         if not lp.exists() or not (art / "shuttle.json").exists():
@@ -394,13 +399,19 @@ def _events_preds(clips: list[Clip], cfg: EventsConfig, preds: Path) -> None:
 def cmd_eval(a: argparse.Namespace) -> int:
     data = a.data.expanduser()
     clips = load_clips(data, "results.json")
-    manifest = json.loads((data / "manifest.json").read_text(encoding="utf-8"))
-    model = a.model.expanduser()
-    out = data / "learn_eval"
-    variants = {"rules": EventsConfig(hit_scorer="off"), "learned": EventsConfig(hit_scorer=str(model))}
+    mp = data / "manifest.json"
+    full = json.loads(mp.read_text(encoding="utf-8")) if mp.exists() else {}
+    # only clips with artifacts are scored (a clip without them would count as all misses for every variant)
+    manifest = {c.cid: full.get(c.cid, {"id": c.cid, "split": "eval", "conditions": {"source": data.name}})
+                for c in clips}
+    models = [m.expanduser() for m in a.model]
+    out = data / a.out_name
+    variants = {"rules": EventsConfig(hit_scorer="off")}
+    variants.update({m.stem: EventsConfig(hit_scorer=str(m)) for m in models})
     L = [f"# Hits: rules vs learned scorer on {len(clips)} held-out clips ({data.name})", "",
-         f"model: `{model}`", ""]
+         f"clips: {', '.join(c.cid for c in clips)}", "", "models: " + ", ".join(f"`{m}`" for m in models), ""]
     summary = {}
+    per_clip: dict[str, dict[str, Any]] = {}
     for name, cfg in variants.items():
         _events_preds(clips, cfg, out / name)
         rep = benchmark.run(data / "labels", out / name, manifest, None, False)
@@ -412,12 +423,17 @@ def cmd_eval(a: argparse.Namespace) -> int:
             M.HIT_TOL_FRAMES = old
         o = rep["overall"]
         summary[name] = {"hits": o["hits"], "hits_6f": loose, "rallies": o["rallies"]}
+        for cid, cs in rep["clips"].items():
+            per_clip.setdefault(cid, {})[name] = cs["hits"]["f1"]
     f = lambda x: "—" if x is None else f"{x * 100:.1f}%"  # noqa: E731
     L += ["| scorer | hit P | hit R | hit F1 | F1 any side | F1 ±6 frames | rally F1 |", "|---|---|---|---|---|---|---|"]
     for name, s in summary.items():
         h = s["hits"]
         L.append(f"| {name} | {f(h['precision'])} | {f(h['recall'])} | {f(h['f1'])} | {f(h['f1_ignore_side'])} | "
                  f"{f(s['hits_6f']['f1'])} | {f(s['rallies']['f1'])} |")
+    L += ["", "Hit F1 per clip:", "", "| clip | " + " | ".join(summary) + " |", "|---|" + "---|" * len(summary)]
+    for cid, row in sorted(per_clip.items()):
+        L.append(f"| {cid} | " + " | ".join(f(row.get(n)) for n in summary) + " |")
     (out / "report.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     (out / "report.json").write_text(json.dumps(summary, indent=1, default=str), encoding="utf-8")
     print("\n".join(L))
@@ -437,7 +453,8 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--l2", type=float, nargs="+", default=[1e-4, 1e-3, 1e-2])
     e = sub.add_parser("eval")
     e.add_argument("--data", type=Path, default=Path("~/rallyiq-data/public/shuttleset"))
-    e.add_argument("--model", type=Path, default=BUNDLED)
+    e.add_argument("--model", type=Path, nargs="+", default=[BUNDLED], help="one or more scorer JSON files")
+    e.add_argument("--out-name", default="learn_eval", help="output folder inside --data")
     a = ap.parse_args(argv)
     return cmd_train(a) if a.cmd == "train" else cmd_eval(a)
 
