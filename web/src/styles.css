@@ -98,3 +98,42 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; }
 .error { color: var(--bad); }
 .history { display: grid; gap: 4px; max-height: 180px; overflow-y: auto; font-size: 12px; }
 kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; font-size: 11px; }
+
+/* Post-match report */
+.page.report { max-width: 1200px; }
+.report-title { font-size: 18px; margin: 0 4px 0 8px; }
+.report-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.metric { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px; display: grid; gap: 3px; align-content: start; transition: border-color .3s; }
+.metric .value { font-size: 18px; font-weight: 600; }
+.metric.undeterminable .value { color: var(--muted); }
+.metric.needs_review .value { color: #fcd9a0; }
+.metric .note { line-height: 1.35; }
+.metric.focus, .dist.focus { border-color: var(--accent); box-shadow: 0 0 0 2px #38bdf855; }
+.dist { border: 1px solid transparent; border-radius: 6px; padding: 6px; display: grid; gap: 4px; }
+.dist-row { display: grid; grid-template-columns: 96px 1fr 90px; gap: 8px; align-items: center; }
+.dist-row .bar { height: 8px; }
+.notice { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+.notice.warn { border-color: #6b4a12; color: var(--warn); }
+.coach .summary { font-size: 15px; line-height: 1.6; margin: 4px 0 12px; }
+.coach h3 { font-size: 14px; margin: 16px 0 6px; }
+.insights { display: grid; gap: 8px; }
+.insight { background: var(--panel-2); border: 1px solid var(--line); border-left-width: 3px; border-radius: 6px; padding: 8px 10px; display: grid; gap: 4px; }
+.insight.strength { border-left-color: var(--ok); }
+.insight.weakness { border-left-color: var(--bad); }
+.insight.pattern { border-left-color: var(--accent); }
+.insight.tactic { border-left-color: #a78bfa; }
+.insight.data_quality { border-left-color: var(--muted); }
+.insight .detail { line-height: 1.55; }
+.kind { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #ffffff10; }
+.kind.strength { color: var(--ok); }
+.kind.weakness { color: var(--bad); }
+.kind.pattern { color: var(--accent); }
+.kind.tactic { color: #a78bfa; }
+.pill.conf-high { color: var(--ok); border-color: #1d5b46; }
+.pill.conf-medium { color: var(--warn); border-color: #6b4a12; }
+.pill.conf-low { color: var(--muted); }
+.chip { font-size: 11px; padding: 1px 8px; border-radius: 999px; }
+.evidence { gap: 4px; }
+.training li { margin: 4px 0; line-height: 1.5; }
+.caveats { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }

@@ -1,7 +1,8 @@
 import { applyCorrections } from "./corrections";
 import { boundaryLinesM, CORNERS_M, homographyFrom4, projectCourtLines, projectLines } from "./court";
 import { generateMock, type MockAnalysis } from "./mock";
-import type { Correction, CorrectionIn, EventsResult, Job, OverlayData, Point, StageName, StageRun, Video } from "./types";
+import { mockCoach, mockStats } from "./report";
+import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video } from "./types";
 
 /** Per-video singles/doubles choice; "auto" lets the players stage decide. */
 export type MatchFormatSetting = "auto" | "singles" | "doubles";
@@ -28,6 +29,12 @@ export interface Api {
   videoFileUrl(videoId: string): string | null;
   /** Server export URL, or null if the client builds the export itself (mock). */
   exportUrl(videoId: string, format: "json" | "csv"): string | null;
+  /** Post-match stats (from effective events) + the cached coach report. */
+  getReport(videoId: string): Promise<MatchReport>;
+  /** (Re)generate the AI coach comments; provider null = server default. Can take a minute. */
+  generateCoach(videoId: string, provider?: string | null): Promise<CoachReport>;
+  /** Report download URL, or null if the client renders it (mock). */
+  reportExportUrl(videoId: string, format: "md" | "json"): string | null;
 }
 
 // ---------------------------------------------------------------- live (FastAPI, rallyiq/api/app.py)
@@ -91,6 +98,10 @@ export const liveApi: Api = {
     http<Job>(`/videos/${enc(id)}/match_format`, { method: "PUT", body: JSON.stringify({ match_format: format }) }),
   videoFileUrl: (id) => `${BASE}/videos/${enc(id)}/file`,
   exportUrl: (id, format) => `${BASE}/videos/${enc(id)}/export?format=${format}`,
+  getReport: (id) => http<MatchReport>(`/videos/${enc(id)}/report`),
+  generateCoach: (id, provider) =>
+    http<CoachReport>(`/videos/${enc(id)}/report/coach`, { method: "POST", body: JSON.stringify({ provider: provider ?? null }) }),
+  reportExportUrl: (id, format) => `${BASE}/videos/${enc(id)}/report/export?format=${format}`,
 };
 
 // ---------------------------------------------------------------- mock (?mock)
@@ -135,6 +146,7 @@ export function createMockApi(): Api {
   const videos = new Map<string, MockVideo>();
   const analyses = new Map<string, MockAnalysis>();
   const corrections = loadCorrections();
+  const coaches = new Map<string, CoachReport>();
   const iso = (t: number) => new Date(t).toISOString();
   const delay = <T,>(v: T, ms = 100) => new Promise<T>((r) => setTimeout(() => r(structuredClone(v)), ms));
 
@@ -267,6 +279,19 @@ export function createMockApi(): Api {
     },
     videoFileUrl: (id) => videos.get(id)?.objectUrl ?? null,
     exportUrl: () => null,
+    async getReport(id) {
+      must(id);
+      const stats = mockStats(applyCorrections(analysis(id).events, corrections[id] ?? [], fps(id)), analysis(id).overlay);
+      const coach = coaches.get(id) ?? null;
+      return delay({ stats, coach, coach_stale: !!coach && coach.stats_fingerprint !== stats.fingerprint });
+    },
+    async generateCoach(id) {
+      const { stats } = await this.getReport(id);
+      const c = mockCoach(stats);
+      coaches.set(id, c);
+      return delay(c, 600);
+    },
+    reportExportUrl: () => null,
   };
 }
 

@@ -189,6 +189,93 @@ export interface HeatmapData {
   samples: number;
 }
 
+// ------------------------------------------------------------------ report (rallyiq/contracts/models.py)
+
+export type MetricConfidence = "high" | "medium" | "low";
+
+export interface Metric {
+  key: string;
+  label: string;
+  value: number | null;
+  unit: string | null;
+  n: number;
+  status: Status;
+  confidence: MetricConfidence;
+  note: string | null;
+}
+
+export interface Distribution {
+  key: string;
+  label: string;
+  counts: Record<string, number>;
+  n: number;
+  status: Status;
+  confidence: MetricConfidence;
+  note: string | null;
+}
+
+export interface PlayerStats {
+  player_id: PlayerId;
+  metrics: Metric[];
+  distributions: Distribution[];
+}
+
+export interface MatchStats {
+  schema_version: string;
+  video_id: string;
+  fingerprint: string;
+  duration_ms: number | null;
+  calibration_status: Status | null;
+  shot_types_available: boolean;
+  metrics: Metric[];
+  distributions: Distribution[];
+  players: PlayerStats[];
+  caveats: string[];
+}
+
+export type InsightKind = "strength" | "weakness" | "pattern" | "tactic" | "data_quality";
+
+export interface CoachInsight {
+  kind: InsightKind;
+  player_id: PlayerId | null;
+  title: string;
+  detail: string;
+  evidence: string[];
+  confidence: MetricConfidence;
+  grounded: boolean;
+  warnings: string[];
+}
+
+export interface TrainingItem {
+  player_id: PlayerId | null;
+  drill: string;
+  why: string;
+  evidence: string[];
+  retest_metric: string | null;
+}
+
+export interface CoachReport {
+  schema_version: string;
+  video_id: string;
+  stats_fingerprint: string;
+  provider: string;
+  model: string | null;
+  created_at: string;
+  language: "zh";
+  summary: string;
+  insights: CoachInsight[];
+  training: TrainingItem[];
+  caveats: string[];
+  fallback_reason: string | null;
+  dropped: number;
+}
+
+export interface MatchReport {
+  stats: MatchStats;
+  coach: CoachReport | null;
+  coach_stale: boolean;
+}
+
 export const PLAYER_IDS: PlayerId[] = ["P1", "P2"];
 export const DOUBLES_PLAYER_IDS: PlayerId[] = ["P1", "P3", "P2", "P4"];
 export const TEAM_IDS: TeamId[] = ["A", "B"];

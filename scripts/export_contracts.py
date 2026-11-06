@@ -16,6 +16,8 @@ from rallyiq.api.corrections import apply_corrections
 from rallyiq.contracts.geometry import project_boundary_lines, project_court_lines
 from rallyiq.pipeline import demo
 from rallyiq.pipeline.overlay import COCO17_SKELETON
+from rallyiq.report import compute_match_stats
+from rallyiq.report.coach import OfflineProvider, build_report
 
 ROOT = Path(__file__).resolve().parents[1] / "contracts"
 
@@ -23,6 +25,7 @@ SCHEMAS = [
     c.VideoMeta, c.CourtCalibration, c.PlayerTracks, c.ShuttleTrack, c.EventsResult, c.ShotEvent, c.Rally,
     c.CorrectionIn, c.Correction, c.OverlayData, c.OverlayFrame, c.Job, c.Video, c.HeatmapData,
     c.MatchFormatSetting,
+    c.MatchStats, c.CoachReport, c.MatchReport,
 ]
 
 
@@ -68,7 +71,16 @@ def examples() -> dict[str, object]:
                         c.StageRun(name="shuttle"), c.StageRun(name="events"), c.StageRun(name="overlay")])
     doubles = demo.demo_players(long_meta, cal, "doubles")
     doubles_events = demo.demo_events(long_meta, doubles)
+    # report: winners entered for every rally, coach from the offline rule provider
+    decided = effective.model_copy(update={"rallies": [
+        r.model_copy(update={"winner": "P1" if i % 3 else "P2"}) for i, r in enumerate(effective.rallies)]})
+    # fingerprint hashes float-exact inputs (BLAS-dependent in the last digits): pin it for the example
+    stats = compute_match_stats(decided, players, cal, long_meta).model_copy(update={"fingerprint": "0123456789abcdef"})
+    coach = build_report(OfflineProvider().generate(stats), stats, OfflineProvider()).model_copy(
+        update={"created_at": ts})
+    report = c.MatchReport(stats=stats, coach=coach)
     return {
+        "match_report": report,
         "players_doubles": doubles.model_copy(update={"frames": doubles.frames[30:31]}),
         "events_doubles": doubles_events.model_copy(update={
             "rallies": doubles_events.rallies[:1], "shots": [s for s in doubles_events.shots if s.rally_id == "r001"]}),

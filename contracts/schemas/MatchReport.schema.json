@@ -1,0 +1,538 @@
+{
+  "$defs": {
+    "CoachInsight": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "strength",
+            "weakness",
+            "pattern",
+            "tactic",
+            "data_quality"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Metric/Distribution keys from MatchStats that support this insight",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "grounded": {
+          "default": true,
+          "description": "false if a number in the text was not found in the cited evidence",
+          "title": "Grounded",
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "detail",
+        "evidence",
+        "confidence"
+      ],
+      "title": "CoachInsight",
+      "type": "object"
+    },
+    "CoachReport": {
+      "additionalProperties": false,
+      "description": "LLM (or rule-based) coaching comments. Never a source of truth: every claim\ncites ``MatchStats`` keys and is validated against them.",
+      "properties": {
+        "schema_version": {
+          "default": "0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "video_id": {
+          "title": "Video Id",
+          "type": "string"
+        },
+        "stats_fingerprint": {
+          "title": "Stats Fingerprint",
+          "type": "string"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "language": {
+          "const": "zh",
+          "default": "zh",
+          "title": "Language",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "insights": {
+          "items": {
+            "$ref": "#/$defs/CoachInsight"
+          },
+          "title": "Insights",
+          "type": "array"
+        },
+        "training": {
+          "items": {
+            "$ref": "#/$defs/TrainingItem"
+          },
+          "title": "Training",
+          "type": "array"
+        },
+        "caveats": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Caveats",
+          "type": "array"
+        },
+        "fallback_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "why the requested provider was not used",
+          "title": "Fallback Reason"
+        },
+        "dropped": {
+          "default": 0,
+          "description": "insights removed because they cited no valid evidence",
+          "title": "Dropped",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "video_id",
+        "stats_fingerprint",
+        "provider",
+        "created_at",
+        "summary",
+        "insights"
+      ],
+      "title": "CoachReport",
+      "type": "object"
+    },
+    "Distribution": {
+      "additionalProperties": false,
+      "description": "Counts over named categories (e.g. shot types, court zones, rally lengths).",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "n": {
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "counts",
+        "n",
+        "status",
+        "confidence"
+      ],
+      "title": "Distribution",
+      "type": "object"
+    },
+    "MatchStats": {
+      "additionalProperties": false,
+      "description": "Post-match statistics computed from effective events + player tracks.\n\nPure function of the inputs (no model is called). ``fingerprint`` changes\nwhenever the inputs change, so a cached coach report can be marked stale.",
+      "properties": {
+        "schema_version": {
+          "default": "0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "video_id": {
+          "title": "Video Id",
+          "type": "string"
+        },
+        "fingerprint": {
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "calibration_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Status"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "shot_types_available": {
+          "description": "false until a stroke classifier fills ShotEvent.shot_type",
+          "title": "Shot Types Available",
+          "type": "boolean"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "distributions": {
+          "items": {
+            "$ref": "#/$defs/Distribution"
+          },
+          "title": "Distributions",
+          "type": "array"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerStats"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "caveats": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Caveats",
+          "type": "array"
+        }
+      },
+      "required": [
+        "video_id",
+        "fingerprint",
+        "shot_types_available",
+        "metrics",
+        "players"
+      ],
+      "title": "MatchStats",
+      "type": "object"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "One computed number with its evidence size and reliability.\n\n``value`` is null when the metric cannot be computed (e.g. no calibration, no\nwinners entered). ``status`` follows the README levels; ``confidence`` is the\nplain-language reliability used by the coach to phrase caveats.",
+      "properties": {
+        "key": {
+          "description": "stable dotted key, e.g. 'P1.movement.distance_m'",
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "description": "Chinese display label",
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "n": {
+          "description": "sample size the value is computed from",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "value",
+        "n",
+        "status",
+        "confidence"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "PlayerStats": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "distributions": {
+          "items": {
+            "$ref": "#/$defs/Distribution"
+          },
+          "title": "Distributions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "player_id",
+        "metrics"
+      ],
+      "title": "PlayerStats",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "TrainingItem": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "drill": {
+          "title": "Drill",
+          "type": "string"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "retest_metric": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "metric key to compare on the next upload",
+          "title": "Retest Metric"
+        }
+      },
+      "required": [
+        "drill",
+        "why"
+      ],
+      "title": "TrainingItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``GET /api/videos/{id}/report``: stats plus the latest coach report, if any.",
+  "properties": {
+    "stats": {
+      "$ref": "#/$defs/MatchStats"
+    },
+    "coach": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CoachReport"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "coach_stale": {
+      "default": false,
+      "description": "coach was generated from different stats (e.g. before new corrections)",
+      "title": "Coach Stale",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "stats"
+  ],
+  "title": "MatchReport",
+  "type": "object"
+}
