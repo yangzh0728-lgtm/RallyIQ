@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .config import EventsConfig
+from .learned import features, get_scorer
 from .players import PoseIndex, Proximity
 from .rallies import RallySpan
 from .trajectory import Track, angle_deg, norm
@@ -121,7 +122,13 @@ def detect_hits(
     poses: PoseIndex,
     cfg: EventsConfig,
     fps_ms: float,
+    collect: Optional[list] = None,
 ) -> list[Candidate]:
+    """Hit candidates of one rally.
+
+    ``collect``: if given, (features, candidate) of every candidate after non-maximum suppression is
+    appended to it, before any filtering (training data for ``learned.py``).
+    """
     pts = track.points
     raw: list[Candidate] = []
     for i in range(span.start, span.end + 1):
@@ -144,16 +151,33 @@ def detect_hits(
             picked.append(c)
     picked.sort(key=lambda c: c.idx)
 
+    scorer = get_scorer(cfg.hit_scorer)
     no_pose = poses.empty
     out: list[Candidate] = []
     for c in picked:
-        _decide(c, track, span, cfg, no_pose)
-        if c.confidence >= cfg.min_candidate_conf:
+        rule_conf, landing, rejected = _decide(c, track, span, cfg, no_pose)
+        if scorer is not None or collect is not None:
+            x = features(c, track, span, poses, cfg, rule_conf, landing, no_pose)
+            if collect is not None:
+                collect.append((x, c))
+            if scorer is not None:
+                rejected = False
+                c.confidence = round(float(scorer.predict([x])[0]), 3)
+        if not rejected and c.confidence >= cfg.min_candidate_conf:
             out.append(c)
 
-    if not out or pts[out[0].idx].t_ms - pts[span.start].t_ms > cfg.min_hit_gap_ms:
+    serve = None
+    if collect is not None or not out or pts[out[0].idx].t_ms - pts[span.start].t_ms > cfg.min_hit_gap_ms:
         serve = _inferred_serve(track, span, poses, cfg, fps_ms)
-        if serve is not None:
+    if serve is not None:
+        if scorer is not None or collect is not None:
+            x = features(serve, track, span, poses, cfg, serve.confidence, False, no_pose)
+            if collect is not None:
+                collect.append((x, serve))
+            if scorer is not None:
+                serve.confidence = round(float(scorer.predict([x])[0]), 3)
+        needed = not out or pts[out[0].idx].t_ms - pts[span.start].t_ms > cfg.min_hit_gap_ms
+        if needed and (scorer is None or serve.confidence >= cfg.min_candidate_conf):
             out.insert(0, serve)
 
     out = _alternating_subset(out, cfg)
@@ -162,29 +186,33 @@ def detect_hits(
     return out
 
 
-def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_pose: bool) -> None:
+def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_pose: bool) -> tuple[float, bool, bool]:
+    """Set reasons and the rule confidence of a candidate.
+
+    Returns (rule confidence before rejection, is a landing, rejected by the rules). A rejected
+    candidate gets confidence 0; the learned scorer sees the same facts as features instead.
+    """
     pts = track.points
     best = c.best
     p = best.score if best else 0.0
+    rejected = False
 
     if no_pose or not c.prox:
         # No pose around this frame: only the trajectory speaks. Keep strong,
         # sharp changes for review; the hitter stays unknown.
         if c.change * c.sharpness < 0.5:
-            c.confidence = 0.0
-            return
+            rejected = True
         c.reasons.append(R_NO_POSE)
     elif p <= 0.0:
         # Players are visible but none is near: floor landing, net cord, lob
         # apex or a false detection. Not a hit.
-        c.confidence = 0.0
-        return
+        rejected = True
 
     # A change right where the rally stops on the floor is the landing.
     is_last = pts[span.end].t_ms - pts[c.idx].t_ms <= cfg.landing_window_ms
-    if is_last and span.end_reason == RallyEndReason.SHUTTLE_STATIC and p < 0.7:
-        c.confidence = 0.0
-        return
+    landing = is_last and span.end_reason == RallyEndReason.SHUTTLE_STATIC
+    if landing and p < 0.7:
+        rejected = True
 
     if best is not None and not best.used_wrist:
         c.reasons.append(R_WRIST_NOT_VISIBLE)
@@ -201,13 +229,15 @@ def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_p
         c.reasons.append(R_WEAK_CHANGE)
 
     w = WEIGHTS
-    c.confidence = round(
+    conf = round(
         w["change"] * c.change
         + w["proximity"] * p
         + w["sharpness"] * c.sharpness
         + w["track_quality"] * c.track_quality,
         3,
     )
+    c.confidence = 0.0 if rejected else conf
+    return conf, landing, rejected
 
 
 def _inferred_serve(

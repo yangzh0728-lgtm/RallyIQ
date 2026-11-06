@@ -36,6 +36,11 @@ class EventsConfig:
     pose_search_frames: int = 3  # look this many frames around a hit for a pose
     landing_window_ms: float = 250.0  # direction change this close to a static end is a landing
 
+    # --- learned hit scorer (learned.py) ---
+    # "auto": bundled model (models/hit_scorer.json) if present; "off": hand-weighted rules; or a JSON path.
+    # The model's own thresholds (keep / ok / min_candidate) replace the three below unless overridden.
+    hit_scorer: str = "auto"
+
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all
     keep_threshold: float = 0.45  # candidates below this survive only if alternation needs them

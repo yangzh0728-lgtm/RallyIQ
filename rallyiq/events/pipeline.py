@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import statistics
+from dataclasses import fields, replace
 from typing import Optional, Sequence
 
 from .config import EventsConfig
+from .learned import get_scorer
 from .hits import R_SAME_HITTER, Candidate, detect_hits
 from .players import PoseIndex
 from .rallies import segment_rallies
@@ -32,8 +34,10 @@ def segment_events(
     poses: Sequence[PoseFrame],
     cfg: Optional[EventsConfig] = None,
     video_end_ms: Optional[float] = None,
+    collect: Optional[list] = None,
 ) -> list[RallySegment]:
-    cfg = cfg or EventsConfig()
+    """``collect``: see ``hits.detect_hits``; entries become (rally_id, features, candidate, track point)."""
+    cfg = with_scorer_thresholds(cfg or EventsConfig())
     pose_index = PoseIndex(poses, cfg)
     scale = pose_index.global_height
     track = Track(usable_points(shuttle, cfg, scale))
@@ -45,7 +49,10 @@ def segment_events(
     rallies: list[RallySegment] = []
     for n, span in enumerate(segment_rallies(track, cfg, pose_index.scale_at, video_end_ms), start=1):
         rally_id = f"R{n:03d}"
-        cands = detect_hits(track, span, pose_index, cfg, fps_ms)
+        sink: Optional[list] = [] if collect is not None else None
+        cands = detect_hits(track, span, pose_index, cfg, fps_ms, sink)
+        if collect is not None:
+            collect.extend((rally_id, x, c, track.points[c.idx]) for x, c in sink)
         hits = [_to_hit(c, track, rally_id, k, cfg) for k, c in enumerate(cands, start=1)]
         s, e = track.points[span.start], track.points[span.end]
         rally = RallySegment(
@@ -60,6 +67,18 @@ def segment_events(
         _decide_rally(rally, cfg)
         rallies.append(rally)
     return rallies
+
+
+def with_scorer_thresholds(cfg: EventsConfig) -> EventsConfig:
+    """With a learned scorer, confidences are probabilities: use the thresholds tuned with the model,
+    except where the caller set a non-default value."""
+    scorer = get_scorer(cfg.hit_scorer)
+    if scorer is None or not scorer.thresholds:
+        return cfg
+    default = EventsConfig()
+    known = {f.name for f in fields(EventsConfig)}
+    upd = {k: v for k, v in scorer.thresholds.items() if k in known and getattr(cfg, k) == getattr(default, k)}
+    return replace(cfg, **upd)
 
 
 def _to_hit(c: Candidate, track: Track, rally_id: str, k: int, cfg: EventsConfig) -> HitEvent:
