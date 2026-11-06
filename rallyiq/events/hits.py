@@ -42,6 +42,7 @@ R_SAME_HITTER = "same_hitter_consecutive"  # singles: same player twice; doubles
 R_TEAMMATE_AMBIGUOUS = "teammate_ambiguous"  # doubles: both partners equally close to the shuttle
 R_HITTER_FROM_ALTERNATION = "hitter_from_alternation"  # nearest player broke alternation; next-nearest used
 R_INFERRED_SERVE = "inferred_from_rally_start"
+R_HITTER_FROM_TRAJECTORY = "hitter_from_trajectory"  # learned side model overruled the nearest player
 
 WEIGHTS = {"change": 0.35, "proximity": 0.35, "sharpness": 0.15, "track_quality": 0.15}
 
@@ -61,6 +62,29 @@ class Candidate:
     @property
     def best(self) -> Optional[Proximity]:
         return self.prox[0] if self.prox else None
+
+    @property
+    def hitter_known(self) -> bool:
+        b = self.best
+        return b is not None and (b.score > 0 or R_HITTER_FROM_TRAJECTORY in self.reasons)
+
+
+def apply_side_model(c: "Candidate", p_near: float, threshold: float) -> None:
+    """When the learned side model is confident the hit came from the other end of the court than the
+    nearest player's, hand the hit to the best player on that end (trajectory direction and contact height
+    say which end hit it even when two players overlap on screen)."""
+    b = c.best
+    if b is None or b.pose.side not in ("near", "far"):
+        return
+    want = "near" if p_near >= 0.5 else "far"
+    if b.pose.side == want or max(p_near, 1 - p_near) < threshold:
+        return
+    for k, alt in enumerate(c.prox[1:], start=1):
+        if alt.pose.side == want:
+            c.prox.insert(0, c.prox.pop(k))
+            c.reasons = [r for r in c.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
+            c.reasons.append(R_HITTER_FROM_TRAJECTORY)
+            return
 
 
 def _clip(x: float) -> float:
@@ -163,6 +187,8 @@ def detect_hits(
             if scorer is not None:
                 rejected = False
                 c.confidence = round(float(scorer.predict([x])[0]), 3)
+                if scorer.side is not None:
+                    apply_side_model(c, float(scorer.side.predict([x])[0]), cfg.side_threshold)
         if not rejected and c.confidence >= cfg.min_candidate_conf:
             out.append(c)
 
@@ -176,6 +202,8 @@ def detect_hits(
                 collect.append((x, serve))
             if scorer is not None:
                 serve.confidence = round(float(scorer.predict([x])[0]), 3)
+                if scorer.side is not None:
+                    apply_side_model(serve, float(scorer.side.predict([x])[0]), cfg.side_threshold)
         needed = not out or pts[out[0].idx].t_ms - pts[span.start].t_ms > cfg.min_hit_gap_ms
         if needed and (scorer is None or serve.confidence >= cfg.min_candidate_conf):
             out.insert(0, serve)
@@ -258,12 +286,12 @@ def _inferred_serve(
 
 
 def _hitter(c: Candidate) -> Optional[str]:
-    return c.best.player_id if c.best and c.best.score > 0 else None
+    return c.best.player_id if c.hitter_known else None
 
 
 def _side_key(c: Candidate) -> Optional[str]:
     """What must alternate between consecutive hits: player (singles) or team (doubles)."""
-    return c.best.pose.team_key if c.best and c.best.score > 0 else None
+    return c.best.pose.team_key if c.hitter_known else None
 
 
 def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candidate]:

@@ -106,6 +106,8 @@ class HitScorer:
         self.std = np.asarray(spec["std"], float)
         self.layers = [(np.asarray(w, float), np.asarray(b, float)) for w, b in spec["layers"]]
         self.thresholds: dict[str, float] = dict(spec.get("thresholds") or {})
+        # optional second head: P(hit came from the near end), same features
+        self.side: Optional[HitScorer] = HitScorer(spec["side"]) if spec.get("side") else None
 
     def predict(self, x: Sequence[Sequence[float]] | np.ndarray) -> np.ndarray:
         h = (np.asarray(x, float) - self.mean) / self.std

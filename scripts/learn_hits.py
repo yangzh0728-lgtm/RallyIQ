@@ -93,6 +93,7 @@ class Clip:
         pairs = sorted((abs(t - g["t_ms"]), i, j) for j, g in enumerate(self.label["hits"])
                        for i, t in enumerate(ts) if abs(t - g["t_ms"]) <= tol)
         y = np.zeros(len(sink))
+        ys = np.full(len(sink), np.nan)  # positives with a labelled side: 1 = near end hit it
         used_i, used_j = set(), set()
         for _, i, j in pairs:
             if i in used_i or j in used_j:
@@ -100,7 +101,11 @@ class Clip:
             used_i.add(i)
             used_j.add(j)
             y[i] = 1
+            gs = self.label["hits"][j].get("side")
+            if gs in ("near", "far"):
+                ys[i] = 1.0 if gs == "near" else 0.0
         self.y = y
+        self.ys = ys
         self.recall_ceiling = (len(used_j), len(self.label["hits"]))
 
 
@@ -122,7 +127,8 @@ def load_clips(data: Path, index_name: str) -> list[Clip]:
 
 
 # ------------------------------------------------------------------ fast end-to-end simulation
-def simulate(clip: Clip, probs: np.ndarray | None, cfg: EventsConfig) -> list[dict[str, Any]]:
+def simulate(clip: Clip, probs: np.ndarray | None, cfg: EventsConfig,
+             p_near: np.ndarray | None = None) -> list[dict[str, Any]]:
     """The tail of hits.detect_hits (filter, serve, alternation) on cached candidates.
     ``probs`` None = rule confidences. Returns predicted hits in label time with side and status."""
     out_hits = []
@@ -134,12 +140,16 @@ def simulate(clip: Clip, probs: np.ndarray | None, cfg: EventsConfig) -> list[di
         for e in r["cands"]:
             c = replace(e["c"], prox=list(e["c"].prox), reasons=list(e["c"].reasons), confidence=round(conf(e), 3))
             if c.confidence >= cfg.min_candidate_conf and (probs is not None or e["rule"] > 0):
+                if p_near is not None:
+                    H.apply_side_model(c, float(p_near[e["k"]]), cfg.side_threshold)
                 kept.append((c, e))
         s = r["serve"]
         if s is not None:
             needed = not kept or kept[0][1]["t"] - (clip.offset + r["start_ms"]) > cfg.min_hit_gap_ms
             c = replace(s["c"], prox=list(s["c"].prox), reasons=list(s["c"].reasons), confidence=round(conf(s), 3))
             if needed and (probs is None or c.confidence >= cfg.min_candidate_conf):
+                if p_near is not None:
+                    H.apply_side_model(c, float(p_near[s["k"]]), cfg.side_threshold)
                 kept.insert(0, (c, s))
         cands = [c for c, _ in kept]
         ev = {id(c): e for c, e in kept}
@@ -148,7 +158,7 @@ def simulate(clip: Clip, probs: np.ndarray | None, cfg: EventsConfig) -> list[di
         H._check_alternation(cands)
         for c in cands:
             b = c.best
-            hitter = b.player_id if b and b.score > 0 and b.player_id in PLAYER_IDS else None
+            hitter = b.player_id if c.hitter_known and b.player_id in PLAYER_IDS else None
             ok = c.confidence >= cfg.ok_threshold and not c.reasons and hitter is not None
             out_hits.append({"t_ms": ev[id(c)]["t"], "side": b.pose.side if hitter else None, "ok": ok})
     return out_hits
@@ -248,6 +258,32 @@ def oof_probs(clips: list[Clip], folds: list[list[Clip]], hidden: int, l2: float
     return out
 
 
+def oof_side(clips: list[Clip], folds: list[list[Clip]], l2: float = 1e-2) -> dict[str, np.ndarray]:
+    """Out-of-fold P(near end hit it) from a logistic model trained on positives with a labelled side."""
+    out = {}
+    for f in folds:
+        if not f:
+            continue
+        held = {c.cid for c in f}
+        tr = [c for c in clips if c.cid not in held]
+        X = np.vstack([c.X[~np.isnan(c.ys)] for c in tr])
+        y = np.concatenate([c.ys[~np.isnan(c.ys)] for c in tr])
+        sc = HitScorer(fit_mlp(X, y, 0, l2))
+        for c in f:
+            out[c.cid] = sc.predict(c.X) if len(c.X) else np.zeros(0)
+    return out
+
+
+def tune_side(clips: list[Clip], probs: dict[str, np.ndarray], p_near: dict[str, np.ndarray], cfg: EventsConfig):
+    best = None
+    for thr in (0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.01):
+        c2 = replace(cfg, side_threshold=thr)
+        s = score(clips, {c.cid: simulate(c, probs[c.cid], c2, p_near[c.cid]) for c in clips})
+        if best is None or (s["f1"] or 0) > (best[1]["f1"] or 0):
+            best = (thr, s)
+    return best
+
+
 def tune_thresholds(clips: list[Clip], probs: dict[str, np.ndarray], base: EventsConfig):
     best = None
     for mc in (0.05, 0.1, 0.15, 0.2, 0.3):
@@ -295,6 +331,9 @@ def cmd_train(a: argparse.Namespace) -> int:
     results.sort(key=lambda r: r[0])
     ll, hidden, l2, probs = results[0]
     th, cv = tune_thresholds(clips, probs, base)
+    p_near = oof_side(clips, folds)
+    side_thr, cv_side = tune_side(clips, probs, p_near, replace(base, **th))
+    use_side = side_thr <= 1.0 and (cv_side["f1"] or 0) > (cv["f1"] or 0)
     # also: rules with tuned thresholds only (does the model add anything beyond re-thresholding?)
     rules_t = max(((score(clips, {c.cid: simulate(c, None, replace(base, keep_threshold=k, min_candidate_conf=mc))
                                   for c in clips}), k, mc)
@@ -310,13 +349,21 @@ def cmd_train(a: argparse.Namespace) -> int:
           "| scorer | precision | recall | F1 | F1 (any side) | ok hits | ok precision |", "|---|---|---|---|---|---|---|",
           row("rules (current defaults)", rules),
           row(f"rules, re-thresholded (keep={rules_t[1]}, min={rules_t[2]})", rules_t[0]),
-          row(f"learned (hidden={hidden}, l2={l2}), out-of-fold", cv), "",
+          row(f"learned (hidden={hidden}, l2={l2}), out-of-fold", cv),
+          row(f"learned + side model (threshold {side_thr}), out-of-fold", cv_side), "",
+          f"Side model {'used' if use_side else 'not used'}: by side among correctly timed hits "
+          f"right {cv_side['side_ok']}, missing {cv_side['side_missing']}, wrong {cv_side['side_wrong']}", "",
           f"Chosen thresholds: {json.dumps(th)}", "",
           "Hits found at the right time, by near/far side (learned): "
           f"right {cv['side_ok']}, missing {cv['side_missing']}, wrong {cv['side_wrong']}; "
           f"rules: right {rules['side_ok']}, missing {rules['side_missing']}, wrong {rules['side_wrong']}", "",
           "Model search (out-of-fold log-loss): " + ", ".join(f"h{h}/l2={l}: {x:.4f}" for x, h, l, _ in results), ""]
     spec = fit_mlp(X, y, hidden, l2)
+    if use_side:
+        m = np.concatenate([~np.isnan(c.ys) for c in clips])
+        spec["side"] = fit_mlp(X[m], np.concatenate([c.ys for c in clips])[m], 0, 1e-2)
+        th = {**th, "side_threshold": side_thr}
+        cv = cv_side
     spec["thresholds"] = th
     spec["trained_on"] = {"dataset": "ShuttleSet (CoachAI-Projects, MIT)", "clips": len(clips),
                           "matches": len({c.group for c in clips}), "candidates": int(len(y)), "positives": int(y.sum()),

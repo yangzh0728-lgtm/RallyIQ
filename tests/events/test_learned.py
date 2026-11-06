@@ -67,3 +67,15 @@ def test_off_and_missing_model_fall_back_to_rules(tmp_path):
     a = segment_events(v.shuttle, v.poses, EventsConfig(hit_scorer="off"))
     b = segment_events(v.shuttle, v.poses, replace(EventsConfig(), hit_scorer=str(tmp_path / "missing.json")))
     assert [h.t_ms for r in a for h in r.hits] == [h.t_ms for r in b for h in r.hits]
+
+
+def test_side_model_plumbing():
+    clips = [_clip(s, dropout=0.1) for s in range(6)]
+    for c in clips:
+        c.collect(EventsConfig(), 3)
+    assert sum((~np.isnan(c.ys)).sum() for c in clips) > 0
+    folds = LH.folds_by_group(clips, 3)
+    probs = LH.oof_probs(clips, folds, 0, 1e-2)
+    p_near = LH.oof_side(clips, folds)
+    thr, s = LH.tune_side(clips, probs, p_near, EventsConfig())
+    assert s["f1"] is not None and 0.5 <= thr <= 1.01

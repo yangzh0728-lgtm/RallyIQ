@@ -84,7 +84,7 @@ def with_scorer_thresholds(cfg: EventsConfig) -> EventsConfig:
 def _to_hit(c: Candidate, track: Track, rally_id: str, k: int, cfg: EventsConfig) -> HitEvent:
     pt = track.points[c.idx]
     best = c.best
-    hitter = best.player_id if best and best.score > 0 else None
+    hitter = best.player_id if c.hitter_known else None
     status = (
         ReviewStatus.OK
         if c.confidence >= cfg.ok_threshold and not c.reasons and hitter is not None

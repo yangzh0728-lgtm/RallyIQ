@@ -40,6 +40,7 @@ class EventsConfig:
     # "auto": bundled model (models/hit_scorer.json) if present; "off": hand-weighted rules; or a JSON path.
     # The model's own thresholds (keep / ok / min_candidate) replace the three below unless overridden.
     hit_scorer: str = "auto"
+    side_threshold: float = 0.8  # learned side model: confidence needed to overrule the nearest player
 
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all
