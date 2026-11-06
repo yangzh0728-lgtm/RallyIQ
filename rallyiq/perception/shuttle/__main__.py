@@ -16,6 +16,8 @@ from pathlib import Path
 
 
 def main(argv: list[str] | None = None) -> int:
+    from .detector import DetectorConfig
+
     ap = argparse.ArgumentParser(prog="python -m rallyiq.perception.shuttle", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video", type=Path)
@@ -24,7 +26,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--roi", choices=["off", "auto"], default="off")
     ap.add_argument("--device", help="cuda | mps | cpu (default: best available)")
     ap.add_argument("--batch-size", type=int, default=8)
-    ap.add_argument("--peak-threshold", type=float, default=0.2)
+    ap.add_argument("--peak-threshold", type=float, default=DetectorConfig.peak_threshold,
+                    help="heatmap peak threshold; the tracker keeps weak candidates down to it")
     ap.add_argument("--tracker", action="append", default=[], metavar="KEY=VALUE",
                     help="TrackerConfig override, repeatable (e.g. --tracker weak_min_travel_diag_per_s=0.1)")
     ap.add_argument("--from-candidates", type=Path,
@@ -41,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from ...contracts import CourtCalibration
     from ...pipeline.probe import probe_video
-    from .detector import DetectorConfig, HeatmapShuttleDetector, find_weights
+    from .detector import HeatmapShuttleDetector, find_weights
     from .stage import build_track, court_lock, segments_for, tracker_config
 
     overrides = {}

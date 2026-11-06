@@ -6,7 +6,7 @@ import pytest
 from rallyiq.contracts import ShuttleTrack, VideoMeta
 from rallyiq.perception.shuttle.heatmap import extract_peaks
 from rallyiq.perception.shuttle.stage import build_track, segments_for, tracker_config
-from rallyiq.perception.shuttle.tracker import ShuttleTracker, TrackerConfig
+from rallyiq.perception.shuttle.tracker import ShuttleTracker
 
 W, H = 1920, 1080
 
@@ -242,7 +242,18 @@ def test_idle_strong_tracklet_is_kept():
     assert len(res.points) == 30
 
 
-def test_tracker_config_follows_peak_threshold():
-    assert tracker_config(None, 0.1).weak_score == 0.1
-    assert tracker_config(None, 0.5).weak_score == TrackerConfig().weak_score
-    assert tracker_config({"weak_score": 0.15}, 0.05).weak_score == 0.15
+def test_tracker_weak_score_follows_detector_threshold():
+    from rallyiq.perception.shuttle.detector import DetectorConfig
+
+    assert tracker_config(None, 0.05).weak_score == 0.05
+    assert tracker_config({"weak_score": 0.3}, 0.05).weak_score == 0.3
+    assert tracker_config(None).weak_score == DetectorConfig.peak_threshold
+
+
+def test_low_score_flight_is_tracked_when_threshold_is_lowered():
+    meta = _meta()
+    cands = as_candidates(rally(), score=0.08)
+    default, _ = build_track(meta, cands, W, H, "x", tracker_config(None, 0.1))
+    low, _ = build_track(meta, cands, W, H, "x", tracker_config(None, 0.05))
+    assert not default.points
+    assert sum(p.source == "detected" for p in low.points) > 80

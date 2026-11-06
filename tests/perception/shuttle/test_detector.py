@@ -108,3 +108,24 @@ def test_find_weights(tmp_path, monkeypatch):
 def test_ensemble_weights_centre_heavy():
     w = D.ensemble_weights(8, "weight")
     assert abs(w.sum() - 1) < 1e-6 and w[3] == w[4] == w.max() and w[0] == w[7] == w.min()
+
+
+def test_segment_medians_match_per_frame_reads(tmp_path):
+    """The single-pass background medians equal medians of the sampled frames read one by one."""
+    video = write_video(tmp_path / "v.mp4", n=50)
+    det = make_detector(tmp_path, median_samples=7)
+    segs = [D.Segment(0, 9), D.Segment(10, 10), D.Segment(11, 49, (32, 40, 32 + 576, 40 + 324))]
+    got = det._medians(video, segs)
+    cap = cv2.VideoCapture(str(video))
+    frames = []
+    while True:
+        ok, fr = cap.read()
+        if not ok:
+            break
+        frames.append(fr)
+    for seg, med in zip(segs, got):
+        k = min(7, seg.end - seg.start + 1)
+        idx = np.unique(np.linspace(seg.start, seg.end, k).astype(int))
+        want = np.median(np.stack([det._prep(frames[i], seg.roi) for i in idx]), axis=0)
+        assert med.dtype == np.float32 and med.shape == (3, INPUT_HEIGHT, INPUT_WIDTH)
+        assert np.abs(med - want).max() < 1e-6

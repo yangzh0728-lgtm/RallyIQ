@@ -172,3 +172,62 @@ def test_far_boost_auto_only_when_far_player_is_small():
     assert all(r is None for r in _run(200.0, "auto"))
     assert all(r is not None for r in _run(200.0, "on"))
     assert all(r is None for r in _run(40.0, "off"))
+
+
+# -- duplicate detections of one person (far-boost regression) --------------------
+
+def _widened(det, left=0.0, right=0.0):
+    from rallyiq.perception.players.models import PersonDetection
+
+    b = det.bbox.copy()
+    b[0] -= left
+    b[2] += right
+    return PersonDetection(b, det.keypoints.copy(), det.score * 0.95)
+
+
+def test_wide_racket_box_and_narrow_box_are_one_person():
+    from rallyiq.perception.players.pose import same_person
+
+    narrow = person_at_court(3.3, 10.5)
+    w = narrow.bbox[2] - narrow.bbox[0]
+    wide = _widened(narrow, left=0.6 * w, right=0.6 * w)  # racket arm out, ~2x wider
+    assert same_person(wide, narrow) and same_person(narrow, wide)
+    other = person_at_court(4.6, 11.8)
+    assert not same_person(narrow, other)
+
+
+def test_duplicate_candidates_are_dropped_but_close_partners_kept():
+    near = person_at_court(3.0, 2.5)
+    far = person_at_court(3.3, 10.5)
+    w = far.bbox[2] - far.bbox[0]
+    dup = _widened(far, left=0.6 * w, right=0.6 * w)
+    cands = build_candidates([near, far, dup], H_IMG_TO_COURT, IMAGE_SIZE)
+    assert len(cands) == 2
+    # Doubles partners one behind the other overlap on screen but stand apart.
+    front, back = person_at_court(3.0, 8.6), person_at_court(3.2, 11.0)
+    assert len(build_candidates([front, back], H_IMG_TO_COURT, IMAGE_SIZE)) == 2
+
+
+def test_singles_with_doubled_far_player_stays_singles():
+    from rallyiq.perception.players.runner import PlayerTrackingConfig
+
+    per_frame = []
+    for i in range(120):
+        t = i / 30
+        near = person_at_court(3.0 + np.sin(t), 2.5)
+        far = person_at_court(3.3 - np.sin(t), 10.5)
+        w = far.bbox[2] - far.bbox[0]
+        per_frame.append([near, far, _widened(far, left=0.6 * w, right=0.6 * w)])
+    img = np.zeros((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), np.uint8)
+
+    class Est:
+        def __init__(self):
+            self.it = iter(per_frame)
+
+        def __call__(self, im):
+            return next(self.it)
+
+    res = track_players(((i, i * 33.3, img) for i in range(120)), Est(), lambda f: H_IMG_TO_COURT,
+                        PlayerTrackingConfig())
+    assert res.match_format == "singles"
+    assert all(len(r.players) <= 2 for r in res)
