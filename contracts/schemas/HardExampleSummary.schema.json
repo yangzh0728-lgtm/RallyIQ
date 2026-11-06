@@ -1,0 +1,114 @@
+{
+  "$defs": {
+    "ConditionGroup": {
+      "additionalProperties": false,
+      "description": "Error counts for one value of one condition (e.g. camera_view = side).",
+      "properties": {
+        "condition": {
+          "title": "Condition",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "videos": {
+          "title": "Videos",
+          "type": "integer"
+        },
+        "model_shots": {
+          "title": "Model Shots",
+          "type": "integer"
+        },
+        "model_rallies": {
+          "title": "Model Rallies",
+          "type": "integer"
+        },
+        "errors": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "module -> number of corrections that fixed a model error",
+          "title": "Errors",
+          "type": "object"
+        },
+        "confirmed": {
+          "title": "Confirmed",
+          "type": "integer"
+        },
+        "hit_error_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "hit errors / model shots; null without shots",
+          "title": "Hit Error Rate"
+        }
+      },
+      "required": [
+        "condition",
+        "value",
+        "videos",
+        "model_shots",
+        "model_rallies",
+        "errors",
+        "confirmed",
+        "hit_error_rate"
+      ],
+      "title": "ConditionGroup",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``GET /api/hard_examples/summary``: where the model fails most, per condition.",
+  "properties": {
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    },
+    "errors": {
+      "title": "Errors",
+      "type": "integer"
+    },
+    "videos": {
+      "title": "Videos",
+      "type": "integer"
+    },
+    "by_kind": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "By Kind",
+      "type": "object"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/ConditionGroup"
+      },
+      "title": "Groups",
+      "type": "array"
+    },
+    "weakest": {
+      "description": "conditions with the highest hit error rate (enough shots)",
+      "items": {
+        "$ref": "#/$defs/ConditionGroup"
+      },
+      "title": "Weakest",
+      "type": "array"
+    }
+  },
+  "required": [
+    "total",
+    "errors",
+    "videos",
+    "by_kind",
+    "groups",
+    "weakest"
+  ],
+  "title": "HardExampleSummary",
+  "type": "object"
+}

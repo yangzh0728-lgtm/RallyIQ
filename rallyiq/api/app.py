@@ -47,9 +47,13 @@ from ..contracts import (
     MatchStats,
     Video,
     VideoQuality,
+    HardExample,
+    HardExampleSummary,
 )
 from ..contracts.geometry import COURT_CORNERS_M, homography_from_corners
 from ..ingest import quality_for
+from ..review import collect as collect_hard_examples
+from ..review import summarize as summarize_hard_examples
 from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
 from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
@@ -330,6 +334,23 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
         if q is None:
             raise HTTPException(404, "video not probed yet")
         return q
+
+    # --------------------------------------------------------- hard examples
+
+    @app.get("/api/hard_examples", response_model=list[HardExample])
+    def hard_examples(format: Literal["json", "jsonl"] = "json"):
+        """Corrections marked as hard examples across all videos, with model item and video conditions."""
+        examples, _ = collect_hard_examples(store)
+        if format == "jsonl":
+            return PlainTextResponse("".join(e.model_dump_json() + "\n" for e in examples),
+                                     media_type="application/x-ndjson",
+                                     headers={"Content-Disposition": 'attachment; filename="hard_examples.jsonl"'})
+        return examples
+
+    @app.get("/api/hard_examples/summary", response_model=HardExampleSummary)
+    def hard_example_summary() -> HardExampleSummary:
+        """Model errors per video condition (camera view, frame rate, ...) and the weakest scenarios."""
+        return summarize_hard_examples(*collect_hard_examples(store))
 
     # ---------------------------------------------------------------- report
 
