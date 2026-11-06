@@ -1,0 +1,5 @@
+numpy>=1.24
+PyYAML>=6.0
+opencv-python>=4.8   # 仅标注工具需要
+pytest>=7            # 仅测试需要
+# 系统依赖：ffmpeg / ffprobe（brew install ffmpeg）；可选 yt-dlp（见 README 版权说明）
