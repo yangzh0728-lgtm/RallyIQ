@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "video_id": "vid_example",
   "match_format": "doubles",
   "rallies": [
@@ -43,6 +43,7 @@
         3.517
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -69,6 +70,7 @@
         11.116
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -95,6 +97,7 @@
         3.248
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -121,6 +124,7 @@
         9.117
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -147,6 +151,7 @@
         2.043
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -173,6 +178,7 @@
         10.135
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -199,6 +205,7 @@
         5.168
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",

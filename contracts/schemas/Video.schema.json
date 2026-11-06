@@ -93,6 +93,7 @@
             "players",
             "shuttle",
             "events",
+            "strokes",
             "overlay"
           ],
           "title": "Name",
@@ -284,6 +285,7 @@
           "players",
           "shuttle",
           "events",
+          "strokes",
           "overlay"
         ],
         "type": "string"

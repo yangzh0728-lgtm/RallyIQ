@@ -1,4 +1,10 @@
-import { TEAM_OF, type Correction, type EventsResult, type PlayerId, type Rally, type ShotEvent, type TeamId } from "./types";
+import { typeLabel } from "./strokes";
+import { TEAM_OF, type Correction, type EventsResult, type PlayerId, type Rally, type ShotEvent, type ShotType, type StrokeInfo, type TeamId } from "./types";
+
+const humanStroke = (t: ShotType | null): StrokeInfo => ({
+  shot_type: t, confidence: 1, status: t ? "ok" : "undeterminable", source: "human",
+  classifier: null, candidates: [], reasons: [], evidence: {},
+});
 
 /** Id mapping for swap_player_ids (same rules as rallyiq/api/corrections.py). */
 export function swapMap(a: PlayerId = "P1", b: PlayerId = "P2"): Record<string, string> {
@@ -27,10 +33,22 @@ export function applyCorrections(raw: EventsResult, corrections: Correction[], f
         const f = c.payload.frame;
         shots.set(id, {
           shot_id: id, rally_id: null, frame: f, t_ms: tms(f), hitter: c.payload.hitter ?? null, hitter_confidence: null,
-          shuttle_px: c.payload.shuttle_px ?? null, shuttle_court: null, hitter_court: null, shot_type: null, target_zone: null,
-          confidence: 1, status: "ok", source: "human",
+          shuttle_px: c.payload.shuttle_px ?? null, shuttle_court: null, hitter_court: null,
+          shot_type: c.payload.shot_type ?? null, stroke: c.payload.shot_type ? humanStroke(c.payload.shot_type) : null,
+          target_zone: null, confidence: 1, status: "ok", source: "human",
           reasons: [`added by ${c.correction_id}`],
         });
+        break;
+      }
+      case "set_shot_type": {
+        const s = shots.get(c.payload.shot_id);
+        if (!s) {
+          skipped.push(c.correction_id);
+          break;
+        }
+        // Only the stroke label changes: the hit keeps its own status/source.
+        s.shot_type = c.payload.shot_type;
+        s.stroke = humanStroke(c.payload.shot_type);
         break;
       }
       case "delete_shot":
@@ -156,6 +174,8 @@ export function describeCorrection(c: Correction, fps: number): string {
       return `确认击球 ${c.payload.shot_id}`;
     case "confirm_rally":
       return `确认回合 ${c.payload.rally_id}`;
+    case "set_shot_type":
+      return `击球 ${c.payload.shot_id} 类型 → ${typeLabel(c.payload.shot_type)}`;
   }
 }
 

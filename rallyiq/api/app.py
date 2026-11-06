@@ -36,6 +36,7 @@ from ..contracts import (
     CourtCalibration,
     CourtKeypoint,
     EventsResult,
+    StrokesResult,
     HeatmapData,
     Job,
     OverlayData,
@@ -52,6 +53,7 @@ from ..pipeline.worker import Worker
 from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
 from ..report.coach import default_provider_name
 from ..store import Store
+from ..strokes.classify import merge_strokes
 from .corrections import CorrectionError, apply_corrections, validate
 
 COACH_ARTIFACT = "coach"
@@ -59,7 +61,7 @@ ALLOWED_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}
 
 
 class JobRequest(BaseModel):
-    from_stage: Literal["probe", "calibration", "players", "shuttle", "events", "overlay"] = "probe"
+    from_stage: Literal["probe", "calibration", "players", "shuttle", "events", "strokes", "overlay"] = "probe"
 
 
 class EffectiveEvents(EventsResult):
@@ -115,8 +117,15 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
             worker.notify()
         return job
 
-    def effective_events(video_id: str) -> tuple[EventsResult, list[str]]:
+    def model_events(video_id: str) -> EventsResult | None:
+        """Raw model prediction: the ``events`` artifact with the ``strokes`` stage merged in."""
         raw = store.load_artifact(video_id, "events", EventsResult)
+        if raw is None:
+            return None
+        return merge_strokes(raw, store.load_artifact(video_id, "strokes", StrokesResult))
+
+    def effective_events(video_id: str) -> tuple[EventsResult, list[str]]:
+        raw = model_events(video_id)
         if raw is None:
             raise HTTPException(404, "events not available yet")
         return apply_corrections(raw, store.list_corrections(video_id), store.get_video_meta(video_id))
@@ -215,7 +224,10 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
     def get_events(video_id: str, raw: bool = False):
         video_or_404(video_id)
         if raw:
-            return artifact_response(video_id, "events")
+            ev = model_events(video_id)
+            if ev is None:
+                raise HTTPException(404, "events not available yet")
+            return Response(ev.model_dump_json(), media_type="application/json")
         ev, skipped = effective_events(video_id)
         return EffectiveEvents(**ev.model_dump(), corrections_applied=len(store.list_corrections(video_id)),
                                corrections_skipped=skipped)
@@ -362,7 +374,7 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
         v = video_or_404(video_id)
         ev, skipped = effective_events(video_id)
         if format == "json":
-            raw = store.load_artifact(video_id, "events", EventsResult)
+            raw = model_events(video_id)
             body = {
                 "video": v.model_dump(mode="json", exclude={"latest_job"}),
                 "events": ev.model_dump(mode="json"),
@@ -377,12 +389,16 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
         buf = io.StringIO()
         w = csv.writer(buf)
         w.writerow(["shot_id", "rally_id", "frame", "t_ms", "time", "hitter", "team", "confidence", "status", "source",
-                    "shuttle_x", "shuttle_y", "hitter_court_x", "hitter_court_y"])
+                    "shuttle_x", "shuttle_y", "hitter_court_x", "hitter_court_y",
+                    "shot_type", "shot_type_confidence", "shot_type_status", "shot_type_source"])
         for s in ev.shots:
             secs = s.t_ms / 1000
+            st = s.stroke
             w.writerow([s.shot_id, s.rally_id or "", s.frame, s.t_ms, f"{int(secs // 60):02d}:{secs % 60:06.3f}",
                         s.hitter or "", team_of(s.hitter) or "", f"{s.confidence:.3f}", s.status, s.source,
-                        *(s.shuttle_px or ["", ""]), *(s.hitter_court or ["", ""])])
+                        *(s.shuttle_px or ["", ""]), *(s.hitter_court or ["", ""]),
+                        s.shot_type or "", f"{st.confidence:.3f}" if st else "", st.status if st else "",
+                        st.source if st else ""])
         return PlainTextResponse(buf.getvalue(), media_type="text/csv",
                                  headers={"Content-Disposition": f'attachment; filename="{video_id}_shots.csv"'})
 

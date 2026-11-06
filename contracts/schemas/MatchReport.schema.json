@@ -86,7 +86,7 @@
       "description": "LLM (or rule-based) coaching comments. Never a source of truth: every claim\ncites ``MatchStats`` keys and is validated against them.",
       "properties": {
         "schema_version": {
-          "default": "0.1.0",
+          "default": "0.2.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -246,7 +246,7 @@
       "description": "Post-match statistics computed from effective events + player tracks.\n\nPure function of the inputs (no model is called). ``fingerprint`` changes\nwhenever the inputs change, so a cached coach report can be marked stale.",
       "properties": {
         "schema_version": {
-          "default": "0.1.0",
+          "default": "0.2.0",
           "title": "Schema Version",
           "type": "string"
         },

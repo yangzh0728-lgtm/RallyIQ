@@ -3,6 +3,7 @@ import { CorrectionPanel, StatusPill } from "../components/CorrectionPanel";
 import { HeatmapPanel } from "../components/HeatmapPanel";
 import { JobDetail, useJob } from "../components/JobProgress";
 import { MiniMap } from "../components/MiniMap";
+import { StrokePanel } from "../components/StrokePanel";
 import { Timeline } from "../components/Timeline";
 import { VideoStage } from "../components/VideoStage";
 import { api, type MatchFormatSetting } from "../lib/api";
@@ -211,6 +212,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
   const court = courtAt(overlay.court, firstFrame) ?? overlay.court[0];
   const reviewShots = events.shots.filter((s) => s.status === "needs_review" && s.source === "model").length;
   const reviewRallies = events.rallies.filter((r) => r.status === "needs_review" && r.source === "model").length;
+  const reviewTypes = events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status !== "ok").length;
   const toggle = (k: keyof Omit<Layers, "opacity">) => setLayers((l) => ({ ...l, [k]: !l[k] }));
   const meta = overlay.video;
 
@@ -230,6 +232,12 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           <Stat label="待复核 回合 / 击球">
             <span style={{ color: reviewShots + reviewRallies ? "var(--warn)" : undefined }}>
               {reviewRallies} / {reviewShots}
+            </span>
+          </Stat>
+          <Stat label="击球类型 待复核 / 不可判定">
+            <span style={{ color: reviewTypes ? "var(--warn)" : undefined }}>
+              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "needs_review").length} /{" "}
+              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "undeterminable").length}
             </span>
           </Stat>
           <Stat label="已做修正">{corrections.length}</Stat>
@@ -277,6 +285,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           )}
         </div>
         <HeatmapPanel overlay={overlay} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} courtStatus={court?.status} />
+        <StrokePanel shots={events.shots} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} clock={clock} />
       </aside>
 
       <section className="wb-center">

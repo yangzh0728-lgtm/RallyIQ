@@ -25,7 +25,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "0.1.0"
+SCHEMA_VERSION = "0.2.0"
 
 COURT_WIDTH_M = 6.10
 COURT_LENGTH_M = 13.40
@@ -236,8 +236,62 @@ class ShuttleTrack(Contract):
 # -------------------------------------------------------------------------- events
 
 
+# Stroke types (击球类型). Same 12 classes as the merged ShuttleSet taxonomy (without the
+# Top_/Bottom_ side prefix), so a ShuttleSet-trained model maps one to one.
+ShotType = Literal[
+    "short_serve",  # 发短球
+    "long_serve",   # 发高远球
+    "clear",        # 高远球
+    "smash",        # 杀球
+    "drop",         # 吊球 / 切球
+    "net_shot",     # 放网
+    "cross_net",    # 勾对角
+    "push",         # 推球
+    "net_kill",     # 扑球
+    "drive",        # 平抽
+    "lift",         # 挑球
+    "block",        # 挡网（接杀挡）
+]
+SHOT_TYPES: list[str] = list(ShotType.__args__)
+
+
+class ShotTypeScore(Contract):
+    shot_type: ShotType
+    p: Confidence
+
+
+class StrokeInfo(Contract):
+    """Stroke-type prediction (or human label) for one shot."""
+
+    shot_type: ShotType | None = Field(description="null = undeterminable from this video")
+    confidence: Confidence
+    status: Status = Status.needs_review
+    source: Source = Source.model
+    classifier: str | None = Field(default=None, description="e.g. rules_v1, bst@shuttleset25; null for human")
+    candidates: list[ShotTypeScore] = Field(default_factory=list, description="top candidates, best first")
+    reasons: list[str] = Field(default_factory=list, description="review reason codes")
+    evidence: dict[str, float | None] = Field(
+        default_factory=dict, description="measured features behind the prediction (null = not measurable)"
+    )
+
+
+class ShotStroke(Contract):
+    shot_id: str
+    frame: int = Field(ge=0)
+    stroke: StrokeInfo
+
+
+class StrokesResult(Contract):
+    """Stage ``strokes`` output: one stroke prediction per raw ``events`` shot."""
+
+    schema_version: str = SCHEMA_VERSION
+    video_id: str
+    classifier: str | None = None
+    shots: list[ShotStroke]
+
+
 class ShotEvent(Contract):
-    """A hit (击球) candidate. MVP: no shot type / landing zone yet (kept nullable)."""
+    """A hit (击球) candidate. ``shot_type``/``stroke`` come from stage ``strokes``; no landing zone yet."""
 
     shot_id: str
     rally_id: str | None = None
@@ -248,7 +302,8 @@ class ShotEvent(Contract):
     shuttle_px: Point2 | None = None
     shuttle_court: Point2 | None = None
     hitter_court: Point2 | None = None
-    shot_type: str | None = None
+    shot_type: ShotType | None = Field(default=None, description="effective stroke type (= stroke.shot_type)")
+    stroke: StrokeInfo | None = Field(default=None, description="stroke-type prediction or human label")
     target_zone: str | None = None
     confidence: Confidence
     status: Status = Status.needs_review
@@ -300,6 +355,7 @@ CorrectionOp = Literal[
     "swap_player_ids",   # payload: {from_frame, a?, b?} swap two ids (default P1/P2) from this frame on
     "confirm_shot",      # payload: {shot_id} mark a model shot as correct
     "confirm_rally",     # payload: {rally_id} mark a model rally as correct
+    "set_shot_type",     # payload: {shot_id, shot_type: one of SHOT_TYPES | null}
 ]
 
 
@@ -385,8 +441,8 @@ class OverlayData(Contract):
 # ------------------------------------------------------------------- jobs & videos
 
 
-StageName = Literal["probe", "calibration", "players", "shuttle", "events", "overlay"]
-STAGES: list[str] = ["probe", "calibration", "players", "shuttle", "events", "overlay"]
+StageName = Literal["probe", "calibration", "players", "shuttle", "events", "strokes", "overlay"]
+STAGES: list[str] = ["probe", "calibration", "players", "shuttle", "events", "strokes", "overlay"]
 
 JobState = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 
