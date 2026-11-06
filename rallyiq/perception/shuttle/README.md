@@ -94,3 +94,28 @@ python -m rallyiq.perception.shuttle clip.mp4 --benchmark-clip-id <id> \
 
 合成评测（`python -m evaluation.multicourt`）：左右相邻场地串场率从 57–73% 降到 0%，召回不降；
 前后相邻（邻场在远端底线后面）是单目视角的难点，串场率从 95% 降到约 23%。
+
+## 微调（`training.py`、`scripts/finetune_shuttle.py`）
+
+预训练模型在副场固定机位（高位俯拍、球在 512×288 输入里约 3 px）上只有约 50% 的覆盖，
+光调阈值会引入噪声（见上文）。所以要在自己标注的片段上微调。流程：
+
+1. **预标注**：`scripts/real_run.py` 会写出 `preds/<clip>.json`。
+2. **只修可疑帧**：
+   `python -m evaluation.tools.label_tool ko26_court3 --prefill ~/rallyiq-data/runs/latest/preds/ko26_court3.json`，
+   按 `2` 进入羽毛球模式，再用 `g` / `G` 在可疑帧之间跳：低分检测、≤15 帧的短缺口、长缺口两端各 3 帧。
+   其余帧的预标注一般是对的，抽查几段即可。修完按 `r` 标成已复核（reviewed），按 `q` 保存。
+3. **训练**（Mac 上用 MPS）：
+   ```bash
+   # 只有一段副场标注时：前 70% 训练，后 30% 验证
+   python scripts/finetune_shuttle.py --split-clip ko26_court3:0.7 --out weights/shuttle/side.pt
+   # 有 split=train 的标注片段时：用它们训练，用已标注的 eval 片段验证
+   python scripts/finetune_shuttle.py --out weights/shuttle/finetuned.pt
+   ```
+   每轮会打印验证集在阈值 0.5 / 0.3 / 0.2 下的精确率、召回和 F1，第 0 轮是预训练模型本身，
+   最后按 0.5 下的 F1 保留最好的一轮。checkpoint 和检测器的格式一样，旁边会写一个同名的 `.json` 报告。
+4. **对比**：`RALLYIQ_SHUTTLE_WEIGHTS=weights/shuttle/side.pt python scripts/real_run.py --only ko26_court3`，
+   再用 `scripts/hits_ablation.py` 看 ok 击球有没有一起变好，不要只看覆盖率。
+
+默认只用 `status: reviewed` 的标注：未经复核的预标注拿来训练，等于让模型学自己的错误。
+默认设置是 BatchNorm 冻结、学习率 1e-4、10 轮、每轮 300 步、batch 4，数据增强只有水平翻转和亮度/对比度抖动。

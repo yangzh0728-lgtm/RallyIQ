@@ -171,3 +171,30 @@ def test_label_session_flow():
     assert doc["rallies"] == [{"start_ms": START + 800, "end_ms": START + 4000}]
     assert s.toggle_status() == "reviewed"
     schema.validate(doc)
+
+
+def test_uncertain_frames_and_jump():
+    from evaluation.tools.label_tool import uncertain_frames
+
+    fps = 30.0
+
+    def item(f, score=None):
+        t = int(round(START + f * 1000 / fps))
+        return {"t_ms": t, "visible": score is not None, "xy": [1, 1] if score is not None else None,
+                **({"score": score} if score is not None else {})}
+
+    # detections 0-9 (frame 5 weak), short gap 10-14, detections 15-19, long gap 20-79, detection 80
+    sh = [item(f, 0.3 if f == 5 else 0.9) for f in range(10)] + [item(f) for f in range(10, 15)]
+    sh += [item(f, 0.9) for f in range(15, 20)] + [item(f) for f in range(20, 80)] + [item(80, 0.9)]
+    doc = schema.empty_doc("x", "prediction", 1920, 1080, fps, (START, START + 10_000))
+    doc["shuttle"] = sh
+    u = uncertain_frames(doc, START)
+    assert u == [5, 10, 11, 12, 13, 14, 20, 21, 22, 77, 78, 79]
+
+    s = Session(schema.empty_doc("x", "label", 1920, 1080, fps, (START, START + 10_000)), START, 100)
+    s.uncertain = u
+    assert s.jump_uncertain() and s.frame == 5
+    s.seek(15)
+    assert s.jump_uncertain(forward=False) and s.frame == 14
+    s.seek(79)
+    assert not s.jump_uncertain()
