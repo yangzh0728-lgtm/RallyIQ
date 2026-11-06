@@ -37,13 +37,27 @@ def _box_iou(a: np.ndarray, b: np.ndarray) -> float:
     return float(inter / ua) if ua > 0 else 0.0
 
 
-def _containment(a: np.ndarray, b: np.ndarray) -> float:
-    """Share of box ``a`` that lies inside box ``b``."""
+def _overlap_small(a: np.ndarray, b: np.ndarray) -> float:
+    """Intersection over the smaller box: 1 when one box sits inside the other."""
     ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
     ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
     inter = max(ix2 - ix1, 0) * max(iy2 - iy1, 0)
-    area = (a[2] - a[0]) * (a[3] - a[1])
-    return float(inter / area) if area > 0 else 0.0
+    small = min((a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1]))
+    return float(inter / small) if small > 0 else 0.0
+
+
+def same_person(a: PersonDetection, b: PersonDetection) -> bool:
+    """Two boxes of one person from different passes. A box that includes the
+    racket arm can be twice as wide as one that does not, so plain IoU misses
+    them: compare overlap of the smaller box, and the feet."""
+    if _overlap_small(a.bbox, b.bbox) > 0.6:
+        return True
+    ha, hb = a.height, b.height
+    if min(ha, hb) <= 0 or not 0.7 <= ha / hb <= 1.4:
+        return False
+    fa = np.array([(a.bbox[0] + a.bbox[2]) / 2, a.bbox[3]])
+    fb = np.array([(b.bbox[0] + b.bbox[2]) / 2, b.bbox[3]])
+    return float(np.linalg.norm(fa - fb)) < 0.25 * max(ha, hb)
 
 
 def merge_detections(dets: list[PersonDetection], iou_thr: float = 0.5) -> list[PersonDetection]:
@@ -142,7 +156,7 @@ class RTMOOnnx:
             d.bbox[[1, 3]] += y1
             d.keypoints[:, 0] += x1
             d.keypoints[:, 1] += y1
-            if any(_containment(d.bbox, f.bbox) > 0.6 for f in full):
+            if any(same_person(d, f) for f in full):
                 continue  # same person the full-frame pass already has, keep that one
             out.append(d)
         return out
