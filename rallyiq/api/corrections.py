@@ -27,6 +27,8 @@ def validate(op: str, payload: dict) -> None:
         "set_rally_bounds": ["rally_id"],
         "set_rally_winner": ["rally_id", "winner"],
         "swap_player_ids": ["from_frame"],
+        "confirm_shot": ["shot_id"],
+        "confirm_rally": ["rally_id"],
     }[op]
     missing = [k for k in need if k not in payload]
     if missing:
@@ -55,7 +57,7 @@ def apply_corrections(
                 shuttle_px=p.get("shuttle_px"), confidence=1.0, status="ok", source="human",
                 reasons=[f"added by {c.correction_id}"],
             )
-        elif c.op in ("delete_shot", "set_hitter", "move_shot"):
+        elif c.op in ("delete_shot", "set_hitter", "move_shot", "confirm_shot"):
             s = shots.get(p["shot_id"])
             if s is None:
                 skipped.append(c.correction_id)
@@ -65,7 +67,7 @@ def apply_corrections(
                 continue
             if c.op == "set_hitter":
                 s.hitter, s.hitter_confidence = p["hitter"], 1.0
-            else:
+            elif c.op == "move_shot":
                 s.frame, s.t_ms = int(p["frame"]), t_ms(int(p["frame"]))
             s.source, s.status = "human", "ok"
         elif c.op == "add_rally":
@@ -73,7 +75,7 @@ def apply_corrections(
             sf, ef = int(p["start_frame"]), int(p["end_frame"])
             rallies[rid] = Rally(rally_id=rid, start_frame=sf, end_frame=ef, start_ms=t_ms(sf), end_ms=t_ms(ef),
                                  end_reason="manual", confidence=1.0, status="ok", source="human")
-        elif c.op in ("delete_rally", "set_rally_bounds", "set_rally_winner"):
+        elif c.op in ("delete_rally", "set_rally_bounds", "set_rally_winner", "confirm_rally"):
             r = rallies.get(p["rally_id"])
             if r is None:
                 skipped.append(c.correction_id)
@@ -83,7 +85,7 @@ def apply_corrections(
                 continue
             if c.op == "set_rally_winner":
                 r.winner = p["winner"]
-            else:
+            elif c.op == "set_rally_bounds":
                 if "start_frame" in p:
                     r.start_frame, r.start_ms = int(p["start_frame"]), t_ms(int(p["start_frame"]))
                 if "end_frame" in p:

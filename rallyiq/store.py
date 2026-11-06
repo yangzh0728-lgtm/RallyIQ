@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS corrections (
     op TEXT NOT NULL,
     payload TEXT NOT NULL,
     note TEXT,
+    hard_example INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     UNIQUE(video_id, seq)
 );
@@ -272,12 +273,13 @@ class Store:
             seq = self._q("SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM corrections WHERE video_id=?", (video_id,))[0]["n"]
             corr = Correction(
                 correction_id=new_id("cor"), video_id=video_id, created_at=now(), seq=seq,
-                op=c.op, payload=c.payload, note=c.note,
+                op=c.op, payload=c.payload, note=c.note, hard_example=c.hard_example,
             )
             self._q(
-                "INSERT INTO corrections(correction_id, video_id, seq, op, payload, note, created_at) VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO corrections(correction_id, video_id, seq, op, payload, note, hard_example, created_at)"
+                " VALUES (?,?,?,?,?,?,?,?)",
                 (corr.correction_id, video_id, seq, corr.op, json.dumps(corr.payload), corr.note,
-                 corr.created_at.isoformat()),
+                 int(corr.hard_example), corr.created_at.isoformat()),
             )
         return corr
 
@@ -286,7 +288,7 @@ class Store:
         return [
             Correction(
                 correction_id=r["correction_id"], video_id=r["video_id"], seq=r["seq"], op=r["op"],
-                payload=json.loads(r["payload"]), note=r["note"],
+                payload=json.loads(r["payload"]), note=r["note"], hard_example=bool(r["hard_example"]),
                 created_at=datetime.fromisoformat(r["created_at"]),
             )
             for r in rows
