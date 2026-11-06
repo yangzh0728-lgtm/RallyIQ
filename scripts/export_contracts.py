@@ -16,12 +16,15 @@ from rallyiq.api.corrections import apply_corrections
 from rallyiq.contracts.geometry import project_court_lines
 from rallyiq.pipeline import demo
 from rallyiq.pipeline.overlay import COCO17_SKELETON
+from rallyiq.report import compute_match_stats
+from rallyiq.report.coach import OfflineProvider, build_report
 
 ROOT = Path(__file__).resolve().parents[1] / "contracts"
 
 SCHEMAS = [
     c.VideoMeta, c.CourtCalibration, c.PlayerTracks, c.ShuttleTrack, c.EventsResult, c.ShotEvent, c.Rally,
     c.CorrectionIn, c.Correction, c.OverlayData, c.OverlayFrame, c.Job, c.Video, c.HeatmapData,
+    c.MatchStats, c.CoachReport, c.MatchReport,
 ]
 
 
@@ -64,7 +67,15 @@ def examples() -> dict[str, object]:
                         c.StageRun(name="calibration", state="succeeded", progress=1.0, started_at=ts, finished_at=ts),
                         c.StageRun(name="players", state="running", progress=0.42, started_at=ts),
                         c.StageRun(name="shuttle"), c.StageRun(name="events"), c.StageRun(name="overlay")])
+    # report: winners entered for every rally, coach from the offline rule provider
+    decided = effective.model_copy(update={"rallies": [
+        r.model_copy(update={"winner": "P1" if i % 3 else "P2"}) for i, r in enumerate(effective.rallies)]})
+    stats = compute_match_stats(decided, players, cal, long_meta)
+    coach = build_report(OfflineProvider().generate(stats), stats, OfflineProvider()).model_copy(
+        update={"created_at": ts})
+    report = c.MatchReport(stats=stats, coach=coach)
     return {
+        "match_report": report,
         "video_meta": meta, "calibration": cal, "players": players_small, "shuttle": shuttle_small,
         "events": events.model_copy(update={"rallies": events.rallies[:1],
                                             "shots": [s for s in events.shots if s.rally_id == "r001"]}),

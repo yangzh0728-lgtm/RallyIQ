@@ -125,3 +125,40 @@ def test_confirm_ops_and_hard_example_flag(client, sample_video):
     rr = next(x for x in ev["rallies"] if x["rally_id"] == rally["rally_id"])
     assert rr["status"] == "ok" and rr["start_frame"] == rally["start_frame"]
     assert [c["hard_example"] for c in client.get(f"/api/videos/{vid}/corrections").json()] == [False, True]
+
+
+def test_match_report_and_coach(client, sample_video, monkeypatch):
+    monkeypatch.setenv("RALLYIQ_COACH_PROVIDER", "offline")
+    v = upload(client, sample_video)
+    vid = v["video_id"]
+    assert wait_job(client, v["latest_job"]["job_id"])["state"] == "succeeded"
+
+    rep = client.get(f"/api/videos/{vid}/report").json()
+    keys = {m["key"] for m in rep["stats"]["metrics"]}
+    assert {"match.rallies", "match.rally_len.mean"} <= keys
+    assert rep["coach"] is None and rep["coach_stale"] is False
+    assert [p["player_id"] for p in rep["stats"]["players"]] == ["P1", "P2"]
+
+    coach = client.post(f"/api/videos/{vid}/report/coach", json={}).json()
+    assert coach["provider"] == "offline" and coach["summary"]
+    rep = client.get(f"/api/videos/{vid}/report").json()
+    assert rep["coach"]["stats_fingerprint"] == rep["stats"]["fingerprint"] and not rep["coach_stale"]
+
+    # a correction changes the stats -> the cached coach report is marked stale
+    rally_id = client.get(f"/api/videos/{vid}/events").json()["rallies"][0]["rally_id"]
+    client.post(f"/api/videos/{vid}/corrections", json={"op": "set_rally_winner",
+                                                         "payload": {"rally_id": rally_id, "winner": "P1"}})
+    rep = client.get(f"/api/videos/{vid}/report").json()
+    assert rep["coach_stale"] is True
+    won = next(m for m in rep["stats"]["players"][0]["metrics"] if m["key"] == "P1.win.won")
+    assert won["value"] == 1
+
+    md = client.get(f"/api/videos/{vid}/report/export", params={"format": "md"})
+    assert md.status_code == 200 and md.headers["content-type"].startswith("text/markdown")
+    assert "赛后报告" in md.text and "已过时" in md.text
+    js = client.get(f"/api/videos/{vid}/report/export", params={"format": "json"}).json()
+    assert js["coach"]["provider"] == "offline"
+
+    assert client.post(f"/api/videos/{vid}/report/coach", json={"provider": "nope"}).status_code == 503
+    providers = client.get("/api/coach/providers").json()
+    assert providers["default"] == "offline" and {"anthropic", "offline"} <= set(providers["providers"])

@@ -397,4 +397,114 @@ class HeatmapData(Contract):
     samples: int
 
 
+
+# -------------------------------------------------------------------------- report
+
+
+MetricConfidence = Literal["high", "medium", "low"]
+
+
+class Metric(Contract):
+    """One computed number with its evidence size and reliability.
+
+    ``value`` is null when the metric cannot be computed (e.g. no calibration, no
+    winners entered). ``status`` follows the README levels; ``confidence`` is the
+    plain-language reliability used by the coach to phrase caveats.
+    """
+
+    key: str = Field(description="stable dotted key, e.g. 'P1.movement.distance_m'")
+    label: str = Field(description="Chinese display label")
+    value: float | None
+    unit: str | None = None
+    n: int = Field(ge=0, description="sample size the value is computed from")
+    status: Status
+    confidence: MetricConfidence
+    note: str | None = None
+
+
+class Distribution(Contract):
+    """Counts over named categories (e.g. shot types, court zones, rally lengths)."""
+
+    key: str
+    label: str
+    counts: dict[str, int]
+    n: int = Field(ge=0)
+    status: Status
+    confidence: MetricConfidence
+    note: str | None = None
+
+
+class PlayerStats(Contract):
+    player_id: PlayerId
+    metrics: list[Metric]
+    distributions: list[Distribution] = Field(default_factory=list)
+
+
+class MatchStats(Contract):
+    """Post-match statistics computed from effective events + player tracks.
+
+    Pure function of the inputs (no model is called). ``fingerprint`` changes
+    whenever the inputs change, so a cached coach report can be marked stale.
+    """
+
+    schema_version: str = SCHEMA_VERSION
+    video_id: str
+    fingerprint: str
+    duration_ms: int | None = None
+    calibration_status: Status | None = None
+    shot_types_available: bool = Field(description="false until a stroke classifier fills ShotEvent.shot_type")
+    metrics: list[Metric]
+    distributions: list[Distribution] = Field(default_factory=list)
+    players: list[PlayerStats]
+    caveats: list[str] = Field(default_factory=list)
+
+
+InsightKind = Literal["strength", "weakness", "pattern", "tactic", "data_quality"]
+
+
+class CoachInsight(Contract):
+    kind: InsightKind
+    player_id: PlayerId | None = None
+    title: str
+    detail: str
+    evidence: list[str] = Field(description="Metric/Distribution keys from MatchStats that support this insight")
+    confidence: MetricConfidence
+    grounded: bool = Field(default=True, description="false if a number in the text was not found in the cited evidence")
+    warnings: list[str] = Field(default_factory=list)
+
+
+class TrainingItem(Contract):
+    player_id: PlayerId | None = None
+    drill: str
+    why: str
+    evidence: list[str] = Field(default_factory=list)
+    retest_metric: str | None = Field(default=None, description="metric key to compare on the next upload")
+
+
+class CoachReport(Contract):
+    """LLM (or rule-based) coaching comments. Never a source of truth: every claim
+    cites ``MatchStats`` keys and is validated against them."""
+
+    schema_version: str = SCHEMA_VERSION
+    video_id: str
+    stats_fingerprint: str
+    provider: str
+    model: str | None = None
+    created_at: datetime
+    language: Literal["zh"] = "zh"
+    summary: str
+    insights: list[CoachInsight]
+    training: list[TrainingItem] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
+    fallback_reason: str | None = Field(default=None, description="why the requested provider was not used")
+    dropped: int = Field(default=0, description="insights removed because they cited no valid evidence")
+
+
+class MatchReport(Contract):
+    """``GET /api/videos/{id}/report``: stats plus the latest coach report, if any."""
+
+    stats: MatchStats
+    coach: CoachReport | None = None
+    coach_stale: bool = Field(default=False, description="coach was generated from different stats (e.g. before new corrections)")
+
 CalibrationSegment.model_rebuild()
