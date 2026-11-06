@@ -1,0 +1,37 @@
+# Fly.io app for the web UI + API (CPU only). The GPU worker runs on Modal: deploy/modal_worker.py.
+#   fly launch --no-deploy --copy-config --config deploy/fly.toml   (once; pick your own app name)
+#   fly secrets set RALLYIQ_DATABASE_URL=... RALLYIQ_STORAGE=s3://rallyiq ... (see docs/deploy.md)
+#   fly deploy --config deploy/fly.toml
+app = "rallyiq"            # change to the name fly launch gave you
+primary_region = "nrt"     # Tokyo; hkg/sin also fine for China-mainland-adjacent latency
+
+[build]
+  dockerfile = "../Dockerfile"
+
+[env]
+  RALLYIQ_WORKER = "external"
+  RALLYIQ_AUTH = "on"
+  RALLYIQ_SIGNUP = "invite"
+  RALLYIQ_COOKIE_SECURE = "1"
+  RALLYIQ_MAX_ACTIVE_JOBS = "3"
+  RALLYIQ_MAX_UPLOAD_MB = "4096"
+  RALLYIQ_S3_REGION = "auto"
+  PORT = "8000"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"    # no traffic -> machine stops, ~0 cost; wakes on the next request
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

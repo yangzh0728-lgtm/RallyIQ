@@ -105,7 +105,9 @@ rallyiq/perception/shuttle/     羽毛球轨迹阶段
 rallyiq/events/                 回合与击球候选阶段
 rallyiq/pipeline/               阶段注册、任务执行、队列 worker、视频探测、叠加层合成
 rallyiq/api/                    FastAPI 后端（上传、任务、结果、修正、导出）
-rallyiq/store.py                SQLite + 本地文件存储
+rallyiq/store.py                数据库（db.py：SQLite / PostgreSQL）+ 文件存储（blobs.py：本地 / S3）
+rallyiq/api/auth.py             账号与会话（默认关闭，线上 RALLYIQ_AUTH=on）
+Dockerfile, docker/, deploy/    web+API 镜像、GPU worker 镜像、Fly.io / Modal 部署配置
 contracts/schemas, examples     由契约自动生成的 JSON Schema 和示例
 web/                            网页回放与修正界面
 ```
@@ -116,6 +118,12 @@ RALLYIQ_DEMO=1 uvicorn rallyiq.api.app:app --port 8000   # 未接入模型的阶
 python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水线
 pytest
 ```
+
+### 在线部署
+
+同一套代码也能作为网站运行：PostgreSQL 任务队列（多 GPU worker、租约重试）、S3 / Cloudflare R2 视频存储（浏览器直传）、
+邮箱 + 密码账号（邀请码注册，按用户隔离数据），web + API 一个 CPU 容器，分析在按需启动、空闲关机的云 GPU 上跑。
+方案、步骤和费用估算见 [`docs/deploy.md`](docs/deploy.md)；本地体验线上同款环境：`docker compose up --build`。
 
 主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正；`PUT /videos/{id}/calibration/manual` 点选四角；`GET /videos/{id}/heatmap`；`GET /videos/{id}/export?format=json|csv`。完整文档见运行后的 `/docs`。
 

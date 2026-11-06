@@ -3,8 +3,31 @@ import { CORNERS_M, homographyFrom4, projectCourtLines } from "./court";
 import { generateMock, type MockAnalysis } from "./mock";
 import type { Correction, CorrectionIn, EventsResult, Job, OverlayData, Point, StageName, StageRun, Video } from "./types";
 
+export interface PublicConfig {
+  auth: boolean;
+  signup: "invite" | "open" | "closed";
+  direct_upload: boolean;
+  max_upload_mb: number;
+}
+
+export interface User {
+  user_id: string;
+  email: string;
+  is_admin: boolean;
+}
+
+/** Fired on any 401 so the app can show the login screen. */
+export const UNAUTHORIZED_EVENT = "rallyiq:unauthorized";
+
 export interface Api {
   readonly mode: "live" | "mock";
+  getConfig(): Promise<PublicConfig>;
+  /** Current account, or null when signed out. */
+  me(): Promise<User | null>;
+  login(email: string, password: string): Promise<User>;
+  signup(email: string, password: string, inviteCode?: string): Promise<User>;
+  logout(): Promise<void>;
+  deleteVideo(id: string): Promise<void>;
   listVideos(): Promise<Video[]>;
   getVideo(id: string): Promise<Video>;
   uploadVideo(file: File, onProgress?: (fraction: number) => void): Promise<Video>;
@@ -29,11 +52,15 @@ export interface Api {
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
 const enc = encodeURIComponent;
 
-async function http<T>(path: string, init?: RequestInit): Promise<T> {
+async function http<T>(path: string, init?: RequestInit & { quiet401?: boolean }): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
+    credentials: "include",
     ...init,
     headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
   });
+  if (res.status === 401 && !init?.quiet401 && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -44,34 +71,81 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(`${res.status} ${detail}`);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
+function xhrSend(
+  method: string,
+  url: string,
+  body: XMLHttpRequestBodyInit,
+  headers: Record<string, string>,
+  onProgress?: (fraction: number) => void,
+): Promise<string> {
+  // XHR (not fetch) for upload progress on large phone videos.
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.withCredentials = url.startsWith(BASE);
+    for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(xhr.responseText);
+      if (xhr.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+      let detail = xhr.statusText;
+      try {
+        detail = JSON.parse(xhr.responseText).detail ?? detail;
+      } catch {
+        /* not json */
+      }
+      reject(new Error(`${xhr.status} ${detail}`));
+    };
+    xhr.onerror = () => reject(new Error("上传失败：网络错误（后端是否在运行？）"));
+    xhr.send(body);
+  });
+}
+
+let configCache: Promise<PublicConfig> | null = null;
+const getLiveConfig = () =>
+  (configCache ??= http<PublicConfig>("/config").catch((e) => {
+    configCache = null;
+    throw e;
+  }));
+
 export const liveApi: Api = {
   mode: "live",
+  getConfig: getLiveConfig,
+  async me() {
+    try {
+      return await http<User>("/auth/me", { quiet401: true });
+    } catch (e) {
+      if ((e as Error).message.startsWith("401")) return null;
+      throw e;
+    }
+  },
+  login: (email, password) => http<User>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }), quiet401: true }),
+  signup: (email, password, inviteCode) =>
+    http<User>("/auth/signup", { method: "POST", body: JSON.stringify({ email, password, invite_code: inviteCode || null }) }),
+  logout: () => http<void>("/auth/logout", { method: "POST" }),
+  deleteVideo: (id) => http<void>(`/videos/${enc(id)}`, { method: "DELETE" }),
   listVideos: () => http<Video[]>("/videos"),
   getVideo: (id) => http<Video>(`/videos/${enc(id)}`),
-  uploadVideo: (file, onProgress) =>
-    new Promise((resolve, reject) => {
-      // XHR (not fetch) for upload progress on large phone videos.
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${BASE}/videos`);
-      xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) return resolve(JSON.parse(xhr.responseText) as Video);
-        let detail = xhr.statusText;
-        try {
-          detail = JSON.parse(xhr.responseText).detail ?? detail;
-        } catch {
-          /* not json */
-        }
-        reject(new Error(`${xhr.status} ${detail}`));
-      };
-      xhr.onerror = () => reject(new Error("上传失败：网络错误（后端是否在运行？）"));
-      const fd = new FormData();
-      fd.append("file", file);
-      xhr.send(fd);
-    }),
+  async uploadVideo(file, onProgress) {
+    const cfg = await getLiveConfig();
+    if (file.size > cfg.max_upload_mb * 1024 * 1024) throw new Error(`视频超过 ${cfg.max_upload_mb} MB 上限`);
+    if (cfg.direct_upload) {
+      // Online: the browser PUTs straight to object storage, then tells the API it is done.
+      const t = await http<{ video_id: string; url: string; headers: Record<string, string> }>("/uploads", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, size_bytes: file.size, content_type: file.type || null }),
+      });
+      await xhrSend("PUT", t.url, file, t.headers, onProgress);
+      return http<Video>(`/uploads/${enc(t.video_id)}/complete`, { method: "POST" });
+    }
+    const fd = new FormData();
+    fd.append("file", file);
+    return JSON.parse(await xhrSend("POST", `${BASE}/videos`, fd, {}, onProgress)) as Video;
+  },
   getJob: (id) => http<Job>(`/jobs/${enc(id)}`),
   getOverlay: (id) => http<OverlayData>(`/videos/${enc(id)}/overlay`),
   getEvents: (id) => http<EventsResult>(`/videos/${enc(id)}/events`),
@@ -181,6 +255,19 @@ export function createMockApi(): Api {
 
   return {
     mode: "mock",
+    getConfig: async () => ({ auth: false, signup: "closed", direct_upload: false, max_upload_mb: 4096 }),
+    me: async () => null,
+    login: async () => {
+      throw new Error("演示模式没有账号");
+    },
+    signup: async () => {
+      throw new Error("演示模式没有账号");
+    },
+    logout: async () => {},
+    deleteVideo: async (id) => {
+      must(id);
+      videos.delete(id);
+    },
     listVideos: () => delay([...videos.values()].map(videoOf).sort((a, b) => b.created_at.localeCompare(a.created_at))),
     getVideo: async (id) => delay(videoOf(must(id))),
     async uploadVideo(file, onProgress) {

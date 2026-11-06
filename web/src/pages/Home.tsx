@@ -108,6 +108,7 @@ export function Home() {
                 <th>规格</th>
                 <th>上传时间</th>
                 <th>分析状态</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -123,6 +124,18 @@ export function Home() {
                   <td className="muted small">{new Date(v.created_at).toLocaleString()}</td>
                   <td>
                     <JobBadge job={v.latest_job} />
+                  </td>
+                  <td>
+                    <button
+                      className="small danger"
+                      title="删除视频、分析结果和修正记录"
+                      onClick={() => {
+                        if (!confirm(`删除「${v.filename}」及其全部分析结果？此操作不能撤销。`)) return;
+                        api.deleteVideo(v.video_id).then(refresh, (e: Error) => setError(e.message));
+                      }}
+                    >
+                      删除
+                    </button>
                   </td>
                 </tr>
               ))}

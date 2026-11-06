@@ -1,27 +1,29 @@
-"""Local storage: SQLite for videos/jobs/corrections, files for videos and stage artifacts.
+"""Storage: a SQL database for videos / jobs / corrections / users, and a blob store for files.
 
-Layout under the data dir (``RALLYIQ_DATA``, default ``./data``)::
+Locally (default) both live in the data dir (``RALLYIQ_DATA``, default ``./data``)::
 
     rallyiq.db
     videos/<video_id>/source<.ext>
     videos/<video_id>/artifacts/<stage>.json
     videos/<video_id>/artifacts/calibration_manual.json   (human override, optional)
-    videos/<video_id>/work/                                (scratch for stages)
+    videos/<video_id>/work/                                (scratch for stages, never uploaded)
+
+Online, ``RALLYIQ_DATABASE_URL`` points at PostgreSQL and ``RALLYIQ_STORAGE`` at an S3 bucket
+(see ``db.py`` / ``blobs.py``); the data dir is then only a local cache for the worker.
 """
 
 from __future__ import annotations
 
 import json
-import os
-import sqlite3
-import threading
+import socket
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TypeVar
 
 from pydantic import BaseModel
 
+from .blobs import BlobStore, blob_store_from_env
 from .contracts import (
     STAGES,
     Correction,
@@ -31,6 +33,7 @@ from .contracts import (
     Video,
     VideoMeta,
 )
+from .db import Database, Row, database_url
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -39,7 +42,7 @@ CREATE TABLE IF NOT EXISTS videos (
     video_id TEXT PRIMARY KEY,
     filename TEXT NOT NULL,
     path TEXT NOT NULL,
-    size_bytes INTEGER NOT NULL,
+    size_bytes BIGINT NOT NULL,
     created_at TEXT NOT NULL,
     meta TEXT
 );
@@ -66,7 +69,36 @@ CREATE TABLE IF NOT EXISTS corrections (
     created_at TEXT NOT NULL,
     UNIQUE(video_id, seq)
 );
+CREATE TABLE IF NOT EXISTS users (
+    user_id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    is_admin INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(user_id),
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);
 """
+
+# Columns added after the first release; created on startup if missing (additive only).
+VIDEO_COLUMNS = {
+    "source_key": "TEXT",          # blob key of the source video
+    "owner_id": "TEXT",            # users.user_id; NULL when accounts are off
+    "artifacts": "TEXT",           # JSON list of saved artifact names (avoids listing the bucket)
+    "status": "TEXT",              # 'uploading' (direct upload not finished) | 'ready'
+}
+JOB_COLUMNS = {
+    "worker_id": "TEXT",
+    "heartbeat_at": "TEXT",
+    "attempts": "INTEGER NOT NULL DEFAULT 0",
+}
+
+CONTENT_TYPES = {".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm",
+                 ".mkv": "video/x-matroska", ".avi": "video/x-msvideo"}
 
 
 def now() -> datetime:
@@ -78,31 +110,44 @@ def new_id(prefix: str) -> str:
 
 
 def default_data_dir() -> Path:
+    import os
+
     return Path(os.environ.get("RALLYIQ_DATA", "data")).resolve()
 
 
+def default_worker_id() -> str:
+    return f"{socket.gethostname()}-{uuid.uuid4().hex[:6]}"
+
+
 class Store:
-    def __init__(self, root: Path | str | None = None):
+    def __init__(self, root: Path | str | None = None, db_url: str | None = None, blobs: BlobStore | None = None):
         self.root = Path(root).resolve() if root else default_data_dir()
         (self.root / "videos").mkdir(parents=True, exist_ok=True)
-        self.db_path = self.root / "rallyiq.db"
-        self._lock = threading.RLock()
-        self._conn = sqlite3.connect(self.db_path, check_same_thread=False, isolation_level=None)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA busy_timeout=5000")
-        self._conn.executescript(SCHEMA)
+        self.db = Database(db_url or database_url(self.root))
+        self.blobs: BlobStore = blobs or blob_store_from_env(self.root)
+        self.db.executescript(SCHEMA)
+        self.db.add_columns("videos", VIDEO_COLUMNS)
+        self.db.add_columns("jobs", JOB_COLUMNS)
+        self.db.q("CREATE INDEX IF NOT EXISTS videos_owner ON videos(owner_id, created_at)")
 
-    def _q(self, sql: str, args: tuple = ()) -> list[sqlite3.Row]:
-        with self._lock:
-            return self._conn.execute(sql, args).fetchall()
+    def _q(self, sql: str, args: tuple = ()) -> list[Row]:
+        return self.db.q(sql, args)
 
-    # ------------------------------------------------------------------ paths
+    @property
+    def _order_tiebreak(self) -> str:
+        return "rowid" if self.db.dialect == "sqlite" else "job_id"
+
+    # ------------------------------------------------------------------ keys / local paths
+
+    @staticmethod
+    def artifact_key(video_id: str, name: str) -> str:
+        return f"videos/{video_id}/artifacts/{name}.json"
 
     def video_dir(self, video_id: str) -> Path:
         return self.root / "videos" / video_id
 
     def artifact_path(self, video_id: str, name: str) -> Path:
+        """Local path of an artifact. Only meaningful with local storage; see :meth:`artifact_bytes`."""
         return self.video_dir(video_id) / "artifacts" / f"{name}.json"
 
     def work_dir(self, video_id: str) -> Path:
@@ -113,22 +158,77 @@ class Store:
     # ----------------------------------------------------------------- videos
 
     def create_video(self, filename: str, ext: str = ".mp4") -> tuple[str, Path]:
-        """Reserve a video id and return the path the upload must be written to."""
+        """Reserve a video id and return the local path the upload must be written to."""
         video_id = new_id("vid")
         d = self.video_dir(video_id)
         (d / "artifacts").mkdir(parents=True, exist_ok=True)
         return video_id, d / f"source{ext.lower() or '.mp4'}"
 
-    def register_video(self, video_id: str, filename: str, path: Path) -> Video:
+    def register_video(self, video_id: str, filename: str, path: Path, owner_id: str | None = None) -> Video:
+        """Record a video whose bytes are at local ``path`` (uploaded to object storage if configured)."""
+        ext = Path(path).suffix.lower()
+        key = f"videos/{video_id}/source{ext}"
+        self.blobs.put_file(key, Path(path), CONTENT_TYPES.get(ext))
         self._q(
-            "INSERT INTO videos(video_id, filename, path, size_bytes, created_at) VALUES (?,?,?,?,?)",
-            (video_id, filename, str(path), path.stat().st_size, now().isoformat()),
+            "INSERT INTO videos(video_id, filename, path, size_bytes, created_at, source_key, owner_id, status)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (video_id, filename, key, Path(path).stat().st_size, now().isoformat(), key, owner_id, "ready"),
         )
         return self.get_video(video_id)  # type: ignore[return-value]
 
+    def reserve_upload(self, filename: str, ext: str, owner_id: str | None = None) -> tuple[str, str]:
+        """Direct-to-bucket upload, step 1: create a placeholder row and return ``(video_id, key)``."""
+        video_id = new_id("vid")
+        key = f"videos/{video_id}/source{ext.lower() or '.mp4'}"
+        self._q(
+            "INSERT INTO videos(video_id, filename, path, size_bytes, created_at, source_key, owner_id, status)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (video_id, filename, key, 0, now().isoformat(), key, owner_id, "uploading"),
+        )
+        return video_id, key
+
+    def complete_upload(self, video_id: str) -> Video | None:
+        """Direct-to-bucket upload, step 2: the object exists now; mark the video ready."""
+        key = self.source_key(video_id)
+        size = self.blobs.size(key) if key else None
+        if size is None:
+            return None
+        self._q("UPDATE videos SET size_bytes=?, status='ready' WHERE video_id=?", (size, video_id))
+        return self.get_video(video_id)
+
+    def video_status(self, video_id: str) -> str | None:
+        rows = self._q("SELECT status FROM videos WHERE video_id=?", (video_id,))
+        return (rows[0]["status"] or "ready") if rows else None
+
+    def source_key(self, video_id: str) -> str | None:
+        rows = self._q("SELECT path, source_key FROM videos WHERE video_id=?", (video_id,))
+        if not rows:
+            return None
+        return rows[0]["source_key"]
+
+    def video_owner(self, video_id: str) -> str | None:
+        rows = self._q("SELECT owner_id FROM videos WHERE video_id=?", (video_id,))
+        return rows[0]["owner_id"] if rows else None
+
     def video_path(self, video_id: str) -> Path | None:
-        rows = self._q("SELECT path FROM videos WHERE video_id=?", (video_id,))
-        return Path(rows[0]["path"]) if rows else None
+        """Local path of the source video, downloading it into the cache from object storage if needed."""
+        rows = self._q("SELECT path, source_key FROM videos WHERE video_id=?", (video_id,))
+        if not rows:
+            return None
+        key = rows[0]["source_key"]
+        if not key:  # rows written before object storage existed hold an absolute path
+            return Path(rows[0]["path"])
+        local = self.blobs.local_path(key)
+        if local is not None:
+            return local
+        cached = self.root / key
+        if not cached.exists():
+            self.blobs.get_file(key, cached)
+        return cached
+
+    def video_download_url(self, video_id: str, filename: str | None = None) -> str | None:
+        key = self.source_key(video_id)
+        return self.blobs.presign_get(key, filename=filename) if key else None
 
     def set_video_meta(self, meta: VideoMeta) -> None:
         self._q("UPDATE videos SET meta=? WHERE video_id=?", (meta.model_dump_json(), meta.video_id))
@@ -137,7 +237,13 @@ class Store:
         rows = self._q("SELECT meta FROM videos WHERE video_id=?", (video_id,))
         return VideoMeta.model_validate_json(rows[0]["meta"]) if rows and rows[0]["meta"] else None
 
-    def _video_from_row(self, r: sqlite3.Row) -> Video:
+    def _artifact_names(self, r: Row) -> list[str]:
+        if r["artifacts"] is not None:
+            names = set(json.loads(r["artifacts"]))
+            return [s for s in STAGES if s in names]
+        return [s for s in STAGES if self.blobs.exists(self.artifact_key(r["video_id"], s))]
+
+    def _video_from_row(self, r: Row) -> Video:
         vid = r["video_id"]
         return Video(
             video_id=vid,
@@ -146,35 +252,66 @@ class Store:
             created_at=datetime.fromisoformat(r["created_at"]),
             meta=VideoMeta.model_validate_json(r["meta"]) if r["meta"] else None,
             latest_job=self.latest_job(vid),
-            artifacts=[s for s in STAGES if self.artifact_path(vid, s).exists()],
+            artifacts=self._artifact_names(r),
         )
 
     def get_video(self, video_id: str) -> Video | None:
         rows = self._q("SELECT * FROM videos WHERE video_id=?", (video_id,))
         return self._video_from_row(rows[0]) if rows else None
 
-    def list_videos(self) -> list[Video]:
-        return [self._video_from_row(r) for r in self._q("SELECT * FROM videos ORDER BY created_at DESC")]
+    def list_videos(self, owner_id: str | None = None) -> list[Video]:
+        """Ready videos, newest first. ``owner_id`` restricts to one user's videos."""
+        where, args = "WHERE COALESCE(status, 'ready')='ready'", ()
+        if owner_id is not None:
+            where, args = where + " AND owner_id=?", (owner_id,)
+        rows = self._q(f"SELECT * FROM videos {where} ORDER BY created_at DESC", args)
+        return [self._video_from_row(r) for r in rows]
+
+    def delete_video(self, video_id: str) -> None:
+        with self.db.transaction():
+            self.db.q("DELETE FROM corrections WHERE video_id=?", (video_id,))
+            self.db.q("DELETE FROM jobs WHERE video_id=?", (video_id,))
+            self.db.q("DELETE FROM videos WHERE video_id=?", (video_id,))
+        self.blobs.delete_prefix(f"videos/{video_id}/")
+        cache = self.video_dir(video_id)
+        if cache.exists():
+            import shutil
+
+            shutil.rmtree(cache, ignore_errors=True)
 
     # -------------------------------------------------------------- artifacts
 
-    def save_artifact(self, video_id: str, name: str, obj: BaseModel) -> Path:
-        p = self.artifact_path(video_id, name)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        tmp = p.with_suffix(".json.tmp")
-        tmp.write_text(obj.model_dump_json())
-        tmp.replace(p)
-        return p
+    def _set_artifact_flag(self, video_id: str, name: str, present: bool) -> None:
+        with self.db.transaction():
+            rows = self.db.q("SELECT artifacts FROM videos WHERE video_id=?", (video_id,))
+            if not rows:
+                return
+            cur = rows[0]["artifacts"]
+            names = set(json.loads(cur)) if cur is not None else {
+                s for s in STAGES if self.blobs.exists(self.artifact_key(video_id, s))
+            }
+            names = names | {name} if present else names - {name}
+            self.db.q("UPDATE videos SET artifacts=? WHERE video_id=?", (json.dumps(sorted(names)), video_id))
+
+    def save_artifact(self, video_id: str, name: str, obj: BaseModel) -> str:
+        key = self.artifact_key(video_id, name)
+        self.blobs.put_bytes(key, obj.model_dump_json().encode(), "application/json")
+        self._set_artifact_flag(video_id, name, True)
+        return key
 
     def has_artifact(self, video_id: str, name: str) -> bool:
-        return self.artifact_path(video_id, name).exists()
+        return self.blobs.exists(self.artifact_key(video_id, name))
+
+    def artifact_bytes(self, video_id: str, name: str) -> bytes | None:
+        return self.blobs.get_bytes(self.artifact_key(video_id, name))
 
     def load_artifact(self, video_id: str, name: str, model: type[T]) -> T | None:
-        p = self.artifact_path(video_id, name)
-        return model.model_validate_json(p.read_text()) if p.exists() else None
+        data = self.artifact_bytes(video_id, name)
+        return model.model_validate_json(data) if data is not None else None
 
     def delete_artifact(self, video_id: str, name: str) -> None:
-        self.artifact_path(video_id, name).unlink(missing_ok=True)
+        self.blobs.delete(self.artifact_key(video_id, name))
+        self._set_artifact_flag(video_id, name, False)
 
     # ------------------------------------------------------------------- jobs
 
@@ -189,21 +326,28 @@ class Store:
         )
         return job
 
-    def update_job(self, job: Job) -> None:
-        self._q(
-            "UPDATE jobs SET state=?, stages=?, started_at=?, finished_at=?, error=? WHERE job_id=?",
-            (
-                job.state,
-                json.dumps([r.model_dump(mode="json") for r in job.stages]),
-                job.started_at.isoformat() if job.started_at else None,
-                job.finished_at.isoformat() if job.finished_at else None,
-                job.error,
-                job.job_id,
-            ),
-        )
+    def update_job(self, job: Job, worker_id: str | None = None) -> None:
+        """Persist job progress. With ``worker_id`` the write also refreshes the lease, and is ignored
+        if another worker has taken the job over (e.g. after this one was presumed dead)."""
+        args = [
+            job.state,
+            json.dumps([r.model_dump(mode="json") for r in job.stages]),
+            job.started_at.isoformat() if job.started_at else None,
+            job.finished_at.isoformat() if job.finished_at else None,
+            job.error,
+        ]
+        if worker_id is None:
+            self._q("UPDATE jobs SET state=?, stages=?, started_at=?, finished_at=?, error=? WHERE job_id=?",
+                    (*args, job.job_id))
+        else:
+            self._q(
+                "UPDATE jobs SET state=?, stages=?, started_at=?, finished_at=?, error=?, heartbeat_at=?"
+                " WHERE job_id=? AND worker_id=?",
+                (*args, now().isoformat(), job.job_id, worker_id),
+            )
 
     @staticmethod
-    def _job_from_row(r: sqlite3.Row) -> Job:
+    def _job_from_row(r: Row) -> Job:
         return Job(
             job_id=r["job_id"],
             video_id=r["video_id"],
@@ -221,7 +365,8 @@ class Store:
 
     def latest_job(self, video_id: str) -> Job | None:
         rows = self._q(
-            "SELECT * FROM jobs WHERE video_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1", (video_id,)
+            f"SELECT * FROM jobs WHERE video_id=? ORDER BY created_at DESC, {self._order_tiebreak} DESC LIMIT 1",
+            (video_id,),
         )
         return self._job_from_row(rows[0]) if rows else None
 
@@ -232,50 +377,99 @@ class Store:
             rows = self._q("SELECT * FROM jobs ORDER BY created_at DESC")
         return [self._job_from_row(r) for r in rows]
 
-    def claim_next_job(self) -> Job | None:
-        """Atomically move the oldest queued job to running and return it."""
-        with self._lock:
-            self._conn.execute("BEGIN IMMEDIATE")
-            try:
-                row = self._conn.execute(
-                    "SELECT job_id FROM jobs WHERE state='queued' ORDER BY created_at, rowid LIMIT 1"
-                ).fetchone()
-                if not row:
-                    self._conn.execute("COMMIT")
-                    return None
-                self._conn.execute(
-                    "UPDATE jobs SET state='running', started_at=? WHERE job_id=? AND state='queued'",
-                    (now().isoformat(), row["job_id"]),
-                )
-                self._conn.execute("COMMIT")
-            except Exception:
-                self._conn.execute("ROLLBACK")
-                raise
-        return self.get_job(row["job_id"])
+    def count_active_jobs(self, owner_id: str | None) -> int:
+        rows = self._q(
+            "SELECT COUNT(*) AS n FROM jobs j JOIN videos v ON v.video_id=j.video_id"
+            " WHERE j.state IN ('queued','running') AND v.owner_id IS NOT DISTINCT FROM ?"
+            if self.db.dialect == "postgres" else
+            "SELECT COUNT(*) AS n FROM jobs j JOIN videos v ON v.video_id=j.video_id"
+            " WHERE j.state IN ('queued','running') AND v.owner_id IS ?",
+            (owner_id,),
+        )
+        return int(rows[0]["n"])
 
-    def fail_orphaned_jobs(self) -> int:
-        """Jobs left 'running' by a crashed worker are marked failed on startup."""
-        rows = self._q("SELECT job_id FROM jobs WHERE state='running'")
-        for r in rows:
-            job = self.get_job(r["job_id"])
-            if job:
-                job.state, job.error, job.finished_at = "failed", "worker stopped while running", now()
+    def queue_depth(self) -> dict[str, int]:
+        rows = self._q("SELECT state, COUNT(*) AS n FROM jobs WHERE state IN ('queued','running') GROUP BY state")
+        out = {"queued": 0, "running": 0}
+        out.update({r["state"]: int(r["n"]) for r in rows})
+        return out
+
+    def claim_next_job(self, worker_id: str | None = None) -> Job | None:
+        """Atomically move the oldest queued job to running, lease it to ``worker_id`` and return it.
+
+        Safe with many workers: PostgreSQL uses ``FOR UPDATE SKIP LOCKED``; SQLite takes the write lock.
+        """
+        worker_id = worker_id or default_worker_id()
+        ts = now().isoformat()
+        lock = " FOR UPDATE SKIP LOCKED" if self.db.dialect == "postgres" else ""
+        with self.db.transaction():
+            rows = self.db.q(
+                f"SELECT job_id FROM jobs WHERE state='queued' ORDER BY created_at, {self._order_tiebreak}"
+                f" LIMIT 1{lock}"
+            )
+            if not rows:
+                return None
+            job_id = rows[0]["job_id"]
+            self.db.q(
+                "UPDATE jobs SET state='running', started_at=COALESCE(started_at, ?), worker_id=?, heartbeat_at=?,"
+                " attempts=attempts+1 WHERE job_id=? AND state='queued'",
+                (ts, worker_id, ts, job_id),
+            )
+        return self.get_job(job_id)
+
+    def heartbeat(self, job_id: str, worker_id: str) -> bool:
+        """Extend the lease. Returns False if the job is no longer ours."""
+        rows = self._q(
+            "UPDATE jobs SET heartbeat_at=? WHERE job_id=? AND worker_id=? AND state='running' RETURNING job_id",
+            (now().isoformat(), job_id, worker_id),
+        )
+        return bool(rows)
+
+    def recover_stale_jobs(self, lease_s: float = 300, max_attempts: int = 2) -> dict[str, int]:
+        """Jobs whose worker stopped heart-beating (crash, preempted GPU, scale-down) are re-queued,
+        or failed once they have used ``max_attempts``. Safe to call from any process."""
+        cutoff = (now() - timedelta(seconds=lease_s)).isoformat()
+        out = {"requeued": 0, "failed": 0}
+        with self.db.transaction():
+            rows = self.db.q(
+                "SELECT * FROM jobs WHERE state='running' AND (heartbeat_at IS NULL OR heartbeat_at < ?)", (cutoff,)
+            )
+            for r in rows:
+                job = self._job_from_row(r)
+                retry = int(r["attempts"] or 0) < max_attempts
                 for s in job.stages:
                     if s.state == "running":
-                        s.state, s.error = "failed", job.error
-                self.update_job(job)
-        return len(rows)
+                        s.state, s.progress = ("pending", 0.0) if retry else ("failed", s.progress)
+                        s.error = None if retry else "worker stopped while running"
+                if retry:
+                    job.state, job.error = "queued", None
+                    out["requeued"] += 1
+                else:
+                    job.state, job.error, job.finished_at = "failed", "worker stopped while running", now()
+                    out["failed"] += 1
+                self.db.q(
+                    "UPDATE jobs SET state=?, stages=?, finished_at=?, error=?, worker_id=NULL WHERE job_id=?",
+                    (job.state, json.dumps([s.model_dump(mode="json") for s in job.stages]),
+                     job.finished_at.isoformat() if job.finished_at else None, job.error, job.job_id),
+                )
+        return out
+
+    def fail_orphaned_jobs(self) -> int:
+        """Single-process mode: anything still 'running' at startup was left by a crash; fail it."""
+        return self.recover_stale_jobs(lease_s=-1, max_attempts=0)["failed"]
 
     # ------------------------------------------------------------ corrections
 
     def add_correction(self, video_id: str, c: CorrectionIn) -> Correction:
-        with self._lock:
-            seq = self._q("SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM corrections WHERE video_id=?", (video_id,))[0]["n"]
+        with self.db.transaction():
+            seq = self.db.q(
+                "SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM corrections WHERE video_id=?", (video_id,)
+            )[0]["n"]
             corr = Correction(
                 correction_id=new_id("cor"), video_id=video_id, created_at=now(), seq=seq,
                 op=c.op, payload=c.payload, note=c.note, hard_example=c.hard_example,
             )
-            self._q(
+            self.db.q(
                 "INSERT INTO corrections(correction_id, video_id, seq, op, payload, note, hard_example, created_at)"
                 " VALUES (?,?,?,?,?,?,?,?)",
                 (corr.correction_id, video_id, seq, corr.op, json.dumps(corr.payload), corr.note,
@@ -293,3 +487,37 @@ class Store:
             )
             for r in rows
         ]
+
+    # ------------------------------------------------------------------ users
+
+    def create_user(self, email: str, password_hash: str, is_admin: bool = False) -> str:
+        user_id = new_id("usr")
+        self._q("INSERT INTO users(user_id, email, password_hash, created_at, is_admin) VALUES (?,?,?,?,?)",
+                (user_id, email, password_hash, now().isoformat(), int(is_admin)))
+        return user_id
+
+    def get_user_by_email(self, email: str) -> Row | None:
+        rows = self._q("SELECT * FROM users WHERE email=?", (email,))
+        return rows[0] if rows else None
+
+    def get_user(self, user_id: str) -> Row | None:
+        rows = self._q("SELECT * FROM users WHERE user_id=?", (user_id,))
+        return rows[0] if rows else None
+
+    def count_users(self) -> int:
+        return int(self._q("SELECT COUNT(*) AS n FROM users")[0]["n"])
+
+    def create_session(self, token_hash: str, user_id: str, ttl: timedelta) -> None:
+        t = now()
+        self._q("INSERT INTO sessions(token_hash, user_id, created_at, expires_at) VALUES (?,?,?,?)",
+                (token_hash, user_id, t.isoformat(), (t + ttl).isoformat()))
+
+    def session_user(self, token_hash: str) -> Row | None:
+        rows = self._q(
+            "SELECT u.* FROM sessions s JOIN users u ON u.user_id=s.user_id WHERE s.token_hash=? AND s.expires_at>?",
+            (token_hash, now().isoformat()),
+        )
+        return rows[0] if rows else None
+
+    def delete_session(self, token_hash: str) -> None:
+        self._q("DELETE FROM sessions WHERE token_hash=?", (token_hash,))

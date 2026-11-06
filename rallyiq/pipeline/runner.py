@@ -17,11 +17,23 @@ log = logging.getLogger("rallyiq.pipeline")
 MANUAL_CALIBRATION = "calibration_manual"
 
 
-def run_job(store: Store, job: Job, config: dict[str, Any] | None = None) -> Job:
-    video_path = store.video_path(job.video_id)
+def run_job(store: Store, job: Job, config: dict[str, Any] | None = None, worker_id: str | None = None) -> Job:
+    """Run ``job`` to completion. With ``worker_id`` every progress write also renews the job lease
+    (see ``Store.claim_next_job``) and is dropped if the lease was lost to another worker."""
+
+    def save(j: Job) -> None:
+        store.update_job(j, worker_id)
+
+    try:
+        video_path = store.video_path(job.video_id)  # downloads from object storage when needed
+    except Exception as e:  # noqa: BLE001
+        log.exception("could not fetch video %s", job.video_id)
+        job.state, job.error, job.finished_at = "failed", f"could not fetch video: {e}", now()
+        save(job)
+        return job
     if video_path is None:
         job.state, job.error, job.finished_at = "failed", "video not found", now()
-        store.update_job(job)
+        save(job)
         return job
 
     ctx = StageContext(
@@ -30,14 +42,14 @@ def run_job(store: Store, job: Job, config: dict[str, Any] | None = None) -> Job
     )
     job.state = "running"
     job.started_at = job.started_at or now()
-    store.update_job(job)
+    save(job)
 
     for run in job.stages:
         if run.state == "skipped":
             continue
         name = run.name
         run.state, run.started_at, run.progress, run.error = "running", now(), 0.0, None
-        store.update_job(job)
+        save(job)
 
         last = [0.0]
 
@@ -45,7 +57,7 @@ def run_job(store: Store, job: Job, config: dict[str, Any] | None = None) -> Job
             _run.progress = max(0.0, min(1.0, float(p)))
             if time.monotonic() - last[0] > 0.5:  # throttle DB writes
                 last[0] = time.monotonic()
-                store.update_job(job)
+                save(job)
 
         ctx.report = report
         try:
@@ -64,14 +76,14 @@ def run_job(store: Store, job: Job, config: dict[str, Any] | None = None) -> Job
             for later in job.stages[STAGES.index(name) + 1:]:
                 if later.state == "pending":
                     later.state = "skipped"
-            store.update_job(job)
+            save(job)
             log.debug(traceback.format_exc())
             return job
         run.finished_at = now()
-        store.update_job(job)
+        save(job)
 
     job.state, job.finished_at = "succeeded", now()
-    store.update_job(job)
+    save(job)
     return job
 
 

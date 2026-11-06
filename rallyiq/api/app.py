@@ -5,6 +5,12 @@
 Env: ``RALLYIQ_DATA`` (data dir), ``RALLYIQ_DEMO=1`` (stub stages emit synthetic data),
 ``RALLYIQ_WORKER=external`` (don't run the queue worker in-process),
 ``RALLYIQ_CORS_ORIGINS`` (comma separated, default http://localhost:3000,http://localhost:5173).
+
+Online deployment (docs/deploy.md) adds: ``RALLYIQ_DATABASE_URL`` (PostgreSQL), ``RALLYIQ_STORAGE``
+(S3 / R2 bucket), ``RALLYIQ_AUTH=on`` (accounts, see auth.py), ``RALLYIQ_WEB_DIR`` (serve the built
+web UI from the same origin), ``RALLYIQ_MAX_UPLOAD_MB`` (default 4096), ``RALLYIQ_MAX_ACTIVE_JOBS``
+(queued + running jobs per user, default 3), ``RALLYIQ_WORKER_WAKE_URL`` / ``RALLYIQ_WORKER_WAKE_TOKEN``
+(POSTed when a job is queued, to start an on-demand GPU worker).
 """
 
 from __future__ import annotations
@@ -13,15 +19,20 @@ import csv
 import io
 import json
 import os
+import logging
 import shutil
+import threading
+import time
+import urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from ..contracts import (
@@ -44,10 +55,62 @@ from ..contracts import (
 from ..contracts.geometry import COURT_CORNERS_M, homography_from_corners
 from ..pipeline.runner import MANUAL_CALIBRATION, stages_from
 from ..pipeline.worker import Worker
-from ..store import Store
+from ..store import CONTENT_TYPES, Store
+from .auth import AuthConfig, User, build_auth
 from .corrections import CorrectionError, apply_corrections, validate
 
 ALLOWED_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}
+log = logging.getLogger("rallyiq.api")
+
+
+class UploadRequest(BaseModel):
+    filename: str = Field(max_length=255)
+    size_bytes: int = Field(ge=1)
+    content_type: str | None = None
+
+
+class UploadTicket(BaseModel):
+    video_id: str
+    method: Literal["PUT"] = "PUT"
+    url: str
+    headers: dict[str, str]
+    expires_s: int
+
+
+class PublicConfig(BaseModel):
+    auth: bool
+    signup: str
+    direct_upload: bool
+    max_upload_mb: int
+
+
+class WorkerWaker:
+    """Pings an on-demand GPU worker endpoint when a job is queued (at most every ``min_interval_s``)."""
+
+    def __init__(self, url: str | None, token: str | None, min_interval_s: float = 20.0):
+        self.url, self.token, self.min_interval_s = url, token, min_interval_s
+        self._last = -1e9
+        self._lock = threading.Lock()
+
+    def __call__(self) -> None:
+        if not self.url:
+            return
+        with self._lock:
+            if time.monotonic() - self._last < self.min_interval_s:
+                return
+            self._last = time.monotonic()
+        threading.Thread(target=self._post, daemon=True).start()
+
+    def _post(self) -> None:
+        req = urllib.request.Request(self.url, data=b"{}", method="POST",  # noqa: S310 - operator-set URL
+                                     headers={"Content-Type": "application/json"})
+        if self.token:
+            req.add_header("Authorization", f"Bearer {self.token}")
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:  # noqa: S310
+                log.info("worker wake -> %s", r.status)
+        except Exception as e:  # noqa: BLE001
+            log.warning("worker wake failed: %s", e)
 
 
 class JobRequest(BaseModel):
@@ -66,11 +129,18 @@ class ManualCalibration(BaseModel):
     end_frame: int | None = None
 
 
-def create_app(store: Store | None = None, start_worker: bool | None = None) -> FastAPI:
+def create_app(store: Store | None = None, start_worker: bool | None = None,
+               auth: AuthConfig | None = None) -> FastAPI:
     store = store or Store()
     if start_worker is None:
         start_worker = os.environ.get("RALLYIQ_WORKER", "inprocess") != "external"
     worker = Worker(store) if start_worker else None
+    auth = auth or AuthConfig.from_env()
+    auth_router, current_user = build_auth(store, auth)
+    max_upload = int(os.environ.get("RALLYIQ_MAX_UPLOAD_MB", "4096")) << 20
+    max_active = int(os.environ.get("RALLYIQ_MAX_ACTIVE_JOBS", "3"))
+    wake = WorkerWaker(os.environ.get("RALLYIQ_WORKER_WAKE_URL"), os.environ.get("RALLYIQ_WORKER_WAKE_TOKEN"))
+    direct_upload = store.blobs.presign_put("probe", "video/mp4", 60) is not None
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -84,19 +154,34 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
     app.state.store = store
     app.state.worker = worker
     origins = os.environ.get("RALLYIQ_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
-    app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()],
+    origins = [o.strip() for o in origins if o.strip()]
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials="*" not in origins,
                        allow_methods=["*"], allow_headers=["*"])
+    app.include_router(auth_router)
 
-    def video_or_404(video_id: str) -> Video:
+    def owner(user: User | None) -> str | None:
+        return user.user_id if user else None
+
+    def check_owner(video_id: str, user: User | None) -> None:
+        if user is not None and store.video_owner(video_id) != user.user_id:
+            raise HTTPException(404, "video not found")
+
+    def video_or_404(video_id: str, user: User | None) -> Video:
+        if store.video_status(video_id) != "ready":
+            raise HTTPException(404, "video not found")
+        check_owner(video_id, user)
         v = store.get_video(video_id)
         if v is None:
             raise HTTPException(404, "video not found")
         return v
 
-    def enqueue(video_id: str, stages: list[str] | None = None) -> Job:
+    def enqueue(video_id: str, stages: list[str] | None = None, user: User | None = None) -> Job:
+        if user is not None and store.count_active_jobs(user.user_id) >= max_active:
+            raise HTTPException(429, f"同时排队或分析中的任务最多 {max_active} 个，请等前面的完成")
         job = store.create_job(video_id, stages)
         if worker:
             worker.notify()
+        wake()
         return job
 
     def effective_events(video_id: str) -> tuple[EventsResult, list[str]]:
@@ -109,83 +194,162 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
 
     @app.get("/api/health")
     def health() -> dict:
-        return {"ok": True, "stages": STAGES, "worker": bool(worker)}
+        return {"ok": True, "stages": STAGES, "worker": bool(worker), "queue": store.queue_depth(),
+                "db": store.db.dialect, "storage": store.blobs.kind}
+
+    @app.get("/api/config", response_model=PublicConfig)
+    def public_config() -> PublicConfig:
+        return PublicConfig(auth=auth.enabled, signup=auth.signup, direct_upload=direct_upload,
+                            max_upload_mb=max_upload >> 20)
 
     # ---------------------------------------------------------------- videos
 
     @app.post("/api/videos", response_model=Video, status_code=201)
-    def upload_video(file: UploadFile = File(...), analyze: bool = Query(True)) -> Video:
+    def upload_video(request: Request, file: UploadFile = File(...), analyze: bool = Query(True),
+                     user: User | None = Depends(current_user)) -> Video:
+        """Upload through the API (local mode). Online, prefer ``POST /api/uploads`` (direct to bucket)."""
         name = Path(file.filename or "video.mp4").name
         ext = Path(name).suffix.lower()
         if ext not in ALLOWED_EXT:
             raise HTTPException(415, f"unsupported file type {ext!r}")
+        if int(request.headers.get("content-length") or 0) > max_upload + (1 << 20):
+            raise HTTPException(413, f"视频超过 {max_upload >> 20} MB 上限")
         video_id, dest = store.create_video(name, ext)
+        written = 0
         with dest.open("wb") as out:
-            shutil.copyfileobj(file.file, out, length=8 << 20)
-        store.register_video(video_id, name, dest)
+            while chunk := file.file.read(8 << 20):
+                written += len(chunk)
+                if written > max_upload:
+                    out.close()
+                    shutil.rmtree(dest.parent, ignore_errors=True)
+                    raise HTTPException(413, f"视频超过 {max_upload >> 20} MB 上限")
+                out.write(chunk)
+        store.register_video(video_id, name, dest, owner_id=owner(user))
+        if store.blobs.local_path(f"videos/{video_id}/source{ext}") is None:
+            shutil.rmtree(store.video_dir(video_id), ignore_errors=True)  # bytes now live in the bucket
         if analyze:
-            enqueue(video_id)
+            enqueue(video_id, user=user)
         return store.get_video(video_id)
 
+    @app.post("/api/uploads", response_model=UploadTicket, status_code=201)
+    def start_upload(req: UploadRequest, user: User | None = Depends(current_user)) -> UploadTicket:
+        """Direct upload, step 1: get a presigned URL, then ``PUT`` the file to it with ``headers``."""
+        if not direct_upload:
+            raise HTTPException(409, "direct upload needs object storage; use POST /api/videos")
+        name = Path(req.filename).name or "video.mp4"
+        ext = Path(name).suffix.lower()
+        if ext not in ALLOWED_EXT:
+            raise HTTPException(415, f"unsupported file type {ext!r}")
+        if req.size_bytes > max_upload:
+            raise HTTPException(413, f"视频超过 {max_upload >> 20} MB 上限")
+        ctype = CONTENT_TYPES.get(ext, "application/octet-stream")
+        video_id, key = store.reserve_upload(name, ext, owner_id=owner(user))
+        expires = 6 * 3600
+        url = store.blobs.presign_put(key, ctype, expires)
+        assert url is not None
+        return UploadTicket(video_id=video_id, url=url, headers={"Content-Type": ctype}, expires_s=expires)
+
+    @app.post("/api/uploads/{video_id}/complete", response_model=Video)
+    def complete_upload(video_id: str, analyze: bool = Query(True),
+                        user: User | None = Depends(current_user)) -> Video:
+        """Direct upload, step 2: the PUT finished; register the video and queue analysis."""
+        status = store.video_status(video_id)
+        if status is None:
+            raise HTTPException(404, "upload not found")
+        check_owner(video_id, user)
+        if status == "ready":
+            return video_or_404(video_id, user)
+        key = store.source_key(video_id)
+        size = store.blobs.size(key) if key else None
+        if size is None:
+            raise HTTPException(409, "file not uploaded yet")
+        if size > max_upload:
+            store.delete_video(video_id)
+            raise HTTPException(413, f"视频超过 {max_upload >> 20} MB 上限")
+        v = store.complete_upload(video_id)
+        if analyze:
+            enqueue(video_id, user=user)
+        return store.get_video(video_id) or v
+
     @app.get("/api/videos", response_model=list[Video])
-    def list_videos() -> list[Video]:
-        return store.list_videos()
+    def list_videos(user: User | None = Depends(current_user)) -> list[Video]:
+        return store.list_videos(owner_id=owner(user))
 
     @app.get("/api/videos/{video_id}", response_model=Video)
-    def get_video(video_id: str) -> Video:
-        return video_or_404(video_id)
+    def get_video(video_id: str, user: User | None = Depends(current_user)) -> Video:
+        return video_or_404(video_id, user)
+
+    @app.delete("/api/videos/{video_id}", status_code=204)
+    def delete_video(video_id: str, user: User | None = Depends(current_user)) -> Response:
+        """Delete the video, its analysis, corrections and stored files."""
+        video_or_404(video_id, user)
+        store.delete_video(video_id)
+        return Response(status_code=204)
 
     @app.get("/api/videos/{video_id}/file")
-    def video_file(video_id: str):
-        video_or_404(video_id)
-        path = store.video_path(video_id)
-        if path is None or not path.exists():
+    def video_file(video_id: str, user: User | None = Depends(current_user)):
+        v = video_or_404(video_id, user)
+        key = store.source_key(video_id)
+        local = store.blobs.local_path(key) if key else store.video_path(video_id)
+        if local is None:  # object storage: let the browser stream (with Range) straight from the bucket
+            url = store.video_download_url(video_id, v.filename)
+            if url is None:
+                raise HTTPException(404, "video file missing")
+            return RedirectResponse(url, status_code=307)
+        if not local.exists():
             raise HTTPException(404, "video file missing")
-        media = "video/mp4" if path.suffix in {".mp4", ".m4v"} else "video/quicktime" if path.suffix == ".mov" else None
-        return FileResponse(path, media_type=media)
+        return FileResponse(local, media_type=CONTENT_TYPES.get(local.suffix.lower()))
 
     # ------------------------------------------------------------------ jobs
 
     @app.post("/api/videos/{video_id}/jobs", response_model=Job, status_code=201)
-    def create_job(video_id: str, req: JobRequest | None = None) -> Job:
-        video_or_404(video_id)
+    def create_job(video_id: str, req: JobRequest | None = None, user: User | None = Depends(current_user)) -> Job:
+        video_or_404(video_id, user)
         first = req.from_stage if req else "probe"
         if first != "probe" and store.get_video_meta(video_id) is None:
             first = "probe"
-        return enqueue(video_id, stages_from(first))
+        return enqueue(video_id, stages_from(first), user)
 
     @app.get("/api/videos/{video_id}/jobs", response_model=list[Job])
-    def list_jobs(video_id: str) -> list[Job]:
-        video_or_404(video_id)
+    def list_jobs(video_id: str, user: User | None = Depends(current_user)) -> list[Job]:
+        video_or_404(video_id, user)
         return store.list_jobs(video_id)
 
     @app.get("/api/jobs/{job_id}", response_model=Job)
-    def get_job(job_id: str) -> Job:
+    def get_job(job_id: str, user: User | None = Depends(current_user)) -> Job:
         job = store.get_job(job_id)
         if job is None:
+            raise HTTPException(404, "job not found")
+        if user is not None and store.video_owner(job.video_id) != user.user_id:
             raise HTTPException(404, "job not found")
         return job
 
     # ------------------------------------------------------------- artifacts
 
-    def artifact_response(video_id: str, name: str) -> Response:
-        video_or_404(video_id)
-        p = store.artifact_path(video_id, name)
-        if not p.exists():
+    def artifact_response(video_id: str, name: str, user: User | None) -> Response:
+        video_or_404(video_id, user)
+        local = store.blobs.local_path(store.artifact_key(video_id, name))
+        if local is not None:
+            if not local.exists():
+                raise HTTPException(404, f"{name} not available yet")
+            return FileResponse(local, media_type="application/json")
+        data = store.artifact_bytes(video_id, name)
+        if data is None:
             raise HTTPException(404, f"{name} not available yet")
-        return FileResponse(p, media_type="application/json")
+        return Response(content=data, media_type="application/json")
 
     @app.get("/api/videos/{video_id}/artifacts/{stage}")
-    def get_artifact(video_id: str, stage: str):
+    def get_artifact(video_id: str, stage: str, user: User | None = Depends(current_user)):
         if stage not in STAGES or stage == "probe":
             raise HTTPException(404, "unknown artifact")
-        return artifact_response(video_id, stage)
+        return artifact_response(video_id, stage, user)
 
     @app.get("/api/videos/{video_id}/overlay", response_model=OverlayData)
-    def get_overlay(video_id: str, start_ms: int | None = None, end_ms: int | None = None):
+    def get_overlay(video_id: str, start_ms: int | None = None, end_ms: int | None = None,
+                    user: User | None = Depends(current_user)):
         if start_ms is None and end_ms is None:
-            return artifact_response(video_id, "overlay")
-        video_or_404(video_id)
+            return artifact_response(video_id, "overlay", user)
+        video_or_404(video_id, user)
         ov = store.load_artifact(video_id, "overlay", OverlayData)
         if ov is None:
             raise HTTPException(404, "overlay not available yet")
@@ -196,22 +360,22 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
     # ---------------------------------------------------------------- events
 
     @app.get("/api/videos/{video_id}/events", response_model=EffectiveEvents)
-    def get_events(video_id: str, raw: bool = False):
-        video_or_404(video_id)
+    def get_events(video_id: str, raw: bool = False, user: User | None = Depends(current_user)):
+        video_or_404(video_id, user)
         if raw:
-            return artifact_response(video_id, "events")
+            return artifact_response(video_id, "events", user)
         ev, skipped = effective_events(video_id)
         return EffectiveEvents(**ev.model_dump(), corrections_applied=len(store.list_corrections(video_id)),
                                corrections_skipped=skipped)
 
     @app.get("/api/videos/{video_id}/corrections", response_model=list[Correction])
-    def list_corrections(video_id: str) -> list[Correction]:
-        video_or_404(video_id)
+    def list_corrections(video_id: str, user: User | None = Depends(current_user)) -> list[Correction]:
+        video_or_404(video_id, user)
         return store.list_corrections(video_id)
 
     @app.post("/api/videos/{video_id}/corrections", response_model=Correction, status_code=201)
-    def add_correction(video_id: str, c: CorrectionIn) -> Correction:
-        video_or_404(video_id)
+    def add_correction(video_id: str, c: CorrectionIn, user: User | None = Depends(current_user)) -> Correction:
+        video_or_404(video_id, user)
         try:
             validate(c.op, c.payload)
         except CorrectionError as e:
@@ -221,8 +385,8 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
     # ----------------------------------------------------------- calibration
 
     @app.put("/api/videos/{video_id}/calibration/manual", response_model=Job)
-    def manual_calibration(video_id: str, req: ManualCalibration) -> Job:
-        video_or_404(video_id)
+    def manual_calibration(video_id: str, req: ManualCalibration, user: User | None = Depends(current_user)) -> Job:
+        video_or_404(video_id, user)
         meta = store.get_video_meta(video_id)
         try:
             h = homography_from_corners(req.corners)
@@ -238,20 +402,21 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
         )
         cal = CourtCalibration(video_id=video_id, segments=[seg])
         store.save_artifact(video_id, MANUAL_CALIBRATION, cal)
-        return enqueue(video_id, stages_from("calibration" if meta else "probe"))
+        return enqueue(video_id, stages_from("calibration" if meta else "probe"), user)
 
     @app.delete("/api/videos/{video_id}/calibration/manual", response_model=Job)
-    def clear_manual_calibration(video_id: str) -> Job:
-        video_or_404(video_id)
+    def clear_manual_calibration(video_id: str, user: User | None = Depends(current_user)) -> Job:
+        video_or_404(video_id, user)
         store.delete_artifact(video_id, MANUAL_CALIBRATION)
-        return enqueue(video_id, stages_from("calibration"))
+        return enqueue(video_id, stages_from("calibration"), user)
 
     # --------------------------------------------------------------- heatmap
 
     @app.get("/api/videos/{video_id}/heatmap", response_model=HeatmapData)
     def heatmap(video_id: str, player_id: Literal["P1", "P2"] | None = None, cell_m: float = Query(0.5, gt=0.05),
-                start_ms: int | None = None, end_ms: int | None = None) -> HeatmapData:
-        video_or_404(video_id)
+                start_ms: int | None = None, end_ms: int | None = None,
+                user: User | None = Depends(current_user)) -> HeatmapData:
+        video_or_404(video_id, user)
         players = store.load_artifact(video_id, "players", PlayerTracks)
         if players is None:
             raise HTTPException(404, "players not available yet")
@@ -274,8 +439,8 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
     # ---------------------------------------------------------------- export
 
     @app.get("/api/videos/{video_id}/export")
-    def export(video_id: str, format: Literal["json", "csv"] = "json"):
-        v = video_or_404(video_id)
+    def export(video_id: str, format: Literal["json", "csv"] = "json", user: User | None = Depends(current_user)):
+        v = video_or_404(video_id, user)
         ev, skipped = effective_events(video_id)
         if format == "json":
             raw = store.load_artifact(video_id, "events", EventsResult)
@@ -301,6 +466,13 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
                         *(s.shuttle_px or ["", ""]), *(s.hitter_court or ["", ""])])
         return PlainTextResponse(buf.getvalue(), media_type="text/csv",
                                  headers={"Content-Disposition": f'attachment; filename="{video_id}_shots.csv"'})
+
+    # ------------------------------------------------------------- web UI
+
+    web_dir = os.environ.get("RALLYIQ_WEB_DIR")
+    if web_dir and Path(web_dir, "index.html").exists():
+        # Same-origin hosting of the built web UI (hash routing, so no SPA fallback needed).
+        app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
     return app
 
