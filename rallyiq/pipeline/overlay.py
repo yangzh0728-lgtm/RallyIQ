@@ -26,7 +26,8 @@ def run(ctx: StageContext) -> OverlayData:
             if seg.homography is None:
                 continue
             court.append(CourtLines(start_frame=seg.start_frame, end_frame=seg.end_frame,
-                                    lines=project_court_lines(seg.homography), status=seg.status))
+                                    lines=project_court_lines(seg.homography), status=seg.status,
+                                    image_corners=seg.image_corners, other_courts=seg.other_courts))
 
     frames: dict[int, OverlayFrame] = {}
 

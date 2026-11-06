@@ -148,7 +148,9 @@
           ]
         ]
       ],
-      "status": "ok"
+      "status": "ok",
+      "image_corners": null,
+      "other_courts": []
     }
   ],
   "keypoint_format": "coco17",

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { PlaybackClock } from "../lib/clock";
-import { CALIB_ORDER_HINT, drawOverlay, type Layers } from "../lib/overlay";
+import { CALIB_ORDER_HINT, courtAt, courtsAfterSwitch, drawOverlay, frameIndexAt, otherCourtAt, type Layers } from "../lib/overlay";
 import { colorOf } from "../lib/players";
 import type { OverlayData, Point } from "../lib/types";
 
@@ -11,9 +11,12 @@ interface Props {
   layers: Layers;
   calibrating: boolean;
   onCalibrated: (corners: Point[]) => void;
+  /** Click one of the other courts in view to analyse it instead. */
+  choosingCourt?: boolean;
+  onCourtChosen?: (corners: Point[], othersAfter: Point[][]) => void;
 }
 
-export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCalibrated }: Props) {
+export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCalibrated, choosingCourt = false, onCourtChosen }: Props) {
   const { width: vw, height: vh } = overlay.video;
   const outer = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -50,18 +53,27 @@ export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCa
     c.width = Math.round(size.w * dpr);
     c.height = Math.round(size.h * dpr);
     const ctx = c.getContext("2d")!;
-    const draw = () => drawOverlay(ctx, overlay, clock.ms, layers, colorOf, calibrating ? calib : null);
+    const draw = () => drawOverlay(ctx, overlay, clock.ms, layers, colorOf, calibrating ? calib : null, choosingCourt);
     draw();
     return clock.subscribe(draw);
-  }, [overlay, clock, layers, size, calibrating, calib]);
+  }, [overlay, clock, layers, size, calibrating, calib, choosingCourt]);
 
   const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const p: Point = [((e.clientX - r.left) / r.width) * vw, ((e.clientY - r.top) / r.height) * vh];
+    if (choosingCourt && !calibrating) {
+      const f = overlay.frames[frameIndexAt(overlay.frames, clock.ms)];
+      const cal = f ? courtAt(overlay.court, f.frame) : overlay.court[0];
+      const chosen = otherCourtAt(cal, p);
+      if (cal && chosen && onCourtChosen) {
+        onCourtChosen(chosen.map(([x, y]) => [Math.round(x), Math.round(y)] as Point), courtsAfterSwitch(cal, chosen));
+      }
+      return;
+    }
     if (!calibrating) {
       clock.toggle();
       return;
     }
-    const r = e.currentTarget.getBoundingClientRect();
-    const p: Point = [((e.clientX - r.left) / r.width) * vw, ((e.clientY - r.top) / r.height) * vh];
     const next = [...calib, p];
     setCalib(next);
     if (next.length === 4) onCalibrated(next.map(([x, y]) => [Math.round(x), Math.round(y)]));
@@ -83,12 +95,13 @@ export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCa
         )}
         <canvas ref={canvas} onClick={onCanvasClick} />
       </div>
+      {choosingCourt && !calibrating && <div className="stage-hint">点击虚线框中要分析的那块场地</div>}
       {calibrating && (
         <div className="stage-hint">
           {CALIB_ORDER_HINT}（{calib.length}/4）
         </div>
       )}
-      {!videoUrl && !calibrating && <div className="stage-hint muted">合成数据：无原视频，仅显示 AI 叠加层</div>}
+      {!videoUrl && !calibrating && !choosingCourt && <div className="stage-hint muted">合成数据：无原视频，仅显示 AI 叠加层</div>}
       {videoError && <div className="stage-hint error">{videoError}</div>}
     </div>
   );

@@ -18,7 +18,8 @@ export interface Api {
   listCorrections(videoId: string): Promise<Correction[]>;
   postCorrection(videoId: string, c: CorrectionIn): Promise<Correction>;
   /** Corners in px, order near-left, near-right, far-right, far-left. Re-runs analysis from calibration. */
-  setManualCalibration(videoId: string, corners: Point[]): Promise<Job>;
+  /** ``otherCourts``: courts in view to keep ignoring (e.g. the one analysed before switching). */
+  setManualCalibration(videoId: string, corners: Point[], otherCourts?: Point[][]): Promise<Job>;
   /** URL for the <video> element; null when there is no file (synthetic demo). */
   videoFileUrl(videoId: string): string | null;
   /** Server export URL, or null if the client builds the export itself (mock). */
@@ -85,8 +86,11 @@ export const liveApi: Api = {
   getRawEvents: (id) => http<EventsResult>(`/videos/${enc(id)}/events?raw=true`),
   listCorrections: (id) => http<Correction[]>(`/videos/${enc(id)}/corrections`),
   postCorrection: (id, c) => http<Correction>(`/videos/${enc(id)}/corrections`, { method: "POST", body: JSON.stringify(c) }),
-  setManualCalibration: (id, corners) =>
-    http<Job>(`/videos/${enc(id)}/calibration/manual`, { method: "PUT", body: JSON.stringify({ corners }) }),
+  setManualCalibration: (id, corners, otherCourts = []) =>
+    http<Job>(`/videos/${enc(id)}/calibration/manual`, {
+      method: "PUT",
+      body: JSON.stringify({ corners, other_courts: otherCourts }),
+    }),
   videoFileUrl: (id) => `${BASE}/videos/${enc(id)}/file`,
   exportUrl: (id, format) => `${BASE}/videos/${enc(id)}/export?format=${format}`,
   getReport: (id) => http<MatchReport>(`/videos/${enc(id)}/report`),
@@ -238,12 +242,18 @@ export function createMockApi(): Api {
       saveCorrections(corrections);
       return delay(c);
     },
-    async setManualCalibration(id, corners) {
+    async setManualCalibration(id, corners, otherCourts = []) {
       const mv = must(id);
       const H = homographyFrom4(CORNERS_M, corners);
       if (!H) throw new Error("422 四个角点无效（共线或重复）");
       const a = analysis(id);
-      a.overlay = { ...a.overlay, court: [{ start_frame: 0, end_frame: a.overlay.video.frame_count - 1, lines: projectCourtLines(H), status: "ok" }] };
+      a.overlay = {
+        ...a.overlay,
+        court: [{
+          start_frame: 0, end_frame: a.overlay.video.frame_count - 1, lines: projectCourtLines(H), status: "ok",
+          image_corners: corners, other_courts: otherCourts,
+        }],
+      };
       const n = Number(mv.job.id.split("_").pop()) + 1;
       mv.job = { id: `job_${id}_${n}`, startedAt: Date.now(), from: 1 };
       return delay(jobOf(mv));
