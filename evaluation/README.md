@@ -36,7 +36,9 @@ pip install -r evaluation/requirements.txt
 python -m evaluation.tools.extract_clips
 #    → ~/rallyiq-data/bwf/clips/<clip_id>.mp4 + .meta.json（起点毫秒、fps、分辨率）
 
-# 2. 跑各模块，输出 predictions/<clip_id>.json（格式见 schema.py）
+# 2. 用流水线处理片段，再把产物转换成评测格式（自动加上片段在原视频中的起点）
+python -m evaluation.from_contracts data/videos/<video_id>/artifacts \
+    --clip-meta ~/rallyiq-data/bwf/clips/ae26_ms_f.meta.json --out preds/
 
 # 3. 标注：用预测打底，人工修正最快
 python -m evaluation.tools.label_tool ae26_ms_f --prefill preds/ae26_ms_f.json

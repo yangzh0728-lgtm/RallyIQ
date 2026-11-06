@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "Source": {
+      "enum": [
+        "model",
+        "human"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "rally_id": {
+      "title": "Rally Id",
+      "type": "string"
+    },
+    "start_frame": {
+      "minimum": 0,
+      "title": "Start Frame",
+      "type": "integer"
+    },
+    "end_frame": {
+      "minimum": 0,
+      "title": "End Frame",
+      "type": "integer"
+    },
+    "start_ms": {
+      "minimum": 0,
+      "title": "Start Ms",
+      "type": "integer"
+    },
+    "end_ms": {
+      "minimum": 0,
+      "title": "End Ms",
+      "type": "integer"
+    },
+    "shot_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Shot Ids",
+      "type": "array"
+    },
+    "end_reason": {
+      "default": "unknown",
+      "enum": [
+        "shuttle_lost",
+        "shuttle_static",
+        "video_end",
+        "manual",
+        "unknown"
+      ],
+      "title": "End Reason",
+      "type": "string"
+    },
+    "winner": {
+      "anyOf": [
+        {
+          "enum": [
+            "P1",
+            "P2"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Winner"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "status": {
+      "$ref": "#/$defs/Status",
+      "default": "needs_review"
+    },
+    "source": {
+      "$ref": "#/$defs/Source",
+      "default": "model"
+    }
+  },
+  "required": [
+    "rally_id",
+    "start_frame",
+    "end_frame",
+    "start_ms",
+    "end_ms",
+    "confidence"
+  ],
+  "title": "Rally",
+  "type": "object"
+}

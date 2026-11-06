@@ -1,0 +1,303 @@
+{
+  "$defs": {
+    "Job": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "video_id": {
+          "title": "Video Id",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "failed",
+            "cancelled"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "stages": {
+          "items": {
+            "$ref": "#/$defs/StageRun"
+          },
+          "title": "Stages",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "job_id",
+        "video_id",
+        "state",
+        "stages",
+        "created_at"
+      ],
+      "title": "Job",
+      "type": "object"
+    },
+    "StageRun": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "probe",
+            "calibration",
+            "players",
+            "shuttle",
+            "events",
+            "overlay"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "state": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "running",
+            "succeeded",
+            "failed",
+            "skipped"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "progress": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Progress",
+          "type": "number"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "StageRun",
+      "type": "object"
+    },
+    "VideoMeta": {
+      "additionalProperties": false,
+      "description": "Probe result for an uploaded video (stage ``probe``).",
+      "properties": {
+        "video_id": {
+          "title": "Video Id",
+          "type": "string"
+        },
+        "filename": {
+          "title": "Filename",
+          "type": "string"
+        },
+        "fps": {
+          "exclusiveMinimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "frame_count": {
+          "minimum": 0,
+          "title": "Frame Count",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "duration_ms": {
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "codec": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Codec"
+        },
+        "rotation": {
+          "default": 0,
+          "title": "Rotation",
+          "type": "integer"
+        },
+        "variable_frame_rate": {
+          "default": false,
+          "title": "Variable Frame Rate",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "video_id",
+        "filename",
+        "fps",
+        "frame_count",
+        "width",
+        "height",
+        "duration_ms"
+      ],
+      "title": "VideoMeta",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "filename": {
+      "title": "Filename",
+      "type": "string"
+    },
+    "size_bytes": {
+      "title": "Size Bytes",
+      "type": "integer"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "meta": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VideoMeta"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "latest_job": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Job"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "artifacts": {
+      "items": {
+        "enum": [
+          "probe",
+          "calibration",
+          "players",
+          "shuttle",
+          "events",
+          "overlay"
+        ],
+        "type": "string"
+      },
+      "title": "Artifacts",
+      "type": "array"
+    }
+  },
+  "required": [
+    "video_id",
+    "filename",
+    "size_bytes",
+    "created_at"
+  ],
+  "title": "Video",
+  "type": "object"
+}

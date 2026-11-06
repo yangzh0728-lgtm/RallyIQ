@@ -1,0 +1,72 @@
+{
+  "additionalProperties": false,
+  "description": "Probe result for an uploaded video (stage ``probe``).",
+  "properties": {
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "filename": {
+      "title": "Filename",
+      "type": "string"
+    },
+    "fps": {
+      "exclusiveMinimum": 0,
+      "title": "Fps",
+      "type": "number"
+    },
+    "frame_count": {
+      "minimum": 0,
+      "title": "Frame Count",
+      "type": "integer"
+    },
+    "width": {
+      "exclusiveMinimum": 0,
+      "title": "Width",
+      "type": "integer"
+    },
+    "height": {
+      "exclusiveMinimum": 0,
+      "title": "Height",
+      "type": "integer"
+    },
+    "duration_ms": {
+      "minimum": 0,
+      "title": "Duration Ms",
+      "type": "integer"
+    },
+    "codec": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Codec"
+    },
+    "rotation": {
+      "default": 0,
+      "title": "Rotation",
+      "type": "integer"
+    },
+    "variable_frame_rate": {
+      "default": false,
+      "title": "Variable Frame Rate",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "video_id",
+    "filename",
+    "fps",
+    "frame_count",
+    "width",
+    "height",
+    "duration_ms"
+  ],
+  "title": "VideoMeta",
+  "type": "object"
+}

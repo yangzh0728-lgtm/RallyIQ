@@ -1,0 +1,72 @@
+{
+  "additionalProperties": false,
+  "description": "Append-only human edit. Effective events = raw events + corrections in order.",
+  "properties": {
+    "op": {
+      "enum": [
+        "add_shot",
+        "delete_shot",
+        "set_hitter",
+        "move_shot",
+        "add_rally",
+        "delete_rally",
+        "set_rally_bounds",
+        "set_rally_winner",
+        "swap_player_ids",
+        "confirm_shot",
+        "confirm_rally"
+      ],
+      "title": "Op",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    },
+    "hard_example": {
+      "default": true,
+      "description": "collect this edit as a hard example for evaluation",
+      "title": "Hard Example",
+      "type": "boolean"
+    },
+    "correction_id": {
+      "title": "Correction Id",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "seq": {
+      "title": "Seq",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "op",
+    "correction_id",
+    "video_id",
+    "created_at",
+    "seq"
+  ],
+  "title": "Correction",
+  "type": "object"
+}

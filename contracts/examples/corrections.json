@@ -1,0 +1,44 @@
+[
+  {
+    "op": "set_hitter",
+    "payload": {
+      "shot_id": "s0002",
+      "hitter": "P1"
+    },
+    "note": null,
+    "hard_example": true,
+    "correction_id": "cor_1",
+    "video_id": "vid_example",
+    "created_at": "2026-11-06T08:00:00Z",
+    "seq": 1
+  },
+  {
+    "op": "delete_shot",
+    "payload": {
+      "shot_id": "s0003"
+    },
+    "note": null,
+    "hard_example": true,
+    "correction_id": "cor_2",
+    "video_id": "vid_example",
+    "created_at": "2026-11-06T08:00:00Z",
+    "seq": 2
+  },
+  {
+    "op": "add_shot",
+    "payload": {
+      "frame": 100,
+      "hitter": "P2",
+      "shuttle_px": [
+        900,
+        400
+      ]
+    },
+    "note": null,
+    "hard_example": true,
+    "correction_id": "cor_3",
+    "video_id": "vid_example",
+    "created_at": "2026-11-06T08:00:00Z",
+    "seq": 3
+  }
+]

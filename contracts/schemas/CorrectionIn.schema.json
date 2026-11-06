@@ -1,0 +1,50 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "op": {
+      "enum": [
+        "add_shot",
+        "delete_shot",
+        "set_hitter",
+        "move_shot",
+        "add_rally",
+        "delete_rally",
+        "set_rally_bounds",
+        "set_rally_winner",
+        "swap_player_ids",
+        "confirm_shot",
+        "confirm_rally"
+      ],
+      "title": "Op",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    },
+    "hard_example": {
+      "default": true,
+      "description": "collect this edit as a hard example for evaluation",
+      "title": "Hard Example",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "op"
+  ],
+  "title": "CorrectionIn",
+  "type": "object"
+}

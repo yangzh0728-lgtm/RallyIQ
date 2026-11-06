@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rallyiq"
+version = "0.1.0"
+description = "Personal badminton video analysis (MVP backend, pipeline and shared data contracts)"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.6",
+  "numpy>=1.26",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+# Perception modules add their own heavy deps (torch, opencv, ...) here.
+vision = ["opencv-python>=4.9"]
+dev = ["pytest>=8", "httpx>=0.27", "pyyaml>=6"]  # pyyaml: evaluation/clips.yaml
+
+[tool.setuptools.packages.find]
+include = ["rallyiq*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "evaluation/tests"]
