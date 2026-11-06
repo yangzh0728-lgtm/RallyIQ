@@ -1,0 +1,86 @@
+{
+  "schema_version": "0.1.0",
+  "video_id": "vid_example",
+  "detector": "demo@0",
+  "points": [
+    {
+      "frame": 30,
+      "t_ms": 1000,
+      "x": 1269.982,
+      "y": 407.967,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    },
+    {
+      "frame": 31,
+      "t_ms": 1033,
+      "x": 1260.798,
+      "y": 353.935,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    },
+    {
+      "frame": 32,
+      "t_ms": 1067,
+      "x": 1251.614,
+      "y": 303.264,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    },
+    {
+      "frame": 33,
+      "t_ms": 1100,
+      "x": 1242.43,
+      "y": 255.952,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    },
+    {
+      "frame": 34,
+      "t_ms": 1133,
+      "x": 1233.246,
+      "y": 212.001,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    },
+    {
+      "frame": 35,
+      "t_ms": 1167,
+      "x": 1224.062,
+      "y": 171.41,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    },
+    {
+      "frame": 36,
+      "t_ms": 1200,
+      "x": 1214.878,
+      "y": 134.178,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    },
+    {
+      "frame": 37,
+      "t_ms": 1233,
+      "x": 1205.694,
+      "y": 100.307,
+      "confidence": 0.85,
+      "source": "detected",
+      "court_xy": null
+    }
+  ],
+  "gaps": [
+    {
+      "start_frame": 60,
+      "end_frame": 65,
+      "reason": "occluded"
+    }
+  ]
+}

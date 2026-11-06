@@ -2,7 +2,7 @@
 
 **个人 AI 羽毛球训练与比赛分析系统：学习正确打法，读懂比赛，预测对手战术。**
 
-> 状态：规划阶段，尚无可运行代码。本 README 是研发蓝图的摘要。
+> 状态：MVP 开发中。后端骨架、任务队列和共享数据契约已就绪，感知模块正在接入。本 README 是研发蓝图的摘要。
 
 ## 项目定位
 
@@ -94,6 +94,30 @@ planner/      战术概率、训练推荐、报告与证据关联
 review/       人工复核、修正与标注回流
 evaluation/   模型基准、可复现实验、回归测试
 ```
+
+## 代码结构与本地运行（MVP）
+
+```
+rallyiq/contracts/              共享数据契约（pydantic）与球场几何；见 contracts/README.md
+rallyiq/perception/calibration/ 球场标定阶段
+rallyiq/perception/players/     球员姿态与跟踪阶段
+rallyiq/perception/shuttle/     羽毛球轨迹阶段
+rallyiq/events/                 回合与击球候选阶段
+rallyiq/pipeline/               阶段注册、任务执行、队列 worker、视频探测、叠加层合成
+rallyiq/api/                    FastAPI 后端（上传、任务、结果、修正、导出）
+rallyiq/store.py                SQLite + 本地文件存储
+contracts/schemas, examples     由契约自动生成的 JSON Schema 和示例
+web/                            网页回放与修正界面
+```
+
+```bash
+pip install -e '.[dev]'                       # 需要 ffmpeg/ffprobe
+RALLYIQ_DEMO=1 uvicorn rallyiq.api.app:app --port 8000   # 未接入模型的阶段输出合成数据
+python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水线
+pytest
+```
+
+主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正；`PUT /videos/{id}/calibration/manual` 点选四角；`GET /videos/{id}/heatmap`；`GET /videos/{id}/export?format=json|csv`。完整文档见运行后的 `/docs`。
 
 ## 界面设计
 

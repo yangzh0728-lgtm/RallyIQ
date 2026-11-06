@@ -1,0 +1,189 @@
+{
+  "$defs": {
+    "Source": {
+      "enum": [
+        "model",
+        "human"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A hit (\u51fb\u7403) candidate. MVP: no shot type / landing zone yet (kept nullable).",
+  "properties": {
+    "shot_id": {
+      "title": "Shot Id",
+      "type": "string"
+    },
+    "rally_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rally Id"
+    },
+    "frame": {
+      "minimum": 0,
+      "title": "Frame",
+      "type": "integer"
+    },
+    "t_ms": {
+      "minimum": 0,
+      "title": "T Ms",
+      "type": "integer"
+    },
+    "hitter": {
+      "anyOf": [
+        {
+          "enum": [
+            "P1",
+            "P2"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Hitter"
+    },
+    "hitter_confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Hitter Confidence"
+    },
+    "shuttle_px": {
+      "anyOf": [
+        {
+          "description": "[x, y]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Shuttle Px"
+    },
+    "shuttle_court": {
+      "anyOf": [
+        {
+          "description": "[x, y]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Shuttle Court"
+    },
+    "hitter_court": {
+      "anyOf": [
+        {
+          "description": "[x, y]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Hitter Court"
+    },
+    "shot_type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Shot Type"
+    },
+    "target_zone": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Zone"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "status": {
+      "$ref": "#/$defs/Status",
+      "default": "needs_review"
+    },
+    "source": {
+      "$ref": "#/$defs/Source",
+      "default": "model"
+    },
+    "reasons": {
+      "description": "why this was proposed",
+      "items": {
+        "type": "string"
+      },
+      "title": "Reasons",
+      "type": "array"
+    }
+  },
+  "required": [
+    "shot_id",
+    "frame",
+    "t_ms",
+    "confidence"
+  ],
+  "title": "ShotEvent",
+  "type": "object"
+}
