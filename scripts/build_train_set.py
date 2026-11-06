@@ -37,6 +37,47 @@ from evaluation.public import shuttleset as SS  # noqa: E402
 from evaluation.tools.extract_clips import cut, probe  # noqa: E402
 
 OUT = Path.home() / "rallyiq-data" / "public" / "shuttleset_train"
+STAGE_ZH = {"probe": "读取视频", "calibration": "球场标定", "players": "球员姿态", "shuttle": "羽毛球检测",
+            "events": "回合/击球", "overlay": "叠加层"}
+
+
+class StagePrinter:
+    """Prints one line per stage every 10% of progress, with seconds since the stage was first seen.
+    Stages can overlap (prefetch), so the state is kept per stage."""
+
+    def __init__(self) -> None:
+        self.t0: dict[str, float] = {}
+        self.next: dict[str, float] = {}
+
+    def __call__(self, stage: str, p: float) -> None:
+        now = time.monotonic()
+        if stage not in self.t0:
+            self.t0[stage], self.next[stage] = now, 0.1
+        if self.next[stage] > 1.0:
+            return  # already reported as done
+        if p >= self.next[stage]:
+            done = "完成" if p >= 1.0 else f"{p:4.0%}"
+            print(f"    [{STAGE_ZH.get(stage, stage)}] {done}  {now - self.t0[stage]:5.0f}s", flush=True)
+            self.next[stage] = 1.1 if p >= 1.0 else min((int(p * 10) + 1) / 10, 1.0)
+
+
+def _pct(v: Any) -> str:
+    return "–" if v is None else f"{v:.0%}"
+
+
+def clip_summary(r: dict[str, Any], label: dict[str, Any], pred_path: Path) -> str:
+    """Per-clip result: what each module produced, and hit F1 against the ShuttleSet label."""
+    from evaluation import metrics as M
+
+    f1 = "–"
+    if pred_path.exists():
+        st = M.eval_hits(label, schema.load(pred_path)).summary()
+        if st["f1"] is not None:
+            f1 = f"{st['f1']:.2f}（不分方 {st['f1_ignore_side']:.2f}）"
+    stages = "  ".join(f"{STAGE_ZH.get(n, n)} {s['s']}s" for n, s in r["stages"].items() if s.get("s") is not None)
+    return (f"    结果：标定 {_pct(r.get('court_calibrated_frac'))}  两名球员 {_pct(r.get('players_both_frac'))}  "
+            f"球检出 {_pct(r.get('shuttle_detected_frac'))}  回合 {r.get('rallies', '–')}  "
+            f"击球 预测 {r.get('hits', '–')} / 标注 {len(label['hits'])}  击球F1 {f1}\n    耗时：{stages}")
 
 
 def plan(set_dir: Path, window: float) -> list[dict[str, Any]]:
@@ -69,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--limit", type=int, default=0, help="only the first n clips")
     ap.add_argument("--only", nargs="*", help="clip ids")
     ap.add_argument("--no-run", action="store_true", help="download + label only")
+    ap.add_argument("--quiet", action="store_true", help="no per-stage progress lines")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(message)s")
 
@@ -87,6 +129,8 @@ def main(argv: list[str] | None = None) -> int:
         items = items[: a.limit]
     print(f"{len(items)} clips from {len({i['match']['id'] for i in items})} training matches", flush=True)
     t_all = time.monotonic()
+    run_times: list[float] = []
+    todo = sum(1 for i in items if index.get(i["id"], {}).get("state") != "succeeded")
     for k, it in enumerate(items, 1):
         cid, m, win = it["id"], it["match"], it["window"]
         if index.get(cid, {}).get("state") == "succeeded":
@@ -117,10 +161,19 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"=== [{k}/{len(items)}] {cid} {m['video']} [{win[0]:.0f}s, {win[1]:.0f}s] "
                   f"{len(doc['hits'])} hits  (elapsed {time.monotonic() - t_all:.0f}s)", flush=True)
-            r = real_run.run_clip(store, clip, {"players_stride": a.stride}, preds)
+            r = real_run.run_clip(store, clip, {"players_stride": a.stride}, preds,
+                                  None if a.quiet else StagePrinter())
             index[cid] = {**entry, "state": r["state"], "error": r["error"], "artifacts": r["artifacts"],
                           "wall_s": r["wall_s"], "stages": {n: s["s"] for n, s in r["stages"].items()}}
-            print(json.dumps({"clip": cid, "state": r["state"], "wall_s": r["wall_s"]}), flush=True)
+            run_times.append(r["wall_s"])
+            todo -= 1
+            avg = sum(run_times) / len(run_times)
+            done = sum(1 for v in index.values() if v.get("state") == "succeeded") + (r["state"] == "succeeded")
+            print(f"    {cid}: {r['state']}{'（' + str(r['error']) + '）' if r['error'] else ''}  用时 {r['wall_s']:.0f}s", flush=True)
+            if r["state"] == "succeeded":
+                print(clip_summary(r, doc, preds / f"{cid}.json"), flush=True)
+            print(f"    进度：已完成 {done} 段，本轮剩余 {todo} 段，平均 {avg / 60:.1f} 分钟/段，"
+                  f"预计还需 {todo * avg / 3600:.1f} 小时", flush=True)
         idx_p.write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
     ok = sum(1 for v in index.values() if v.get("state") == "succeeded")
     print(f"\ndone: {ok} clips succeeded, index {idx_p}", flush=True)
