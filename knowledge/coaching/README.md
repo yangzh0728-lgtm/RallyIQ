@@ -34,6 +34,7 @@
 | `corrections` | 纠错实例：`problem` 问题、`cue` 他给的提示、`result` 效果 |
 | `progression` | 进阶练习顺序 |
 | `self_check` | 自查清单 |
+| `detailed_description` | 详细描述，按视频顺序讲清楚这一期教了什么、怎么做、为什么，至少 400 字 |
 | `related_metrics` | 与这期内容相关、可用来复测的 RallyIQ 指标 key（`{pid}` 为球员前缀） |
 | `content_caveats` | 字幕局限、个人习惯不宜照搬等提醒 |
 

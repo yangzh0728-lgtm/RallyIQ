@@ -29,7 +29,8 @@ def render_note(n: dict, tax: dict) -> str:
            f"- 球员：{n['coach']}　平台：{n['platform']}　发布：{n.get('published', '')}　时长：{n.get('duration_s', '?')} 秒",
            f"- 原视频：{n['url']}",
            f"- 难度：{n['level']}　字幕来源：{n['transcript_source']}",
-           f"- 主题：{n['topic']}", "", "## 概述", "", n["summary"], ""]
+           f"- 主题：{n['topic']}", "", "## 概述", "", n["summary"], "",
+           "## 详细描述", "", n["detailed_description"], ""]
     if n["shots"]:
         out += ["## 具体击球", "", "| 击球 | 类型 | 正/反手 | 场区 | 线路 |", "|---|---|---|---|---|"]
         for s in n["shots"]:
@@ -45,7 +46,7 @@ def render_note(n: dict, tax: dict) -> str:
         out += ["## 使用时机", "", *bullets(n["when_to_use"]), ""]
     out += ["## 常见错误", "", *bullets(n["common_mistakes"]), ""]
     if n["corrections"]:
-        out += ["## 纠错实例", "", "| 问题 | 安赛龙的提示 | 效果 |", "|---|---|---|",
+        out += ["## 纠错实例", "", "| 问题 | 球员的提示 | 效果 |", "|---|---|---|",
                 *[f"| {c['problem']} | {c['cue']} | {c['result']} |" for c in n["corrections"]], ""]
     if n["drills"]:
         out += ["## 练习方法", "", *[f"- **{d['name']}**：{d['how']}" for d in n["drills"]], ""]

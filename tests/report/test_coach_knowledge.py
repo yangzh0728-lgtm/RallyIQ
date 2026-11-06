@@ -23,6 +23,7 @@ def test_notes_exist_and_follow_schema():
         assert n["level"] in tax["levels"], n["id"]
         assert n["transcript_source"] in tax["transcript_sources"], n["id"]
         assert n["key_points"] and n["summary"].strip(), n["id"]
+        assert len(n["detailed_description"]) >= 400, n["id"]
         for d in n["drills"]:
             assert set(d) == {"name", "how"}, n["id"]
         for shot in n["shots"]:
