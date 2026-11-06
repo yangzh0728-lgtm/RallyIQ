@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import fields
 from pathlib import Path
 
@@ -154,13 +154,12 @@ def save_candidates(path: Path, candidates: dict[int, Sequence[Candidate]], sele
     path.write_text(json.dumps(doc, separators=(",", ":")))
 
 
-def run(ctx: StageContext) -> ShuttleTrack:
-    meta = ctx.require_meta()
-    if demo_mode(ctx) and (players := ctx.players) is not None and players.frames:
-        from ...pipeline.demo import demo_shuttle
+class Cancelled(Exception):
+    """Raised inside a background detection when the job no longer needs it."""
 
-        return demo_shuttle(meta, players)
 
+def _detector(ctx: StageContext):
+    """``(detector, DetectorConfig)`` or ``None`` when no weights are installed."""
     cfg = dict(ctx.config.get("shuttle") or {})
     from .detector import DetectorConfig, HeatmapShuttleDetector, find_weights
 
@@ -171,17 +170,83 @@ def run(ctx: StageContext) -> ShuttleTrack:
         if cfg.get("require_weights"):
             raise RuntimeError(msg)
         log.warning(msg)
-        return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
-
+        return None
     det_cfg = DetectorConfig()
     for k in ("device", "batch_size", "peak_threshold", "top_k", "target_fps", "ensemble"):
         if k in cfg:
             setattr(det_cfg, k, cfg[k])
-    detector = HeatmapShuttleDetector(weights, det_cfg)
+    return HeatmapShuttleDetector(weights, det_cfg), det_cfg
+
+
+def _detect(ctx: StageContext, detector, progress):
+    meta = ctx.require_meta()
+    cfg = dict(ctx.config.get("shuttle") or {})
     segments = segments_for(meta, ctx.calibration, cfg.get("roi", "off"))
-    candidates, size = detector.detect(
-        ctx.video_path, meta.fps, meta.frame_count, segments, progress=lambda p: ctx.report(0.95 * p)
-    )
+    return detector.detect(ctx.video_path, meta.fps, meta.frame_count, segments, progress=progress)
+
+
+def prefetch(ctx: StageContext, report, cancel) -> "Callable[[], tuple] | None":
+    """Start the detector in a background thread while the players stage runs.
+
+    Detection only needs the calibration; the players are used afterwards (court
+    lock), so the two heaviest stages can overlap: pose runs on the CPU
+    (onnxruntime) and the shuttle network on the GPU (MPS / CUDA). Returns a
+    function that waits for and returns ``(detector, det_cfg, candidates, size)``,
+    or ``None`` when there is nothing worth starting (demo mode, no weights, or no
+    accelerator, where both stages would fight for the same CPU cores).
+    """
+    if demo_mode(ctx):
+        return None
+    got = _detector(ctx)
+    if got is None:
+        return None
+    detector, det_cfg = got
+    if detector.device.type == "cpu" and str(ctx.config.get("parallel_stages", "auto")).lower() != "on":
+        return None
+    import threading
+
+    box: dict = {}
+
+    def progress(p: float) -> None:
+        if cancel.is_set():
+            raise Cancelled()
+        report(0.95 * p)
+
+    def work() -> None:
+        try:
+            box["result"] = _detect(ctx, detector, progress)
+        except BaseException as e:  # noqa: BLE001 - re-raised in the shuttle stage
+            box["error"] = e
+
+    t = threading.Thread(target=work, name="rallyiq-shuttle-detect", daemon=True)
+    t.start()
+
+    def wait():
+        t.join()
+        if "error" in box:
+            raise box["error"]
+        return detector, det_cfg, *box["result"]
+
+    return wait
+
+
+def run(ctx: StageContext) -> ShuttleTrack:
+    meta = ctx.require_meta()
+    if demo_mode(ctx) and (players := ctx.players) is not None and players.frames:
+        from ...pipeline.demo import demo_shuttle
+
+        return demo_shuttle(meta, players)
+
+    cfg = dict(ctx.config.get("shuttle") or {})
+    started = ctx.prefetched.pop("shuttle", None)
+    if started is not None:
+        detector, det_cfg, candidates, size = started()
+    else:
+        got = _detector(ctx)
+        if got is None:
+            return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
+        detector, det_cfg = got
+        candidates, size = _detect(ctx, detector, lambda p: ctx.report(0.95 * p))
     region = support = None
     if cfg.get("court_lock", "auto") != "off":
         region, support, mode = court_lock(ctx.calibration, ctx.players)

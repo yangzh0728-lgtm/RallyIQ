@@ -55,6 +55,94 @@ def merge_detections(dets: list[PersonDetection], iou_thr: float = 0.5) -> list[
     return keep
 
 
+def _coreml_options() -> dict[str, str]:
+    """CoreML as an ML Program: the old NeuralNetwork format only took 195 of RTMO's
+    656 nodes (2026-11-06) and ran no faster than the CPU. The compiled model is
+    cached so later runs skip the conversion."""
+    cache = os.path.expanduser(os.environ.get("RALLYIQ_COREML_CACHE", "~/.cache/rallyiq/coreml"))
+    opts = {"ModelFormat": "MLProgram", "MLComputeUnits": os.environ.get("RALLYIQ_COREML_UNITS", "ALL")}
+    try:
+        os.makedirs(cache, exist_ok=True)
+        opts["ModelCacheDirectory"] = cache
+    except OSError:
+        pass
+    return opts
+
+
+def _session(ort, model_path: str, kind: str):
+    so = ort.SessionOptions()
+    so.log_severity_level = 3
+    if kind == "coreml":
+        return ort.InferenceSession(model_path, so, providers=[("CoreMLExecutionProvider", _coreml_options()),
+                                                                "CPUExecutionProvider"])
+    if kind == "cuda":
+        return ort.InferenceSession(model_path, so, providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+    return ort.InferenceSession(model_path, so, providers=["CPUExecutionProvider"])
+
+
+class CpuFallbackSession:
+    """CoreML session that hands a frame to the CPU when CoreML rejects it.
+
+    RTMO has a dynamic-length tensor of person candidates; CoreML (ML Program)
+    refuses it when the length is 0, i.e. on frames with nobody in them (blank
+    frames, some crops of the far-court pass). Those frames run on the CPU, which
+    gives the same result (keypoints agree to < 0.01 px on real frames).
+    """
+
+    def __init__(self, primary, make_cpu):
+        self.primary = primary
+        self._make_cpu = make_cpu
+        self._cpu = None
+        self.fallbacks = 0
+
+    def get_inputs(self):
+        return self.primary.get_inputs()
+
+    def get_providers(self):
+        return self.primary.get_providers()
+
+    def run(self, output_names, feed):
+        try:
+            return self.primary.run(output_names, feed)
+        except Exception:  # noqa: BLE001 - onnxruntime raises a generic RuntimeException
+            if self._cpu is None:
+                self._cpu = self._make_cpu()
+            self.fallbacks += 1
+            return self._cpu.run(output_names, feed)
+
+
+def pick_session(model_path: str, input_size: tuple[int, int] = (640, 640)):
+    """onnxruntime session on the best backend for this machine.
+
+    ``RALLYIQ_POSE_PROVIDER``: ``auto`` (default), ``coreml``, ``cuda`` or ``cpu``.
+    ``auto`` prefers CUDA, then CoreML as an ML Program (with a per-frame CPU
+    fallback, see ``CpuFallbackSession``), then the CPU.
+    """
+    import logging
+
+    import onnxruntime as ort
+
+    log = logging.getLogger(__name__)
+    want = os.environ.get("RALLYIQ_POSE_PROVIDER", "auto").lower()
+    avail = ort.get_available_providers()
+    if want == "auto":
+        want = ("cuda" if "CUDAExecutionProvider" in avail
+                else "coreml" if "CoreMLExecutionProvider" in avail else "cpu")
+    needs = {"coreml": "CoreMLExecutionProvider", "cuda": "CUDAExecutionProvider"}
+    if want not in ("cpu", "coreml", "cuda") or (want != "cpu" and needs[want] not in avail):
+        want = "cpu"
+    if want == "coreml":
+        try:
+            sess = CpuFallbackSession(_session(ort, model_path, "coreml"),
+                                      lambda: _session(ort, model_path, "cpu"))
+            return sess, "CoreMLExecutionProvider"
+        except Exception as e:  # noqa: BLE001 - CoreML conversion can fail on some graphs
+            log.warning("pose: CoreML unavailable (%s); using the CPU", e)
+            want = "cpu"
+    sess = _session(ort, model_path, want)
+    return sess, sess.get_providers()[0]
+
+
 class RTMOOnnx:
     """RTMO ONNX (end-to-end export: outputs ``dets`` [1,N,5] and ``keypoints`` [1,N,17,3]).
 
@@ -79,13 +167,13 @@ class RTMOOnnx:
                 "RTMO ONNX model not found. Set RALLYIQ_POSE_MODEL or pass model_path "
                 "(see rallyiq/perception/players/README.md)."
             )
-        if providers is None:
-            avail = ort.get_available_providers()
-            pref = ["CoreMLExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"]
-            providers = [p for p in pref if p in avail] or avail
-        self.session = ort.InferenceSession(model_path, providers=providers)
-        self.input_name = self.session.get_inputs()[0].name
         self.input_size = input_size  # (w, h)
+        if providers is None:
+            self.session, self.provider = pick_session(model_path, input_size)
+        else:
+            self.session = ort.InferenceSession(model_path, providers=providers)
+            self.provider = self.session.get_providers()[0]
+        self.input_name = self.session.get_inputs()[0].name
         self.score_thr = score_thr
         self.tile_far_half = tile_far_half
 
