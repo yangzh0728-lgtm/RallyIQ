@@ -22,7 +22,9 @@ COPY pyproject.toml ./
 COPY rallyiq/ rallyiq/
 COPY scripts/ scripts/
 # torch already comes with the base image; onnxruntime-gpu runs the pose model on CUDA.
-RUN pip install '.[server,shuttle]' opencv-python-headless onnxruntime-gpu \
-    && pip uninstall -y opencv-python || true
+# The extras pull the GUI build of OpenCV; swap it for the headless one (both own the cv2 package).
+RUN pip install '.[server,shuttle,calibration]' onnxruntime-gpu \
+    && pip uninstall -y opencv-python \
+    && pip install --force-reinstall --no-deps opencv-python-headless
 RUN if [ "$FETCH_WEIGHTS" = 1 ]; then WEIGHTS_DIR=/opt/rallyiq/weights POSE_VARIANT=$POSE_VARIANT bash scripts/fetch_weights.sh; fi
 ENTRYPOINT ["python", "-m", "rallyiq.pipeline", "worker"]

@@ -18,6 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 # Perception modules add their own heavy deps (torch, opencv, ...) here.
 vision = ["opencv-python>=4.9"]
+calibration = ["opencv-python>=4.9"]  # court calibration (opencv-python-headless also works)
 players = ["opencv-python>=4.9", "onnxruntime>=1.17"]
 shuttle = ["torch>=2.2", "opencv-python>=4.9"]
 # Online deployment: PostgreSQL + S3-compatible object storage (docs/deploy.md).
