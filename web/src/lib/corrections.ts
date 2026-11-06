@@ -1,6 +1,14 @@
-import type { Correction, EventsResult, PlayerId, Rally, ShotEvent } from "./types";
+import { TEAM_OF, type Correction, type EventsResult, type PlayerId, type Rally, type ShotEvent, type TeamId } from "./types";
 
-const SWAP: Record<string, PlayerId | null> = { P1: "P2", P2: "P1" };
+/** Id mapping for swap_player_ids (same rules as rallyiq/api/corrections.py). */
+export function swapMap(a: PlayerId = "P1", b: PlayerId = "P2"): Record<string, string> {
+  const m: Record<string, string> = { [a]: b, [b]: a };
+  if (TEAM_OF[a] !== TEAM_OF[b]) {
+    m[TEAM_OF[a]] = TEAM_OF[b];
+    m[TEAM_OF[b]] = TEAM_OF[a];
+  }
+  return m;
+}
 
 /**
  * Apply append-only corrections on top of raw events. Port of rallyiq/api/corrections.py so mock
@@ -89,8 +97,9 @@ export function applyCorrections(raw: EventsResult, corrections: Correction[], f
       }
       case "swap_player_ids": {
         const f0 = c.payload.from_frame;
-        for (const s of shots.values()) if (s.frame >= f0 && s.hitter) s.hitter = SWAP[s.hitter];
-        for (const r of rallies.values()) if (r.start_frame >= f0 && r.winner) r.winner = SWAP[r.winner];
+        const m = swapMap(c.payload.a, c.payload.b);
+        for (const s of shots.values()) if (s.frame >= f0 && s.hitter) s.hitter = (m[s.hitter] ?? s.hitter) as PlayerId;
+        for (const r of rallies.values()) if (r.start_frame >= f0 && r.winner) r.winner = (m[r.winner] ?? r.winner) as PlayerId | TeamId;
         break;
       }
     }
@@ -120,7 +129,7 @@ export function rallyAt(rallies: Rally[], t: number): Rally | undefined {
 
 export function describeCorrection(c: Correction, fps: number): string {
   const t = (frame: number) => formatMs((frame * 1000) / fps);
-  const who = (p: PlayerId | null | undefined) => p ?? "未知";
+  const who = (p: PlayerId | TeamId | null | undefined) => (p === "A" || p === "B" ? `${p} 队` : (p ?? "未知"));
   switch (c.op) {
     case "add_shot":
       return `新增击球 @ ${t(c.payload.frame)}（${who(c.payload.hitter)}）`;
@@ -142,7 +151,7 @@ export function describeCorrection(c: Correction, fps: number): string {
     case "set_rally_winner":
       return `回合 ${c.payload.rally_id} 得分方 → ${who(c.payload.winner)}`;
     case "swap_player_ids":
-      return `从 ${t(c.payload.from_frame)} 起交换 P1/P2`;
+      return `从 ${t(c.payload.from_frame)} 起交换 ${c.payload.a ?? "P1"}/${c.payload.b ?? "P2"}`;
     case "confirm_shot":
       return `确认击球 ${c.payload.shot_id}`;
     case "confirm_rally":

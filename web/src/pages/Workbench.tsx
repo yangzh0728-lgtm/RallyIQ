@@ -5,14 +5,14 @@ import { JobDetail, useJob } from "../components/JobProgress";
 import { MiniMap } from "../components/MiniMap";
 import { Timeline } from "../components/Timeline";
 import { VideoStage } from "../components/VideoStage";
-import { api } from "../lib/api";
+import { api, type MatchFormatSetting } from "../lib/api";
 import { PlaybackClock } from "../lib/clock";
 import { rallyAt } from "../lib/corrections";
 import { CORNER_NAMES } from "../lib/court";
 import { download, exportCsv, exportJson } from "../lib/export";
 import { courtAt, DEFAULT_LAYERS, frameIndexAt, type Layers } from "../lib/overlay";
 import { colorOf, labelOf } from "../lib/players";
-import { PLAYER_IDS, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
+import { playerIdsFor, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
 
 export function Workbench({ videoId }: { videoId: string }) {
   const [video, setVideo] = useState<Video | null>(null);
@@ -110,6 +110,19 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
     },
     [video.video_id, hardExample],
   );
+
+  const [formatSetting, setFormatSetting] = useState<MatchFormatSetting | null>(null);
+  useEffect(() => {
+    api.getMatchFormat(video.video_id).then(setFormatSetting, () => setFormatSetting(null));
+  }, [video.video_id]);
+  const changeFormat = async (f: MatchFormatSetting) => {
+    try {
+      setFormatSetting(f);
+      onRerun(await api.setMatchFormat(video.video_id, f));
+    } catch (e) {
+      setActionError(`切换单/双打失败：${(e as Error).message}`);
+    }
+  };
 
   const onCalibrated = async (corners: Point[]) => {
     setCalibrating(false);
@@ -219,6 +232,21 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           </Stat>
           <Stat label="已做修正">{corrections.length}</Stat>
           <div className="row">
+            <span className="muted">比赛类型</span>
+            <span className="spacer" />
+            <span className="pill">{overlay.match_format === "doubles" ? "双打 · 4 人" : "单打 · 2 人"}</span>
+            <select
+              value={formatSetting ?? "auto"}
+              disabled={formatSetting === null}
+              title="自动识别不对时手动指定；会从球员识别开始重新分析"
+              onChange={(e) => void changeFormat(e.target.value as MatchFormatSetting)}
+            >
+              <option value="auto">自动识别</option>
+              <option value="singles">强制单打</option>
+              <option value="doubles">强制双打</option>
+            </select>
+          </div>
+          <div className="row">
             <span className="muted">球场标定</span>
             <span className="spacer" />
             {court ? <StatusPill status={court.status} /> : <span className="pill needs_review">未标定</span>}
@@ -256,7 +284,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           </label>
           <span className="spacer" />
           <span className="legend">
-            {PLAYER_IDS.map((id) => (
+            {playerIdsFor(overlay.match_format).map((id) => (
               <span key={id} className="row" style={{ gap: 4 }}>
                 <span className="dot" style={{ background: colorOf(id) }} />
                 {labelOf(id)}
@@ -286,6 +314,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           setHardExample={setHardExample}
           corrections={corrections}
           error={actionError}
+          matchFormat={events.match_format ?? overlay.match_format}
         />
         <div className="panel">
           <h3>导出</h3>

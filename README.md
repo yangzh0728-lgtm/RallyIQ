@@ -117,7 +117,7 @@ python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水
 pytest
 ```
 
-主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正；`PUT /videos/{id}/calibration/manual` 点选四角；`GET /videos/{id}/heatmap`；`GET /videos/{id}/export?format=json|csv`。完整文档见运行后的 `/docs`。
+主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/export?format=json|csv`。完整文档见运行后的 `/docs`。
 
 ## 界面设计
 
@@ -150,7 +150,9 @@ pytest
 
 ### 首版不做（推出后再加）
 
-击球类型分类、AI Coach、个人长期档案与对手报告、抽象 / 双屏视图、球拍检测、双打、模型训练与微调。
+击球类型分类、AI Coach、个人长期档案与对手报告、抽象 / 双屏视图、球拍检测、模型训练与微调。
+
+> 双打已提前接入：自动识别单 / 双打，四人稳定 ID 与 A/B 队伍（A = P1+P3，B = P2+P4），击球按队伍交替归属，双打边界线，热力图可按球员或队伍查看；识别不对时可在网页上强制指定。
 
 ### 排期（约 30 小时）
 
