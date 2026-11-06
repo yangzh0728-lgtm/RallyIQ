@@ -157,12 +157,19 @@ def simulate(clip: Clip, probs: np.ndarray | None, cfg: EventsConfig) -> list[di
 def score(clips: list[Clip], hits_by_clip: dict[str, list[dict]], tol_frames: int = M.HIT_TOL_FRAMES) -> dict[str, Any]:
     st = M.EventStats()
     ok_n = ok_tp = 0
+    side = {"side_ok": 0, "side_missing": 0, "side_wrong": 0}
     old = M.HIT_TOL_FRAMES
     M.HIT_TOL_FRAMES = tol_frames
     try:
         for c in clips:
             hs = hits_by_clip[c.cid]
             st.merge(M.eval_hits(c.label, {"hits": hs}))
+            g = [h for h in c.label["hits"] if M._in_range(h["t_ms"], c.label)]
+            fm = M.frame_ms(c.label)
+            for i, j, _ in M._greedy_match(g, hs, tol_frames * fm + 1e-6, same_side=False):
+                gs, ps = g[i].get("side"), hs[j].get("side")
+                k = "side_ok" if (not gs or gs == ps) else ("side_missing" if ps is None else "side_wrong")
+                side[k] += 1
             oks = [h for h in hs if h["ok"]]
             ok_n += len(oks)
             ok_tp += M.eval_hits(c.label, {"hits": oks}).tp
@@ -171,6 +178,7 @@ def score(clips: list[Clip], hits_by_clip: dict[str, list[dict]], tol_frames: in
     s = st.summary()
     s["ok"] = ok_n
     s["ok_precision"] = ok_tp / ok_n if ok_n else None
+    s.update(side)  # hits found at the right time: is their near/far side right, missing or wrong?
     return s
 
 
@@ -304,6 +312,9 @@ def cmd_train(a: argparse.Namespace) -> int:
           row(f"rules, re-thresholded (keep={rules_t[1]}, min={rules_t[2]})", rules_t[0]),
           row(f"learned (hidden={hidden}, l2={l2}), out-of-fold", cv), "",
           f"Chosen thresholds: {json.dumps(th)}", "",
+          "Hits found at the right time, by near/far side (learned): "
+          f"right {cv['side_ok']}, missing {cv['side_missing']}, wrong {cv['side_wrong']}; "
+          f"rules: right {rules['side_ok']}, missing {rules['side_missing']}, wrong {rules['side_wrong']}", "",
           "Model search (out-of-fold log-loss): " + ", ".join(f"h{h}/l2={l}: {x:.4f}" for x, h, l, _ in results), ""]
     spec = fit_mlp(X, y, hidden, l2)
     spec["thresholds"] = th
