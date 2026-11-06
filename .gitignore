@@ -8,4 +8,13 @@ weights/
 *.mp4
 *.egg-info/
 data/
+
+# 视频与帧图像不进仓库（版权素材，见 evaluation/README.md）
+*.mkv
+*.webm
+*.mov
+*.m4a
+*.part
+evaluation/frames/
+rallyiq-data/
 .pytest_cache/
