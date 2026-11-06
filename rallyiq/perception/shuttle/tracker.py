@@ -52,6 +52,10 @@ class TrackerConfig:
     strong_score: float = 0.5
     weak_score: float = 0.2  # follows the detector peak_threshold (stage.tracker_config)
     weak_min_len: int = 3
+    # A weak-only tracklet (no point >= strong_score) must also travel: its bounding box
+    # must grow by at least this many image diagonals per second. Hands at a handshake,
+    # a mop, a caption barely move; a shuttle in flight, even far away, does.
+    weak_min_travel_diag_per_s: float = 0.03
     min_len: int = 3
     # Fastest plausible image-space speed, in image diagonals per second. A smash
     # close to the camera crosses ~half the frame in 0.15 s.
@@ -300,12 +304,22 @@ class ShuttleTracker:
             if not keep:
                 continue
             sub = t.subset(keep)
-            if sub.weight(self.cfg) <= 0:
+            if sub.weight(self.cfg) <= 0 or self._idle_weak(sub):
                 continue
             claimed.update(sub.frames)
             chosen.append(sub)
         chosen.sort(key=lambda t: t.start)
         return chosen
+
+    def _idle_weak(self, t: _Tracklet) -> bool:
+        """True for a weak-only tracklet that hardly moves (likely not a shuttle)."""
+        if max(t.scores) >= self.cfg.strong_score:
+            return False
+        xs = [p[0] for p in t.xy]
+        ys = [p[1] for p in t.xy]
+        extent = math.hypot(max(xs) - min(xs), max(ys) - min(ys))
+        duration_s = max(t.end - t.start, 1) / self.fps
+        return extent / self.diag / duration_s < self.cfg.weak_min_travel_diag_per_s
 
     # ------------------------------------------------------------------ spikes
 
