@@ -53,7 +53,7 @@ def segment_events(
         cands = detect_hits(track, span, pose_index, cfg, fps_ms, sink)
         if collect is not None:
             collect.extend((rally_id, x, c, track.points[c.idx]) for x, c in sink)
-        hits = [_to_hit(c, track, rally_id, k, cfg) for k, c in enumerate(cands, start=1)]
+        hits = [_to_hit(c, track, rally_id, k, cfg, fps_ms) for k, c in enumerate(cands, start=1)]
         s, e = track.points[span.start], track.points[span.end]
         rally = RallySegment(
             rally_id=rally_id,
@@ -81,7 +81,7 @@ def with_scorer_thresholds(cfg: EventsConfig) -> EventsConfig:
     return replace(cfg, **upd)
 
 
-def _to_hit(c: Candidate, track: Track, rally_id: str, k: int, cfg: EventsConfig) -> HitEvent:
+def _to_hit(c: Candidate, track: Track, rally_id: str, k: int, cfg: EventsConfig, fps_ms: float) -> HitEvent:
     pt = track.points[c.idx]
     best = c.best
     hitter = best.player_id if c.hitter_known else None
@@ -94,8 +94,8 @@ def _to_hit(c: Candidate, track: Track, rally_id: str, k: int, cfg: EventsConfig
         hit_id=f"{rally_id}_S{k:02d}",
         rally_id=rally_id,
         index_in_rally=k,
-        frame=pt.frame,
-        t_ms=pt.t_ms,
+        frame=pt.frame + cfg.hit_frame_offset,
+        t_ms=pt.t_ms + cfg.hit_frame_offset * fps_ms,
         hitter_id=hitter,
         shuttle_xy_px=(round(pt.x, 1), round(pt.y, 1)),
         shuttle_court_xy=pt.court_xy,

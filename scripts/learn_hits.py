@@ -81,7 +81,8 @@ class Clip:
                              for r in rallies if r.end_ms > r.start_ms]
         X = []
         for k, (rid, x, c, pt) in enumerate(sink):
-            e = {"k": k, "c": c, "t": self.t_label(pt.frame), "frame": pt.frame, "rule": c.confidence}
+            f = pt.frame + cfg.hit_frame_offset
+            e = {"k": k, "c": c, "t": self.t_label(f), "frame": f, "rule": c.confidence}
             if H.R_INFERRED_SERVE in c.reasons:
                 by_id[rid]["serve"] = e
             else:
@@ -112,6 +113,21 @@ class Clip:
         self.y = y
         self.ys = ys
         self.recall_ceiling = (len(used_j), len(self.label["hits"]))
+
+
+def estimate_offset(clips: list[Clip], cfg: EventsConfig, window: int = 8) -> tuple[int, list[float]]:
+    """Frames to add to candidate times: minus the median signed (candidate - label) gap of the nearest
+    candidate within ``window`` frames of each labelled hit, collected with no offset."""
+    gaps: list[float] = []
+    for c in clips:
+        c.collect(replace(cfg, hit_frame_offset=0), 3)
+        ts = [e["t"] for r in c.rallies for e in r["cands"] + ([r["serve"]] if r["serve"] else [])]
+        fm = 1000.0 / c.fps
+        for g in c.label["hits"]:
+            d = [(t - g["t_ms"]) / fm for t in ts if abs(t - g["t_ms"]) <= window * fm]
+            if d:
+                gaps.append(min(d, key=abs))
+    return (-int(round(float(np.median(gaps)))) if gaps else 0), gaps
 
 
 def load_clips(data: Path, index_name: str) -> list[Clip]:
@@ -321,6 +337,12 @@ def cmd_train(a: argparse.Namespace) -> int:
         return 1
     overrides = json.loads(a.config.expanduser().read_text(encoding="utf-8")) if a.config else {}
     base = replace(EventsConfig(), **overrides)
+    if "hit_frame_offset" not in overrides:
+        off, gaps = estimate_offset(clips, base)
+        overrides["hit_frame_offset"] = off
+        base = replace(base, hit_frame_offset=off)
+        print(f"hit frame offset: {off:+d} (median nearest-candidate gap {np.median(gaps):+.1f} frames, n={len(gaps)})",
+              flush=True)
     for c in clips:
         c.collect(base, a.tol)
     X = np.vstack([c.X for c in clips])
@@ -361,7 +383,7 @@ def cmd_train(a: argparse.Namespace) -> int:
 
     L += ["## Cross-validated hit accuracy on the training matches (grouped by match)", "",
           "| scorer | precision | recall | F1 | F1 (any side) | ok hits | ok precision |", "|---|---|---|---|---|---|---|",
-          row("rules (current defaults)", rules),
+          row(f"rules (hit frame offset {base.hit_frame_offset:+d})", rules),
           row(f"rules, re-thresholded (keep={rules_t[1]}, min={rules_t[2]})", rules_t[0]),
           row(f"learned (hidden={hidden}, l2={l2}), out-of-fold", cv),
           row(f"learned + side model (threshold {side_thr}), out-of-fold", cv_side), "",
@@ -432,6 +454,8 @@ def cmd_search(a: argparse.Namespace) -> int:
     data = a.data.expanduser()
     clips = load_clips(data, "index.json")
     folds = folds_by_group(clips, a.folds)
+    off, _ = estimate_offset(clips, EventsConfig())
+    print(f"hit frame offset: {off:+d}", flush=True)
     rng = random.Random(a.seed)
     names = sorted(SEARCH_SPACE)
     configs: list[dict[str, Any]] = [{}]
@@ -443,7 +467,7 @@ def cmd_search(a: argparse.Namespace) -> int:
     rows = []
     for i, ov in enumerate(configs):
         try:
-            r = evaluate_config(clips, replace(EventsConfig(), **ov), a.tol, folds, a.hidden, a.l2)
+            r = evaluate_config(clips, replace(EventsConfig(), hit_frame_offset=off, **ov), a.tol, folds, a.hidden, a.l2)
         except Exception as e:  # noqa: BLE001 - a bad combination should not end the search
             print(f"[{i + 1}/{len(configs)}] {ov}: failed {e}", flush=True)
             continue
@@ -455,7 +479,7 @@ def cmd_search(a: argparse.Namespace) -> int:
     base_rally = rows[0]["rally_f1"] or 0
     ok = [r for r in rows if (r["rally_f1"] or 0) >= base_rally - 0.02] or rows
     best = max(ok, key=lambda r: r["hits"]["f1"] or 0)
-    (out / "best.json").write_text(json.dumps(best["overrides"], indent=1), encoding="utf-8")
+    (out / "best.json").write_text(json.dumps({**best["overrides"], "hit_frame_offset": off}, indent=1), encoding="utf-8")
     rows.sort(key=lambda r: -(r["hits"]["f1"] or 0))
     L = ["# Event parameter search (cross-validated, grouped by match)", "",
          f"{len(clips)} clips, {len(rows)} configurations; defaults = first row of the run log.", "",

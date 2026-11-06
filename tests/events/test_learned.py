@@ -30,7 +30,20 @@ def _clip(seed: int, **kw) -> "LH.Clip":
 
 
 def test_simulation_matches_pipeline_for_rules():
-    cfg = EventsConfig(hit_scorer="off")
+    for cfg in (EventsConfig(hit_scorer="off"), EventsConfig(hit_scorer="off", hit_frame_offset=2)):
+        _check_sim(cfg)
+
+
+def test_estimate_offset_recovers_shift():
+    clips = [_clip(s) for s in range(3)]
+    for c in clips:  # labels two frames later than the synthetic truth
+        for h in c.label["hits"]:
+            h["t_ms"] += 2 * 1000.0 / c.fps
+    off, gaps = LH.estimate_offset(clips, EventsConfig())
+    assert off == 2 and gaps
+
+
+def _check_sim(cfg):
     for seed in range(4):
         c = _clip(seed, dropout=0.1, outlier_rate=0.02)
         c.collect(cfg, 3)
