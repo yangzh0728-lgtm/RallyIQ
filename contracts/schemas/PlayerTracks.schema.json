@@ -8,7 +8,9 @@
             {
               "enum": [
                 "P1",
-                "P2"
+                "P2",
+                "P3",
+                "P4"
               ],
               "type": "string"
             },
@@ -24,6 +26,23 @@
           "description": "raw tracker id",
           "title": "Track Id",
           "type": "integer"
+        },
+        "team": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A = P1/P3, B = P2/P4; null if unresolved",
+          "title": "Team"
         },
         "side": {
           "anyOf": [
@@ -167,7 +186,7 @@
   "description": "Stage ``players`` output. Frames without detections may be omitted.",
   "properties": {
     "schema_version": {
-      "default": "0.1.0",
+      "default": "0.2.0",
       "title": "Schema Version",
       "type": "string"
     },
@@ -194,6 +213,31 @@
       "title": "Keypoint Format",
       "type": "string"
     },
+    "match_format": {
+      "default": "singles",
+      "description": "singles: P1/P2; doubles: P1+P3 (team A) vs P2+P4 (team B)",
+      "enum": [
+        "singles",
+        "doubles"
+      ],
+      "title": "Match Format",
+      "type": "string"
+    },
+    "format_confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "how sure the automatic singles/doubles decision is; null if set by config",
+      "title": "Format Confidence"
+    },
     "frames": {
       "items": {
         "$ref": "#/$defs/PlayerFrame"
@@ -202,7 +246,7 @@
       "type": "array"
     },
     "side_switches": {
-      "description": "frames where P1/P2 swap sides",
+      "description": "frames where the teams swap sides",
       "items": {
         "type": "integer"
       },

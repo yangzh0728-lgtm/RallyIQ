@@ -56,3 +56,17 @@ def test_contract_files_up_to_date():
     r = subprocess.run([sys.executable, str(root / "scripts" / "export_contracts.py"), "--check"],
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_doubles_boundaries_and_team_of():
+    from rallyiq.contracts import team_of
+    from rallyiq.contracts.geometry import boundary_corners_m, in_bounds
+
+    assert boundary_corners_m("doubles")[1] == [6.1, 0.0]
+    assert boundary_corners_m("singles")[0] == [0.46, 0.0]
+    # Side alley: in for doubles, out for singles.
+    assert in_bounds((0.2, 3.0), "doubles") and not in_bounds((0.2, 3.0), "singles")
+    # Doubles serve: back alley (between long service line and baseline) is out.
+    assert not in_bounds((3.0, 0.4), "doubles", serve=True) and in_bounds((3.0, 0.4), "singles", serve=True)
+    assert in_bounds((3.0, 12.0), "doubles", serve=True) and not in_bounds((3.0, 6.0), "doubles", serve=True)
+    assert [team_of(p) for p in ("P1", "P2", "P3", "P4", None)] == ["A", "B", "A", "B", None]

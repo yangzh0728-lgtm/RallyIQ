@@ -1,6 +1,7 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "video_id": "vid_example",
+  "match_format": "singles",
   "rallies": [
     {
       "rally_id": "r001",
@@ -42,6 +43,7 @@
         3.54
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -68,6 +70,7 @@
         10.493
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -94,6 +97,7 @@
         3.113
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -120,6 +124,7 @@
         9.605
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -146,6 +151,7 @@
         1.427
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -172,6 +178,7 @@
         10.7
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -198,6 +205,7 @@
         2.62
       ],
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",

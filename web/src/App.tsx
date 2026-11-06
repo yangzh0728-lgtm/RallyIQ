@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, UNAUTHORIZED_EVENT, type PublicConfig, type User } from "./lib/api";
 import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
+import { Report } from "./pages/Report";
 import { Workbench } from "./pages/Workbench";
 
 function useHashRoute(): string {
@@ -41,7 +42,7 @@ function useSession() {
 export function App() {
   const route = useHashRoute();
   const [session, setSession] = useSession();
-  const m = route.match(/^\/videos\/([^/]+)/);
+  const m = route.match(/^\/videos\/([^/]+)(\/report)?/);
   const needLogin = session.state === "ready" && session.config.auth && !session.user;
   const user = session.state === "ready" ? session.user : null;
 
@@ -57,7 +58,7 @@ export function App() {
         <a href="#/" className="brand">
           Rally<b>IQ</b>
         </a>
-        <span className="muted small">单打分析工作台</span>
+        <span className="muted small">单打 / 双打分析工作台</span>
         <span className="spacer" />
         {api.mode === "mock" ? (
           <span className="mode-badge" title="使用前端合成数据，未连接后端">演示模式 · 合成数据</span>
@@ -82,7 +83,11 @@ export function App() {
       ) : needLogin && session.state === "ready" ? (
         <Login config={session.config} onDone={(u) => setSession({ ...session, user: u })} />
       ) : m ? (
-        <Workbench key={m[1]} videoId={decodeURIComponent(m[1])} />
+        m[2] ? (
+          <Report key={m[1]} videoId={decodeURIComponent(m[1])} />
+        ) : (
+          <Workbench key={m[1]} videoId={decodeURIComponent(m[1])} />
+        )
       ) : (
         <Home />
       )}

@@ -13,15 +13,23 @@ from pathlib import Path
 
 from rallyiq import contracts as c
 from rallyiq.api.corrections import apply_corrections
-from rallyiq.contracts.geometry import project_court_lines
+from rallyiq.ingest import assess_quality
+from rallyiq.contracts.geometry import project_boundary_lines, project_court_lines
 from rallyiq.pipeline import demo
 from rallyiq.pipeline.overlay import COCO17_SKELETON
+from rallyiq.report import compute_match_stats
+from rallyiq.strokes import classify, merge_strokes
+from rallyiq.report.coach import OfflineProvider, build_report
 
 ROOT = Path(__file__).resolve().parents[1] / "contracts"
 
 SCHEMAS = [
     c.VideoMeta, c.CourtCalibration, c.PlayerTracks, c.ShuttleTrack, c.EventsResult, c.ShotEvent, c.Rally,
+    c.StrokesResult,
     c.CorrectionIn, c.Correction, c.OverlayData, c.OverlayFrame, c.Job, c.Video, c.HeatmapData,
+    c.MatchFormatSetting,
+    c.MatchStats, c.CoachReport, c.MatchReport,
+    c.VideoQuality, c.HardExample, c.HardExampleSummary,
 ]
 
 
@@ -33,6 +41,7 @@ def examples() -> dict[str, object]:
     players = demo.demo_players(long_meta, cal)
     shuttle = demo.demo_shuttle(long_meta, players)
     events = demo.demo_events(long_meta, players)
+    strokes = classify(events, shuttle, players, long_meta.fps)
     # keep examples small: 2 frames of players, ~1 s of shuttle
     players_small = players.model_copy(update={"frames": players.frames[30:32]})
     shuttle_small = shuttle.model_copy(update={"points": shuttle.points[:8],
@@ -40,9 +49,10 @@ def examples() -> dict[str, object]:
     overlay = c.OverlayData(
         video=meta, skeleton=COCO17_SKELETON,
         court=[c.CourtLines(start_frame=0, end_frame=74, status="ok",
-                            lines=project_court_lines(cal.segments[0].homography))],
+                            lines=project_court_lines(cal.segments[0].homography),
+                            boundary=project_boundary_lines(cal.segments[0].homography, "singles"))],
         frames=[c.OverlayFrame(frame=pf.frame, t_ms=pf.t_ms,
-                               players=[c.OverlayPlayer(player_id=p.player_id, side=p.side, bbox=p.bbox,
+                               players=[c.OverlayPlayer(player_id=p.player_id, team=p.team, side=p.side, bbox=p.bbox,
                                                         keypoints=p.keypoints, foot_court=p.foot_court)
                                         for p in pf.players],
                                shuttle=next((c.OverlayShuttle(x=s.x, y=s.y, source=s.source, confidence=s.confidence)
@@ -57,17 +67,39 @@ def examples() -> dict[str, object]:
                      payload={"shot_id": "s0003"}),
         c.Correction(correction_id="cor_3", video_id=meta.video_id, seq=3, created_at=ts, op="add_shot",
                      payload={"frame": 100, "hitter": "P2", "shuttle_px": [900, 400]}),
+        c.Correction(correction_id="cor_4", video_id=meta.video_id, seq=4, created_at=ts, op="set_shot_type",
+                     payload={"shot_id": "s0001", "shot_type": "short_serve"}),
     ]
-    effective, _ = apply_corrections(events, corrections, long_meta)
+    effective, _ = apply_corrections(merge_strokes(events, strokes), corrections, long_meta)
     job = c.Job(job_id="job_example", video_id=meta.video_id, state="running", created_at=ts, started_at=ts,
                 stages=[c.StageRun(name="probe", state="succeeded", progress=1.0, started_at=ts, finished_at=ts),
                         c.StageRun(name="calibration", state="succeeded", progress=1.0, started_at=ts, finished_at=ts),
                         c.StageRun(name="players", state="running", progress=0.42, started_at=ts),
-                        c.StageRun(name="shuttle"), c.StageRun(name="events"), c.StageRun(name="overlay")])
+                        c.StageRun(name="shuttle"), c.StageRun(name="events"), c.StageRun(name="strokes"),
+                        c.StageRun(name="overlay")])
+    doubles = demo.demo_players(long_meta, cal, "doubles")
+    doubles_events = demo.demo_events(long_meta, doubles)
+    # report: winners entered for every rally, coach from the offline rule provider
+    decided = effective.model_copy(update={"rallies": [
+        r.model_copy(update={"winner": "P1" if i % 3 else "P2"}) for i, r in enumerate(effective.rallies)]})
+    # fingerprint hashes float-exact inputs (BLAS-dependent in the last digits): pin it for the example
+    stats = compute_match_stats(decided, players, cal, long_meta).model_copy(update={"fingerprint": "0123456789abcdef"})
+    coach = build_report(OfflineProvider().generate(stats), stats, OfflineProvider()).model_copy(
+        update={"created_at": ts})
+    report = c.MatchReport(stats=stats, coach=coach)
     return {
+        "match_report": report,
+        "quality": assess_quality(long_meta, demo.demo_calibration(long_meta), players, shuttle, events,
+                                  {"brightness": 118.0, "sharpness": 240.0, "frames": 12}, fingerprint_inputs="example"),
+        "players_doubles": doubles.model_copy(update={"frames": doubles.frames[30:31]}),
+        "events_doubles": doubles_events.model_copy(update={
+            "rallies": doubles_events.rallies[:1], "shots": [s for s in doubles_events.shots if s.rally_id == "r001"]}),
         "video_meta": meta, "calibration": cal, "players": players_small, "shuttle": shuttle_small,
         "events": events.model_copy(update={"rallies": events.rallies[:1],
                                             "shots": [s for s in events.shots if s.rally_id == "r001"]}),
+        "strokes": strokes.model_copy(update={"shots": [s for s in strokes.shots
+                                                         if any(e.shot_id == s.shot_id and e.rally_id == "r001"
+                                                                for e in events.shots)]}),
         "corrections": corrections, "events_effective": effective.model_copy(
             update={"rallies": effective.rallies[:1], "shots": [s for s in effective.shots if s.rally_id == "r001"]}),
         "overlay": overlay, "job": job,

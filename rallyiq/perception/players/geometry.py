@@ -86,3 +86,45 @@ def image_net_y(H_img_to_court: np.ndarray) -> float | None:
         return None
     p = apply_homography(Hinv, np.array([[COURT_WIDTH_M / 2, NET_Y_M]]))[0]
     return float(p[1]) if np.all(np.isfinite(p)) else None
+
+
+def far_court_roi(
+    H_img_to_court: np.ndarray,
+    image_size: tuple[int, int],
+    margin_side_m: float = 1.5,
+    margin_end_m: float = 2.5,
+    head_room_m: float = 2.4,
+) -> tuple[int, int, int, int, float] | None:
+    """Image box around the far half of the court (plus run-off and head room).
+
+    Returns ``(x1, y1, x2, y2, player_px)`` where ``player_px`` is the pixel
+    height of a typical player standing on the far baseline, or None when the
+    far half is not (sensibly) in view.
+    """
+    try:
+        Hinv = np.linalg.inv(H_img_to_court)
+    except np.linalg.LinAlgError:
+        return None
+    w, h = image_size
+    x0, x1 = -margin_side_m, COURT_WIDTH_M + margin_side_m
+    y0, y1 = NET_Y_M - 0.5, COURT_LENGTH_M + margin_end_m
+    ground = apply_homography(Hinv, np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]))
+    if not np.all(np.isfinite(ground)):
+        return None
+    # Pixel scale at the far baseline, used for player height and head room.
+    base = apply_homography(Hinv, np.array([[COURT_WIDTH_M / 2 - 0.5, COURT_LENGTH_M], [COURT_WIDTH_M / 2 + 0.5, COURT_LENGTH_M]]))
+    if not np.all(np.isfinite(base)):
+        return None
+    px_per_m = float(np.linalg.norm(base[1] - base[0]))
+    player_px = 1.75 * px_per_m
+    bx1, bx2 = float(ground[:, 0].min()), float(ground[:, 0].max())
+    by1 = float(ground[:, 1].min()) - head_room_m * px_per_m
+    by2 = float(ground[:, 1].max())
+    bx1, by1 = max(int(bx1), 0), max(int(by1), 0)
+    bx2, by2 = min(int(np.ceil(bx2)), w), min(int(np.ceil(by2)), h)
+    if bx2 - bx1 < 16 or by2 - by1 < 16 or player_px <= 0:
+        return None
+    # A far half covering most of the frame gains nothing from a second pass.
+    if (bx2 - bx1) * (by2 - by1) > 0.7 * w * h:
+        return None
+    return bx1, by1, bx2, by2, player_px

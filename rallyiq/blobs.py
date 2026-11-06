@@ -31,6 +31,7 @@ class BlobStore(Protocol):
     def get_bytes(self, key: str) -> bytes | None: ...
     def exists(self, key: str) -> bool: ...
     def size(self, key: str) -> int | None: ...
+    def stamp(self, key: str) -> list[int] | None: ...
     def delete(self, key: str) -> None: ...
     def delete_prefix(self, prefix: str) -> None: ...
     def local_path(self, key: str) -> Path | None: ...
@@ -84,6 +85,14 @@ class LocalBlobStore:
     def size(self, key: str) -> int | None:
         p = self._p(key)
         return p.stat().st_size if p.exists() else None
+
+    def stamp(self, key: str) -> list[int] | None:
+        """Changes whenever the object is rewritten: ``[mtime_ns, size]``, or None if missing."""
+        try:
+            st = self._p(key).stat()
+        except OSError:
+            return None
+        return [st.st_mtime_ns, st.st_size]
 
     def delete(self, key: str) -> None:
         self._p(key).unlink(missing_ok=True)
@@ -162,6 +171,15 @@ class S3BlobStore:
 
     def exists(self, key: str) -> bool:
         return self.size(key) is not None
+
+    def stamp(self, key: str) -> list[int] | None:
+        try:
+            h = self.client.head_object(Bucket=self.bucket, Key=self._k(key))
+        except Exception as e:  # noqa: BLE001
+            if self._missing(e):
+                return None
+            raise
+        return [int(h["LastModified"].timestamp() * 1e9), int(h["ContentLength"])]
 
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=self._k(key))

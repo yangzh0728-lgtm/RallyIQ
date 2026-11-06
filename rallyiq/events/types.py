@@ -58,6 +58,12 @@ class PlayerPose:
     keypoints: Sequence[Keypoint]
     side: Optional[str] = None  # "near" / "far" relative to camera, if known
     foot_court_xy: Optional[tuple[float, float]] = None
+    team: Optional[str] = None  # doubles: "A" (P1/P3) or "B" (P2/P4); None in singles
+
+    @property
+    def team_key(self) -> str:
+        """Who must alternate: the team in doubles, the player in singles."""
+        return self.team or self.player_id
 
 
 @dataclass(frozen=True)

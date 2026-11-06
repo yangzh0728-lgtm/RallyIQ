@@ -145,8 +145,8 @@ def _solid(colour):
 
 
 def test_identity_survives_change_of_ends_by_appearance():
-    """Both players vanish (break), then return on swapped halves.
-    Torso colours tell them apart: P1 wears red, P2 wears blue."""
+    """Both players vanish (break between games), then return on swapped halves
+    for the next game. Torso colours tell them apart: P1 wears red, P2 blue."""
     red, blue = (0, 0, 220), (220, 0, 0)
 
     def paint(img, det, colour):
@@ -154,11 +154,11 @@ def test_identity_survives_change_of_ends_by_appearance():
         img[max(y1, 0):y2, max(x1, 0):x2] = colour
 
     frames, per_frame = [], []
-    for i in range(160):
+    for i in range(0, 1800, 6):  # 60 s at 5 processed frames per second
         img = np.full((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), 90, np.uint8)
-        if i < 60:
+        if i < 600:
             a, b = person_at_court(3.0, 2.5), person_at_court(3.0, 10.5)  # red near, blue far
-        elif i < 120:
+        elif i < 900:
             a = b = None  # change of ends, camera pointed elsewhere
         else:
             a, b = person_at_court(3.0, 10.5), person_at_court(3.0, 2.5)  # red far, blue near
@@ -167,14 +167,39 @@ def test_identity_survives_change_of_ends_by_appearance():
             paint(img, a, red)
             paint(img, b, blue)
             dets = [b, a]  # detector order is arbitrary
-        frames.append((i, i * 33.3, img))
+        frames.append((i, i * 1000 / 30, img))
         per_frame.append(dets)
     results = track_players(iter(frames), FakeEstimator(per_frame), lambda f: H_IMG_TO_COURT)
-    assert _ids_by_side(results[10]) == {"near": "P1", "far": "P2"}
-    assert results[90].players == []
-    assert _ids_by_side(results[130]) == {"far": "P1", "near": "P2"}
+    at = {r.frame: r for r in results}
+    assert _ids_by_side(at[60]) == {"near": "P1", "far": "P2"}
+    assert at[720].players == []
+    assert _ids_by_side(at[1200]) == {"far": "P1", "near": "P2"}
+    assert results.side_switches == [900]
     # Re-acquisition after a long loss starts a new raw track.
-    assert results[130].players[0].track_id != results[10].players[0].track_id
+    assert at[1200].players[0].track_id != at[60].players[0].track_id
+
+
+def test_lookalike_players_keep_halves_across_camera_cuts():
+    """Broadcast: a cut to a close-up every rally, players dressed alike. No
+    change of ends happens, so none may be reported and ids stay put."""
+    per_frame, idx = [], []
+    for i in range(0, 2700, 6):  # 90 s
+        t = i / 30
+        in_view = (t % 12) < 8  # 8 s rally, 4 s close-up / replay
+        idx.append(i)
+        if not in_view:
+            per_frame.append([])
+            continue
+        near = person_at_court(3.05 + 1.5 * np.sin(t), 2.5 + 0.8 * np.cos(1.3 * t))
+        far = person_at_court(3.05 - 1.6 * np.sin(0.9 * t), 10.5 + 0.9 * np.sin(1.1 * t))
+        per_frame.append([far, near] if int(t) % 2 else [near, far])
+    img = np.zeros((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), np.uint8)
+    frames = ((i, i * 1000 / 30, img) for i in idx)
+    results = track_players(frames, FakeEstimator(per_frame), lambda f: H_IMG_TO_COURT)
+    assert results.side_switches == []
+    for r in results:
+        if r.players:
+            assert _ids_by_side(r) == {"near": "P1", "far": "P2"}
 
 
 def test_tracker_rejects_teleport_to_spectator():
@@ -212,17 +237,23 @@ def test_stage_output_matches_contract_and_reports_side_switch():
     from rallyiq.contracts import PlayerTracks
     from rallyiq.perception.players.stage import build_tracks
 
-    # Change of ends while still in view: P1 walks near -> far, P2 far -> near.
-    ys = np.linspace(2.5, 10.5, 61)
+    # Change of ends while still in view: P1 walks near -> far, P2 far -> near,
+    # then the next game is played on the new halves.
+    ys = np.concatenate([np.full(30, 2.5), np.linspace(2.5, 10.5, 61), np.full(150, 10.5)])
     per_frame = [[person_at_court(1.5, y), person_at_court(4.5, 13.0 - y)] for y in ys]
-    results = track_players(_frames(len(per_frame)), FakeEstimator(per_frame), lambda f: H_IMG_TO_COURT)
+    idx = list(range(0, 3 * len(ys), 3))  # 10 processed frames per second
+    img = np.zeros((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), np.uint8)
+    frames = ((i, i * 1000 / 30, img) for i in idx)
+    results = track_players(frames, FakeEstimator(per_frame), lambda f: H_IMG_TO_COURT)
     tracks = build_tracks("vid", results, "test")
     again = PlayerTracks.model_validate_json(tracks.model_dump_json())
     assert again.frames[0].players[0].player_id == "P1"
     assert len(again.frames[0].players[0].keypoints) == 17
     assert again.frames[0].players[0].foot_court is not None
-    expected = int(np.argmax(ys >= 6.7))
-    assert tracks.side_switches == [expected]
+    assert len(tracks.side_switches) == 1
+    # Reported where the walk takes the players clear of the net.
+    k = idx.index(tracks.side_switches[0])
+    assert 6.7 <= ys[k] <= 7.6
     assert {p.player_id for p in again.frames[-1].players if p.side == "far"} == {"P1"}
 
 
@@ -242,3 +273,23 @@ def test_stage_without_model_returns_empty_tracks(tmp_path, monkeypatch):
     ctx = StageContext(video_id="v", video_path=tmp_path / "v.mp4", work_dir=tmp_path, store=NoStore(), meta=meta)
     out = stage.run(ctx)
     assert out.frames == [] and out.model is None
+
+
+def test_coreml_rejects_empty_frame_falls_back_to_cpu():
+    from rallyiq.perception.players.pose import CpuFallbackSession
+
+    class Rejects:
+        def run(self, names, feed):
+            raise RuntimeError("Input (onnx__Mul_1229) has a dynamic shape ({-1}) but the runtime shape ({0})")
+
+        def get_inputs(self):
+            return ["input"]
+
+    class Cpu:
+        def run(self, names, feed):
+            return ["cpu"]
+
+    made = []
+    s = CpuFallbackSession(Rejects(), lambda: made.append(1) or Cpu())
+    assert s.run(None, {}) == ["cpu"] and s.run(None, {}) == ["cpu"]
+    assert s.fallbacks == 2 and made == [1] and s.get_inputs() == ["input"]

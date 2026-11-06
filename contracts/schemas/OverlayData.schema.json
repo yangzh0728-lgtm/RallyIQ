@@ -30,8 +30,68 @@
           "title": "Lines",
           "type": "array"
         },
+        "boundary": {
+          "description": "in-play rally boundary for the match format (singles or doubles sidelines)",
+          "items": {
+            "items": {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "title": "Boundary",
+          "type": "array"
+        },
         "status": {
           "$ref": "#/$defs/Status"
+        },
+        "image_corners": {
+          "anyOf": [
+            {
+              "items": {
+                "description": "[x, y]",
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "outer corners of the analysed court, near-left, near-right, far-right, far-left",
+          "title": "Image Corners"
+        },
+        "other_courts": {
+          "description": "other courts in view (ignored); the UI lets the user switch to one",
+          "items": {
+            "items": {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "type": "array"
+          },
+          "title": "Other Courts",
+          "type": "array"
         }
       },
       "required": [
@@ -89,7 +149,9 @@
             {
               "enum": [
                 "P1",
-                "P2"
+                "P2",
+                "P3",
+                "P4"
               ],
               "type": "string"
             },
@@ -98,6 +160,22 @@
             }
           ],
           "title": "Player Id"
+        },
+        "team": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team"
         },
         "side": {
           "anyOf": [
@@ -291,12 +369,21 @@
   "description": "Stage ``overlay`` output, served as-is to the web UI.",
   "properties": {
     "schema_version": {
-      "default": "0.1.0",
+      "default": "0.2.0",
       "title": "Schema Version",
       "type": "string"
     },
     "video": {
       "$ref": "#/$defs/VideoMeta"
+    },
+    "match_format": {
+      "default": "singles",
+      "enum": [
+        "singles",
+        "doubles"
+      ],
+      "title": "Match Format",
+      "type": "string"
     },
     "court": {
       "items": {

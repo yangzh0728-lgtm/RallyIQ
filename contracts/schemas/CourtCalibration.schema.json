@@ -67,6 +67,25 @@
           "title": "Keypoints",
           "type": "array"
         },
+        "other_courts": {
+          "description": "other courts detected in view (not analysed), outer corners in px, same order as image_corners; used to reject their players and shuttles and to offer switching court",
+          "items": {
+            "items": {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "type": "array"
+          },
+          "title": "Other Courts",
+          "type": "array"
+        },
         "reprojection_error_px": {
           "anyOf": [
             {
@@ -176,7 +195,7 @@
   "description": "Stage ``calibration`` output.",
   "properties": {
     "schema_version": {
-      "default": "0.1.0",
+      "default": "0.2.0",
       "title": "Schema Version",
       "type": "string"
     },

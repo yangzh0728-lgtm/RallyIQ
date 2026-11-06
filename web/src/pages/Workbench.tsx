@@ -3,16 +3,18 @@ import { CorrectionPanel, StatusPill } from "../components/CorrectionPanel";
 import { HeatmapPanel } from "../components/HeatmapPanel";
 import { JobDetail, useJob } from "../components/JobProgress";
 import { MiniMap } from "../components/MiniMap";
+import { QualityPanel } from "../components/QualityPanel";
+import { StrokePanel } from "../components/StrokePanel";
 import { Timeline } from "../components/Timeline";
 import { VideoStage } from "../components/VideoStage";
-import { api } from "../lib/api";
+import { api, type MatchFormatSetting } from "../lib/api";
 import { PlaybackClock } from "../lib/clock";
 import { rallyAt } from "../lib/corrections";
 import { CORNER_NAMES } from "../lib/court";
 import { download, exportCsv, exportJson } from "../lib/export";
 import { courtAt, DEFAULT_LAYERS, frameIndexAt, type Layers } from "../lib/overlay";
 import { colorOf, labelOf } from "../lib/players";
-import { PLAYER_IDS, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
+import { playerIdsFor, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
 
 export function Workbench({ videoId }: { videoId: string }) {
   const [video, setVideo] = useState<Video | null>(null);
@@ -55,6 +57,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
   const [hardExample, setHardExample] = useState(true);
   const [layers, setLayers] = useState<Layers>(DEFAULT_LAYERS);
   const [calibrating, setCalibrating] = useState(false);
+  const [choosingCourt, setChoosingCourt] = useState(false);
   const [selRally, setSelRally] = useState<string | null>(null);
   const [selShot, setSelShot] = useState<string | null>(null);
 
@@ -111,10 +114,24 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
     [video.video_id, hardExample],
   );
 
-  const onCalibrated = async (corners: Point[]) => {
-    setCalibrating(false);
+  const [formatSetting, setFormatSetting] = useState<MatchFormatSetting | null>(null);
+  useEffect(() => {
+    api.getMatchFormat(video.video_id).then(setFormatSetting, () => setFormatSetting(null));
+  }, [video.video_id]);
+  const changeFormat = async (f: MatchFormatSetting) => {
     try {
-      onRerun(await api.setManualCalibration(video.video_id, corners));
+      setFormatSetting(f);
+      onRerun(await api.setMatchFormat(video.video_id, f));
+    } catch (e) {
+      setActionError(`切换单/双打失败：${(e as Error).message}`);
+    }
+  };
+
+  const onCalibrated = async (corners: Point[], otherCourts: Point[][] = []) => {
+    setCalibrating(false);
+    setChoosingCourt(false);
+    try {
+      onRerun(await api.setManualCalibration(video.video_id, corners, otherCourts));
     } catch (e) {
       setActionError(`标定失败：${(e as Error).message}`);
     }
@@ -196,6 +213,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
   const court = courtAt(overlay.court, firstFrame) ?? overlay.court[0];
   const reviewShots = events.shots.filter((s) => s.status === "needs_review" && s.source === "model").length;
   const reviewRallies = events.rallies.filter((r) => r.status === "needs_review" && r.source === "model").length;
+  const reviewTypes = events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status !== "ok").length;
   const toggle = (k: keyof Omit<Layers, "opacity">) => setLayers((l) => ({ ...l, [k]: !l[k] }));
   const meta = overlay.video;
 
@@ -217,7 +235,28 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
               {reviewRallies} / {reviewShots}
             </span>
           </Stat>
+          <Stat label="击球类型 待复核 / 不可判定">
+            <span style={{ color: reviewTypes ? "var(--warn)" : undefined }}>
+              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "needs_review").length} /{" "}
+              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "undeterminable").length}
+            </span>
+          </Stat>
           <Stat label="已做修正">{corrections.length}</Stat>
+          <div className="row">
+            <span className="muted">比赛类型</span>
+            <span className="spacer" />
+            <span className="pill">{overlay.match_format === "doubles" ? "双打 · 4 人" : "单打 · 2 人"}</span>
+            <select
+              value={formatSetting ?? "auto"}
+              disabled={formatSetting === null}
+              title="自动识别不对时手动指定；会从球员识别开始重新分析"
+              onChange={(e) => void changeFormat(e.target.value as MatchFormatSetting)}
+            >
+              <option value="auto">自动识别</option>
+              <option value="singles">强制单打</option>
+              <option value="doubles">强制双打</option>
+            </select>
+          </div>
           <div className="row">
             <span className="muted">球场标定</span>
             <span className="spacer" />
@@ -228,8 +267,27 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
             {calibrating ? "取消点选" : "球场线不对？手动点选四角"}
           </button>
           {calibrating && <div className="muted" style={{ marginTop: 4 }}>按 {CORNER_NAMES.join(" → ")} 的顺序点击外框四角；提交后会从标定开始重新分析。</div>}
+          {!!court?.other_courts?.length && (
+            <>
+              <div className="muted" style={{ marginTop: 8 }}>
+                画面里还有 {court.other_courts.length} 块场地（虚线框），它们的球员和球已被排除。
+              </div>
+              <button
+                style={{ marginTop: 4, width: "100%" }}
+                className={choosingCourt ? "active" : ""}
+                onClick={() => {
+                  setCalibrating(false);
+                  setChoosingCourt((c) => !c);
+                }}
+              >
+                {choosingCourt ? "取消选择" : "分析的不是这块场地？换一块"}
+              </button>
+            </>
+          )}
         </div>
+        <QualityPanel videoId={video.video_id} />
         <HeatmapPanel overlay={overlay} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} courtStatus={court?.status} />
+        <StrokePanel shots={events.shots} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} clock={clock} />
       </aside>
 
       <section className="wb-center">
@@ -256,7 +314,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           </label>
           <span className="spacer" />
           <span className="legend">
-            {PLAYER_IDS.map((id) => (
+            {playerIdsFor(overlay.match_format).map((id) => (
               <span key={id} className="row" style={{ gap: 4 }}>
                 <span className="dot" style={{ background: colorOf(id) }} />
                 {labelOf(id)}
@@ -267,7 +325,7 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
             </span>
           </span>
         </div>
-        <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} />
+        <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} choosingCourt={choosingCourt} onCourtChosen={onCalibrated} />
       </section>
 
       <aside className="wb-right">
@@ -286,12 +344,32 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           setHardExample={setHardExample}
           corrections={corrections}
           error={actionError}
+          matchFormat={events.match_format ?? overlay.match_format}
         />
+        <div className="panel">
+          <h3>赛后报告</h3>
+          <div className="muted small" style={{ marginBottom: 6 }}>回合、跑动、覆盖、得失分统计和 AI 教练点评（基于修正后的数据）。</div>
+          <a href={`#/videos/${encodeURIComponent(video.video_id)}/report`}>
+            <button className="primary" style={{ width: "100%" }}>查看赛后报告 →</button>
+          </a>
+        </div>
         <div className="panel">
           <h3>导出</h3>
           <div className="row">
             <button onClick={() => void doExport("json")}>JSON（含原始预测和修正）</button>
             <button onClick={() => void doExport("csv")}>CSV（逐拍）</button>
+          </div>
+          <div className="row" style={{ marginTop: 6 }}>
+            <button
+              disabled={!rally || !api.clipUrl(video.video_id, rally.rally_id)}
+              title={api.clipUrl(video.video_id, "x") ? "导出当前回合的视频片段（前后各留 1 秒）" : "演示模式没有原视频"}
+              onClick={() => {
+                const url = rally && api.clipUrl(video.video_id, rally.rally_id);
+                if (url) window.location.href = url;
+              }}
+            >
+              {rally ? `第 ${rallyNo(rally.rally_id)} 回合片段（MP4）` : "回合片段（先播放到某个回合）"}
+            </button>
           </div>
         </div>
       </aside>

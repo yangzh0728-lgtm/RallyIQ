@@ -14,7 +14,8 @@
         "set_rally_winner",
         "swap_player_ids",
         "confirm_shot",
-        "confirm_rally"
+        "confirm_rally",
+        "set_shot_type"
       ],
       "title": "Op",
       "type": "string"

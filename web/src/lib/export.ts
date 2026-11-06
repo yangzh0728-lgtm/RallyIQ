@@ -1,4 +1,4 @@
-import type { Correction, EventsResult, Video } from "./types";
+import { TEAM_OF, type Correction, type EventsResult, type Video } from "./types";
 
 // Client-side export for mock mode. Same shapes as GET /api/videos/{id}/export on the backend.
 
@@ -13,8 +13,9 @@ export function exportJson(video: Video, effective: EventsResult, raw: EventsRes
 }
 
 export const CSV_HEADER = [
-  "shot_id", "rally_id", "frame", "t_ms", "time", "hitter", "confidence", "status", "source",
+  "shot_id", "rally_id", "frame", "t_ms", "time", "hitter", "team", "confidence", "status", "source",
   "shuttle_x", "shuttle_y", "hitter_court_x", "hitter_court_y",
+  "shot_type", "shot_type_confidence", "shot_type_status", "shot_type_source",
 ];
 
 function cell(v: unknown): string {
@@ -29,8 +30,9 @@ export function exportCsv(ev: EventsResult): string {
     const secs = s.t_ms / 1000;
     const time = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${(secs % 60).toFixed(3).padStart(6, "0")}`;
     return [
-      s.shot_id, s.rally_id, s.frame, s.t_ms, time, s.hitter, s.confidence.toFixed(3), s.status, s.source,
+      s.shot_id, s.rally_id, s.frame, s.t_ms, time, s.hitter, s.hitter ? TEAM_OF[s.hitter] : null, s.confidence.toFixed(3), s.status, s.source,
       ...(s.shuttle_px ?? [null, null]), ...(s.hitter_court ?? [null, null]),
+      s.shot_type, s.stroke ? s.stroke.confidence.toFixed(3) : null, s.stroke?.status, s.stroke?.source,
     ];
   });
   return [CSV_HEADER, ...rows].map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";

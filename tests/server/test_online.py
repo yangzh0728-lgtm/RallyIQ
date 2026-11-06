@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from rallyiq.api.app import create_app
 from rallyiq.api.auth import AuthConfig, hash_password, verify_password
-from rallyiq.contracts import EventsResult
+from rallyiq.contracts import STAGES, EventsResult
 from rallyiq.pipeline.worker import Worker
 from rallyiq.store import Store, now
 
@@ -96,7 +96,7 @@ def test_worker_runs_jobs_and_exits_when_idle(tmp_path, db_url, sample_video, mo
     assert time.monotonic() - t0 < 60
     assert w.jobs_done == 1
     assert store.get_job(job.job_id).state == "succeeded"
-    assert store.get_video(vid).artifacts == ["probe", "calibration", "players", "shuttle", "events", "overlay"]
+    assert store.get_video(vid).artifacts == list(STAGES)
 
 
 # ------------------------------------------------------------- object storage
@@ -132,6 +132,14 @@ def test_s3_store_roundtrip(tmp_path, s3_env, sample_video, monkeypatch):
     assert store.load_artifact(vid, "events", EventsResult) is not None
     assert "overlay" in store.get_video(vid).artifacts
     assert "X-Amz-Signature" in store.video_download_url(vid)
+
+    # input assessment works from object-storage stamps; sampling pictures leaves no copy behind
+    from rallyiq.ingest import quality_for
+
+    (tmp_path / "api-data" / "videos" / vid / "source.mp4").unlink()  # the API keeps no local copy
+    assert quality_for(store, vid) is not None
+    assert not (tmp_path / "api-data" / "videos" / vid / "source.mp4").exists()
+    assert store.artifact_stamp(vid, "quality") is not None
 
     store.delete_video(vid)
     assert store.get_video(vid) is None

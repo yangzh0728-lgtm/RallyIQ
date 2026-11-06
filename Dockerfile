@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
 WORKDIR /app
 COPY pyproject.toml ./
 COPY rallyiq/ rallyiq/
-RUN pip install '.[server]'
+# coach: AI coach via Claude API (set ANTHROPIC_API_KEY); headless OpenCV: picture stats for /quality.
+RUN pip install '.[server,coach]' opencv-python-headless
 COPY --from=web /web/dist /app/web
 USER rallyiq
 EXPOSE 8000

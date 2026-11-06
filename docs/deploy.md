@@ -113,7 +113,8 @@ Cloudflare R2 ◀──── Modal：GPU worker 容器（docker/worker.Dockerfi
    输出 `SMOKE OK` 即全链路（注册 → 直传 R2 → GPU 分析 → 结果 → 回放）正常。然后在网页上用邀请码注册自己的账号。
 6. （可选）★ 自有域名：`fly certs add rallyiq.你的域名`，按提示在域名商处加 CNAME；同时更新 CORS 两处配置。
 
-所有变量的说明见 `deploy/env.example`。
+所有变量的说明见 `deploy/env.example`。AI 教练点评默认用 Claude API：在 Fly 上再 `fly secrets set ANTHROPIC_API_KEY=…`
+即可（按调用付费，每份报告约几美分；不设置则用离线规则模板）。
 
 ## 4. 本地跑一遍线上同款环境
 
@@ -134,5 +135,7 @@ CI（`.github/workflows/docker.yml`）在每个相关 PR 上做同样的事：�
   有排队任务就启动 GPU。
 - **备份**：Neon 自带时间点恢复；R2 可开启对象版本或定期 `rclone sync` 到另一个桶。
 - **换 GPU 型号**：`RALLYIQ_MODAL_GPU=T4 modal deploy deploy/modal_worker.py`（更便宜更慢）或 `A10G`（更快）。
+- **线上同样可用的功能**：回合片段导出（API 让 ffmpeg 直接按 Range 读取 R2 预签名地址，不下载整段视频）、
+  视频质量评估（缓存戳来自对象存储元数据）、难例汇总（普通用户只看自己的，管理员看全部）、赛后报告与 AI 点评。
 - **从本机迁移数据**：本地 `data/videos/` 的目录结构与桶里的键完全一致，可用 `rclone copy data/videos r2:rallyiq/videos`
   上传，数据库行需要另外导入（目前没有自动迁移脚本，有需要时再加）。

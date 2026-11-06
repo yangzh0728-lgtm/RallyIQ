@@ -10,6 +10,7 @@
             "players",
             "shuttle",
             "events",
+            "strokes",
             "overlay"
           ],
           "title": "Name",

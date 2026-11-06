@@ -1,4 +1,4 @@
-"""Synthetic singles footage (shuttle track + COCO-17 poses) with ground truth.
+"""Synthetic singles or doubles footage (shuttle track + COCO-17 poses) with ground truth.
 
 Used to develop and regression-test the rules before real perception output
 exists. The camera sits behind the near baseline: the near player is large
@@ -37,10 +37,19 @@ class PlayerSpec:
     side: str
     height_px: float
     contact_box: tuple[float, float, float, float]  # x0, y0, x1, y1 where hits happen
+    team: Optional[str] = None  # doubles only
 
 
 NEAR = PlayerSpec("P1", "near", 330.0, (500, 600, 1400, 880))
 FAR = PlayerSpec("P2", "far", 150.0, (700, 230, 1200, 360))
+
+# Doubles: partners side by side, each covering half of their end.
+DOUBLES = {
+    "A": [PlayerSpec("P1", "near", 330.0, (500, 600, 950, 880), "A"),
+          PlayerSpec("P3", "near", 330.0, (950, 600, 1400, 880), "A")],
+    "B": [PlayerSpec("P2", "far", 150.0, (950, 230, 1200, 360), "B"),
+          PlayerSpec("P4", "far", 150.0, (700, 230, 950, 360), "B")],
+}
 
 
 @dataclass
@@ -78,9 +87,14 @@ def make_video(
     end_modes: Optional[list[str]] = None,
     with_poses: bool = True,
     trailing_ms: float = 2000.0,
+    doubles: bool = False,
 ) -> SynthVideo:
     rng = random.Random(seed)
-    players = {NEAR.player_id: NEAR, FAR.player_id: FAR}
+    if doubles:
+        teams = DOUBLES
+    else:
+        teams = {"A": [NEAR], "B": [FAR]}
+    players = {p.player_id: p for ps in teams.values() for p in ps}
     frame_ms = 1000.0 / fps
 
     # --- script: hits (time, player, contact point, arm) and shuttle path pieces ---
@@ -89,9 +103,15 @@ def make_video(
     shuttle_fn = []  # (t0, t1, fn(t) -> (x, y) or None)
     hit_script: list[tuple[float, str, tuple[float, float], int]] = []
     for r in range(n_rallies):
-        server = NEAR if r % 2 == 0 else FAR
+        serve_team = "A" if r % 2 == 0 else "B"
+        recv_team = "B" if serve_team == "A" else "A"
         n_hits = rng.randint(*hits_per_rally)
-        order = [server if k % 2 == 0 else (FAR if server is NEAR else NEAR) for k in range(n_hits)]
+        order = [
+            (teams[serve_team] if k % 2 == 0 else teams[recv_team])[0]
+            if not doubles
+            else rng.choice(teams[serve_team] if k % 2 == 0 else teams[recv_team])
+            for k in range(n_hits)
+        ]
         contacts = []
         for p in order:
             x0, y0, x1, y1 = p.contact_box
@@ -112,7 +132,8 @@ def make_video(
             if k + 1 < n_hits:
                 b = contacts[k + 1]
             else:  # last shot lands on the opponent's floor
-                opp = FAR if p is NEAR else NEAR
+                opp_team = "B" if p in teams["A"] else "A"
+                opp = teams[opp_team][0] if not doubles else rng.choice(teams[opp_team])
                 x0, y0, x1, y1 = opp.contact_box
                 b = (rng.uniform(x0, x1), y1 + opp.height_px * rng.uniform(0.6, 0.9))
             h = rng.uniform(30, 250)
@@ -168,7 +189,7 @@ def make_video(
     # --- render poses: feet move linearly between the positions each hit needs ---
     poses: list[PoseFrame] = []
     if with_poses:
-        keyframes: dict[str, list[tuple[float, tuple[float, float], int]]] = {"P1": [], "P2": []}
+        keyframes: dict[str, list[tuple[float, tuple[float, float], int]]] = {pid: [] for pid in players}
         for th, pid, c, arm in hit_script:
             hgt = players[pid].height_px
             wx, wy = _HIT_ARMS[arm][1]
@@ -187,7 +208,8 @@ def make_video(
 def _render_player(spec, keys, tf, rng, kp_noise) -> PlayerPose:
     hgt = spec.height_px
     if not keys:
-        foot, arm, w = ((960.0, spec.contact_box[3] + hgt), 0, 0.0)
+        cx = 960.0 if spec.team is None else (spec.contact_box[0] + spec.contact_box[2]) / 2
+        foot, arm, w = ((cx, spec.contact_box[3] + hgt), 0, 0.0)
     else:
         prev = max((k for k in keys if k[0] <= tf), default=None, key=lambda k: k[0])
         nxt = min((k for k in keys if k[0] > tf), default=None, key=lambda k: k[0])
@@ -210,7 +232,7 @@ def _render_player(spec, keys, tf, rng, kp_noise) -> PlayerPose:
         Keypoint(foot[0] + dx * hgt + rng.gauss(0, kp_noise), foot[1] + dy * hgt + rng.gauss(0, kp_noise), rng.uniform(0.6, 0.95))
         for dx, dy in offs
     ]
-    return PlayerPose(spec.player_id, kps, spec.side)
+    return PlayerPose(spec.player_id, kps, spec.side, team=spec.team)
 
 
 def _interpolate_short_gaps(obs: list[ShuttleObs], max_gap: int) -> list[ShuttleObs]:

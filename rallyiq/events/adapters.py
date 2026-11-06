@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ..contracts import EventsResult, PlayerTracks, Rally, ShotEvent, ShuttleTrack
+from ..contracts import EventsResult, PlayerTracks, Rally, ShotEvent, ShuttleTrack, team_of
 from .types import HitEvent, Keypoint, PlayerPose, PoseFrame, RallySegment, ShuttleObs
 
-_PLAYER_IDS = ("P1", "P2")
+_PLAYER_IDS = ("P1", "P2", "P3", "P4")
 
 
 def shuttle_from_contract(track: Optional[ShuttleTrack]) -> list[ShuttleObs]:
@@ -31,6 +31,7 @@ def shuttle_from_contract(track: Optional[ShuttleTrack]) -> list[ShuttleObs]:
 def poses_from_contract(tracks: Optional[PlayerTracks]) -> list[PoseFrame]:
     if tracks is None:
         return []
+    doubles = tracks.match_format == "doubles"
     frames = []
     for pf in tracks.frames:
         players = []
@@ -45,6 +46,8 @@ def poses_from_contract(tracks: Optional[PlayerTracks]) -> list[PoseFrame]:
                     keypoints=[Keypoint(k[0], k[1], k[2]) for k in d.keypoints],
                     side=d.side,
                     foot_court_xy=tuple(d.foot_court) if d.foot_court else None,
+                    # Singles alternates by player, doubles by team.
+                    team=(d.team or team_of(d.player_id)) if doubles else None,
                 )
             )
         frames.append(PoseFrame(pf.frame, float(pf.t_ms), players))
@@ -77,7 +80,7 @@ def _shot(h: HitEvent, shot_id: str, rally_id: str) -> ShotEvent:
     )
 
 
-def events_to_contract(video_id: str, rallies: list[RallySegment]) -> EventsResult:
+def events_to_contract(video_id: str, rallies: list[RallySegment], match_format: str = "singles") -> EventsResult:
     out_rallies: list[Rally] = []
     shots: list[ShotEvent] = []
     for n, r in enumerate(rallies, start=1):
@@ -102,4 +105,4 @@ def events_to_contract(video_id: str, rallies: list[RallySegment]) -> EventsResu
                 source="model",
             )
         )
-    return EventsResult(video_id=video_id, rallies=out_rallies, shots=shots)
+    return EventsResult(video_id=video_id, match_format=match_format, rallies=out_rallies, shots=shots)

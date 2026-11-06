@@ -62,7 +62,7 @@ class Candidate:
 class PlayerState:
     """Tracker output for one player in one frame."""
 
-    player_id: str | None  # "P1"/"P2", stable across side switches
+    player_id: str | None  # "P1".."P4", stable across side switches
     track_id: int  # raw tracker slot id
     side: Side | None
     bbox: np.ndarray
@@ -72,6 +72,8 @@ class PlayerState:
     on_court: bool | None
     confidence: float
     interpolated: bool = False  # True when filled across a short gap, not observed
+    team: str | None = None  # "A" (P1/P3) or "B" (P2/P4)
+    appearance: np.ndarray | None = None  # torso colour histogram (internal, not in the contract)
 
 
 @dataclass

@@ -1,6 +1,7 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "video_id": "vid_example",
+  "match_format": "singles",
   "rallies": [
     {
       "rally_id": "r001",
@@ -41,7 +42,17 @@
         4.592,
         3.54
       ],
-      "shot_type": null,
+      "shot_type": "short_serve",
+      "stroke": {
+        "shot_type": "short_serve",
+        "confidence": 1.0,
+        "status": "ok",
+        "source": "human",
+        "classifier": null,
+        "candidates": [],
+        "reasons": [],
+        "evidence": {}
+      },
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -67,7 +78,41 @@
         2.957,
         10.493
       ],
-      "shot_type": null,
+      "shot_type": "lift",
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.353,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.353
+          },
+          {
+            "shot_type": "short_serve",
+            "p": 0.059
+          },
+          {
+            "shot_type": "long_serve",
+            "p": 0.059
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 3.79,
+          "receiver_depth_m": 3.59,
+          "lateral_m": 1.01,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 7.45,
+          "rise": 1.7,
+          "left_frame": 0.0
+        }
+      },
       "target_zone": null,
       "confidence": 0.7,
       "status": "ok",
@@ -91,6 +136,7 @@
       "shuttle_court": null,
       "hitter_court": null,
       "shot_type": null,
+      "stroke": null,
       "target_zone": null,
       "confidence": 1.0,
       "status": "ok",
@@ -115,7 +161,33 @@
         1.814,
         9.605
       ],
-      "shot_type": null,
+      "shot_type": "lift",
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.823,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.823
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 2.9,
+          "receiver_depth_m": 5.27,
+          "lateral_m": 1.58,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 8.33,
+          "rise": 1.46,
+          "left_frame": 0.0
+        }
+      },
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -141,7 +213,41 @@
         3.394,
         1.427
       ],
-      "shot_type": null,
+      "shot_type": "lift",
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.543,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.543
+          },
+          {
+            "shot_type": "drive",
+            "p": 0.061
+          },
+          {
+            "shot_type": "block",
+            "p": 0.057
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 5.27,
+          "receiver_depth_m": 4.0,
+          "lateral_m": 1.2,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 9.35,
+          "rise": 1.379,
+          "left_frame": 0.0
+        }
+      },
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -167,7 +273,33 @@
         4.599,
         10.7
       ],
-      "shot_type": null,
+      "shot_type": "lift",
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.628,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.628
+          }
+        ],
+        "reasons": [
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 4.0,
+          "receiver_depth_m": 4.08,
+          "lateral_m": 1.04,
+          "flight_ms": 1000.0,
+          "court_speed_mps": 8.15,
+          "rise": 1.598,
+          "left_frame": 0.0
+        }
+      },
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",
@@ -193,7 +325,45 @@
         3.561,
         2.62
       ],
-      "shot_type": null,
+      "shot_type": "lift",
+      "stroke": {
+        "shot_type": "lift",
+        "confidence": 0.261,
+        "status": "needs_review",
+        "source": "model",
+        "classifier": "rules_v1",
+        "candidates": [
+          {
+            "shot_type": "lift",
+            "p": 0.373
+          },
+          {
+            "shot_type": "drive",
+            "p": 0.231
+          },
+          {
+            "shot_type": "block",
+            "p": 0.12
+          }
+        ],
+        "reasons": [
+          "last_shot_of_rally",
+          "flight_not_observed",
+          "ambiguous_types",
+          "incomplete_evidence",
+          "hit_needs_review"
+        ],
+        "evidence": {
+          "contact_h": 0.946,
+          "hitter_depth_m": 4.08,
+          "receiver_depth_m": null,
+          "lateral_m": null,
+          "flight_ms": null,
+          "court_speed_mps": null,
+          "rise": null,
+          "left_frame": 0.0
+        }
+      },
       "target_zone": null,
       "confidence": 0.7,
       "status": "needs_review",

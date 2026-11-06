@@ -3,6 +3,7 @@ import type { PlaybackClock } from "../lib/clock";
 import { formatMs } from "../lib/corrections";
 import { useClockMs, useClockPlaying } from "../lib/useClock";
 import { colorOf } from "../lib/players";
+import { SHOT_TYPE_COLOR, SHOT_TYPE_ZH, typeLabel } from "../lib/strokes";
 import type { Rally, ShotEvent } from "../lib/types";
 
 interface Props {
@@ -96,13 +97,23 @@ export function Timeline(p: Props) {
               key={s.shot_id}
               className={`tl-shot ${s.status} ${s.shot_id === p.selectedShotId ? "selected" : ""}`}
               style={{ left: pct(s.t_ms), background: colorOf(s.hitter) }}
-              title={`${formatMs(s.t_ms)} · ${s.hitter ?? "击球者未知"} · 置信度 ${Math.round(s.confidence * 100)}%`}
+              title={`${formatMs(s.t_ms)} · ${s.hitter ?? "击球者未知"} · 置信度 ${Math.round(s.confidence * 100)}%${
+                s.stroke ? ` · ${typeLabel(s.shot_type)}${s.stroke.source === "model" && s.stroke.status !== "ok" ? "（类型待复核）" : ""}` : ""
+              }`}
               onClick={(e) => {
                 e.stopPropagation();
                 p.onSelectShot(s.shot_id);
               }}
             />
           ))}
+        {zoomRally &&
+          p.shots
+            .filter((s) => inView(s.t_ms) && s.shot_type)
+            .map((s) => (
+              <span key={`t-${s.shot_id}`} className="tl-type" style={{ left: pct(s.t_ms), color: SHOT_TYPE_COLOR[s.shot_type!] }}>
+                {SHOT_TYPE_ZH[s.shot_type!]}
+              </span>
+            ))}
         {inView(t) && <div className="tl-head" style={{ left: pct(t) }} />}
       </div>
     </div>

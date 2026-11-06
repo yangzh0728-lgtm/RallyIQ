@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { formatMs } from "../lib/corrections";
 import type { Video } from "../lib/types";
+import { HardExamples } from "../components/HardExamples";
 import { JobBadge } from "../components/JobProgress";
 
 export function Home() {
@@ -143,6 +144,7 @@ export function Home() {
           </table>
         )}
       </section>
+      <HardExamples />
     </main>
   );
 }

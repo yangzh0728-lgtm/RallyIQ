@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 import socket
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TypeVar
@@ -225,6 +227,37 @@ class Store:
         if not cached.exists():
             self.blobs.get_file(key, cached)
         return cached
+
+    @contextmanager
+    def local_video(self, video_id: str) -> Iterator[Path | None]:
+        """A local copy of the source for one-off reads (e.g. by the API). A file downloaded from
+        object storage just for this is removed afterwards; a worker's cached copy is kept."""
+        key = self.source_key(video_id)
+        if key is None or self.blobs.local_path(key) is not None:
+            yield self.video_path(video_id)
+            return
+        cached = self.root / key
+        existed = cached.exists()
+        try:
+            yield self.video_path(video_id)
+        finally:
+            if not existed:
+                cached.unlink(missing_ok=True)
+
+    def video_stamp(self, video_id: str) -> list[int] | None:
+        """Changes when the source video changes; works without downloading it."""
+        key = self.source_key(video_id)
+        if key is None:
+            p = self.video_path(video_id)
+            try:
+                st = p.stat() if p else None
+            except OSError:
+                st = None
+            return [st.st_mtime_ns, st.st_size] if st else None
+        return self.blobs.stamp(key)
+
+    def artifact_stamp(self, video_id: str, name: str) -> list[int] | None:
+        return self.blobs.stamp(self.artifact_key(video_id, name))
 
     def video_download_url(self, video_id: str, filename: str | None = None) -> str | None:
         key = self.source_key(video_id)

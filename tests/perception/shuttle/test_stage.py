@@ -55,3 +55,25 @@ def test_candidates_file_keeps_rejected(tmp_path):
     doc = json.loads(out.read_text())
     assert doc["frames"]["5"]["candidates"][1] == [1800.0, 50.0, 0.3]
     assert doc["frames"]["5"]["selected"] == 0
+
+
+def test_cli_retracks_saved_candidates_without_model(tmp_path, sample_video):
+    from rallyiq.perception.shuttle.__main__ import main
+
+    # sample_video: 640x360, 30 fps, 12 s
+    cands = {f: [(100.0 + 3 * f, 300.0 - 2 * f, 0.15), (500.0, 50.0, 0.15)] for f in range(0, 60)}
+    cfile = tmp_path / "c.json"
+    stage.save_candidates(cfile, cands, {}, "test@0", (640, 360))
+    out = tmp_path / "s.json"
+    assert main([str(sample_video), "--from-candidates", str(cfile), "--peak-threshold", "0.1",
+                 "--out", str(out)]) == 0
+    track = ShuttleTrack.model_validate_json(out.read_text())
+    assert track.detector == "test@0"
+    xs = {p.frame: p.x for p in track.points if p.source == "detected"}
+    assert len(xs) >= 55 and abs(xs[30] - 190.0) < 1e-6  # the weak moving track, not the idle blob
+    # Default threshold (0.2): everything is below it; an explicit weak_score override wins.
+    assert main([str(sample_video), "--from-candidates", str(cfile), "--out", str(out)]) == 0
+    assert ShuttleTrack.model_validate_json(out.read_text()).points == []
+    assert main([str(sample_video), "--from-candidates", str(cfile), "--out", str(out), "--peak-threshold", "0.1",
+                 "--tracker", "weak_score=0.5"]) == 0
+    assert ShuttleTrack.model_validate_json(out.read_text()).points == []

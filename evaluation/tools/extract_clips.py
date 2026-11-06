@@ -56,8 +56,8 @@ def download_section(video_id: str, start_s: float, dur_s: float, dest: Path) ->
     a, b = max(0, start_s - 2), start_s + dur_s + 2
     out = dest / f"{video_id}__{int(a)}-{int(b)}.mp4"
     if not out.exists():
-        subprocess.run(["yt-dlp", "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080]",
-                        "--download-sections", f"*{a}-{b}", "--force-keyframes-at-cuts",
+        subprocess.run(["yt-dlp", "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]",
+                        "--merge-output-format", "mp4", "--download-sections", f"*{a}-{b}", "--force-keyframes-at-cuts",
                         "-o", str(out), f"https://www.youtube.com/watch?v={video_id}"], check=True)
     return out
 
