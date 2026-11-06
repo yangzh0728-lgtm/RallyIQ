@@ -371,3 +371,25 @@ export interface VideoQuality {
   capabilities: CapabilityReliability[];
   summary: string;
 }
+
+// ------------------------------------------------------------------ hard examples (GET /hard_examples/summary)
+
+export interface ConditionGroup {
+  condition: string;
+  value: string;
+  videos: number;
+  model_shots: number;
+  model_rallies: number;
+  errors: Record<string, number>;
+  confirmed: number;
+  hit_error_rate: number | null;
+}
+
+export interface HardExampleSummary {
+  total: number;
+  errors: number;
+  videos: number;
+  by_kind: Record<string, number>;
+  groups: ConditionGroup[];
+  weakest: ConditionGroup[];
+}

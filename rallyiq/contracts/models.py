@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -652,3 +652,54 @@ class VideoQuality(Contract):
     checks: list[QualityCheck]
     capabilities: list[CapabilityReliability]
     summary: str
+
+
+# ------------------------------------------------------------------- hard examples
+
+
+HardExampleModule = Literal["hits", "rallies", "players", "strokes", "labels"]
+
+
+class HardExample(Contract):
+    """One human correction marked ``hard_example``, with the model output it fixed and the
+    video conditions it happened under. Collected across videos to build the evaluation set."""
+
+    video_id: str
+    filename: str | None = None
+    correction_id: str
+    op: str
+    kind: str = Field(description="e.g. missed_hit, false_hit, hit_timing, wrong_hitter, missed_rally, "
+                      "false_rally, rally_bounds, wrong_shot_type, id_swap, confirmed, label")
+    module: HardExampleModule
+    is_error: bool = Field(description="false for confirmations and plain labels (e.g. rally winner)")
+    frame: int | None = None
+    t_ms: int | None = None
+    created_at: datetime
+    payload: dict[str, Any] = Field(default_factory=dict)
+    model: dict[str, Any] | None = Field(default=None, description="the raw model item the correction refers to")
+    conditions: dict[str, str] = Field(default_factory=dict, description="camera_view, camera_height, fps, resolution, ...")
+    note: str | None = None
+
+
+class ConditionGroup(Contract):
+    """Error counts for one value of one condition (e.g. camera_view = side)."""
+
+    condition: str
+    value: str
+    videos: int
+    model_shots: int
+    model_rallies: int
+    errors: dict[str, int] = Field(description="module -> number of corrections that fixed a model error")
+    confirmed: int
+    hit_error_rate: float | None = Field(description="hit errors / model shots; null without shots")
+
+
+class HardExampleSummary(Contract):
+    """``GET /api/hard_examples/summary``: where the model fails most, per condition."""
+
+    total: int
+    errors: int
+    videos: int
+    by_kind: dict[str, int]
+    groups: list[ConditionGroup]
+    weakest: list[ConditionGroup] = Field(description="conditions with the highest hit error rate (enough shots)")

@@ -3,7 +3,7 @@ import { boundaryLinesM, CORNERS_M, homographyFrom4, projectCourtLines, projectL
 import { generateMock, type MockAnalysis } from "./mock";
 import { mockQuality } from "./quality";
 import { mockCoach, mockStats } from "./report";
-import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality } from "./types";
+import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality, HardExampleSummary } from "./types";
 
 /** Per-video singles/doubles choice; "auto" lets the players stage decide. */
 export type MatchFormatSetting = "auto" | "singles" | "doubles";
@@ -39,6 +39,10 @@ export interface Api {
   reportExportUrl(videoId: string, format: "md" | "json"): string | null;
   /** Input assessment: camera view, picture, visibility and how far each output can be trusted. */
   getQuality(videoId: string): Promise<VideoQuality>;
+  /** Corrections kept as hard examples, grouped by video condition. */
+  getHardExampleSummary(): Promise<HardExampleSummary>;
+  /** JSONL download of all hard examples, or null in mock mode. */
+  hardExamplesUrl(): string | null;
 }
 
 // ---------------------------------------------------------------- live (FastAPI, rallyiq/api/app.py)
@@ -110,6 +114,8 @@ export const liveApi: Api = {
     http<CoachReport>(`/videos/${enc(id)}/report/coach`, { method: "POST", body: JSON.stringify({ provider: provider ?? null }) }),
   reportExportUrl: (id, format) => `${BASE}/videos/${enc(id)}/report/export?format=${format}`,
   getQuality: (id) => http<VideoQuality>(`/videos/${enc(id)}/quality`),
+  getHardExampleSummary: () => http<HardExampleSummary>("/hard_examples/summary"),
+  hardExamplesUrl: () => `${BASE}/hard_examples?format=jsonl`,
 };
 
 // ---------------------------------------------------------------- mock (?mock)
@@ -310,6 +316,14 @@ export function createMockApi(): Api {
       must(id);
       return delay(mockQuality(analysis(id).overlay));
     },
+    async getHardExampleSummary() {
+      const all = Object.values(corrections).flat().filter((c) => c.hard_example);
+      const by_kind: Record<string, number> = {};
+      for (const c of all) by_kind[c.op] = (by_kind[c.op] ?? 0) + 1;
+      const errors = all.filter((c) => !c.op.startsWith("confirm") && c.op !== "set_rally_winner").length;
+      return delay({ total: all.length, errors, videos: Object.values(corrections).filter((cs) => cs.some((c) => c.hard_example)).length, by_kind, groups: [], weakest: [] });
+    },
+    hardExamplesUrl: () => null,
   };
 }
 

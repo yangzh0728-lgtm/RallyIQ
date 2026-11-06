@@ -29,7 +29,7 @@ SCHEMAS = [
     c.CorrectionIn, c.Correction, c.OverlayData, c.OverlayFrame, c.Job, c.Video, c.HeatmapData,
     c.MatchFormatSetting,
     c.MatchStats, c.CoachReport, c.MatchReport,
-    c.VideoQuality,
+    c.VideoQuality, c.HardExample, c.HardExampleSummary,
 ]
 
 

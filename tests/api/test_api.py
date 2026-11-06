@@ -222,3 +222,34 @@ def test_match_report_and_coach(client, sample_video, monkeypatch):
     assert client.post(f"/api/videos/{vid}/report/coach", json={"provider": "nope"}).status_code == 503
     providers = client.get("/api/coach/providers").json()
     assert providers["default"] == "offline" and {"anthropic", "offline"} <= set(providers["providers"])
+
+
+def test_hard_examples_collected_from_corrections(client, sample_video):
+    v = upload(client, sample_video)
+    vid = v["video_id"]
+    wait_job(client, v["latest_job"]["job_id"])
+    raw = client.get(f"/api/videos/{vid}/events").json()
+    s0, s1 = raw["shots"][0], raw["shots"][1]
+    other = "P2" if s1["hitter"] == "P1" else "P1"
+    post = lambda op, payload, **kw: client.post(f"/api/videos/{vid}/corrections", json={"op": op, "payload": payload, **kw})
+    post("delete_shot", {"shot_id": s0["shot_id"]})
+    post("set_hitter", {"shot_id": s1["shot_id"], "hitter": other})
+    post("add_shot", {"frame": 200, "hitter": "P1"})
+    post("confirm_rally", {"rally_id": raw["rallies"][0]["rally_id"]})
+    post("move_shot", {"shot_id": s1["shot_id"], "frame": s1["frame"] + 2}, hard_example=False)
+
+    ex = client.get("/api/hard_examples").json()
+    kinds = [e["kind"] for e in ex]
+    assert kinds == ["false_hit", "wrong_hitter", "missed_hit", "confirmed"]  # move_shot opted out
+    assert ex[0]["model"]["shot_id"] == s0["shot_id"] and ex[0]["frame"] == s0["frame"]
+    assert ex[2]["frame"] == 200 and ex[2]["model"] is None
+    assert ex[0]["conditions"]["fps"] == "25-35" and "camera_view" in ex[0]["conditions"]
+
+    summ = client.get("/api/hard_examples/summary").json()
+    assert summ["total"] == 4 and summ["errors"] == 3 and summ["videos"] == 1
+    fps = next(g for g in summ["groups"] if g["condition"] == "fps")
+    assert fps["errors"] == {"hits": 3} and fps["confirmed"] == 1
+    assert fps["hit_error_rate"] == pytest.approx(3 / fps["model_shots"], abs=1e-3)
+
+    jl = client.get("/api/hard_examples", params={"format": "jsonl"}).text.strip().splitlines()
+    assert len(jl) == 4
