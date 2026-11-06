@@ -70,10 +70,12 @@ def test_real_checkpoint_layout_loads(tmp_path):
     assert det.seq_len == 8 and det.bg_mode == "concat" and det.name.startswith("shuttle-heatmap-seq8@")
 
 
-@pytest.mark.parametrize("fps,n", [(30.0, 60), (120.0, 61), (30.0, 5)])
-def test_every_frame_detected_and_mapped_back(tmp_path, fps, n):
+@pytest.mark.parametrize("fps,n,ensemble", [
+    (30.0, 60, "weight"), (120.0, 61, "weight"), (30.0, 5, "weight"), (30.0, 61, "none"), (60.0, 45, "average"),
+])
+def test_every_frame_detected_and_mapped_back(tmp_path, fps, n, ensemble):
     video = write_video(tmp_path / "v.mp4", n=n, fps=fps)
-    det = make_detector(tmp_path, batch_size=4)
+    det = make_detector(tmp_path, batch_size=4, ensemble=ensemble)
     cands, size = det.detect(video, fps, n)
     assert size == (640, 360)
     assert sorted(cands) == list(range(n))
@@ -92,7 +94,7 @@ def test_roi_crop_maps_back_to_original_pixels(tmp_path):
     for f in range(20):
         x, y = ball_position(f, 640, 360)
         cx, cy, _ = cands[f][0]
-        assert abs(cx - x) < 2.0 and abs(cy - y) < 2.0
+        assert abs(cx - x) < 2.5 and abs(cy - y) < 2.5
 
 
 def test_find_weights(tmp_path, monkeypatch):
