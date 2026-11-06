@@ -75,6 +75,11 @@ python -m rallyiq.perception.players match.mp4 --homography H.json --out players
 标定给出其他场地（`other_courts`）时，脚站在其他场地上的人直接排除；跟踪结束后按整段轨迹再查一次：
 同一 `track_id` 大部分时间站在本场缓冲区外的整段删除（偶尔扑出界不受影响）。见 `postprocess.drop_offcourt_runs`。
 
+标定只看场线选场地，可能选成没人打球的邻场（DJI_0009）。跟踪前先在每个机位段抽 12 帧跑姿态，
+数每块候选场地（目标 + `other_courts`）上"两个半场都有人"的程度；别的场地明显更像正在比赛的场地时，
+把它换成目标场地（原目标移进 `other_courts`，状态降为待复核，`notes` 里写明原因），并保存回标定结果，
+羽毛球和叠加层也随之使用。手动标定不会被改动；`court_choice: off` 关闭。见 `perception/court_choice.py`。
+
 ## 已知限制（首版）
 
 - 双打搭档常穿同色队服，颜色特征区分不了搭档，交叉跑位时只靠运动连续性；跟错时用
