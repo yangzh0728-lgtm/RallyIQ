@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "description": "Court occupancy grid in court metres for one player.",
+  "properties": {
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "enum": [
+            "P1",
+            "P2"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Player Id"
+    },
+    "cell_m": {
+      "title": "Cell M",
+      "type": "number"
+    },
+    "nx": {
+      "title": "Nx",
+      "type": "integer"
+    },
+    "ny": {
+      "title": "Ny",
+      "type": "integer"
+    },
+    "counts": {
+      "description": "counts[iy][ix]; cell (ix, iy) covers x in [ix*cell, (ix+1)*cell)",
+      "items": {
+        "items": {
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "title": "Counts",
+      "type": "array"
+    },
+    "samples": {
+      "title": "Samples",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "video_id",
+    "player_id",
+    "cell_m",
+    "nx",
+    "ny",
+    "counts",
+    "samples"
+  ],
+  "title": "HeatmapData",
+  "type": "object"
+}

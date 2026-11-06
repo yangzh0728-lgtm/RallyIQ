@@ -1,0 +1,103 @@
+{
+  "schema_version": "0.1.0",
+  "video_id": "vid_example",
+  "segments": [
+    {
+      "start_frame": 0,
+      "end_frame": 74,
+      "homography": [
+        [
+          0.023533950617283847,
+          0.010459533607681705,
+          -19.542592592592506
+        ],
+        [
+          -9.362287503356468e-18,
+          -0.04298862781538993,
+          43.17777777777766
+        ],
+        [
+          7.635047876063808e-19,
+          0.003429355281207109,
+          1.0
+        ]
+      ],
+      "image_corners": [
+        [
+          384.0,
+          1004.4
+        ],
+        [
+          1536.0,
+          1004.4
+        ],
+        [
+          1238.4,
+          334.8
+        ],
+        [
+          681.6,
+          334.8
+        ]
+      ],
+      "keypoints": [
+        {
+          "name": "near_left_corner",
+          "image": [
+            384.0,
+            1004.4
+          ],
+          "court": [
+            0.0,
+            0.0
+          ],
+          "used_for_fit": true
+        },
+        {
+          "name": "near_right_corner",
+          "image": [
+            1536.0,
+            1004.4
+          ],
+          "court": [
+            6.1,
+            0.0
+          ],
+          "used_for_fit": true
+        },
+        {
+          "name": "far_right_corner",
+          "image": [
+            1238.4,
+            334.8
+          ],
+          "court": [
+            6.1,
+            13.4
+          ],
+          "used_for_fit": true
+        },
+        {
+          "name": "far_left_corner",
+          "image": [
+            681.6,
+            334.8
+          ],
+          "court": [
+            0.0,
+            13.4
+          ],
+          "used_for_fit": true
+        }
+      ],
+      "reprojection_error_px": 0.0,
+      "method": "auto",
+      "mirrored": false,
+      "confidence": 0.9,
+      "status": "ok",
+      "notes": [
+        "demo data"
+      ]
+    }
+  ]
+}

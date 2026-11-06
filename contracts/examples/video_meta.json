@@ -1,0 +1,12 @@
+{
+  "video_id": "vid_example",
+  "filename": "match.mp4",
+  "fps": 30.0,
+  "frame_count": 75,
+  "width": 1920,
+  "height": 1080,
+  "duration_ms": 2500,
+  "codec": "h264",
+  "rotation": 0,
+  "variable_frame_rate": false
+}

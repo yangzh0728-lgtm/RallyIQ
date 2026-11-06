@@ -1,0 +1,164 @@
+{
+  "$defs": {
+    "OverlayPlayer": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Player Id"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side"
+        },
+        "bbox": {
+          "description": "[x1, y1, x2, y2] px",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bbox",
+          "type": "array"
+        },
+        "keypoints": {
+          "items": {
+            "description": "[x, y, conf]",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "title": "Keypoints",
+          "type": "array"
+        },
+        "foot_court": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Foot Court"
+        },
+        "interpolated": {
+          "default": false,
+          "title": "Interpolated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "player_id",
+        "bbox",
+        "keypoints"
+      ],
+      "title": "OverlayPlayer",
+      "type": "object"
+    },
+    "OverlayShuttle": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "detected",
+            "interpolated"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "source",
+        "confidence"
+      ],
+      "title": "OverlayShuttle",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Everything the web player draws on one frame.\n\nHits/rallies are not repeated here: take them from the effective events\n(``GET /api/videos/{id}/events``) so human corrections show up immediately.",
+  "properties": {
+    "frame": {
+      "title": "Frame",
+      "type": "integer"
+    },
+    "t_ms": {
+      "title": "T Ms",
+      "type": "integer"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/OverlayPlayer"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "shuttle": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OverlayShuttle"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "frame",
+    "t_ms"
+  ],
+  "title": "OverlayFrame",
+  "type": "object"
+}

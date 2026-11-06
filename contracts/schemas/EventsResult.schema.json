@@ -1,0 +1,313 @@
+{
+  "$defs": {
+    "Rally": {
+      "additionalProperties": false,
+      "properties": {
+        "rally_id": {
+          "title": "Rally Id",
+          "type": "string"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "shot_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Shot Ids",
+          "type": "array"
+        },
+        "end_reason": {
+          "default": "unknown",
+          "enum": [
+            "shuttle_lost",
+            "shuttle_static",
+            "video_end",
+            "manual",
+            "unknown"
+          ],
+          "title": "End Reason",
+          "type": "string"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Winner"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "status": {
+          "$ref": "#/$defs/Status",
+          "default": "needs_review"
+        },
+        "source": {
+          "$ref": "#/$defs/Source",
+          "default": "model"
+        }
+      },
+      "required": [
+        "rally_id",
+        "start_frame",
+        "end_frame",
+        "start_ms",
+        "end_ms",
+        "confidence"
+      ],
+      "title": "Rally",
+      "type": "object"
+    },
+    "ShotEvent": {
+      "additionalProperties": false,
+      "description": "A hit (\u51fb\u7403) candidate. MVP: no shot type / landing zone yet (kept nullable).",
+      "properties": {
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "rally_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rally Id"
+        },
+        "frame": {
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "hitter": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hitter"
+        },
+        "hitter_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hitter Confidence"
+        },
+        "shuttle_px": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shuttle Px"
+        },
+        "shuttle_court": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shuttle Court"
+        },
+        "hitter_court": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hitter Court"
+        },
+        "shot_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shot Type"
+        },
+        "target_zone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Zone"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "status": {
+          "$ref": "#/$defs/Status",
+          "default": "needs_review"
+        },
+        "source": {
+          "$ref": "#/$defs/Source",
+          "default": "model"
+        },
+        "reasons": {
+          "description": "why this was proposed",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "shot_id",
+        "frame",
+        "t_ms",
+        "confidence"
+      ],
+      "title": "ShotEvent",
+      "type": "object"
+    },
+    "Source": {
+      "enum": [
+        "model",
+        "human"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Stage ``events`` output (raw model prediction; corrections are layered on top).",
+  "properties": {
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "rallies": {
+      "items": {
+        "$ref": "#/$defs/Rally"
+      },
+      "title": "Rallies",
+      "type": "array"
+    },
+    "shots": {
+      "items": {
+        "$ref": "#/$defs/ShotEvent"
+      },
+      "title": "Shots",
+      "type": "array"
+    }
+  },
+  "required": [
+    "video_id",
+    "rallies",
+    "shots"
+  ],
+  "title": "EventsResult",
+  "type": "object"
+}

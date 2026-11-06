@@ -1,0 +1,211 @@
+{
+  "schema_version": "0.1.0",
+  "video_id": "vid_example",
+  "rallies": [
+    {
+      "rally_id": "r001",
+      "start_frame": 15,
+      "end_frame": 240,
+      "start_ms": 500,
+      "end_ms": 8000,
+      "shot_ids": [
+        "s0001",
+        "s0002",
+        "s0003",
+        "s0004",
+        "s0005",
+        "s0006",
+        "s0007"
+      ],
+      "end_reason": "shuttle_lost",
+      "winner": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model"
+    }
+  ],
+  "shots": [
+    {
+      "shot_id": "s0001",
+      "rally_id": "r001",
+      "frame": 30,
+      "t_ms": 1000,
+      "hitter": "P1",
+      "hitter_confidence": 0.8,
+      "shuttle_px": [
+        1269.982,
+        407.967
+      ],
+      "shuttle_court": null,
+      "hitter_court": [
+        4.592,
+        3.54
+      ],
+      "shot_type": null,
+      "target_zone": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model",
+      "reasons": [
+        "demo: trajectory turn",
+        "demo: wrist within 40 px"
+      ]
+    },
+    {
+      "shot_id": "s0002",
+      "rally_id": "r001",
+      "frame": 60,
+      "t_ms": 2000,
+      "hitter": "P2",
+      "hitter_confidence": 0.8,
+      "shuttle_px": [
+        994.463,
+        248.623
+      ],
+      "shuttle_court": null,
+      "hitter_court": [
+        2.957,
+        10.493
+      ],
+      "shot_type": null,
+      "target_zone": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model",
+      "reasons": [
+        "demo: trajectory turn",
+        "demo: wrist within 40 px"
+      ]
+    },
+    {
+      "shot_id": "s0003",
+      "rally_id": "r001",
+      "frame": 90,
+      "t_ms": 3000,
+      "hitter": "P1",
+      "hitter_confidence": 0.8,
+      "shuttle_px": [
+        876.466,
+        435.552
+      ],
+      "shuttle_court": null,
+      "hitter_court": [
+        1.95,
+        3.113
+      ],
+      "shot_type": null,
+      "target_zone": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model",
+      "reasons": [
+        "demo: trajectory turn",
+        "demo: wrist within 40 px"
+      ]
+    },
+    {
+      "shot_id": "s0004",
+      "rally_id": "r001",
+      "frame": 120,
+      "t_ms": 4000,
+      "hitter": "P2",
+      "hitter_confidence": 0.8,
+      "shuttle_px": [
+        871.858,
+        276.942
+      ],
+      "shuttle_court": null,
+      "hitter_court": [
+        1.814,
+        9.605
+      ],
+      "shot_type": null,
+      "target_zone": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model",
+      "reasons": [
+        "demo: trajectory turn",
+        "demo: wrist within 40 px"
+      ]
+    },
+    {
+      "shot_id": "s0005",
+      "rally_id": "r001",
+      "frame": 150,
+      "t_ms": 5000,
+      "hitter": "P1",
+      "hitter_confidence": 0.8,
+      "shuttle_px": [
+        1101.302,
+        560.909
+      ],
+      "shuttle_court": null,
+      "hitter_court": [
+        3.394,
+        1.427
+      ],
+      "shot_type": null,
+      "target_zone": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model",
+      "reasons": [
+        "demo: trajectory turn",
+        "demo: wrist within 40 px"
+      ]
+    },
+    {
+      "shot_id": "s0006",
+      "rally_id": "r001",
+      "frame": 180,
+      "t_ms": 6000,
+      "hitter": "P2",
+      "hitter_confidence": 0.8,
+      "shuttle_px": [
+        1161.849,
+        242.34
+      ],
+      "shuttle_court": null,
+      "hitter_court": [
+        4.599,
+        10.7
+      ],
+      "shot_type": null,
+      "target_zone": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model",
+      "reasons": [
+        "demo: trajectory turn",
+        "demo: wrist within 40 px"
+      ]
+    },
+    {
+      "shot_id": "s0007",
+      "rally_id": "r001",
+      "frame": 210,
+      "t_ms": 7000,
+      "hitter": "P1",
+      "hitter_confidence": 0.8,
+      "shuttle_px": [
+        1122.695,
+        469.302
+      ],
+      "shuttle_court": null,
+      "hitter_court": [
+        3.561,
+        2.62
+      ],
+      "shot_type": null,
+      "target_zone": null,
+      "confidence": 0.7,
+      "status": "needs_review",
+      "source": "model",
+      "reasons": [
+        "demo: trajectory turn",
+        "demo: wrist within 40 px"
+      ]
+    }
+  ]
+}
