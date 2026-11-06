@@ -9,11 +9,15 @@ reason instead of silently deleting, so the review UI can explain decisions.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .geometry import PlayArea, apply_homography, foot_point
 from .models import KP, Candidate, PersonDetection
+
+if TYPE_CHECKING:
+    from ..target_court import CourtRegion
 
 TYPICAL_PLAYER_HEIGHT_M = 1.72
 
@@ -30,6 +34,9 @@ class FilterConfig:
     height_ratio_range: tuple[float, float] = (0.4, 2.5)
     # Keep only this many candidates per frame (singles: 2 players + slack).
     max_candidates: int = 6
+    # Two candidates whose feet land this close on court, with heavily
+    # overlapping boxes, are one person detected twice (keep the better one).
+    duplicate_foot_m: float = 0.35
     # Without calibration, drop boxes smaller than this fraction of the largest.
     uncalibrated_min_rel_height: float = 0.35
 
@@ -84,8 +91,13 @@ def build_candidates(
     H_img_to_court: np.ndarray | None,
     image_size: tuple[int, int],
     cfg: FilterConfig | None = None,
+    region: "CourtRegion | None" = None,
 ) -> list[Candidate]:
-    """Score detections; returns candidates sorted best first (rejected ones removed)."""
+    """Score detections; returns candidates sorted best first (rejected ones removed).
+
+    ``region`` (optional) knows the other courts calibration found; anyone whose
+    feet are on one of them is a player of another match and is dropped.
+    """
     cfg = cfg or FilterConfig()
     w, h = image_size
     out: list[Candidate] = []
@@ -129,6 +141,8 @@ def build_candidates(
                     reasons.append("outside_play_area")
             else:
                 continue  # projects behind the camera / horizon
+            if region is not None and region.on_other_court(fp):
+                continue
             exp_h = expected_pixel_height(H_img_to_court, fp)
             if exp_h:
                 ratio = det.height / exp_h
@@ -147,4 +161,28 @@ def build_candidates(
         out.append(Candidate(det, fp, foot_court, on_court, float(score), reasons))
 
     out.sort(key=lambda c: c.player_score, reverse=True)
-    return out[: cfg.max_candidates]
+    return _drop_duplicates(out, cfg)[: cfg.max_candidates]
+
+
+def _drop_duplicates(cands: list[Candidate], cfg: FilterConfig) -> list[Candidate]:
+    """Remove second detections of the same person (best-first input).
+
+    Partners in doubles can overlap on screen, but their feet are apart on
+    court; a duplicate has both the same feet and mostly the same box. Without
+    this, one player counted twice can flip the singles/doubles decision.
+    """
+    from .pose import _overlap_small
+
+    keep: list[Candidate] = []
+    for c in cands:
+        dup = False
+        for k in keep:
+            if c.foot_court is None or k.foot_court is None:
+                continue
+            if (float(np.linalg.norm(c.foot_court - k.foot_court)) < cfg.duplicate_foot_m
+                    and _overlap_small(c.det.bbox, k.det.bbox) > 0.5):
+                dup = True
+                break
+        if not dup:
+            keep.append(c)
+    return keep

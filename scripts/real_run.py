@@ -51,9 +51,11 @@ def clip_stats(art: Path) -> dict[str, Any]:
     out: dict[str, Any] = {"frames": n, "fps": meta.get("fps"), "size": f"{meta.get('width')}x{meta.get('height')}"}
 
     cal = _load(art, "calibration")
+    cal_frames: set[int] | None = None
     if cal:
-        ok = sum(s["end_frame"] - s["start_frame"] + 1 for s in cal["segments"]
-                 if s.get("homography") and s.get("status") != "undeterminable")
+        good = [s for s in cal["segments"] if s.get("homography") and s.get("status") != "undeterminable"]
+        ok = sum(s["end_frame"] - s["start_frame"] + 1 for s in good)
+        cal_frames = {i for s in good for i in range(s["start_frame"], s["end_frame"] + 1)}
         errs = [s["reprojection_error_px"] for s in cal["segments"] if s.get("reprojection_error_px") is not None]
         out["court_calibrated_frac"] = round(min(ok / n, 1.0), 3)
         out["court_segments"] = len(cal["segments"])
@@ -62,11 +64,21 @@ def clip_stats(art: Path) -> dict[str, Any]:
     pl = _load(art, "players")
     if pl:
         frames = pl["frames"]
-        both = sum(1 for f in frames if sum(1 for p in f["players"] if not p.get("interpolated")) >= 2)
+        need = 4 if pl.get("match_format") == "doubles" else 2
+
+        def all_in(f: dict[str, Any]) -> bool:
+            return sum(1 for p in f["players"] if not p.get("interpolated")) >= need
+
+        both = sum(1 for f in frames if all_in(f))
         far = sum(1 for f in frames if any(p.get("side") == "far" and not p.get("interpolated") for p in f["players"]))
         out["players_model"] = pl.get("model")
         out["players_both_frac"] = round(both / n, 3)
         out["players_far_frac"] = round(far / n, 3)
+        if cal_frames:
+            # Close-ups and replays have no court, so nobody can be placed there:
+            # the share over calibrated frames is the number that shows misses.
+            on_cal = [f for f in frames if f["frame"] in cal_frames]
+            out["players_both_cal_frac"] = round(sum(1 for f in on_cal if all_in(f)) / max(len(on_cal), 1), 3)
         out["players_side_switches"] = len(pl.get("side_switches", []))
 
     sh = _load(art, "shuttle")
@@ -133,7 +145,7 @@ def render(results: list[dict[str, Any]], bench_md: str | None) -> str:
     L.append("")
     cols = [("片段", "clip_id"), ("状态", "state"), ("耗时 s", "wall_s"), ("分辨率", "size"), ("fps", "fps"),
             ("球场已标定", "court_calibrated_frac"), ("标定段", "court_segments"),
-            ("重投影 px", "court_reproj_px_median"), ("两名球员", "players_both_frac"),
+            ("重投影 px", "court_reproj_px_median"), ("两名球员", "players_both_frac"), ("两名球员/已标定帧", "players_both_cal_frac"),
             ("远端球员", "players_far_frac"), ("换边", "players_side_switches"),
             ("球检出", "shuttle_detected_frac"), ("回合", "rallies"), ("击球", "hits"), ("击球 ok", "hits_ok")]
     L.append("| " + " | ".join(c for c, _ in cols) + " |")
@@ -164,8 +176,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--clips", type=Path, default=DEFAULT_CLIPS)
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    ap.add_argument("--far-boost", action="store_true", help="players: second pass for small far players")
+    ap.add_argument("--far-boost", choices=("auto", "on", "off"), default="auto",
+                    help="players: second pose pass on the far half of the court (auto: only when the far player is small)")
     ap.add_argument("--stride", type=int, default=1, help="players: pose every n-th frame")
+    ap.add_argument("--parallel", choices=("auto", "on", "off"), default="auto",
+                    help="run shuttle detection alongside players (auto: only when the shuttle model has a GPU)")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
@@ -173,7 +188,8 @@ def main(argv: list[str] | None = None) -> int:
     preds = out / "preds"
     preds.mkdir(parents=True, exist_ok=True)
     store = Store(out / "data")
-    config: dict[str, Any] = {"players_stride": a.stride, "players_far_boost": a.far_boost}
+    config: dict[str, Any] = {"players_stride": a.stride, "players_far_boost": a.far_boost,
+                              "parallel_stages": a.parallel}
 
     clips = sorted(p for p in a.clips.expanduser().glob("*.mp4") if not a.only or p.stem in a.only)
     if not clips:

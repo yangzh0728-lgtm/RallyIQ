@@ -12,6 +12,7 @@
     "rotation": 0,
     "variable_frame_rate": false
   },
+  "match_format": "singles",
   "court": [
     {
       "start_frame": 0,
@@ -148,7 +149,51 @@
           ]
         ]
       ],
-      "status": "ok"
+      "boundary": [
+        [
+          [
+            470.872,
+            1004.4
+          ],
+          [
+            1449.128,
+            1004.4
+          ]
+        ],
+        [
+          [
+            1449.128,
+            1004.4
+          ],
+          [
+            1196.412,
+            334.8
+          ]
+        ],
+        [
+          [
+            1196.412,
+            334.8
+          ],
+          [
+            723.588,
+            334.8
+          ]
+        ],
+        [
+          [
+            723.588,
+            334.8
+          ],
+          [
+            470.872,
+            1004.4
+          ]
+        ]
+      ],
+      "status": "ok",
+      "image_corners": null,
+      "other_courts": []
     }
   ],
   "keypoint_format": "coco17",
@@ -225,6 +270,7 @@
       "players": [
         {
           "player_id": "P1",
+          "team": "A",
           "side": "near",
           "bbox": [
             1112.918,
@@ -327,6 +373,7 @@
         },
         {
           "player_id": "P2",
+          "team": "B",
           "side": "far",
           "bbox": [
             1055.381,
@@ -441,6 +488,7 @@
       "players": [
         {
           "player_id": "P1",
+          "team": "A",
           "side": "near",
           "bbox": [
             1115.122,
@@ -543,6 +591,7 @@
         },
         {
           "player_id": "P2",
+          "team": "B",
           "side": "far",
           "bbox": [
             1052.493,

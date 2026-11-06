@@ -3,7 +3,15 @@ import { describeCorrection, formatMs } from "../lib/corrections";
 import { colorOf, labelOf } from "../lib/players";
 import { evidenceRows, reasonLabel, SHOT_TYPE_COLOR, SHOT_TYPE_ZH, SHOT_TYPES, typeLabel } from "../lib/strokes";
 import { useClockMs } from "../lib/useClock";
-import { PLAYER_IDS, type Correction, type CorrectionOp, type PlayerId, type Rally, type ShotEvent, type ShotType, type Source, type Status } from "../lib/types";
+import { TEAM_IDS, TEAM_OF, playerIdsFor, type Correction, type CorrectionOp, type MatchFormat, type PlayerId, type Rally, type ShotEvent, type ShotType, type Source, type Status, type TeamId } from "../lib/types";
+
+/** Pairs offered for "swap ids from here on" in doubles: partners mixed up, or both teams. */
+const DOUBLES_SWAPS: [PlayerId, PlayerId, string][] = [
+  ["P1", "P3", "A 队内 P1↔P3"],
+  ["P2", "P4", "B 队内 P2↔P4"],
+  ["P1", "P2", "跨队 P1↔P2"],
+  ["P3", "P4", "跨队 P3↔P4"],
+];
 
 const STATUS_LABEL: Record<Status, string> = { ok: "可用", needs_review: "待复核", undeterminable: "不可判定" };
 
@@ -96,6 +104,7 @@ interface Props {
   setHardExample: (v: boolean) => void;
   corrections: Correction[];
   error: string | null;
+  matchFormat?: MatchFormat;
 }
 
 export function CorrectionPanel(p: Props) {
@@ -104,6 +113,13 @@ export function CorrectionPanel(p: Props) {
   const shot = p.shots.find((s) => s.shot_id === p.selectedShotId);
   const r = p.rally;
   const ask = (msg: string) => window.confirm(msg);
+  const doubles = p.matchFormat === "doubles";
+  const PLAYER_IDS = playerIdsFor(p.matchFormat);
+  // Doubles points go to a team; singles to a player.
+  const WINNERS: (PlayerId | TeamId)[] = doubles ? TEAM_IDS : PLAYER_IDS;
+  const swap = (a: PlayerId, b: PlayerId) =>
+    ask(`从 ${formatMs(t)} 起交换 ${a}/${b} 的击球者${TEAM_OF[a] !== TEAM_OF[b] ? "和得分方" : ""}？`) &&
+    p.submit({ op: "swap_player_ids", payload: { from_frame: frame, a, b } });
 
   return (
     <>
@@ -124,10 +140,10 @@ export function CorrectionPanel(p: Props) {
             <select
               disabled={p.busy}
               value={r.winner ?? ""}
-              onChange={(e) => p.submit({ op: "set_rally_winner", payload: { rally_id: r.rally_id, winner: (e.target.value || null) as PlayerId | null } })}
+              onChange={(e) => p.submit({ op: "set_rally_winner", payload: { rally_id: r.rally_id, winner: (e.target.value || null) as PlayerId | TeamId | null } })}
             >
               <option value="">待确认</option>
-              {PLAYER_IDS.map((id) => (
+              {WINNERS.map((id) => (
                 <option key={id} value={id}>
                   {labelOf(id)}
                 </option>
@@ -226,13 +242,28 @@ export function CorrectionPanel(p: Props) {
             修正记为难例（进入评估集）
           </label>
           <span className="spacer" />
-          <button
-            disabled={p.busy}
-            title="球员 ID 跟错时使用：从当前帧起 P1/P2 互换"
-            onClick={() => ask(`从 ${formatMs(t)} 起交换 P1/P2 的击球者和得分方？`) && p.submit({ op: "swap_player_ids", payload: { from_frame: frame } })}
-          >
-            从此帧起交换 P1/P2
-          </button>
+          {doubles ? (
+            <select
+              disabled={p.busy}
+              value=""
+              title="球员 ID 跟错时使用：从当前帧起交换两人的 ID"
+              onChange={(e) => {
+                const pair = DOUBLES_SWAPS[Number(e.target.value)];
+                if (pair) swap(pair[0], pair[1]);
+              }}
+            >
+              <option value="">从此帧起交换 ID…</option>
+              {DOUBLES_SWAPS.map(([, , label], i) => (
+                <option key={label} value={i}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button disabled={p.busy} title="球员 ID 跟错时使用：从当前帧起 P1/P2 互换" onClick={() => swap("P1", "P2")}>
+              从此帧起交换 P1/P2
+            </button>
+          )}
         </div>
         {p.error && <div className="error small">{p.error}</div>}
       </div>

@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Court occupancy grid in court metres for one player.",
+  "description": "Court occupancy grid in court metres for one player, one team, or everyone.",
   "properties": {
     "video_id": {
       "title": "Video Id",
@@ -11,7 +11,9 @@
         {
           "enum": [
             "P1",
-            "P2"
+            "P2",
+            "P3",
+            "P4"
           ],
           "type": "string"
         },
@@ -20,6 +22,22 @@
         }
       ],
       "title": "Player Id"
+    },
+    "team": {
+      "anyOf": [
+        {
+          "enum": [
+            "A",
+            "B"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Team"
     },
     "cell_m": {
       "title": "Cell M",

@@ -7,9 +7,23 @@ Corrections that refer to unknown ids are ignored (reported in ``skipped``).
 
 from __future__ import annotations
 
-from ..contracts import SHOT_TYPES, Correction, EventsResult, Rally, ShotEvent, StrokeInfo, VideoMeta
+from ..contracts import SHOT_TYPES, TEAM_OF, Correction, EventsResult, Rally, ShotEvent, StrokeInfo, VideoMeta
 
-_SWAP = {"P1": "P2", "P2": "P1", None: None}
+PLAYER_IDS = ("P1", "P2", "P3", "P4")
+TEAM_IDS = ("A", "B")
+
+
+def _swap_map(payload: dict) -> dict:
+    """Ids swapped by ``swap_player_ids``: ``a``/``b`` (default P1/P2).
+
+    Swapping two players of different teams (singles P1/P2, or a doubles
+    change of ends tracked the wrong way round) also swaps the team winner.
+    """
+    a, b = payload.get("a", "P1"), payload.get("b", "P2")
+    m = {a: b, b: a}
+    if TEAM_OF.get(a) != TEAM_OF.get(b):
+        m.update({TEAM_OF[a]: TEAM_OF[b], TEAM_OF[b]: TEAM_OF[a]})
+    return m
 
 
 class CorrectionError(ValueError):
@@ -39,11 +53,16 @@ def validate(op: str, payload: dict) -> None:
     missing = [k for k in need if k not in payload]
     if missing:
         raise CorrectionError(f"{op} needs {', '.join(missing)}")
-    for k in ("hitter", "winner"):
-        if k in payload and payload[k] not in ("P1", "P2", None):
-            raise CorrectionError(f"{k} must be 'P1', 'P2' or null")
     if "shot_type" in payload and payload["shot_type"] is not None and payload["shot_type"] not in SHOT_TYPES:
         raise CorrectionError(f"shot_type must be one of {', '.join(SHOT_TYPES)} or null")
+    if "hitter" in payload and payload["hitter"] not in (*PLAYER_IDS, None):
+        raise CorrectionError("hitter must be 'P1'..'P4' or null")
+    if "winner" in payload and payload["winner"] not in (*PLAYER_IDS, *TEAM_IDS, None):
+        raise CorrectionError("winner must be 'P1'..'P4', team 'A'/'B' or null")
+    if op == "swap_player_ids":
+        a, b = payload.get("a", "P1"), payload.get("b", "P2")
+        if a not in PLAYER_IDS or b not in PLAYER_IDS or a == b:
+            raise CorrectionError("swap_player_ids needs two different ids from 'P1'..'P4' as a/b")
 
 
 def apply_corrections(
@@ -111,12 +130,13 @@ def apply_corrections(
             r.source, r.status = "human", "ok"
         elif c.op == "swap_player_ids":
             f0 = int(p["from_frame"])
+            swap = _swap_map(p)
             for s in shots.values():
                 if s.frame >= f0:
-                    s.hitter = _SWAP[s.hitter]
+                    s.hitter = swap.get(s.hitter, s.hitter)
             for r in rallies.values():
                 if r.start_frame >= f0:
-                    r.winner = _SWAP[r.winner]
+                    r.winner = swap.get(r.winner, r.winner)
 
     # Re-derive rally membership from frames so added/moved shots land in the right rally.
     ordered_rallies = sorted(rallies.values(), key=lambda r: r.start_frame)
@@ -130,4 +150,6 @@ def apply_corrections(
                 s.rally_id = r.rally_id
                 r.shot_ids.append(s.shot_id)
                 break
-    return EventsResult(video_id=raw.video_id, rallies=ordered_rallies, shots=ordered_shots), skipped
+    return EventsResult(
+        video_id=raw.video_id, match_format=raw.match_format, rallies=ordered_rallies, shots=ordered_shots
+    ), skipped

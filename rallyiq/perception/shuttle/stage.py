@@ -9,6 +9,11 @@
 * ``roi``: ``"off"`` (default) or ``"auto"``: crop to the calibrated court plus the air
   above it, which enlarges small far-court shuttles. Experimental until measured.
 * ``tracker``: overrides for ``TrackerConfig`` fields.
+* ``court_lock``: ``"auto"`` (default) or ``"off"``. When several courts are in view,
+  keep only trajectories over the target court: the air box above the calibrated
+  court (or, without calibration, the band spanned by the tracked players), with a
+  bonus for trajectories that pass within reach of our players. Shuttles over the
+  other courts listed by calibration are rejected. See ``target_court.py``.
 
 Besides the contract output, every raw candidate (including rejected ones) is written
 to ``<work_dir>/shuttle_candidates.json`` so nothing the model saw is lost.
@@ -21,27 +26,61 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import fields
 from pathlib import Path
 
-from ...contracts import CourtCalibration, FrameGap, ShuttlePoint, ShuttleTrack, VideoMeta
+from ...contracts import CourtCalibration, FrameGap, PlayerTracks, ShuttlePoint, ShuttleTrack, VideoMeta
 from ...pipeline.context import StageContext, demo_mode
-from .tracker import Candidate, ShuttleTracker, TrackerConfig
+from ..target_court import PlayerProximity, PlayerSpanRegion, SegmentRegions
+from .tracker import Candidate, RegionFn, ShuttleTracker, SupportFn, TrackerConfig
 
 log = logging.getLogger("rallyiq.shuttle")
 
 CANDIDATES_FILE = "shuttle_candidates.json"
 
 
-def tracker_config(overrides: dict | None) -> TrackerConfig:
+def tracker_config(overrides: dict | None, peak_threshold: float | None = None) -> TrackerConfig:
+    """Tracker settings. ``peak_threshold`` is the detector's: the tracker keeps weak
+    candidates down to it (unless ``weak_score`` is overridden), otherwise lowering the
+    detector threshold would only add candidates the tracker throws away."""
     cfg = TrackerConfig()
+    if peak_threshold is not None:
+        cfg.weak_score = float(peak_threshold)
     names = {f.name for f in fields(TrackerConfig)}
     for k, v in (overrides or {}).items():
         if k not in names:
             raise ValueError(f"unknown shuttle tracker setting {k!r}")
         setattr(cfg, k, type(getattr(cfg, k))(v))
     return cfg
+
+
+def court_lock(
+    calibration: CourtCalibration | None, players: PlayerTracks | None
+) -> tuple[RegionFn | None, SupportFn | None, str]:
+    """Region and player-support functions that keep the tracker on the target court.
+
+    Returns ``(region, support, mode)``; ``mode`` says which evidence was used.
+    """
+    regions = SegmentRegions(calibration)
+    span = PlayerSpanRegion.from_players(players)
+    region: RegionFn | None = None
+    if regions:
+        def region(frame: int, x: float, y: float) -> float:
+            r = regions.for_frame(frame)
+            if r is not None:
+                return r.air_weight(x, y)
+            return span.air_weight(x, y) if span is not None else 1.0
+        mode = "calibration"
+    elif span is not None:
+        def region(frame: int, x: float, y: float) -> float:
+            return span.air_weight(x, y)
+        mode = "player_span"
+    else:
+        mode = "none"
+    prox = PlayerProximity(players)
+    support = prox.near if prox else None
+    return region, support, mode
 
 
 def build_track(
@@ -51,6 +90,8 @@ def build_track(
     height: int,
     detector: str | None,
     config: TrackerConfig | None = None,
+    region: RegionFn | None = None,
+    support: SupportFn | None = None,
 ) -> tuple[ShuttleTrack, dict[int, int]]:
     """Run the tracker and convert to the contract. Also returns the selected
     candidate index per frame (for the raw-candidates file)."""
@@ -62,9 +103,11 @@ def build_track(
         )
     # Coordinates are in decoded-frame px; scale if the decoder's size differs from the probe.
     sx, sy = meta.width / width, meta.height / height
-    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config)
+    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support)
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in candidates.items()}
     res = tracker.track(scaled, frame_count)
+    if tracker.rejected_foreign:
+        log.info("shuttle: dropped %d trajectories outside the target court", tracker.rejected_foreign)
     points = [
         ShuttlePoint(
             frame=p.frame, t_ms=meta.t_ms(p.frame), x=round(p.x, 2), y=round(p.y, 2),
@@ -111,13 +154,12 @@ def save_candidates(path: Path, candidates: dict[int, Sequence[Candidate]], sele
     path.write_text(json.dumps(doc, separators=(",", ":")))
 
 
-def run(ctx: StageContext) -> ShuttleTrack:
-    meta = ctx.require_meta()
-    if demo_mode(ctx) and (players := ctx.players) is not None and players.frames:
-        from ...pipeline.demo import demo_shuttle
+class Cancelled(Exception):
+    """Raised inside a background detection when the job no longer needs it."""
 
-        return demo_shuttle(meta, players)
 
+def _detector(ctx: StageContext):
+    """``(detector, DetectorConfig)`` or ``None`` when no weights are installed."""
     cfg = dict(ctx.config.get("shuttle") or {})
     from .detector import DetectorConfig, HeatmapShuttleDetector, find_weights
 
@@ -128,19 +170,89 @@ def run(ctx: StageContext) -> ShuttleTrack:
         if cfg.get("require_weights"):
             raise RuntimeError(msg)
         log.warning(msg)
-        return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
-
+        return None
     det_cfg = DetectorConfig()
     for k in ("device", "batch_size", "peak_threshold", "top_k", "target_fps", "ensemble"):
         if k in cfg:
             setattr(det_cfg, k, cfg[k])
-    detector = HeatmapShuttleDetector(weights, det_cfg)
+    return HeatmapShuttleDetector(weights, det_cfg), det_cfg
+
+
+def _detect(ctx: StageContext, detector, progress):
+    meta = ctx.require_meta()
+    cfg = dict(ctx.config.get("shuttle") or {})
     segments = segments_for(meta, ctx.calibration, cfg.get("roi", "off"))
-    candidates, size = detector.detect(
-        ctx.video_path, meta.fps, meta.frame_count, segments, progress=lambda p: ctx.report(0.95 * p)
-    )
+    return detector.detect(ctx.video_path, meta.fps, meta.frame_count, segments, progress=progress)
+
+
+def prefetch(ctx: StageContext, report, cancel) -> "Callable[[], tuple] | None":
+    """Start the detector in a background thread while the players stage runs.
+
+    Detection only needs the calibration; the players are used afterwards (court
+    lock), so the two heaviest stages can overlap: pose runs on the CPU
+    (onnxruntime) and the shuttle network on the GPU (MPS / CUDA). Returns a
+    function that waits for and returns ``(detector, det_cfg, candidates, size)``,
+    or ``None`` when there is nothing worth starting (demo mode, no weights, or no
+    accelerator, where both stages would fight for the same CPU cores).
+    """
+    if demo_mode(ctx):
+        return None
+    got = _detector(ctx)
+    if got is None:
+        return None
+    detector, det_cfg = got
+    if detector.device.type == "cpu" and str(ctx.config.get("parallel_stages", "auto")).lower() != "on":
+        return None
+    import threading
+
+    box: dict = {}
+
+    def progress(p: float) -> None:
+        if cancel.is_set():
+            raise Cancelled()
+        report(0.95 * p)
+
+    def work() -> None:
+        try:
+            box["result"] = _detect(ctx, detector, progress)
+        except BaseException as e:  # noqa: BLE001 - re-raised in the shuttle stage
+            box["error"] = e
+
+    t = threading.Thread(target=work, name="rallyiq-shuttle-detect", daemon=True)
+    t.start()
+
+    def wait():
+        t.join()
+        if "error" in box:
+            raise box["error"]
+        return detector, det_cfg, *box["result"]
+
+    return wait
+
+
+def run(ctx: StageContext) -> ShuttleTrack:
+    meta = ctx.require_meta()
+    if demo_mode(ctx) and (players := ctx.players) is not None and players.frames:
+        from ...pipeline.demo import demo_shuttle
+
+        return demo_shuttle(meta, players)
+
+    cfg = dict(ctx.config.get("shuttle") or {})
+    started = ctx.prefetched.pop("shuttle", None)
+    if started is not None:
+        detector, det_cfg, candidates, size = started()
+    else:
+        got = _detector(ctx)
+        if got is None:
+            return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
+        detector, det_cfg = got
+        candidates, size = _detect(ctx, detector, lambda p: ctx.report(0.95 * p))
+    region = support = None
+    if cfg.get("court_lock", "auto") != "off":
+        region, support, mode = court_lock(ctx.calibration, ctx.players)
+        log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
-                                  tracker_config(cfg.get("tracker")))
+                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support)
     save_candidates(Path(ctx.work_dir) / CANDIDATES_FILE, candidates, selected, detector.name, size)
     ctx.report(1.0)
     return track

@@ -31,7 +31,8 @@ def run(ctx: StageContext) -> EventsResult:
             from ..pipeline.demo import demo_events
 
             return demo_events(meta, players)
-        return EventsResult(video_id=meta.video_id, rallies=[], shots=[])
+        fmt = players.match_format if players is not None else "singles"
+        return EventsResult(video_id=meta.video_id, match_format=fmt, rallies=[], shots=[])
 
     ctx.report(0.1)
     rallies = segment_events(
@@ -41,4 +42,4 @@ def run(ctx: StageContext) -> EventsResult:
         video_end_ms=float(meta.duration_ms),
     )
     ctx.report(0.9)
-    return events_to_contract(meta.video_id, rallies)
+    return events_to_contract(meta.video_id, rallies, players.match_format if players is not None else "singles")

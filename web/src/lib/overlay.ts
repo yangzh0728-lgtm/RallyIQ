@@ -19,6 +19,27 @@ export function courtAt(court: CourtLines[], frame: number): CourtLines | undefi
   return court.find((c) => frame >= c.start_frame && frame <= c.end_frame);
 }
 
+export function pointInPolygon(poly: Point[], [x, y]: Point): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** The other court (4 corners) under an image point, for "analyse this court instead". */
+export function otherCourtAt(cal: CourtLines | undefined, p: Point): Point[] | null {
+  return cal?.other_courts?.find((c) => pointInPolygon(c, p)) ?? null;
+}
+
+/** Courts to keep ignoring after switching to ``chosen``: the rest plus the old target. */
+export function courtsAfterSwitch(cal: CourtLines, chosen: Point[]): Point[][] {
+  const rest = (cal.other_courts ?? []).filter((c) => c !== chosen);
+  return cal.image_corners ? [...rest, cal.image_corners] : rest;
+}
+
 // COCO-17 limb pairs (fallback when the overlay has no `skeleton`).
 export const COCO_LIMBS: [number, number][] = [
   [5, 7], [7, 9], [6, 8], [8, 10], [5, 6], [5, 11], [6, 12], [11, 12],
@@ -46,6 +67,7 @@ export function drawOverlay(
   layers: Layers,
   colorOf: (playerId: PlayerId | null) => string,
   calibPoints: Point[] | null,
+  choosingCourt = false,
 ) {
   const { canvas } = ctx;
   const sx = canvas.width / data.video.width;
@@ -64,8 +86,22 @@ export function drawOverlay(
   const idx = frameIndexAt(data.frames, t);
   const f: OverlayFrame | undefined = data.frames[idx];
 
-  if (layers.court && f) {
+  if ((layers.court || choosingCourt) && f) {
     const cal = courtAt(data.court, f.frame);
+    // Other courts in view are ignored by the analysis: outline them faintly so it is
+    // visible which court was analysed, and highlight them when the user is choosing.
+    for (const oc of cal?.other_courts ?? []) {
+      ctx.strokeStyle = choosingCourt ? "#22d3ee" : "#94a3b880";
+      ctx.fillStyle = "#22d3ee22";
+      ctx.lineWidth = (choosingCourt ? 2.5 : 1) * px;
+      ctx.setLineDash([8 * px, 6 * px]);
+      ctx.beginPath();
+      oc.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.closePath();
+      ctx.stroke();
+      if (choosingCourt) ctx.fill();
+      ctx.setLineDash([]);
+    }
     if (cal) {
       const shaky = cal.status !== "ok";
       ctx.strokeStyle = shaky ? "#f59e0b" : "#ffffffb0";
@@ -77,6 +113,16 @@ export function drawOverlay(
         ctx.lineTo(x2, y2);
       }
       ctx.stroke();
+      // The in-play boundary for this format (singles: inner sidelines, doubles: outer) drawn bolder.
+      if (cal.boundary?.length) {
+        ctx.lineWidth = 3 * px;
+        ctx.beginPath();
+        for (const [[x1, y1], [x2, y2]] of cal.boundary) {
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+        }
+        ctx.stroke();
+      }
       ctx.setLineDash([]);
     }
   }

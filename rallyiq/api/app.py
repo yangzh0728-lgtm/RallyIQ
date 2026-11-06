@@ -27,6 +27,8 @@ from pydantic import BaseModel, Field
 from ..contracts import (
     COURT_LENGTH_M,
     COURT_WIDTH_M,
+    MatchFormatSetting,
+    team_of,
     STAGES,
     CalibrationSegment,
     Correction,
@@ -40,15 +42,21 @@ from ..contracts import (
     OverlayData,
     PlayerTracks,
     Point2,
+    CoachReport,
+    MatchReport,
+    MatchStats,
     Video,
 )
 from ..contracts.geometry import COURT_CORNERS_M, homography_from_corners
-from ..pipeline.runner import MANUAL_CALIBRATION, stages_from
+from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
+from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
+from ..report.coach import default_provider_name
 from ..store import Store
 from ..strokes.classify import merge_strokes
 from .corrections import CorrectionError, apply_corrections, validate
 
+COACH_ARTIFACT = "coach"
 ALLOWED_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}
 
 
@@ -61,11 +69,19 @@ class EffectiveEvents(EventsResult):
     corrections_skipped: list[str] = Field(default_factory=list)
 
 
+class CoachRequest(BaseModel):
+    provider: str | None = Field(default=None, description="null = server default (Claude, offline fallback)")
+
+
 class ManualCalibration(BaseModel):
     corners: list[Point2] = Field(min_length=4, max_length=4,
                                   description="near-left, near-right, far-right, far-left (px)")
     start_frame: int = 0
     end_frame: int | None = None
+    other_courts: list[list[Point2]] = Field(
+        default_factory=list,
+        description="other courts in view, 4 corners each (e.g. the court analysed before switching), "
+        "so their players and shuttles keep being rejected")
 
 
 def create_app(store: Store | None = None, start_worker: bool | None = None) -> FastAPI:
@@ -246,6 +262,7 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
             start_frame=req.start_frame, end_frame=end, homography=h, image_corners=req.corners,
             keypoints=[CourtKeypoint(name=n, image=i, court=c) for n, i, c in zip(names, req.corners, COURT_CORNERS_M)],
             reprojection_error_px=0.0, method="manual", confidence=1.0, status="ok",
+            other_courts=[c for c in req.other_courts if len(c) == 4],
             notes=["4 corners picked by user"],
         )
         cal = CourtCalibration(video_id=video_id, segments=[seg])
@@ -258,10 +275,26 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
         store.delete_artifact(video_id, MANUAL_CALIBRATION)
         return enqueue(video_id, stages_from("calibration"))
 
+    # ---------------------------------------------------------- match format
+
+    @app.get("/api/videos/{video_id}/match_format", response_model=MatchFormatSetting)
+    def get_match_format(video_id: str) -> MatchFormatSetting:
+        video_or_404(video_id)
+        return store.load_artifact(video_id, MATCH_FORMAT, MatchFormatSetting) or MatchFormatSetting()
+
+    @app.put("/api/videos/{video_id}/match_format", response_model=Job)
+    def set_match_format(video_id: str, req: MatchFormatSetting) -> Job:
+        """Force singles / doubles (or back to auto) and re-run from the players stage."""
+        video_or_404(video_id)
+        store.save_artifact(video_id, MATCH_FORMAT, req)
+        meta = store.get_video_meta(video_id)
+        return enqueue(video_id, stages_from("players" if meta else "probe"))
+
     # --------------------------------------------------------------- heatmap
 
     @app.get("/api/videos/{video_id}/heatmap", response_model=HeatmapData)
-    def heatmap(video_id: str, player_id: Literal["P1", "P2"] | None = None, cell_m: float = Query(0.5, gt=0.05),
+    def heatmap(video_id: str, player_id: Literal["P1", "P2", "P3", "P4"] | None = None,
+                team: Literal["A", "B"] | None = None, cell_m: float = Query(0.5, gt=0.05),
                 start_ms: int | None = None, end_ms: int | None = None) -> HeatmapData:
         video_or_404(video_id)
         players = store.load_artifact(video_id, "players", PlayerTracks)
@@ -276,12 +309,63 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
             for p in pf.players:
                 if p.foot_court is None or (player_id and p.player_id != player_id):
                     continue
+                if team and (p.team or team_of(p.player_id)) != team:
+                    continue
                 ix, iy = int(p.foot_court[0] // cell_m), int(p.foot_court[1] // cell_m)
                 if 0 <= ix < nx and 0 <= iy < ny:
                     grid[iy, ix] += 1
                     n += 1
-        return HeatmapData(video_id=video_id, player_id=player_id, cell_m=cell_m, nx=nx, ny=ny,
+        return HeatmapData(video_id=video_id, player_id=player_id, team=team, cell_m=cell_m, nx=nx, ny=ny,
                            counts=grid.tolist(), samples=n)
+
+    # ---------------------------------------------------------------- report
+
+    def match_stats(video_id: str) -> MatchStats:
+        ev, _ = effective_events(video_id)
+        return compute_match_stats(
+            ev, store.load_artifact(video_id, "players", PlayerTracks),
+            store.load_artifact(video_id, "calibration", CourtCalibration), store.get_video_meta(video_id),
+        )
+
+    def match_report(video_id: str) -> MatchReport:
+        stats = match_stats(video_id)
+        coach = store.load_artifact(video_id, COACH_ARTIFACT, CoachReport)
+        return MatchReport(stats=stats, coach=coach,
+                           coach_stale=coach is not None and coach.stats_fingerprint != stats.fingerprint)
+
+    @app.get("/api/coach/providers")
+    def coach_providers() -> dict:
+        return {"default": default_provider_name(), "providers": list_providers()}
+
+    @app.get("/api/videos/{video_id}/report", response_model=MatchReport)
+    def get_report(video_id: str) -> MatchReport:
+        video_or_404(video_id)
+        return match_report(video_id)
+
+    @app.post("/api/videos/{video_id}/report/coach", response_model=CoachReport)
+    def create_coach_report(video_id: str, req: CoachRequest | None = None) -> CoachReport:
+        """Generate (or regenerate) the AI coach comments for the current stats. Synchronous."""
+        video_or_404(video_id)
+        stats = match_stats(video_id)
+        try:
+            coach = generate_coach_report(stats, req.provider if req else None)
+        except CoachUnavailable as e:
+            raise HTTPException(503, str(e)) from e
+        store.save_artifact(video_id, COACH_ARTIFACT, coach)
+        return coach
+
+    @app.get("/api/videos/{video_id}/report/export")
+    def export_report(video_id: str, format: Literal["md", "json"] = "md"):
+        v = video_or_404(video_id)
+        rep = match_report(video_id)
+        if format == "json":
+            return Response(
+                content=rep.model_dump_json(indent=1), media_type="application/json",
+                headers={"Content-Disposition": f'attachment; filename="{video_id}_report.json"'},
+            )
+        md = render_markdown(rep.stats, rep.coach, title=f"赛后报告 · {v.filename}", coach_stale=rep.coach_stale)
+        return PlainTextResponse(md, media_type="text/markdown; charset=utf-8",
+                                 headers={"Content-Disposition": f'attachment; filename="{video_id}_report.md"'})
 
     # ---------------------------------------------------------------- export
 
@@ -304,14 +388,14 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
             )
         buf = io.StringIO()
         w = csv.writer(buf)
-        w.writerow(["shot_id", "rally_id", "frame", "t_ms", "time", "hitter", "confidence", "status", "source",
+        w.writerow(["shot_id", "rally_id", "frame", "t_ms", "time", "hitter", "team", "confidence", "status", "source",
                     "shuttle_x", "shuttle_y", "hitter_court_x", "hitter_court_y",
                     "shot_type", "shot_type_confidence", "shot_type_status", "shot_type_source"])
         for s in ev.shots:
             secs = s.t_ms / 1000
             st = s.stroke
             w.writerow([s.shot_id, s.rally_id or "", s.frame, s.t_ms, f"{int(secs // 60):02d}:{secs % 60:06.3f}",
-                        s.hitter or "", f"{s.confidence:.3f}", s.status, s.source,
+                        s.hitter or "", team_of(s.hitter) or "", f"{s.confidence:.3f}", s.status, s.source,
                         *(s.shuttle_px or ["", ""]), *(s.hitter_court or ["", ""]),
                         s.shot_type or "", f"{st.confidence:.3f}" if st else "", st.status if st else "",
                         st.source if st else ""])

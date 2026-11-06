@@ -22,6 +22,7 @@ from ..contracts import (
     ShuttlePoint,
     ShuttleTrack,
     VideoMeta,
+    team_of,
 )
 from ..contracts.geometry import (
     COURT_CORNERS_M,
@@ -67,10 +68,30 @@ def _shots(meta: VideoMeta) -> list[tuple[int, int, int]]:
     return out
 
 
-def _player_court(pid: str, t: float) -> list[float]:
+def _player_court(pid: str, t: float, doubles: bool = False) -> list[float]:
+    if doubles:
+        # Partners split the half left/right and drift front/back.
+        base = {"P1": (1.6, 2.8), "P3": (4.5, 4.2), "P2": (4.5, 10.6), "P4": (1.6, 9.2)}[pid]
+        ph = {"P1": 0.0, "P2": 1.0, "P3": 2.0, "P4": 3.0}[pid]
+        return [base[0] + 0.8 * math.sin(t * 1.2 + ph), base[1] + 1.0 * math.sin(t * 0.8 + ph)]
     if pid == "P1":
         return [3.05 + 1.6 * math.sin(t * 1.3), 2.6 + 1.2 * math.sin(t * 0.9)]
     return [3.05 + 1.6 * math.sin(t * 1.1 + 1), 10.8 + 1.2 * math.sin(t * 0.7 + 2)]
+
+
+_SINGLES = [("P1", "near"), ("P2", "far")]
+_DOUBLES = [("P1", "near"), ("P2", "far"), ("P3", "near"), ("P4", "far")]
+
+
+def _hitter_index(k: int, n_players: int) -> int:
+    """Index into the frame's player list of the k-th hitter in a rally.
+
+    Teams alternate (players are listed P1, P2[, P3, P4]); in doubles the
+    partners take turns every other shot of their team.
+    """
+    if n_players < 4:
+        return k % 2
+    return k % 2 + 2 * ((k // 2) % 2)
 
 
 def _skeleton(foot: list[float], height_px: float) -> list[list[float]]:
@@ -84,26 +105,27 @@ def _skeleton(foot: list[float], height_px: float) -> list[list[float]]:
     return [[x + dx * s, y + dy * s, 0.9] for dx, dy in rel]
 
 
-def demo_players(meta: VideoMeta, cal: CourtCalibration) -> PlayerTracks:
+def demo_players(meta: VideoMeta, cal: CourtCalibration, match_format: str = "singles") -> PlayerTracks:
     h = cal.segments[0].homography
     inv = invert_homography(h)
+    doubles = match_format == "doubles"
     frames = []
     for f in range(meta.frame_count):
         t = f / meta.fps
         dets = []
-        for track_id, (pid, side) in enumerate([("P1", "near"), ("P2", "far")], start=1):
-            court = _player_court(pid, t)
+        for track_id, (pid, side) in enumerate(_DOUBLES if doubles else _SINGLES, start=1):
+            court = _player_court(pid, t, doubles)
             foot = apply_homography(inv, [court])[0]
             height = meta.height * (0.32 if side == "near" else 0.17)
             kps = _skeleton(foot, height)
             xs, ys = [k[0] for k in kps], [k[1] for k in kps]
             dets.append(PlayerDetection(
-                player_id=pid, track_id=track_id, side=side,
+                player_id=pid, track_id=track_id, team=team_of(pid), side=side,
                 bbox=[min(xs) - 5, min(ys) - 5, max(xs) + 5, max(ys) + 5], keypoints=kps,
                 foot_px=foot, foot_court=court, on_court=True, confidence=0.9,
             ))
         frames.append(PlayerFrame(frame=f, t_ms=meta.t_ms(f), players=dets))
-    return PlayerTracks(video_id=meta.video_id, model="demo@0", frames=frames)
+    return PlayerTracks(video_id=meta.video_id, model="demo@0", match_format=match_format, frames=frames)
 
 
 def demo_shuttle(meta: VideoMeta, players: PlayerTracks) -> ShuttleTrack:
@@ -114,8 +136,9 @@ def demo_shuttle(meta: VideoMeta, players: PlayerTracks) -> ShuttleTrack:
         if nxt is None or nxt[0] != r:
             continue
         f1 = nxt[2]
-        a = by_frame[f0].players[k % 2].keypoints[10]
-        b = by_frame[f1].players[(k + 1) % 2].keypoints[10]
+        pa, pb = by_frame[f0].players, by_frame[f1].players
+        a = pa[_hitter_index(k, len(pa))].keypoints[10]
+        b = pb[_hitter_index(k + 1, len(pb))].keypoints[10]
         for f in range(f0, f1):
             u = (f - f0) / (f1 - f0)
             x = a[0] + (b[0] - a[0]) * u
@@ -132,7 +155,8 @@ def demo_events(meta: VideoMeta, players: PlayerTracks) -> EventsResult:
     shots: list[ShotEvent] = []
     rallies: dict[int, list[ShotEvent]] = {}
     for r, k, f in _shots(meta):
-        hitter = by_frame[f].players[k % 2]
+        ps = by_frame[f].players
+        hitter = ps[_hitter_index(k, len(ps))]
         s = ShotEvent(
             shot_id=f"s{len(shots) + 1:04d}", rally_id=f"r{r + 1:03d}", frame=f, t_ms=meta.t_ms(f),
             hitter=hitter.player_id, hitter_confidence=0.8, shuttle_px=hitter.keypoints[10][:2],
@@ -149,4 +173,4 @@ def demo_events(meta: VideoMeta, players: PlayerTracks) -> EventsResult:
             start_ms=meta.t_ms(max(ss[0].frame - int(meta.fps // 2), 0)), end_ms=meta.t_ms(end),
             shot_ids=[s.shot_id for s in ss], end_reason="shuttle_lost", confidence=0.7, status="needs_review",
         ))
-    return EventsResult(video_id=meta.video_id, rallies=out, shots=shots)
+    return EventsResult(video_id=meta.video_id, match_format=players.match_format, rallies=out, shots=shots)

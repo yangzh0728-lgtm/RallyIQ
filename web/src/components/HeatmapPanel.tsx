@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { computeHeat } from "../lib/heatmap";
 import { colorOf, labelOf } from "../lib/players";
-import { PLAYER_IDS, type OverlayData, type PlayerId, type Rally, type Status } from "../lib/types";
+import { TEAM_IDS, TEAM_MEMBERS, playerIdsFor, type OverlayData, type PlayerId, type Rally, type Status, type TeamId } from "../lib/types";
 import { CourtView } from "./CourtView";
 
 interface Props {
@@ -12,13 +12,17 @@ interface Props {
 }
 
 export function HeatmapPanel({ overlay, rally, rallyNo, courtStatus }: Props) {
-  const [playerId, setPlayerId] = useState<PlayerId>("P1");
+  const doubles = overlay.match_format === "doubles";
+  const ids = playerIdsFor(overlay.match_format);
+  // A player id, or a team (doubles: both partners on one map).
+  const [sel, setSel] = useState<PlayerId | TeamId>("P1");
+  const who: PlayerId[] = sel === "A" || sel === "B" ? TEAM_MEMBERS[sel] : [sel];
   const [scope, setScope] = useState<"rally" | "all">("all");
   const useRally = scope === "rally" && rally;
   const from = useRally ? rally.start_ms : 0;
   const to = useRally ? rally.end_ms : overlay.video.duration_ms;
-  const heat = useMemo(() => computeHeat(overlay.frames, playerId, from, to), [overlay.frames, playerId, from, to]);
-  const color = colorOf(playerId);
+  const heat = useMemo(() => computeHeat(overlay.frames, who, from, to), [overlay.frames, sel, from, to]); // eslint-disable-line react-hooks/exhaustive-deps
+  const color = colorOf(sel);
   // README: only show metres when the spatial calibration is reliable.
   const reliable = courtStatus === "ok";
   const seconds = heat.samples / overlay.video.fps;
@@ -27,12 +31,18 @@ export function HeatmapPanel({ overlay, rally, rallyNo, courtStatus }: Props) {
     <div className="panel">
       <h3>跑位热力图</h3>
       <div className="row" style={{ marginBottom: 8 }}>
-        <select value={playerId} onChange={(e) => setPlayerId(e.target.value as PlayerId)}>
-          {PLAYER_IDS.map((p) => (
+        <select value={sel} onChange={(e) => setSel(e.target.value as PlayerId | TeamId)}>
+          {ids.map((p) => (
             <option key={p} value={p}>
               {labelOf(p)}
             </option>
           ))}
+          {doubles &&
+            TEAM_IDS.map((t) => (
+              <option key={t} value={t}>
+                {labelOf(t)}
+              </option>
+            ))}
         </select>
         <select value={scope} onChange={(e) => setScope(e.target.value as "rally" | "all")}>
           <option value="all">整段视频</option>
@@ -67,7 +77,7 @@ export function HeatmapPanel({ overlay, rally, rallyNo, courtStatus }: Props) {
           </span>
         </div>
         <div className="row">
-          <span className="muted">跑动距离</span>
+          <span className="muted">{who.length > 1 ? "两人合计跑动" : "跑动距离"}</span>
           <span className="spacer" />
           {reliable ? <span className="mono">{heat.distanceM.toFixed(1)} m</span> : <span className="pill needs_review">标定未确认，不显示米</span>}
         </div>

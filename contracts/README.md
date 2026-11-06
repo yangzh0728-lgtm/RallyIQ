@@ -38,6 +38,10 @@ Every stage is `run(ctx: StageContext) -> Model`. `ctx` gives `video_path`, `met
 `ctx.players`, `ctx.shuttle`, `ctx.events`, `ctx.strokes`). The runner saves the return value as
 `data/videos/<id>/artifacts/<stage>.json`.
 
+Derived (not pipeline stages): `MatchStats` / `CoachReport` / `MatchReport` from `rallyiq/report`
+(`match_report.json`). The coach report is cached as `artifacts/coach.json` and carries the
+`stats_fingerprint` it was generated from.
+
 The raw model prediction served by the API is the `events` artifact with `strokes` merged in by
 `shot_id` (`ShotEvent.shot_type` + `ShotEvent.stroke`). Human edits are append-only `Correction`s
 (`corrections.json`, including `set_shot_type`); the API layers them on that raw prediction to produce

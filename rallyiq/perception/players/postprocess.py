@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .geometry import court_side
+from .geometry import PlayArea, court_side
 from .models import PlayerFrameResult, PlayerState
 
 
@@ -54,9 +54,45 @@ def fill_short_gaps(frames: list[PlayerFrameResult], max_gap: int = 6) -> list[P
                                 on_court=ps.on_court if ps.on_court == p.on_court else None,
                                 confidence=0.5 * min(ps.confidence, p.confidence),
                                 interpolated=True,
+                                team=ps.team,
                             )
                         )
             last_seen[p.player_id] = (fi, p)
     for f in frames:
         f.players.sort(key=lambda p: p.player_id or "")
     return frames
+
+
+def drop_offcourt_runs(
+    frames: list[PlayerFrameResult],
+    play_area: PlayArea | None = None,
+    min_frames: int = 3,
+    min_outside_frac: float = 0.6,
+    min_median_outside_m: float = 0.5,
+) -> int:
+    """Track-level court lock: remove whole runs (same ``player_id`` and
+    ``track_id``) that mostly stand outside the target play area.
+
+    Per-frame filtering is soft near the margin so a lunge past the run-off is
+    not lost. A person on the next court can sit in that soft band for a long
+    time though, and over a whole run the difference is clear: our players
+    spend nearly all their time inside. Returns the number of runs dropped.
+    """
+    area = play_area or PlayArea()
+    runs: dict[tuple[str, int], list[float]] = {}
+    for f in frames:
+        for p in f.players:
+            if p.player_id is None or p.interpolated or p.foot_court is None:
+                continue
+            runs.setdefault((p.player_id, p.track_id), []).append(area.distance_outside(p.foot_court))
+    bad = set()
+    for key, d in runs.items():
+        if len(d) < min_frames:
+            continue
+        arr = np.asarray(d)
+        if (arr > 0).mean() >= min_outside_frac and float(np.median(arr)) >= min_median_outside_m:
+            bad.add(key)
+    if bad:
+        for f in frames:
+            f.players = [p for p in f.players if (p.player_id, p.track_id) not in bad]
+    return len(bad)

@@ -24,6 +24,19 @@ STAGE_ENTRYPOINTS: dict[str, str] = {
 }
 
 
+# Stages that can start early, overlapping an earlier stage: target -> (start with, entry).
+# ``entry(ctx, report, cancel)`` returns ``wait() -> result`` (handed to the target
+# stage as ``ctx.prefetched[target]``) or ``None`` when nothing was started.
+STAGE_PREFETCH: dict[str, tuple[str, str]] = {
+    "shuttle": ("players", "rallyiq.perception.shuttle.stage:prefetch"),
+}
+
+
+def load_prefetch(name: str) -> Callable:
+    module, func = STAGE_PREFETCH[name][1].split(":")
+    return getattr(importlib.import_module(module), func)
+
+
 def load_stage(name: str) -> Callable[[StageContext], BaseModel]:
     module, func = STAGE_ENTRYPOINTS[name].split(":")
     return getattr(importlib.import_module(module), func)

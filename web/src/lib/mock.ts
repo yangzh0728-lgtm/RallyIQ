@@ -1,8 +1,8 @@
 // Deterministic synthetic analysis in the backend's wire format, so the UI can be demoed without
 // the Python service (open the app with ?mock).
-import { applyH, COURT_L, COURT_W, CORNERS_M, homographyFrom4, projectCourtLines } from "./court";
+import { applyH, boundaryLinesM, COURT_L, COURT_W, CORNERS_M, homographyFrom4, projectCourtLines, projectLines } from "./court";
 import { COCO_LIMBS } from "./overlay";
-import type { EventsResult, Keypoint, OverlayData, OverlayFrame, PlayerId, Point, Rally, ShotEvent, ShotType, StrokeInfo, VideoMeta } from "./types";
+import { TEAM_OF, type EventsResult, type Keypoint, type OverlayData, type OverlayFrame, type PlayerId, type Point, type Rally, type ShotEvent, type ShotType, type StrokeInfo, type VideoMeta } from "./types";
 
 function rng(seed: number) {
   let s = seed >>> 0 || 1;
@@ -16,7 +16,7 @@ function rng(seed: number) {
 
 interface Hit {
   t: number;
-  hitter: 0 | 1; // 0 = P1 (near), 1 = P2 (far)
+  hitter: number; // index into PID; even = near team (P1, P3), odd = far team (P2, P4)
   pos: Point; // court metres
 }
 
@@ -25,9 +25,14 @@ export interface MockAnalysis {
   events: EventsResult;
 }
 
-const PID: PlayerId[] = ["P1", "P2"];
+const PID: PlayerId[] = ["P1", "P2", "P3", "P4"];
 
-export function generateMock(videoId: string, opts: { width?: number; height?: number; fps?: number; durationMs?: number; filename?: string } = {}): MockAnalysis {
+export function generateMock(
+  videoId: string,
+  opts: { width?: number; height?: number; fps?: number; durationMs?: number; filename?: string; doubles?: boolean } = {},
+): MockAnalysis {
+  const doubles = !!opts.doubles;
+  const nPlayers = doubles ? 4 : 2;
   const width = opts.width ?? 1280;
   const height = opts.height ?? 720;
   const fps = opts.fps ?? 30;
@@ -53,12 +58,16 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
   while (t < duration - 4000) {
     const n = 3 + Math.floor(r() * 9);
     const rh: Hit[] = [];
-    let hitter: 0 | 1 = r() < 0.5 ? 0 : 1;
+    let team = r() < 0.5 ? 0 : 1;
     let ht = t + 300;
     for (let i = 0; i < n && ht < duration - 1500; i++) {
-      rh.push({ t: ht, hitter, pos: [0.8 + r() * (COURT_W - 1.6), hitter === 0 ? 0.5 + r() * 5.3 : 7.6 + r() * 5.3] });
+      // Doubles: the partner whose lane (left/right half of the court) the shuttle comes to hits it.
+      const lane = r() < 0.5 ? 0 : 1;
+      const hitter = doubles ? team + 2 * lane : team;
+      const x = doubles ? (lane === (team === 0 ? 0 : 1) ? 0.6 + r() * 2.3 : 3.2 + r() * 2.3) : 0.8 + r() * (COURT_W - 1.6);
+      rh.push({ t: ht, hitter, pos: [x, team === 0 ? 0.5 + r() * 5.3 : 7.6 + r() * 5.3] });
       ht += 850 + r() * 650;
-      hitter = hitter === 0 ? 1 : 0;
+      team = 1 - team;
     }
     if (rh.length < 2) break;
     const end = rh[rh.length - 1].t + 900 + r() * 500;
@@ -73,7 +82,7 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
       end_ms: tOf(ef),
       shot_ids: [],
       end_reason: r() < 0.7 ? "shuttle_lost" : "shuttle_static",
-      winner: r() < 0.2 ? null : PID[r() < 0.5 ? 0 : 1],
+      winner: r() < 0.2 ? null : doubles ? (r() < 0.5 ? "A" : "B") : PID[r() < 0.5 ? 0 : 1],
       confidence: round2(conf),
       status: conf < 0.65 ? "needs_review" : "ok",
       source: "model",
@@ -99,20 +108,28 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
     rh.forEach((h, i) => {
       if (ri % 3 === 1 && i === 2) return; // missed hit (false negative)
       const wrongHitter = ri % 4 === 2 && i === 1;
-      addShot(ri, h.t + (r() - 0.5) * 60, PID[wrongHitter ? 1 - h.hitter : h.hitter], 0.45 + r() * 0.55, ["mock: trajectory turn", "mock: wrist near shuttle"], wrongHitter, mockStroke(rs, i, h));
+      addShot(ri, h.t + (r() - 0.5) * 60, PID[wrongHitter ? h.hitter ^ 1 : h.hitter], 0.45 + r() * 0.55, ["mock: trajectory turn", "mock: wrist near shuttle"], wrongHitter, mockStroke(rs, i, h));
     });
     if (ri % 5 === 3) {
       const last = rh[rh.length - 1];
-      addShot(ri, last.t + 500, PID[1 - last.hitter], 0.41, ["mock: trajectory turn"]); // false positive
+      addShot(ri, last.t + 500, PID[last.hitter ^ 1], 0.41, ["mock: trajectory turn"]); // false positive
     }
   });
   shots.sort((a, b) => a.frame - b.frame);
 
   // Per-frame overlay.
-  const home: Point[] = [
-    [COURT_W / 2, 3.2],
-    [COURT_W / 2, 10.2],
-  ];
+  const home: Point[] = doubles
+    ? [
+        [1.6, 3.2], // P1 near-left
+        [4.5, 10.2], // P2 far (image right)
+        [4.5, 3.2], // P3 near-right
+        [1.6, 10.2], // P4 far (image left)
+      ]
+    : [
+        [COURT_W / 2, 3.2],
+        [COURT_W / 2, 10.2],
+      ];
+  const slots = Array.from({ length: nPlayers }, (_, i) => i);
   const frames: OverlayFrame[] = [];
   const nFrames = Math.floor((duration / 1000) * fps);
   let gapUntil = -1;
@@ -120,7 +137,7 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
     const tm = (f * 1000) / fps;
     const ri = rallies.findIndex((ra) => tm >= ra.start_ms - 800 && tm <= ra.end_ms + 600);
     const rh = ri >= 0 ? hits[ri] : null;
-    const pos = [0, 1].map((p) => playerPos(p as 0 | 1, tm, rh, home[p], f));
+    const pos = slots.map((p) => playerPos(p, tm, rh, home[p], f));
     let shuttle: OverlayFrame["shuttle"] = null;
     if (rh && tm >= rh[0].t - 200 && tm <= rallies[ri].end_ms) {
       const sp = shuttlePos(tm, rh, H);
@@ -130,7 +147,7 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
         shuttle = { x: round1(sp[0]), y: round1(sp[1]), source: interp ? "interpolated" : "detected", confidence: interp ? 0.3 : round2(0.75 + r() * 0.25) };
       }
     }
-    const swing = (p: 0 | 1) => {
+    const swing = (p: number) => {
       const h = rh?.find((x) => x.hitter === p && Math.abs(x.t - tm) < 250);
       return h ? 1 - Math.abs(h.t - tm) / 250 : 0;
     };
@@ -138,14 +155,15 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
       frame: f,
       t_ms: tOf(f),
       shuttle,
-      players: [0, 1].map((p) => {
+      players: slots.map((p) => {
         const foot = applyH(H, pos[p]);
         const s = pxPerMeter(H, pos[p]);
         return {
           player_id: PID[p],
-          side: p === 0 ? "near" : "far",
+          team: TEAM_OF[PID[p]],
+          side: p % 2 === 0 ? "near" : "far",
           bbox: [round1(foot[0] - 0.45 * s), round1(foot[1] - 1.85 * s), round1(foot[0] + 0.45 * s), round1(foot[1])],
-          keypoints: skeleton(foot, s, swing(p as 0 | 1), p === 0, f),
+          keypoints: skeleton(foot, s, swing(p), p % 2 === 0, f),
           foot_court: [round2(pos[p][0]), round2(pos[p][1])],
           interpolated: false,
         };
@@ -169,12 +187,19 @@ export function generateMock(videoId: string, opts: { width?: number; height?: n
     overlay: {
       schema_version: "0.2.0",
       video,
-      court: [{ start_frame: 0, end_frame: nFrames - 1, lines: projectCourtLines(H), status: "ok" }],
+      match_format: doubles ? "doubles" : "singles",
+      court: [{
+        start_frame: 0, end_frame: nFrames - 1, lines: projectCourtLines(H), status: "ok",
+        boundary: projectLines(H, boundaryLinesM(doubles ? "doubles" : "singles")),
+        image_corners: imgCorners,
+        // A neighbouring court 2 m to the right, as in a sports hall.
+        other_courts: [CORNERS_M.map(([x, y]) => applyH(H, [x + COURT_W + 2, y]))],
+      }],
       keypoint_format: "coco17",
       skeleton: COCO_LIMBS,
       frames,
     },
-    events: { schema_version: "0.2.0", video_id: videoId, rallies, shots },
+    events: { schema_version: "0.2.0", video_id: videoId, match_format: doubles ? "doubles" : "singles", rallies, shots },
   };
 }
 
@@ -209,7 +234,7 @@ function mockStroke(r: () => number, index: number, h: Hit): StrokeInfo | null {
   };
 }
 
-function playerPos(p: 0 | 1, t: number, rh: Hit[] | null, home: Point, f: number): Point {
+function playerPos(p: number, t: number, rh: Hit[] | null, home: Point, f: number): Point {
   const jitter: Point = [Math.sin(f / 23 + p) * 0.08, Math.cos(f / 31 + p) * 0.08];
   if (!rh) return [home[0] + jitter[0], home[1] + jitter[1]];
   // Keyframes: own hits at hit position, otherwise drift back toward home.
@@ -235,7 +260,7 @@ function shuttlePos(t: number, rh: Hit[], H: number[]): Point | null {
   if (i === -1) {
     a = rh[rh.length - 1];
     // Last shot lands deep on the other side.
-    b = { t: a.t + 1000, pos: [a.pos[0] * 0.5 + 1.5, a.hitter === 0 ? COURT_L - 1.2 : 1.2] };
+    b = { t: a.t + 1000, pos: [a.pos[0] * 0.5 + 1.5, a.hitter % 2 === 0 ? COURT_L - 1.2 : 1.2] };
     i = rh.length;
   } else if (i === 0) return null;
   else {

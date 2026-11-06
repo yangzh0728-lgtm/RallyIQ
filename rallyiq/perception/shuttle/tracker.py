@@ -33,12 +33,16 @@ Pipeline:
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 import numpy as np
 
 Candidate = tuple[float, float, float]  # x px, y px, score 0..1
+# (frame, x, y) -> weight in [0, 1]: how plausible a shuttle there is for the target court.
+RegionFn = Callable[[int, float, float], float]
+# (frame, x, y) -> True when the point is within reach of one of the target players.
+SupportFn = Callable[[int, float, float], bool]
 
 
 @dataclass
@@ -46,7 +50,7 @@ class TrackerConfig:
     # Candidate scores. ``strong`` is the usual heatmap threshold; weaker candidates
     # are only kept if they belong to a tracklet with enough support.
     strong_score: float = 0.5
-    weak_score: float = 0.2
+    weak_score: float = 0.2  # follows the detector peak_threshold (stage.tracker_config)
     weak_min_len: int = 3
     min_len: int = 3
     # Fastest plausible image-space speed, in image diagonals per second. A smash
@@ -69,6 +73,15 @@ class TrackerConfig:
     fit_tol_frac: float = 0.01
     # Border margin (fraction of width/height) used to decide ``out_of_frame``.
     border_frac: float = 0.06
+    # Target-court lock (only used when the tracker gets a ``region``). A tracklet
+    # whose mean region weight is below this is another court's shuttle and is dropped
+    # as a whole; points with weight 0 are dropped from kept tracklets.
+    region_min_mean: float = 0.5
+    # Below this mean weight a tracklet is ambiguous (mostly where our air space and
+    # another court's overlap in the image) and is kept only if it reaches our players.
+    region_ambiguous_mean: float = 0.75
+    # Weight multiplier for a tracklet that passes within reach of a target player.
+    player_support_bonus: float = 0.5
 
 
 @dataclass
@@ -102,6 +115,9 @@ class _Tracklet:
     xy: list[tuple[float, float]] = field(default_factory=list)
     scores: list[float] = field(default_factory=list)
     cand_idx: list[int] = field(default_factory=list)
+    # Target-court plausibility of each point (1.0 when no region is used).
+    region: list[float] = field(default_factory=list)
+    supported: bool = False
 
     @property
     def start(self) -> int:
@@ -123,16 +139,36 @@ class _Tracklet:
         n = len(self.frames)
         need = cfg.min_len if max(self.scores) >= cfg.strong_score else cfg.weak_min_len
         dense = n >= 0.5 * (self.end - self.start + 1)  # mostly consecutive frames
-        return float(sum(self.scores)) if n >= need and dense else 0.0
+        if not (n >= need and dense):
+            return 0.0
+        if not self.region:
+            return float(sum(self.scores))
+        w = float(sum(s * r for s, r in zip(self.scores, self.region)))
+        return w * (1.0 + cfg.player_support_bonus) if self.supported else w
+
+    def mean_region(self) -> float:
+        return float(np.mean(self.region)) if self.region else 1.0
+
+    def subset(self, keep: list[int]) -> "_Tracklet":
+        return _Tracklet(
+            [self.frames[i] for i in keep], [self.xy[i] for i in keep],
+            [self.scores[i] for i in keep], [self.cand_idx[i] for i in keep],
+            [self.region[i] for i in keep] if self.region else [], self.supported,
+        )
 
 
 class ShuttleTracker:
-    def __init__(self, fps: float, width: int, height: int, config: TrackerConfig | None = None):
+    def __init__(self, fps: float, width: int, height: int, config: TrackerConfig | None = None,
+                 region: RegionFn | None = None, support: SupportFn | None = None):
+        """``region`` / ``support`` lock the tracker onto the target court when
+        several matches are in view (see ``rallyiq.perception.target_court``)."""
         if fps <= 0:
             raise ValueError("fps must be > 0")
         self.fps = float(fps)
         self.width, self.height = int(width), int(height)
         self.cfg = config or TrackerConfig()
+        self.region, self.support = region, support
+        self.rejected_foreign = 0  # tracklets dropped as another court's shuttle
         self.diag = math.hypot(self.width, self.height)
         self.max_step = self.cfg.max_speed_diag_per_s * self.diag / self.fps  # px per frame
         self.link_skip = max(1, int(round(self.cfg.link_skip_s * self.fps)))
@@ -151,7 +187,7 @@ class ShuttleTracker:
             f: [i for i, c in enumerate(candidates[f]) if c[2] >= self.cfg.weak_score]
             for f in candidates
         }
-        tracklets = self._link(cands, index_map)
+        tracklets = self._target_court(self._link(cands, index_map))
         chosen = self._select(tracklets)
 
         det: dict[int, TrackPoint] = {}
@@ -223,6 +259,35 @@ class ShuttleTracker:
                     active.append(_Tracklet([f], [(x, y)], [s], [index_map[f][ci]]))
         return done + active
 
+    # ------------------------------------------------------------ target court
+
+    def _target_court(self, tracklets: list[_Tracklet]) -> list[_Tracklet]:
+        """Trajectory-level court lock: judge each linked tracklet as a whole, so one
+        frame drifting over a line neither keeps a foreign trajectory nor cuts ours."""
+        if self.region is None and self.support is None:
+            return tracklets
+        out = []
+        for t in tracklets:
+            if self.region is not None:
+                t.region = [self.region(f, x, y) for f, (x, y) in zip(t.frames, t.xy)]
+            if self.support is not None:
+                t.supported = any(self.support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
+            if t.region:
+                m = t.mean_region()
+                foreign = m < self.cfg.region_min_mean and not (t.supported and m > 0)
+                ambiguous = m < self.cfg.region_ambiguous_mean and not t.supported and self.support is not None
+                if foreign or ambiguous:
+                    if len(t.frames) >= self.cfg.min_len:
+                        self.rejected_foreign += 1
+                    continue
+                keep = [i for i, r in enumerate(t.region) if r > 0.0]
+                if len(keep) < len(t.frames):
+                    if not keep:
+                        continue
+                    t = t.subset(keep)
+            out.append(t)
+        return out
+
     # --------------------------------------------------------------- selection
 
     def _select(self, tracklets: list[_Tracklet]) -> list[_Tracklet]:
@@ -234,10 +299,7 @@ class ShuttleTracker:
             keep = [i for i, f in enumerate(t.frames) if f not in claimed]
             if not keep:
                 continue
-            sub = _Tracklet(
-                [t.frames[i] for i in keep], [t.xy[i] for i in keep],
-                [t.scores[i] for i in keep], [t.cand_idx[i] for i in keep],
-            )
+            sub = t.subset(keep)
             if sub.weight(self.cfg) <= 0:
                 continue
             claimed.update(sub.frames)

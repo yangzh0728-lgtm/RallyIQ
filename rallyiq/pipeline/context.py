@@ -27,6 +27,8 @@ class StageContext:
     meta: VideoMeta | None = None
     config: dict[str, Any] = field(default_factory=dict)
     report: Callable[[float], None] = lambda p: None
+    # Work a later stage started early (see ``registry.STAGE_PREFETCH``): name -> wait().
+    prefetched: dict[str, Callable[[], Any]] = field(default_factory=dict)
 
     def _load(self, name, model):
         return self.store.load_artifact(self.video_id, name, model)
