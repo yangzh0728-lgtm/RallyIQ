@@ -34,6 +34,9 @@ class FilterConfig:
     height_ratio_range: tuple[float, float] = (0.4, 2.5)
     # Keep only this many candidates per frame (singles: 2 players + slack).
     max_candidates: int = 6
+    # Two candidates whose feet land this close on court, with heavily
+    # overlapping boxes, are one person detected twice (keep the better one).
+    duplicate_foot_m: float = 0.35
     # Without calibration, drop boxes smaller than this fraction of the largest.
     uncalibrated_min_rel_height: float = 0.35
 
@@ -158,4 +161,28 @@ def build_candidates(
         out.append(Candidate(det, fp, foot_court, on_court, float(score), reasons))
 
     out.sort(key=lambda c: c.player_score, reverse=True)
-    return out[: cfg.max_candidates]
+    return _drop_duplicates(out, cfg)[: cfg.max_candidates]
+
+
+def _drop_duplicates(cands: list[Candidate], cfg: FilterConfig) -> list[Candidate]:
+    """Remove second detections of the same person (best-first input).
+
+    Partners in doubles can overlap on screen, but their feet are apart on
+    court; a duplicate has both the same feet and mostly the same box. Without
+    this, one player counted twice can flip the singles/doubles decision.
+    """
+    from .pose import _overlap_small
+
+    keep: list[Candidate] = []
+    for c in cands:
+        dup = False
+        for k in keep:
+            if c.foot_court is None or k.foot_court is None:
+                continue
+            if (float(np.linalg.norm(c.foot_court - k.foot_court)) < cfg.duplicate_foot_m
+                    and _overlap_small(c.det.bbox, k.det.bbox) > 0.5):
+                dup = True
+                break
+        if not dup:
+            keep.append(c)
+    return keep
