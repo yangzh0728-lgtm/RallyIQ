@@ -128,3 +128,28 @@ def test_zero_best_score_fails_instead_of_dividing_by_zero(monkeypatch):
     img, _ = render(Scene(CAMERAS["corner_oblique"]))
     cal = calibrate_frame(img)
     assert cal.status == "undeterminable"
+
+
+@pytest.mark.parametrize("sym", ["rotate_180", "flip_x", "flip_y"])
+def test_previous_from_another_shot_does_not_flip_a_clear_view(sym):
+    # Broadcast: after a cut, the previous calibration comes from another shot. Matching
+    # corners across shots used to pick the 180-degree or a mirrored labelling for the
+    # rest of the clip (ShuttleSet ss01/ss08/ss22/ss29).
+    from rallyiq.perception.calibration.homography import canonicalize
+
+    _, H_true = render(Scene(CAMERAS["behind_high"]))
+    previous = H_true @ cm.SYMMETRIES[sym]
+    H, _ = canonicalize(H_true @ cm.SYMMETRIES["rotate_180"], previous)
+    corners = np.array(list(cm.CORNERS.values()))
+    assert np.allclose(project(H, corners)[0], project(H_true, corners)[0], atol=1e-6)
+
+
+def test_previous_decides_only_when_perspective_cannot():
+    from rallyiq.perception.calibration.homography import canonicalize, orientation_preserving
+
+    # top-down, no perspective: both ends look the same, so keep the previous labelling
+    H_top = np.array([[50.0, 0, 100], [0, -50.0, 800], [0, 0, 1]])
+    assert orientation_preserving(H_top)
+    previous = H_top @ cm.SYMMETRIES["rotate_180"]
+    H, name = canonicalize(H_top, previous)
+    assert name == "rotate_180" and np.allclose(H, previous)
