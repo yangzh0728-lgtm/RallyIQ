@@ -1,0 +1,219 @@
+{
+  "$defs": {
+    "PlayerDetection": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "stable identity across side switches; null if unresolved",
+          "title": "Player Id"
+        },
+        "track_id": {
+          "description": "raw tracker id",
+          "title": "Track Id",
+          "type": "integer"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side"
+        },
+        "bbox": {
+          "description": "[x1, y1, x2, y2] px",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bbox",
+          "type": "array"
+        },
+        "keypoints": {
+          "description": "17 COCO keypoints [x, y, conf] px, or empty",
+          "items": {
+            "description": "[x, y, conf]",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "title": "Keypoints",
+          "type": "array"
+        },
+        "foot_px": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Foot Px"
+        },
+        "foot_court": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Foot Court"
+        },
+        "on_court": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "On Court"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "interpolated": {
+          "default": false,
+          "description": "true for short-gap fills, not a detection",
+          "title": "Interpolated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "track_id",
+        "bbox",
+        "confidence"
+      ],
+      "title": "PlayerDetection",
+      "type": "object"
+    },
+    "PlayerFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "frame": {
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerDetection"
+          },
+          "title": "Players",
+          "type": "array"
+        }
+      },
+      "required": [
+        "frame",
+        "t_ms"
+      ],
+      "title": "PlayerFrame",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Stage ``players`` output. Frames without detections may be omitted.",
+  "properties": {
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "pose model name@version",
+      "title": "Model"
+    },
+    "keypoint_format": {
+      "const": "coco17",
+      "default": "coco17",
+      "title": "Keypoint Format",
+      "type": "string"
+    },
+    "frames": {
+      "items": {
+        "$ref": "#/$defs/PlayerFrame"
+      },
+      "title": "Frames",
+      "type": "array"
+    },
+    "side_switches": {
+      "description": "frames where P1/P2 swap sides",
+      "items": {
+        "type": "integer"
+      },
+      "title": "Side Switches",
+      "type": "array"
+    }
+  },
+  "required": [
+    "video_id",
+    "frames"
+  ],
+  "title": "PlayerTracks",
+  "type": "object"
+}

@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "FrameGap": {
+      "additionalProperties": false,
+      "properties": {
+        "start_frame": {
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "end_frame": {
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "reason": {
+          "default": "unknown",
+          "enum": [
+            "not_detected",
+            "out_of_frame",
+            "occluded",
+            "unknown"
+          ],
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start_frame",
+        "end_frame"
+      ],
+      "title": "FrameGap",
+      "type": "object"
+    },
+    "ShuttlePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "frame": {
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "source": {
+          "default": "detected",
+          "enum": [
+            "detected",
+            "interpolated"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "court_xy": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "only if a ground-plane position is actually known",
+          "title": "Court Xy"
+        }
+      },
+      "required": [
+        "frame",
+        "t_ms",
+        "x",
+        "y",
+        "confidence"
+      ],
+      "title": "ShuttlePoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Stage ``shuttle`` output. Frames with no point = shuttle not visible.",
+  "properties": {
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "detector": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "detector name@version",
+      "title": "Detector"
+    },
+    "points": {
+      "items": {
+        "$ref": "#/$defs/ShuttlePoint"
+      },
+      "title": "Points",
+      "type": "array"
+    },
+    "gaps": {
+      "items": {
+        "$ref": "#/$defs/FrameGap"
+      },
+      "title": "Gaps",
+      "type": "array"
+    }
+  },
+  "required": [
+    "video_id",
+    "points"
+  ],
+  "title": "ShuttleTrack",
+  "type": "object"
+}
