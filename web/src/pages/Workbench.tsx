@@ -359,6 +359,18 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
             <button onClick={() => void doExport("json")}>JSON（含原始预测和修正）</button>
             <button onClick={() => void doExport("csv")}>CSV（逐拍）</button>
           </div>
+          <div className="row" style={{ marginTop: 6 }}>
+            <button
+              disabled={!rally || !api.clipUrl(video.video_id, rally.rally_id)}
+              title={api.clipUrl(video.video_id, "x") ? "导出当前回合的视频片段（前后各留 1 秒）" : "演示模式没有原视频"}
+              onClick={() => {
+                const url = rally && api.clipUrl(video.video_id, rally.rally_id);
+                if (url) window.location.href = url;
+              }}
+            >
+              {rally ? `第 ${rallyNo(rally.rally_id)} 回合片段（MP4）` : "回合片段（先播放到某个回合）"}
+            </button>
+          </div>
         </div>
       </aside>
 
