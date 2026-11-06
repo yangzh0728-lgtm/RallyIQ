@@ -16,6 +16,8 @@
          x 当前帧球场不可见（特写、回放、观众镜头）   Backspace 撤销上一个角点
   羽毛球 左键点击球的位置 → 记为可见并跳到下一标注帧
          n 当前帧球不可见并跳到下一帧   x 删除当前帧的球标注
+         g / G 跳到下一个 / 上一个"可疑帧"（需要 --prefill）：低分检测、短缺口、缺口两端。
+               微调只需要把这些帧修对，其余预标注一般不用逐帧看
   事件   h 近端球员击球   j 远端球员击球   [ 回合开始   ] 回合结束
          u 删除离当前帧最近（±5 帧内）的击球
 """
@@ -48,6 +50,7 @@ class Session:
         self.pending: list[list[float]] = []
         self.open_rally: int | None = None
         self.dirty = False
+        self.uncertain: list[int] = []  # frames to check first (from the prefill)
 
     # 帧号 ↔ 原视频毫秒
     def t(self, frame: int | None = None) -> int:
@@ -116,6 +119,15 @@ class Session:
     def shuttle_here(self) -> dict | None:
         return self._at("shuttle")
 
+    def jump_uncertain(self, forward: bool = True) -> bool:
+        """Seek to the next (or previous) frame in ``self.uncertain``."""
+        frames = self.uncertain
+        cand = [f for f in frames if f > self.frame] if forward else [f for f in frames if f < self.frame]
+        if not cand:
+            return False
+        self.seek(cand[0] if forward else cand[-1])
+        return True
+
     # ---------------- 事件
     def hit(self, side: str) -> None:
         self._set("hits", {"t_ms": self.t(), "side": side, "player": None})
@@ -145,6 +157,35 @@ class Session:
         self.doc["status"] = "reviewed" if self.doc.get("status") != "reviewed" else "draft"
         self.dirty = True
         return self.doc["status"]
+
+
+def uncertain_frames(prefill: dict, start_ms: int, low_score: float = 0.5, short_gap: int = 15,
+                     edge: int = 3) -> list[int]:
+    """Frames of a model prefill worth a human look before training on it.
+
+    * detections with a score below ``low_score``;
+    * every frame of a gap of at most ``short_gap`` frames between detections (the ball
+      is usually still in play there: occlusion, missed fast smash);
+    * the first and last ``edge`` frames of longer gaps (where a rally starts or ends).
+    """
+    fps = float(prefill["video"]["fps"])
+    vis: dict[int, float | None] = {}
+    for it in prefill.get("shuttle", []):
+        f = int(round((it["t_ms"] - start_ms) * fps / 1000.0))
+        vis[f] = it.get("score", 1.0) if it.get("visible") else None
+    if not vis:
+        return []
+    out = {f for f, sc in vis.items() if sc is not None and sc < low_score}
+    det = sorted(f for f, sc in vis.items() if sc is not None)
+    for a, b in zip(det, det[1:]):
+        gap = list(range(a + 1, b))
+        if not gap:
+            continue
+        out.update(gap if len(gap) <= short_gap else gap[:edge] + gap[-edge:])
+    if det:
+        out.update(range(max(min(vis), det[0] - edge), det[0]))
+        out.update(range(det[-1] + 1, min(max(vis), det[-1] + edge) + 1))
+    return sorted(f for f in out if f >= 0)
 
 
 def load_or_create(clip_id: str, meta: dict, labels_dir: Path, prefill: Path | None) -> dict:
@@ -203,6 +244,10 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
         sys.exit("视频读取失败")
     doc = load_or_create(clip_id, meta, labels_dir, prefill)
     s = Session(doc, meta["start_ms"], reader.n, stride)
+    if prefill:
+        s.uncertain = uncertain_frames(schema.load(prefill), meta["start_ms"])
+        print(f"{len(s.uncertain)} 个可疑帧（羽毛球模式按 g / G 跳转），共 {reader.n} 帧")
+    uncertain_set = set(s.uncertain)
     out_path = labels_dir / f"{clip_id}.json"
     win = f"RallyIQ label - {clip_id}"
     cv2.namedWindow(win, cv2.WINDOW_NORMAL)
@@ -233,7 +278,8 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
             cv2.circle(img, (int(sh["xy"][0]), int(sh["xy"][1])), 8, (0, 255, 255), 1, cv2.LINE_AA)
         near_hits = [h for h in doc["hits"] if abs(h["t_ms"] - s.t()) <= 3000 / s.fps]
         in_rally = any(r["start_ms"] <= s.t() <= r["end_ms"] for r in doc["rallies"]) or s.open_rally is not None
-        bar = (f"[{s.mode}] frame {s.frame}/{s.n - 1}  t={s.t()}ms  {doc['status']}  "
+        unsure = "  ?CHECK" if s.frame in uncertain_set else ""
+        bar = (f"[{s.mode}] frame {s.frame}/{s.n - 1}{unsure}  t={s.t()}ms  {doc['status']}  "
                f"hits={len(doc['hits'])} rallies={len(doc['rallies'])} shuttle={len(doc['shuttle'])}"
                f"{'  IN-RALLY' if in_rally else ''}{'  HIT ' + near_hits[0]['side'] if near_hits else ''}  {msg}")
         cv2.rectangle(img, (0, 0), (img.shape[1], 28), (0, 0, 0), -1)
@@ -274,6 +320,8 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
                 s.shuttle_hidden()
             elif ch == "x":
                 s.shuttle_delete()
+            elif ch in "gG":
+                msg = "" if s.jump_uncertain(ch == "g") else "no more uncertain frames"
         elif s.mode == "events":
             if ch == "h":
                 s.hit("near")
