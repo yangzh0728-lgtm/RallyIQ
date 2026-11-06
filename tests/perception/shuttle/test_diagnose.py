@@ -81,3 +81,24 @@ def test_sweep_script_without_detection(tmp_path):
     res = json.loads((run / "shuttle_sweep.json").read_text())
     assert [v["threshold"] for v in res[0]["variants"]] == [0.2, 0.1, 0.05]
     assert "c1" in (run / "shuttle_sweep.md").read_text()
+
+
+def test_hits_ablation_runs_offline(tmp_path):
+    from scripts.hits_ablation import ablate, render
+
+    s = _scene()
+    vdir = tmp_path / "v1"
+    (vdir / "artifacts").mkdir(parents=True)
+    (vdir / "artifacts" / "probe.json").write_text(s.meta.model_dump_json())
+    (vdir / "artifacts" / "calibration.json").write_text(s.calibration.model_dump_json())
+    (vdir / "artifacts" / "players.json").write_text(s.players.model_dump_json())
+    (vdir / "work").mkdir()
+    (vdir / "work" / "shuttle_candidates.json").write_text(json.dumps({
+        "detector": "sim", "frame_size": [s.meta.width, s.meta.height],
+        "frames": {str(f): {"candidates": [list(c) for c in cs], "selected": -1} for f, cs in s.candidates.items()},
+    }))
+    rows = ablate(vdir)
+    assert [(r["peak_threshold"], r["events_min_shuttle_conf"]) for r in rows] == [
+        (0.2, 0.2), (0.2, 0.1), (0.2, 0.05), (0.1, 0.2), (0.1, 0.1), (0.1, 0.05)]
+    assert all(r["hits_ok"] <= r["hits"] for r in rows)
+    assert "| 0.1 | 0.05 |" in render("v1", rows)
