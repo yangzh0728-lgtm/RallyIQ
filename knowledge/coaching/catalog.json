@@ -279,8 +279,7 @@
       "platform": "bilibili",
       "channel": "https://space.bilibili.com/383058245",
       "scope": "B 站 UP 主空间里《羽球思维》全部 132 期（含球路讲解、康复、热身等期）。空间里的 Vlog、广告、思维杯宣传、说系列点评等非教学视频列为 skipped。付费课程《羽球思维系统课》不在范围内。抖音发布的是同一系列，不重复收录。",
-      "status": "in_progress",
-      "reason": "已登录 B 站，用 AI 字幕整理，已完成 101/132 期。",
+      "status": "complete",
       "videos": [
         {
           "id": "BV11o4ZePEPt",
@@ -1197,7 +1196,8 @@
           "title": "羽球思维第102期球路讲解-2023丹麦世锦赛",
           "url": "https://www.bilibili.com/video/BV1DkA7zbEs3/",
           "date": "2026-03-21",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1DkA7zbEs3.json"
         },
         {
           "id": "BV1dbXbB6ETN",
@@ -1205,7 +1205,8 @@
           "title": "羽球思维第103期 膝盖疼的讲解与康复",
           "url": "https://www.bilibili.com/video/BV1dbXbB6ETN/",
           "date": "2026-03-28",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1dbXbB6ETN.json"
         },
         {
           "id": "BV1ct9TBdEbU",
@@ -1213,7 +1214,8 @@
           "title": "羽球思维第104期 球路讲解-2022东京世锦赛",
           "url": "https://www.bilibili.com/video/BV1ct9TBdEbU/",
           "date": "2026-04-04",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ct9TBdEbU.json"
         },
         {
           "id": "BV1eYQFBHEFY",
@@ -1221,7 +1223,8 @@
           "title": "羽球思维第105期 如何在防守时应对平高球",
           "url": "https://www.bilibili.com/video/BV1eYQFBHEFY/",
           "date": "2026-04-11",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1eYQFBHEFY.json"
         },
         {
           "id": "BV1MXdhBCEiG",
@@ -1229,7 +1232,8 @@
           "title": "羽球思维第106期 混双中男生起球后女生如何应对",
           "url": "https://www.bilibili.com/video/BV1MXdhBCEiG/",
           "date": "2026-04-18",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1MXdhBCEiG.json"
         },
         {
           "id": "BV1X6o5B6EQZ",
@@ -1237,7 +1241,8 @@
           "title": "羽球思维107期 球路讲解-2024宁波亚锦赛",
           "url": "https://www.bilibili.com/video/BV1X6o5B6EQZ/",
           "date": "2026-04-25",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1X6o5B6EQZ.json"
         },
         {
           "id": "BV1dz98B1ESN",
@@ -1245,7 +1250,8 @@
           "title": "羽球思维第108期 打球时 腰疼的康复与预防",
           "url": "https://www.bilibili.com/video/BV1dz98B1ESN/",
           "date": "2026-05-02",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1dz98B1ESN.json"
         },
         {
           "id": "BV1puRDBDEBm",
@@ -1253,7 +1259,8 @@
           "title": "羽球思维第109期 双打卸力挡网反击",
           "url": "https://www.bilibili.com/video/BV1puRDBDEBm/",
           "date": "2026-05-09",
-          "status": "pending"
+          "status": "skipped",
+          "reason": "B 站没有这一期的 AI 字幕（播放器接口只返回了另一个不相关视频的字幕），无法按“只用字幕”的规则整理。"
         },
         {
           "id": "BV1AH5Y6ME92",
@@ -1261,7 +1268,8 @@
           "title": "羽球思维110期 球路讲解-2024巴黎奥运会",
           "url": "https://www.bilibili.com/video/BV1AH5Y6ME92/",
           "date": "2026-05-16",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1AH5Y6ME92.json"
         },
         {
           "id": "BV1aBGt6PEdB",
@@ -1269,7 +1277,8 @@
           "title": "羽球思维111期 正确的正手中半场抽球发力模式",
           "url": "https://www.bilibili.com/video/BV1aBGt6PEdB/",
           "date": "2026-05-23",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1aBGt6PEdB.json"
         },
         {
           "id": "BV1T3V46oEyT",
@@ -1277,7 +1286,8 @@
           "title": "羽球思维第112期 球路讲解-2026泰国公开赛",
           "url": "https://www.bilibili.com/video/BV1T3V46oEyT/",
           "date": "2026-05-30",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1T3V46oEyT.json"
         },
         {
           "id": "BV1Cr7r6TESH",
@@ -1285,7 +1295,8 @@
           "title": "羽球思维第113期 双打反手搓球的正确方式",
           "url": "https://www.bilibili.com/video/BV1Cr7r6TESH/",
           "date": "2026-06-06",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1Cr7r6TESH.json"
         },
         {
           "id": "BV18nEC6WExZ",
@@ -1293,7 +1304,8 @@
           "title": "羽球思维第114期 在办公椅上 进行的运动热身方式",
           "url": "https://www.bilibili.com/video/BV18nEC6WExZ/",
           "date": "2026-06-13",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV18nEC6WExZ.json"
         },
         {
           "id": "BV1rrLf6VEM7",
@@ -1301,7 +1313,8 @@
           "title": "羽球思维第115期 球路讲解2018南京世锦赛 第一局16：13处",
           "url": "https://www.bilibili.com/video/BV1rrLf6VEM7/",
           "date": "2026-06-20",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1rrLf6VEM7.json"
         },
         {
           "id": "BV1ra7G6DEja",
@@ -1309,7 +1322,8 @@
           "title": "羽球思维第116期  接发球后如回连贯扑压",
           "url": "https://www.bilibili.com/video/BV1ra7G6DEja/",
           "date": "2026-06-27",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ra7G6DEja.json"
         },
         {
           "id": "BV18iTs6gExU",
@@ -1317,7 +1331,8 @@
           "title": "羽球思维第117期  打球前的高效运动热身方式",
           "url": "https://www.bilibili.com/video/BV18iTs6gExU/",
           "date": "2026-07-04",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV18iTs6gExU.json"
         },
         {
           "id": "BV1YrNE6REpc",
@@ -1325,7 +1340,8 @@
           "title": "羽球思维第118期 如何做好正手中半场勾对角",
           "url": "https://www.bilibili.com/video/BV1YrNE6REpc/",
           "date": "2026-07-11",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1YrNE6REpc.json"
         },
         {
           "id": "BV1kbgY6ZEei",
@@ -1333,7 +1349,8 @@
           "title": "羽球思维第119期 球路讲解 2023全英公开赛 第三局08：05处",
           "url": "https://www.bilibili.com/video/BV1kbgY6ZEei/",
           "date": "2026-07-25",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1kbgY6ZEei.json"
         },
         {
           "id": "BV11PGA6nEdo",
@@ -1341,7 +1358,8 @@
           "title": "羽球思维第120期 简单全面高效体能锻炼方式",
           "url": "https://www.bilibili.com/video/BV11PGA6nEdo/",
           "date": "2026-08-01",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV11PGA6nEdo.json"
         },
         {
           "id": "BV1oFu468EaD",
@@ -1349,7 +1367,8 @@
           "title": "羽球思维第121期 对方接发球放网如何利用快切占据主动",
           "url": "https://www.bilibili.com/video/BV1oFu468EaD/",
           "date": "2026-08-08",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1oFu468EaD.json"
         },
         {
           "id": "BV19jgN6AEPQ",
@@ -1357,7 +1376,8 @@
           "title": "羽球思维第122期 歲脚后的处理与康复",
           "url": "https://www.bilibili.com/video/BV19jgN6AEPQ/",
           "date": "2026-08-15",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV19jgN6AEPQ.json"
         },
         {
           "id": "BV1do866nEcF",
@@ -1365,7 +1385,8 @@
           "title": "羽球思维第123期  球路讲解 2019法国公开赛",
           "url": "https://www.bilibili.com/video/BV1do866nEcF/",
           "date": "2026-08-22",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1do866nEcF.json"
         },
         {
           "id": "BV1Q5tc6fEKq",
@@ -1373,7 +1394,8 @@
           "title": "羽球思维第124期 球路讲解2026印度世锦赛 男双决赛",
           "url": "https://www.bilibili.com/video/BV1Q5tc6fEKq/",
           "date": "2026-08-29",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1Q5tc6fEKq.json"
         },
         {
           "id": "BV1pZti67Ecz",
@@ -1381,7 +1403,8 @@
           "title": "羽球思维第125期 如何打好接发球抢网拿回头球",
           "url": "https://www.bilibili.com/video/BV1pZti67Ecz/",
           "date": "2026-09-05",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1pZti67Ecz.json"
         },
         {
           "id": "BV1d6e16GEPn",
@@ -1389,7 +1412,8 @@
           "title": "羽球思维第126期 如何打好正确的正手推球",
           "url": "https://www.bilibili.com/video/BV1d6e16GEPn/",
           "date": "2026-09-19",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1d6e16GEPn.json"
         },
         {
           "id": "BV1sMaP6KEVc",
@@ -1397,7 +1421,8 @@
           "title": "羽球思维第127期 球路讲解2024杭州总决赛 第三局7：6处",
           "url": "https://www.bilibili.com/video/BV1sMaP6KEVc/",
           "date": "2026-09-26",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1sMaP6KEVc.json"
         },
         {
           "id": "BV1ExHh6GEu9",
@@ -1405,7 +1430,8 @@
           "title": "羽球思维第128期 前交叉韧带的保护与预防",
           "url": "https://www.bilibili.com/video/BV1ExHh6GEu9/",
           "date": "2026-10-03",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ExHh6GEu9.json"
         },
         {
           "id": "BV1CEpt6VEVh",
@@ -1413,7 +1439,8 @@
           "title": "羽球思维第129期 招财猫吊球基础知识复习与进阶",
           "url": "https://www.bilibili.com/video/BV1CEpt6VEVh/",
           "date": "2026-10-10",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1CEpt6VEVh.json"
         },
         {
           "id": "BV1MhJ96nEvg",
@@ -1421,7 +1448,8 @@
           "title": "羽球思维第130期 2024全英公开赛 第三局10：6处",
           "url": "https://www.bilibili.com/video/BV1MhJ96nEvg/",
           "date": "2026-10-17",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1MhJ96nEvg.json"
         },
         {
           "id": "BV13Unb6REAJ",
@@ -1429,7 +1457,8 @@
           "title": "羽球思维第131期 接对手中腰球的接球思路",
           "url": "https://www.bilibili.com/video/BV13Unb6REAJ/",
           "date": "2026-10-24",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV13Unb6REAJ.json"
         },
         {
           "id": "BV1hJxe6mEJS",
@@ -1437,7 +1466,8 @@
           "title": "羽球思维第132期 2026丹麦公开赛 第一局4：4处",
           "url": "https://www.bilibili.com/video/BV1hJxe6mEJS/",
           "date": "2026-10-31",
-          "status": "pending"
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1hJxe6mEJS.json"
         },
         {
           "id": "BV13xWA6xEUm",

@@ -79,7 +79,7 @@
 ## 相关 RallyIQ 指标
 
 - `{pid}.win.receive_rate_pct`
-- `{pid}.match.rally_len.mean`
+- `match.rally_len.mean`
 
 ## 说明
 
