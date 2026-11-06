@@ -16,6 +16,8 @@ from pathlib import Path
 
 
 def main(argv: list[str] | None = None) -> int:
+    from .detector import DetectorConfig
+
     ap = argparse.ArgumentParser(prog="python -m rallyiq.perception.shuttle", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video", type=Path)
@@ -24,7 +26,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--roi", choices=["off", "auto"], default="off")
     ap.add_argument("--device", help="cuda | mps | cpu (default: best available)")
     ap.add_argument("--batch-size", type=int, default=8)
-    ap.add_argument("--peak-threshold", type=float, default=0.2)
+    ap.add_argument("--peak-threshold", type=float, default=DetectorConfig.peak_threshold,
+                    help="heatmap peak threshold; the tracker keeps weak candidates down to it")
     ap.add_argument("--out", type=Path, default=Path("shuttle.json"), help="ShuttleTrack JSON")
     ap.add_argument("--candidates", type=Path, help="also write raw per-frame candidates here")
     ap.add_argument("--benchmark-clip-id")
@@ -35,8 +38,8 @@ def main(argv: list[str] | None = None) -> int:
 
     from ...contracts import CourtCalibration
     from ...pipeline.probe import probe_video
-    from .detector import DetectorConfig, HeatmapShuttleDetector, find_weights
-    from .stage import build_track, save_candidates, segments_for
+    from .detector import HeatmapShuttleDetector, find_weights
+    from .stage import build_track, save_candidates, segments_for, tracker_config
 
     weights = find_weights(args.weights)
     if weights is None:
@@ -56,7 +59,8 @@ def main(argv: list[str] | None = None) -> int:
 
     cands, size = det.detect(args.video, meta.fps, meta.frame_count, segments_for(meta, calib, args.roi), progress)
     elapsed = time.monotonic() - t0
-    track, selected = build_track(meta, cands, size[0], size[1], det.name)
+    track, selected = build_track(meta, cands, size[0], size[1], det.name,
+                                  tracker_config(None, args.peak_threshold))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(track.model_dump_json(indent=1))
     if args.candidates:

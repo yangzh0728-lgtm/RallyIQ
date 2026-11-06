@@ -43,7 +43,7 @@ class DetectorConfig:
     batch_size: int = 8
     device: str | None = None  # "cuda" | "mps" | "cpu"; auto when None
     ensemble: str = "weight"  # "weight" | "average" | "none"
-    peak_threshold: float = 0.2
+    peak_threshold: float = 0.1  # measured on real clips (2026-11-06), see shuttle/README.md
     top_k: int = 3
     target_fps: float = 30.0
     median_samples: int = 120

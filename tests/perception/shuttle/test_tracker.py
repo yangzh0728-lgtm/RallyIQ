@@ -217,3 +217,20 @@ def test_court_roi_zooms_on_small_court():
     assert abs((x1 - x0) / (y1 - y0) - 16 / 9) < 0.02
     # Court filling the frame: no crop.
     assert court_roi([[0, 1080], [1920, 1080], [1500, 300], [420, 300]], 1920, 1080) is None
+
+
+def test_tracker_weak_score_follows_detector_threshold():
+    from rallyiq.perception.shuttle.detector import DetectorConfig
+
+    assert tracker_config(None, 0.05).weak_score == 0.05
+    assert tracker_config({"weak_score": 0.3}, 0.05).weak_score == 0.3
+    assert tracker_config(None).weak_score == DetectorConfig.peak_threshold
+
+
+def test_low_score_flight_is_tracked_when_threshold_is_lowered():
+    meta = _meta()
+    cands = as_candidates(rally(), score=0.08)
+    default, _ = build_track(meta, cands, W, H, "x", tracker_config(None, 0.1))
+    low, _ = build_track(meta, cands, W, H, "x", tracker_config(None, 0.05))
+    assert not default.points
+    assert sum(p.source == "detected" for p in low.points) > 80
