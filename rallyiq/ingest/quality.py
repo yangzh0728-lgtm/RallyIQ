@@ -345,14 +345,6 @@ class PictureStats(BaseModel):
     frames: int
 
 
-def _stamp(path: Path) -> list[int] | None:
-    try:
-        st = path.stat()
-    except OSError:
-        return None
-    return [st.st_mtime_ns, st.st_size]
-
-
 def quality_for(store, video_id: str, sample_pictures: bool = True) -> VideoQuality | None:
     """Assessment for a stored video, cached as the ``quality`` artifact until an input changes.
 
@@ -361,16 +353,17 @@ def quality_for(store, video_id: str, sample_pictures: bool = True) -> VideoQual
     meta = store.get_video_meta(video_id)
     if meta is None:
         return None
-    video = store.video_path(video_id)
-    stamps = {n: _stamp(store.artifact_path(video_id, n)) for n in _INPUTS}
-    stamps["video"] = _stamp(video) if video else None
+    # Stamps come from the store so they also work with object storage (no download needed).
+    stamps = {n: store.artifact_stamp(video_id, n) for n in _INPUTS}
+    stamps["video"] = store.video_stamp(video_id)
     fp = fingerprint(stamps, meta.model_dump(mode="json"))
     cached = store.load_artifact(video_id, QUALITY_ARTIFACT, VideoQuality)
     if cached is not None and cached.fingerprint == fp:
         return cached
     pic = store.load_artifact(video_id, PICTURE_ARTIFACT, PictureStats)
-    if pic is None and sample_pictures and video is not None and video.exists():
-        raw = sample_picture_stats(video, meta.frame_count)
+    if pic is None and sample_pictures and stamps["video"] is not None:
+        with store.local_video(video_id) as video:
+            raw = sample_picture_stats(video, meta.frame_count) if video is not None and video.exists() else None
         if raw is not None:
             pic = PictureStats(**raw)
             store.save_artifact(video_id, PICTURE_ARTIFACT, pic)

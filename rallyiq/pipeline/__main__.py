@@ -1,7 +1,7 @@
 """CLI.
 
     python -m rallyiq.pipeline analyze VIDEO [--demo] [--from STAGE]   # offline, prints artifact dir
-    python -m rallyiq.pipeline worker                                  # queue worker
+    python -m rallyiq.pipeline worker [--idle-exit 300]                # queue worker
 """
 
 from __future__ import annotations
@@ -28,6 +28,12 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--from", dest="first", choices=STAGES, default="probe")
     w = sub.add_parser("worker", help="run queued jobs forever")
     w.add_argument("--demo", action="store_true")
+    w.add_argument("--idle-exit", type=float, default=None, metavar="SECONDS",
+                   help="exit after the queue has been empty this long (on-demand GPU containers)")
+    w.add_argument("--lease", type=float, default=300.0, metavar="SECONDS",
+                   help="a running job whose worker has not heart-beaten for this long is re-queued")
+    w.add_argument("--max-attempts", type=int, default=2)
+    w.add_argument("--poll", type=float, default=2.0, metavar="SECONDS")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     store = Store(args.data)
@@ -43,7 +49,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"video_id={video_id} artifacts={store.video_dir(video_id) / 'artifacts'}")
         return 0 if job.state == "succeeded" else 1
 
-    Worker(store, config=config).loop()
+    Worker(store, poll_s=args.poll, config=config, lease_s=args.lease, max_attempts=args.max_attempts,
+           idle_exit_s=args.idle_exit, single_process=False).loop()
     return 0
 
 

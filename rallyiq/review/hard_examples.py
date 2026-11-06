@@ -133,14 +133,15 @@ def examples_for_video(
     return out
 
 
-def collect(store) -> tuple[list[HardExample], dict[str, dict]]:
-    """All hard examples in the store, plus per-video totals used to normalise error rates."""
+def collect(store, owner_id: str | None = None) -> tuple[list[HardExample], dict[str, dict]]:
+    """All hard examples in the store (or one account's videos), plus per-video totals used to
+    normalise error rates."""
     from ..ingest.quality import QUALITY_ARTIFACT, quality_for  # noqa: PLC0415
     from ..strokes.classify import merge_strokes  # noqa: PLC0415
 
     examples: list[HardExample] = []
     videos: dict[str, dict] = {}
-    for v in store.list_videos():
+    for v in store.list_videos(owner_id=owner_id):
         corrections = store.list_corrections(v.video_id)
         if not any(c.hard_example for c in corrections):
             continue

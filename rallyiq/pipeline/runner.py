@@ -7,6 +7,7 @@ import os
 import threading
 import time
 import traceback
+from collections.abc import Callable
 from typing import Any
 
 from ..contracts import STAGES, CourtCalibration, Job
@@ -20,11 +21,23 @@ MANUAL_CALIBRATION = "calibration_manual"
 MATCH_FORMAT = "match_format"  # MatchFormatSetting chosen in the UI; read by the players stage
 
 
-def run_job(store: Store, job: Job, config: dict[str, Any] | None = None) -> Job:
-    video_path = store.video_path(job.video_id)
+def run_job(store: Store, job: Job, config: dict[str, Any] | None = None, worker_id: str | None = None) -> Job:
+    """Run ``job`` to completion. With ``worker_id`` every progress write also renews the job lease
+    (see ``Store.claim_next_job``) and is dropped if the lease was lost to another worker."""
+
+    def save(j: Job) -> None:
+        store.update_job(j, worker_id)
+
+    try:
+        video_path = store.video_path(job.video_id)  # downloads from object storage when needed
+    except Exception as e:  # noqa: BLE001
+        log.exception("could not fetch video %s", job.video_id)
+        job.state, job.error, job.finished_at = "failed", f"could not fetch video: {e}", now()
+        save(job)
+        return job
     if video_path is None:
         job.state, job.error, job.finished_at = "failed", "video not found", now()
-        store.update_job(job)
+        save(job)
         return job
 
     ctx = StageContext(
@@ -33,11 +46,11 @@ def run_job(store: Store, job: Job, config: dict[str, Any] | None = None) -> Job
     )
     job.state = "running"
     job.started_at = job.started_at or now()
-    store.update_job(job)
+    save(job)
 
     cancel = threading.Event()
     try:
-        return _run_stages(store, job, ctx, cancel)
+        return _run_stages(store, job, ctx, cancel, save)
     finally:
         cancel.set()  # stop early-started work the job no longer needs
         for wait in ctx.prefetched.values():
@@ -53,7 +66,8 @@ def parallel_enabled(config: dict[str, Any]) -> bool:
     return v not in ("off", "0", "false", "no")
 
 
-def _start_prefetch(store: Store, job: Job, ctx: StageContext, trigger: str, cancel: threading.Event) -> None:
+def _start_prefetch(store: Store, job: Job, ctx: StageContext, trigger: str, cancel: threading.Event,
+                    save: Callable[[Job], None]) -> None:
     """Start the stages that may overlap ``trigger`` (see ``registry.STAGE_PREFETCH``)."""
     if not parallel_enabled(ctx.config):
         return
@@ -73,11 +87,12 @@ def _start_prefetch(store: Store, job: Job, ctx: StageContext, trigger: str, can
         if wait is not None:
             ctx.prefetched[target] = wait
             run.state, run.started_at, run.progress, run.error = "running", now(), 0.0, None
-            store.update_job(job)
+            save(job)
             log.info("%s started alongside %s", target, trigger)
 
 
-def _run_stages(store: Store, job: Job, ctx: StageContext, cancel: threading.Event) -> Job:
+def _run_stages(store: Store, job: Job, ctx: StageContext, cancel: threading.Event,
+                save: Callable[[Job], None]) -> Job:
     for run in job.stages:
         if run.state == "skipped":
             continue
@@ -86,8 +101,8 @@ def _run_stages(store: Store, job: Job, ctx: StageContext, cancel: threading.Eve
             run.error = None  # already started alongside an earlier stage; keep its start time
         else:
             run.state, run.started_at, run.progress, run.error = "running", now(), 0.0, None
-        store.update_job(job)
-        _start_prefetch(store, job, ctx, name, cancel)
+        save(job)
+        _start_prefetch(store, job, ctx, name, cancel, save)
 
         last = [0.0]
 
@@ -95,7 +110,7 @@ def _run_stages(store: Store, job: Job, ctx: StageContext, cancel: threading.Eve
             _run.progress = max(0.0, min(1.0, float(p)))
             if time.monotonic() - last[0] > 0.5:  # throttle DB writes
                 last[0] = time.monotonic()
-                store.update_job(job)
+                save(job)
 
         ctx.report = report
         try:
@@ -114,14 +129,14 @@ def _run_stages(store: Store, job: Job, ctx: StageContext, cancel: threading.Eve
             for later in job.stages[STAGES.index(name) + 1:]:
                 if later.state in ("pending", "running"):
                     later.state = "skipped"
-            store.update_job(job)
+            save(job)
             log.debug(traceback.format_exc())
             return job
         run.finished_at = now()
-        store.update_job(job)
+        save(job)
 
     job.state, job.finished_at = "succeeded", now()
-    store.update_job(job)
+    save(job)
     return job
 
 

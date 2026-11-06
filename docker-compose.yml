@@ -1,0 +1,92 @@
+# Production-like stack on one machine: PostgreSQL + S3 (moto server) + web/API + worker.
+# The S3 stand-in keeps objects in memory (reset on restart); online the bucket is Cloudflare R2.
+#
+#   docker compose up --build                 # CPU worker in demo mode (synthetic analysis), no GPU needed
+#   docker compose --profile gpu up --build   # plus the real GPU worker (NVIDIA Container Toolkit)
+#
+# Open http://localhost:8000 and sign up with invite code "rallyiq" (see RALLYIQ_INVITE_CODE).
+# Online, the same images run on managed services instead: docs/deploy.md.
+
+x-env: &env
+  RALLYIQ_DATABASE_URL: postgresql://rallyiq:rallyiq@postgres:5432/rallyiq
+  RALLYIQ_STORAGE: s3://rallyiq
+  RALLYIQ_S3_ENDPOINT: http://s3:5000
+  RALLYIQ_S3_PUBLIC_ENDPOINT: http://localhost:5000   # presigned URLs the browser opens
+  RALLYIQ_S3_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: rallyiq
+  AWS_SECRET_ACCESS_KEY: rallyiq-secret
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rallyiq
+      POSTGRES_PASSWORD: rallyiq
+      POSTGRES_DB: rallyiq
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rallyiq"]
+      interval: 2s
+      retries: 30
+
+  s3:
+    image: motoserver/moto:5.1.0
+    ports: ["5000:5000"]
+
+  s3-init:
+    image: rallyiq-api
+    depends_on: [s3]
+    environment:
+      AWS_ACCESS_KEY_ID: rallyiq
+      AWS_SECRET_ACCESS_KEY: rallyiq-secret
+    command:
+      - python
+      - -c
+      - |
+        import time, boto3
+        s3 = boto3.client("s3", endpoint_url="http://s3:5000", region_name="us-east-1")
+        for _ in range(60):
+            try:
+                s3.create_bucket(Bucket="rallyiq")
+                break
+            except Exception as e:  # s3 not up yet
+                print(e)
+                time.sleep(1)
+        else:
+            raise SystemExit("could not create bucket")
+
+  api:
+    build: .
+    image: rallyiq-api
+    environment:
+      <<: *env
+      RALLYIQ_WORKER: external
+      RALLYIQ_AUTH: "on"
+      RALLYIQ_SIGNUP: invite
+      RALLYIQ_INVITE_CODE: rallyiq
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      s3-init: {condition: service_completed_successfully}
+
+  worker-demo:
+    image: rallyiq-api
+    command: ["python", "-m", "rallyiq.pipeline", "worker", "--demo"]
+    environment: *env
+    depends_on: [api]
+
+  worker:
+    profiles: [gpu]
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    image: rallyiq-worker
+    environment: *env
+    depends_on: [api]
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
+volumes:
+  pgdata:
