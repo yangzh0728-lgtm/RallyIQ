@@ -9,7 +9,9 @@ Configuration (``ctx.config`` or environment):
   Without it the stage returns empty tracks so the rest of the pipeline still
   runs, and the ``model`` field stays ``None`` to show nothing was detected.
 * ``players_stride`` - run pose on every n-th frame (default 1).
-* ``players_far_boost`` - second pass for small far-side players.
+* ``players_far_boost`` - second pose pass on an upscaled crop of the far half
+  of the court: ``auto`` (default, only when the far player is small),
+  ``on``/``true`` or ``off``/``false``.
 * ``match_format`` / ``RALLYIQ_MATCH_FORMAT`` - ``auto`` (default), ``singles``
   or ``doubles``. ``auto`` decides from the first seconds of the video.
 """
@@ -53,16 +55,17 @@ def to_contract(p: PlayerState) -> PlayerDetection:
 
 
 def side_switches(results: list[PlayerFrameResult]) -> list[int]:
-    """Frames where P1 is first observed on the other half than before."""
-    out: list[int] = []
-    last = None
-    for r in results:
-        for p in r.players:
-            if p.player_id == "P1" and p.side is not None and not p.interpolated:
-                if last is not None and p.side != last:
-                    out.append(r.frame)
-                last = p.side
-    return out
+    """Frames where the teams really changed ends (sustained, spaced like games).
+
+    ``track_players`` already worked them out while fixing the labels; for other
+    result lists they are recomputed without touching the labels.
+    """
+    known = getattr(results, "side_switches", None)
+    if known is not None:
+        return list(known)
+    from .sides import stabilise_sides
+
+    return stabilise_sides(list(results), apply=False)
 
 
 def build_tracks(video_id: str, results: list[PlayerFrameResult], model: str | None) -> PlayerTracks:
@@ -91,6 +94,15 @@ def match_format_setting(ctx: StageContext) -> str:
     return fmt if fmt in ("auto", "singles", "doubles") else "auto"
 
 
+def far_boost_setting(ctx: StageContext) -> str:
+    v = ctx.config.get("players_far_boost", "auto")
+    if v is None or v == "auto":
+        return "auto"
+    if isinstance(v, str):
+        return "off" if v.lower() in ("off", "false", "0", "no") else "on"
+    return "on" if v else "off"
+
+
 def run(ctx: StageContext) -> PlayerTracks:
     meta = ctx.require_meta()
     cal = ctx.calibration
@@ -109,9 +121,9 @@ def run(ctx: StageContext) -> PlayerTracks:
     from .runner import PlayerTrackingConfig, iter_video, track_players
 
     stride = int(ctx.config.get("players_stride", 1))
-    cfg = PlayerTrackingConfig(stride=stride, match_format=match_format_setting(ctx))
+    cfg = PlayerTrackingConfig(stride=stride, match_format=match_format_setting(ctx), far_boost=far_boost_setting(ctx))
     cfg.tracker.fps = meta.fps
-    est = RTMOOnnx(model_path, tile_far_half=bool(ctx.config.get("players_far_boost", False)))
+    est = RTMOOnnx(model_path)
 
     def homography_for(frame: int):
         h = cal.homography_for(frame) if cal is not None else None

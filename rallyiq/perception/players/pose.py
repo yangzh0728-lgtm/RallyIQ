@@ -37,6 +37,15 @@ def _box_iou(a: np.ndarray, b: np.ndarray) -> float:
     return float(inter / ua) if ua > 0 else 0.0
 
 
+def _containment(a: np.ndarray, b: np.ndarray) -> float:
+    """Share of box ``a`` that lies inside box ``b``."""
+    ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+    ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+    inter = max(ix2 - ix1, 0) * max(iy2 - iy1, 0)
+    area = (a[2] - a[0]) * (a[3] - a[1])
+    return float(inter / area) if area > 0 else 0.0
+
+
 def merge_detections(dets: list[PersonDetection], iou_thr: float = 0.5) -> list[PersonDetection]:
     """Greedy NMS across passes, keeping the higher-scoring person."""
     keep: list[PersonDetection] = []
@@ -107,8 +116,41 @@ class RTMOOnnx:
             out.append(PersonDetection(bbox, k, score))
         return out
 
-    def __call__(self, image_bgr: np.ndarray) -> list[PersonDetection]:
+    supports_far_roi = True
+
+    def _scale(self, w: int, h: int) -> float:
+        w_in, h_in = self.input_size
+        return min(h_in / h, w_in / w)
+
+    def far_player_px(self, image_shape: tuple[int, ...], roi: tuple) -> float | None:
+        """Height a far-baseline player has in the model input on the full frame."""
+        h, w = image_shape[:2]
+        return float(roi[4]) * self._scale(w, h)
+
+    def _infer_roi(self, img: np.ndarray, roi: tuple, full: list[PersonDetection]) -> list[PersonDetection]:
+        x1, y1, x2, y2 = (int(v) for v in roi[:4])
+        crop = img[y1:y2, x1:x2]
+        if crop.size == 0:
+            return []
+        out = []
+        for d in self._infer(crop):
+            # Someone cut off by the crop's lower edge (a near player's upper
+            # body) would get a fake foot point on the far half.
+            if y2 < img.shape[0] - 2 and d.bbox[3] >= crop.shape[0] - 3:
+                continue
+            d.bbox[[0, 2]] += x1
+            d.bbox[[1, 3]] += y1
+            d.keypoints[:, 0] += x1
+            d.keypoints[:, 1] += y1
+            if any(_containment(d.bbox, f.bbox) > 0.6 for f in full):
+                continue  # same person the full-frame pass already has, keep that one
+            out.append(d)
+        return out
+
+    def __call__(self, image_bgr: np.ndarray, far_roi: tuple | None = None) -> list[PersonDetection]:
         dets = self._infer(image_bgr)
+        if far_roi is not None:
+            return merge_detections(dets + self._infer_roi(image_bgr, far_roi, dets))
         if not self.tile_far_half:
             return dets
         # Upper 55% of the frame usually holds the far half of the court.
