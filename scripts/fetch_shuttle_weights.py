@@ -1,6 +1,6 @@
 """Download the pretrained shuttle heatmap checkpoint into weights/shuttle/.
 
-    pip install gdown && python scripts/fetch_shuttle_weights.py
+    bash scripts/fetch_shuttle_weights.sh   (or: pip install gdown && python scripts/fetch_shuttle_weights.py)
 
 The checkpoint is MIT licensed (see rallyiq/perception/shuttle/LICENSE-THIRD-PARTY).
 Without gdown, download the zip from DRIVE_URL by hand and pass it with --zip.

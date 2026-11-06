@@ -8,7 +8,7 @@
 
 ```bash
 pip install -e '.[shuttle]'          # torch + OpenCV
-pip install gdown && python scripts/fetch_shuttle_weights.py   # 下载到 weights/shuttle/heatmap.pt
+bash scripts/fetch_shuttle_weights.sh   # 下载到 weights/shuttle/heatmap.pt（mac_e2e.sh 会自动调用）
 ```
 
 权重查找顺序：`ctx.config["shuttle"]["weights"]` → 环境变量 `RALLYIQ_SHUTTLE_WEIGHTS`
