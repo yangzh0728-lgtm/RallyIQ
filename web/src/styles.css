@@ -169,3 +169,8 @@ kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-w
 .auth-card label { display: flex; flex-direction: column; gap: 4px; }
 .auth-card input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg, transparent); }
 .auth-card button { padding: 8px; }
+.training li { margin: 8px 0; }
+.training .focus { color: var(--warn); }
+.training .key-points { margin: 2px 0 2px 18px; padding: 0; }
+.training .sources { gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.training .sources a.chip { text-decoration: none; border: 1px solid var(--line); }

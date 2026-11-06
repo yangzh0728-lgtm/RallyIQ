@@ -363,6 +363,17 @@
             "status": "needs_review",
             "confidence": "low",
             "note": null
+          },
+          {
+            "key": "P1.lost.last_shot_types",
+            "label": "\u5931\u5206\u56de\u5408\u4e2d\u672c\u4eba\u6700\u540e\u4e00\u62cd\u7684\u51fb\u7403\u7c7b\u578b",
+            "counts": {
+              "\u6311\u7403": 1
+            },
+            "n": 1,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": "\u8fd1\u4f3c\u770b\u4f5c\u5931\u8bef\u6216\u88ab\u538b\u5236\u7684\u90a3\u4e00\u62cd\uff1b\u843d\u70b9\u672a\u8bc6\u522b"
           }
         ]
       },
@@ -590,6 +601,17 @@
             "status": "needs_review",
             "confidence": "low",
             "note": null
+          },
+          {
+            "key": "P2.lost.last_shot_types",
+            "label": "\u5931\u5206\u56de\u5408\u4e2d\u672c\u4eba\u6700\u540e\u4e00\u62cd\u7684\u51fb\u7403\u7c7b\u578b",
+            "counts": {
+              "\u6311\u7403": 1
+            },
+            "n": 1,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": "\u8fd1\u4f3c\u770b\u4f5c\u5931\u8bef\u6216\u88ab\u538b\u5236\u7684\u90a3\u4e00\u62cd\uff1b\u843d\u70b9\u672a\u8bc6\u522b"
           }
         ]
       }

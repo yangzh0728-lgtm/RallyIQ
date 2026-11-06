@@ -3,7 +3,7 @@ import { MemoryCommit } from "../components/MemoryCommit";
 import { api } from "../lib/api";
 import { download } from "../lib/export";
 import { colorOf } from "../lib/players";
-import { CONF_LABEL, evidenceText, fmtValue, indexStats, KIND_LABEL, reportMarkdown, STATUS_LABEL, type Evidence } from "../lib/report";
+import { CONF_LABEL, evidenceText, fmtValue, indexStats, KIND_LABEL, reportMarkdown, STATUS_LABEL, videoLink, type Evidence } from "../lib/report";
 import type { CoachReport, Distribution, MatchReport, Metric, Video } from "../lib/types";
 
 export function Report({ videoId }: { videoId: string }) {
@@ -202,6 +202,7 @@ function CoachView({ coach, idx, onJump }: { coach: CoachReport; idx: Map<string
           <ol className="training">
             {coach.training.map((t, n) => (
               <li key={n}>
+                {t.focus && <div className="small focus">针对：{t.focus}</div>}
                 {t.player_id && <b>{t.player_id}：</b>}
                 <b>{t.drill}</b> <span className="muted">— {t.why}</span>
                 {t.retest_metric && idx.get(t.retest_metric) && (
@@ -213,6 +214,29 @@ function CoachView({ coach, idx, onJump }: { coach: CoachReport; idx: Map<string
                     ）
                   </span>
                 )}
+                {(t.key_points?.length ?? 0) > 0 && (
+                  <ul className="key-points small">
+                    {t.key_points!.map((k) => (
+                      <li key={k}>{k}</li>
+                    ))}
+                  </ul>
+                )}
+                {(t.sources?.length ?? 0) > 0 && (
+                  <div className="row sources small">
+                    <span className="muted">参考教学</span>
+                    {t.sources!.map((r) => (
+                      <a key={r.note_id} className="chip" href={videoLink(r)} target="_blank" rel="noreferrer" title={r.title}>
+                        {r.coach.split(" (")[0]} · {r.title}
+                        {r.drill ? ` · ${r.drill}` : ""}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {t.warnings?.map((w) => (
+                  <div key={w} className="small" style={{ color: "var(--warn)" }}>
+                    ⚠ {w}
+                  </div>
+                ))}
               </li>
             ))}
           </ol>

@@ -13,13 +13,15 @@ RUN npm run build
 
 FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
-    RALLYIQ_DATA=/data RALLYIQ_WEB_DIR=/app/web
+    RALLYIQ_DATA=/data RALLYIQ_WEB_DIR=/app/web RALLYIQ_KNOWLEDGE_DIR=/app/knowledge/coaching
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 rallyiq && mkdir -p /data && chown rallyiq /data
 WORKDIR /app
 COPY pyproject.toml ./
 COPY rallyiq/ rallyiq/
+# coaching notes the AI coach cites (knowledge/coaching/notes)
+COPY knowledge/ knowledge/
 # coach: AI coach via Claude API (set ANTHROPIC_API_KEY); headless OpenCV: picture stats for /quality.
 RUN pip install '.[server,coach]' opencv-python-headless
 COPY --from=web /web/dist /app/web

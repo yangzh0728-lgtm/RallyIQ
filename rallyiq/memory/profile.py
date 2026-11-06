@@ -137,7 +137,8 @@ def retests(evs: list[AnalysisEvent]) -> list[RetestResult]:
                 else:
                     status = "changed"
             out.append(RetestResult(
-                drill=t.drill, why=t.why, metric=t.retest_metric, label=(b or a).label if (b or a) else None,
+                drill=t.drill, why=t.why, focus=t.focus, sources=t.sources, metric=t.retest_metric,
+                label=(b or a).label if (b or a) else None,
                 unit=(b or a).unit if (b or a) else None, from_video_id=e.video_id,
                 to_video_id=nxt.video_id if nxt else None,
                 before=b.value if b else None, after=a.value if a else None,

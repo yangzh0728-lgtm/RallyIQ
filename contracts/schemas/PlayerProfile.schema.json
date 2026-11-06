@@ -1,5 +1,62 @@
 {
   "$defs": {
+    "NoteRef": {
+      "additionalProperties": false,
+      "description": "A coaching-note citation (``knowledge/coaching/notes``). Link and title come from the\nnote file, never from the model, so a citation always points at a real video.",
+      "properties": {
+        "note_id": {
+          "title": "Note Id",
+          "type": "string"
+        },
+        "coach": {
+          "title": "Coach",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "description": "source video; with ``t_s`` it opens at that moment",
+          "title": "Url",
+          "type": "string"
+        },
+        "t_s": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "seconds into the video where the cited part starts, when known",
+          "title": "T S"
+        },
+        "drill": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "name of the note's drill this advice uses, if any",
+          "title": "Drill"
+        }
+      },
+      "required": [
+        "note_id",
+        "coach",
+        "title",
+        "url"
+      ],
+      "title": "NoteRef",
+      "type": "object"
+    },
     "ProfileMetric": {
       "additionalProperties": false,
       "properties": {
@@ -317,6 +374,26 @@
           ],
           "default": null,
           "title": "Delta"
+        },
+        "focus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focus"
+        },
+        "sources": {
+          "description": "coaching notes the drill came from",
+          "items": {
+            "$ref": "#/$defs/NoteRef"
+          },
+          "title": "Sources",
+          "type": "array"
         },
         "same_conditions": {
           "anyOf": [

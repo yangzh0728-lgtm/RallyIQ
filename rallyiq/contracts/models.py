@@ -572,12 +572,28 @@ class CoachInsight(Contract):
     warnings: list[str] = Field(default_factory=list)
 
 
+class NoteRef(Contract):
+    """A coaching-note citation (``knowledge/coaching/notes``). Link and title come from the
+    note file, never from the model, so a citation always points at a real video."""
+
+    note_id: str
+    coach: str
+    title: str
+    url: str = Field(description="source video; with ``t_s`` it opens at that moment")
+    t_s: int | None = Field(default=None, description="seconds into the video where the cited part starts, when known")
+    drill: str | None = Field(default=None, description="name of the note's drill this advice uses, if any")
+
+
 class TrainingItem(Contract):
     player_id: PlayerId | None = None
     drill: str
     why: str
     evidence: list[str] = Field(default_factory=list)
     retest_metric: str | None = Field(default=None, description="metric key to compare on the next upload")
+    focus: str | None = Field(default=None, description="the weakness this item addresses, e.g. '失分多在网前球'")
+    key_points: list[str] = Field(default_factory=list, description="technique points / cues taken from the cited notes")
+    sources: list[NoteRef] = Field(default_factory=list, description="coaching notes this advice is based on")
+    warnings: list[str] = Field(default_factory=list)
 
 
 class CoachReport(Contract):

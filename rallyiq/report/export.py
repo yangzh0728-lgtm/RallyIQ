@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ..contracts import CoachReport, Distribution, MatchStats, Metric
+from .coach.advice import video_link
 
 STATUS = {"ok": "可用", "needs_review": "待复核", "undeterminable": "不可判定"}
 CONF = {"high": "高", "medium": "中", "low": "低"}
@@ -57,7 +58,15 @@ def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: 
             for t in coach.training:
                 who = f"{t.player_id}：" if t.player_id else ""
                 retest = f"（复测：`{t.retest_metric}`）" if t.retest_metric else ""
-                out.append(f"1. {who}**{t.drill}** — {t.why}{retest}")
+                focus = f"针对：{t.focus}。" if t.focus else ""
+                out.append(f"1. {who}**{t.drill}** — {focus}{t.why}{retest}")
+                if t.key_points:
+                    out.append(f"   要点：{'；'.join(t.key_points)}")
+                for r in t.sources:
+                    drill = f" · 练习「{r.drill}」" if r.drill else ""
+                    out.append(f"   参考：{r.coach}《{r.title}》{drill} {video_link(r)}")
+                for w in t.warnings:
+                    out.append(f"   ⚠ {w}")
         out.append("")
 
     caveats = coach.caveats if coach else stats.caveats
