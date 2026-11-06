@@ -1,0 +1,43 @@
+{
+  "id": "axelsen-yt-qHS8HW94zkA",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=qHS8HW94zkA",
+  "title": "Fix ❌ Your Backhand Clear in 10 Minutes ⏱️",
+  "series": "VA Academy",
+  "published": "2026-03-28",
+  "duration_s": 922,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "intermediate",
+  "topic": "反手高远球纠错：肘部带动、拇指位置、短挥拍",
+  "strokes": ["backhand_clear"],
+  "aspects": ["technique", "grip"],
+  "summary": "安赛龙纠正业余球员的反手高远球。原始问题：全靠手臂和手腕硬发力、挥拍太大、肘部贴身、还带切削。正确做法：反手握拍时拇指稍移到拍柄侧面、握拍相对固定但手指放松；高位早准备，手臂较直离开身体，准备时肘部略下沉、肩胛稍沉，然后把肘部向网的方向驱动，手臂随之展开甩出；击球点要高、要伸展开，不要离球太近。反手高远球靠时机和技术，而不是蛮力。",
+  "key_points": [
+    "握拍：从中性握拍把拇指稍移到拍柄侧面；高远球时握法相对固定，手指放松，不要过紧。",
+    "早准备、高准备，手臂较直、远离身体。",
+    "准备时让肘部（和肩胛）略微下沉，然后把肘部向网前方向驱动，前臂和拍子随之甩出。",
+    "力量来自时机、肘部驱动和身体协调，而不是手腕；可以用左臂和背部帮助协调。",
+    "挥拍要短而简单；在有风的场馆大挥拍更难控制。",
+    "击球点要高、手臂伸展，不要离球太近或在身体侧面低位击球。",
+    "反手高远球不要切削，要正面击球。",
+    "动作改变需要大量正确重复，初期打不远是正常的。"
+  ],
+  "common_mistakes": [
+    "完全依赖手臂和手腕发力。",
+    "挥拍幅度过大，导致不稳定。",
+    "肘部贴近身体，手臂弯得太多。",
+    "击球时切削。",
+    "离球太近、击球点太低。",
+    "握拍太紧或拇指位置不对。"
+  ],
+  "drills": [
+    {"name": "反手高远球喂球", "how": "同伴喂反手后场高球，只关注早准备、沉肘、驱动肘部和伸展击球，不追求距离。"},
+    {"name": "空挥动作分解", "how": "无球练习：高位准备 → 沉肘 → 向前驱动肘 → 伸展甩出，逐步缩短挥拍。"}
+  ],
+  "coach_cues": ["早准备", "沉肘", "肘向前推", "伸展", "别切", "短挥拍"],
+  "related_metrics": ["{pid}.hit.zones", "{pid}.pos.lateral_zones", "{pid}.pos.depth_zones"],
+  "content_caveats": "安赛龙因背伤未亲自示范反手，以指导业余球员为主。"
+}

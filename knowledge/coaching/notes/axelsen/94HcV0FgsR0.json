@@ -1,0 +1,39 @@
+{
+  "id": "axelsen-yt-94HcV0FgsR0",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=94HcV0FgsR0",
+  "title": "Master the Slice Like Viktor Axelsen 🏸 | Badminton Tutorial",
+  "series": "VA Academy",
+  "published": "2026-06-09",
+  "duration_s": 305,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "advanced",
+  "topic": "正手后场斜线切吊（慢切与快切）",
+  "strokes": ["slice", "drop"],
+  "aspects": ["technique", "deception"],
+  "summary": "正手后场斜线切吊。准备动作和直线切吊完全一样，高肘、拍面略开，靠手腕和手指让拍头由右向左刷过球托，随挥比直线稍长。先练落在前发球线以内、贴近边角的慢切，再练出手更快的快切；快切只是拍头动作和力量不同。安赛龙说这是他职业生涯打得比直线切吊更多的球，也是 2017 年世锦赛决胜分的那一拍。",
+  "key_points": [
+    "与直线切吊、杀球、高远球保持相同准备，让对手判断不了方向。",
+    "高肘、尽量在高点击球。",
+    "拍头由右向左刷球，斜线比直线随挥更长一点。",
+    "拍头动作不要太大太长，否则很难控制。",
+    "目标落点：对角网前角，最好在前发球线之前。",
+    "他偏好后场准备时拍面略开，觉得更自然也更好控制；有些球员握拍更封闭，也可以。",
+    "快切：同样准备，靠手指和手腕产生角度，整条手臂加更多力量；角度好时对手很难防。",
+    "正常情况下上背部的转体也应参与（片中因背伤只用手臂示范）。"
+  ],
+  "common_mistakes": [
+    "动作幅度过大，控制不住落点。",
+    "准备动作与其他后场球不同，暴露意图。",
+    "急于求成：刚开始贴网的短切失误多是正常的。"
+  ],
+  "drills": [
+    {"name": "直线挑球 → 斜线切吊", "how": "同伴从网前直线挑到正手后场，练斜线慢切，观察落点是否集中在对角前发球线附近；再换成快切。"}
+  ],
+  "coach_cues": ["同一准备", "高肘", "由右向左刷", "随挥稍长", "落在前发球线前"],
+  "related_metrics": ["{pid}.hit.zones", "{pid}.pos.depth_zones", "{pid}.win.own_last_shot_pct"],
+  "content_caveats": "示范时安赛龙背部有伤，没有展示完整的上背转体。"
+}

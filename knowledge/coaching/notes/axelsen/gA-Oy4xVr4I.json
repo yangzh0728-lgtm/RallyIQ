@@ -1,0 +1,36 @@
+{
+  "id": "axelsen-yt-gA-Oy4xVr4I",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=gA-Oy4xVr4I",
+  "title": "Master Net Shot Tutorial",
+  "series": "VA Academy",
+  "published": "2026-02-27",
+  "duration_s": 390,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "beginner",
+  "topic": "正手放网：直线和斜线（接上一期反手放网）",
+  "strokes": ["net_shot"],
+  "aspects": ["technique", "grip"],
+  "summary": "正手区的直线放网和斜线放网。核心是早准备、中性握拍、伸直手臂，用很短的拍头左右小动作（手指 + 少量手腕）控制球；斜线要和直线一样的准备，让球离拍子更近一点，再用短促的手指手腕动作出角度。",
+  "key_points": [
+    "提前准备，持中性握拍，手臂伸出去迎球。",
+    "直线放网：拍头做很小的左右（或右左）搓动来控制球，动作短而可控。",
+    "来球速度越快，动作越小；可以只靠手指轻微发力。",
+    "握拍放松，手指为主、手腕为辅。",
+    "斜线放网要伪装成直线：准备动作相同，让球更靠近拍面，肘部略沉，再用短促的手指+手腕动作改变角度。"
+  ],
+  "common_mistakes": [
+    "动作太大太长，失去控制。",
+    "握拍太紧，手指没有参与。",
+    "斜线准备动作和直线不同，被对手提前读到。"
+  ],
+  "drills": [
+    {"name": "手抛放网", "how": "同伴在网对面手抛球，交替练直线和斜线，双方轮换。初期出错正常，先找手感。"}
+  ],
+  "coach_cues": ["早准备", "手臂伸直", "短而控", "手指发力", "斜线伪装成直线"],
+  "related_metrics": ["{pid}.pos.depth_zones", "{pid}.hit.zones"],
+  "content_caveats": "视频较短，大部分为动作示范；字幕信息有限。"
+}

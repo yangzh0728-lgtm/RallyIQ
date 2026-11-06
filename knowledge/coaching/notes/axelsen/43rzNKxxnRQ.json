@@ -1,0 +1,41 @@
+{
+  "id": "axelsen-yt-43rzNKxxnRQ",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=43rzNKxxnRQ",
+  "title": "Master Backhand Serve like a Pro",
+  "series": "VA Academy",
+  "published": "2026-03-18",
+  "duration_s": 357,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "beginner",
+  "topic": "反手发网前球与反手发后场平高（flick）",
+  "strokes": ["serve_short", "serve_flick"],
+  "aspects": ["technique", "grip", "mental"],
+  "summary": "反手发球入门。站在前发球线后约半步，拇指和食指捏球，左臂伸直，持中性反手握拍；节奏比速度重要（他会默数一二三），不要紧张。网前球只用一点手指和手腕的短动作，不要用手臂；拍子不能往上抬，否则球飞高被对手扑。想发到侧边时转动球托方向而不是转身。反手发后场准备要和网前球完全一样，最后靠手指（尤其拇指）和手腕突然发力。",
+  "key_points": [
+    "站位：前发球线后约半步（可按个人习惯）。",
+    "拇指和食指捏住球，左臂伸展，反手中性握拍，拇指贴在拍柄上。",
+    "保持节奏，不要急，不要僵硬；安赛龙用“一、二、三”数节奏，紧张时更重要。",
+    "网前球：手指 + 手腕的短动作，手臂尽量不参与；动作太长难以控制。",
+    "拍子不要往上走：他早年发球偏高，给对手扑球的机会。",
+    "想变线到边角：转动球的朝向制造角度，不用转动整个身体。",
+    "反手发后场：准备动作与网前球完全相同，最后靠手指和拇指爆发力；拍头保持低位，避免被判违例，同时制造突然性。"
+  ],
+  "common_mistakes": [
+    "用手臂推球，动作过长。",
+    "发球弧线过高，被对手扑杀。",
+    "紧张导致动作僵硬、节奏混乱。",
+    "后场球准备动作和网前球不一样，被提前识破。",
+    "发后场时把拍子抬高（可能违例）。"
+  ],
+  "drills": [
+    {"name": "节奏发球", "how": "每次发球前默数一二三，重复发网前球，观察是否贴网、是否过高。"},
+    {"name": "网前/后场混发", "how": "同样准备动作，随机交替网前球和反手后场平高，练习手指爆发力和一致性。"}
+  ],
+  "coach_cues": ["一二三", "手指手腕", "拍子别上抬", "转球不转身", "拇指发力"],
+  "related_metrics": ["{pid}.win.serve_rate_pct", "{pid}.win.receive_rate_pct"],
+  "content_caveats": "片中提到他自己发球时有左右摆动的习惯，这是个人特点，不是必须模仿的技术要点。"
+}

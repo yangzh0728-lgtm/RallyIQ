@@ -1,0 +1,34 @@
+{
+  "id": "axelsen-yt-soN6tS5KI_w",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=soN6tS5KI_w",
+  "title": "The Unexpected Cross Court Defence - VACADEMY #4",
+  "series": "VACADEMY",
+  "published": "2019-11-24",
+  "duration_s": 137,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "advanced",
+  "topic": "反手位防守直线杀球时转身用正手打斜线（花式防守）",
+  "strokes": ["defense", "trick_shot"],
+  "aspects": ["technique"],
+  "summary": "反手防守位接对手直线杀球时，转身用正手打出斜线的意外防守球。用普通反手握拍、握拍放松（像握手），来球时转体并用正手打斜线；手臂、肘、手腕要放松成一个连贯动作，髋部转动。安赛龙提醒这不一定适合比赛，只在状态很好、很有信心时尝试。",
+  "key_points": [
+    "防守准备：普通反手握拍，不要转得太多，握拍放松。",
+    "来球时转体，用正手打斜线。",
+    "整条手臂（肘、腕）放松协同，髋部带动旋转。",
+    "比赛中仅在状态极佳时使用。"
+  ],
+  "common_mistakes": [
+    "手臂紧张，无法完成旋转。",
+    "在不占优时冒险使用。"
+  ],
+  "drills": [
+    {"name": "反手位杀球防守变化", "how": "同伴向反手位直线杀/抛球，练习转体正手斜线回球，先看慢动作再模仿。"}
+  ],
+  "coach_cues": ["放松", "转髋", "有信心时才用"],
+  "related_metrics": ["{pid}.pos.lateral_zones"],
+  "content_caveats": "花式防守，主要为趣味。"
+}

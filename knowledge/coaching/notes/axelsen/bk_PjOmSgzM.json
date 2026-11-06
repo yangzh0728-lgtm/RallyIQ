@@ -1,0 +1,37 @@
+{
+  "id": "axelsen-yt-bk_PjOmSgzM",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=bk_PjOmSgzM",
+  "title": "How To Play A Powerful Backhand Smash - Axelsen Backhand Smash Tutorial - VACADEMY #1",
+  "series": "VACADEMY",
+  "published": "2019-10-19",
+  "duration_s": 190,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "advanced",
+  "topic": "反手杀球的三个要点",
+  "strokes": ["backhand_smash"],
+  "aspects": ["technique", "grip", "footwork"],
+  "summary": "反手杀球三个要点：一是步法时机和站位，离球不能太远也不能太近，要留出空间让整条手臂和肘部向上伸直；二是手臂放松到触球前一刻，太紧反而没有力量；三是触球要短促、突然，而不是一个长而用力的动作。握拍用普通反手握拍，拇指放在拍柄宽面边缘，不要转得太过，否则手腕用不上力、也难控制。",
+  "key_points": [
+    "步法到位：与球保持合适距离，两脚间留出空间，才能伸直手臂和肘部向上击球。",
+    "触球前手臂保持放松，触球瞬间才发力。",
+    "握拍：普通反手握拍，拇指在宽面边缘，不要过度转到侧面。",
+    "很多力量来自手腕，过度的握拍转动会锁死手腕。",
+    "击球动作要短促爆发，也能给对手制造突然性。"
+  ],
+  "common_mistakes": [
+    "手臂过于紧张。",
+    "反手握拍转得过多。",
+    "离球太近或太远，无法伸展手臂。",
+    "用一个长而用力的大动作去打。"
+  ],
+  "drills": [
+    {"name": "反手杀球多球", "how": "同伴喂反手后场球，专注站位距离、放松和短促触球；初期失误多是正常的，坚持重复找时机。"}
+  ],
+  "coach_cues": ["站位距离", "放松到触球", "拇指在边缘", "短促"],
+  "related_metrics": ["{pid}.hit.zones", "{pid}.pos.lateral_zones"],
+  "content_caveats": "2019 年的早期视频，时长约 3 分钟。"
+}

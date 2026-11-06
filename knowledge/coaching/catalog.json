@@ -1,0 +1,366 @@
+{
+  "updated": "2026-11-06",
+  "coaches": [
+    {
+      "coach": "Viktor Axelsen",
+      "platform": "youtube",
+      "channel": "https://www.youtube.com/channel/UCkuVto4oGsgdEisvXlUaHvg",
+      "handle": "@viktoraxelsen7830",
+      "scope": "频道里所有教学类播放列表（Va-Academy、VACADEMY、Tips 23-24、VA 5 ADVICE、Trick Shot Tutorials）。Vlog、比赛回放、Q&A、直播等非教学列表未收录。",
+      "videos": [
+        {
+          "id": "J1JBAfxTaDA",
+          "title": "YOU'RE TOO EASY TO READ",
+          "url": "https://www.youtube.com/watch?v=J1JBAfxTaDA",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/J1JBAfxTaDA.json"
+        },
+        {
+          "id": "94HcV0FgsR0",
+          "title": "Master the Slice Like Viktor Axelsen 🏸 | Badminton Tutorial",
+          "url": "https://www.youtube.com/watch?v=94HcV0FgsR0",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/94HcV0FgsR0.json"
+        },
+        {
+          "id": "Y2BfBgk_rSc",
+          "title": "Straight Reverse Slice Tutorial | One of Badminton's Most Difficult Shots",
+          "url": "https://www.youtube.com/watch?v=Y2BfBgk_rSc",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/Y2BfBgk_rSc.json"
+        },
+        {
+          "id": "q6e73uS4NTg",
+          "title": "Can Viktor Axelsen Fix This Amateur's Cross-Court Slice?",
+          "url": "https://www.youtube.com/watch?v=q6e73uS4NTg",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/q6e73uS4NTg.json"
+        },
+        {
+          "id": "HqUWKm-t_fs",
+          "title": "👉 pro vs amateur ✅ - badminton reverse slice (Short)",
+          "url": "https://www.youtube.com/watch?v=HqUWKm-t_fs",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "skipped",
+          "reason": "36 秒短视频，没有口播和字幕"
+        },
+        {
+          "id": "qHS8HW94zkA",
+          "title": "Fix ❌ Your Backhand Clear in 10 Minutes ⏱️",
+          "url": "https://www.youtube.com/watch?v=qHS8HW94zkA",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/qHS8HW94zkA.json"
+        },
+        {
+          "id": "43rzNKxxnRQ",
+          "title": "Master Backhand Serve like a Pro",
+          "url": "https://www.youtube.com/watch?v=43rzNKxxnRQ",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/43rzNKxxnRQ.json"
+        },
+        {
+          "id": "SQ8cYP-0BrY",
+          "title": "Warm Up Like a Badminton Pro - Viktor Axelsen",
+          "url": "https://www.youtube.com/watch?v=SQ8cYP-0BrY",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/SQ8cYP-0BrY.json"
+        },
+        {
+          "id": "gA-Oy4xVr4I",
+          "title": "Master Net Shot Tutorial",
+          "url": "https://www.youtube.com/watch?v=gA-Oy4xVr4I",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/gA-Oy4xVr4I.json"
+        },
+        {
+          "id": "_Ib6sv7Q2LY",
+          "title": "Backhand Net Shot Tutorial with Viktor Axelsen",
+          "url": "https://www.youtube.com/watch?v=_Ib6sv7Q2LY",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/_Ib6sv7Q2LY.json"
+        },
+        {
+          "id": "ytvx-z5Tj8s",
+          "title": "Stop Moving Wrong! Split Step Tutorial for Beginners",
+          "url": "https://www.youtube.com/watch?v=ytvx-z5Tj8s",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/ytvx-z5Tj8s.json"
+        },
+        {
+          "id": "4C5_4Jn10V8",
+          "title": "Badminton Lift for Beginners: The Most Underrated Shot",
+          "url": "https://www.youtube.com/watch?v=4C5_4Jn10V8",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/4C5_4Jn10V8.json"
+        },
+        {
+          "id": "k9-vZWgVH-Q",
+          "title": "How to Start Badminton With Viktor Axelsen (Beginner Guide) - Va Academy",
+          "url": "https://www.youtube.com/watch?v=k9-vZWgVH-Q",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/k9-vZWgVH-Q.json"
+        },
+        {
+          "id": "bk_PjOmSgzM",
+          "title": "How To Play A Powerful Backhand Smash - Axelsen Backhand Smash Tutorial - VACADEMY #1",
+          "url": "https://www.youtube.com/watch?v=bk_PjOmSgzM",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/bk_PjOmSgzM.json"
+        },
+        {
+          "id": "wSr3CuuTwyk",
+          "title": "Behind The Back Trick Shot  - Axelsen Trick Shot Tutorial -  - VACADEMY #2",
+          "url": "https://www.youtube.com/watch?v=wSr3CuuTwyk",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/wSr3CuuTwyk.json"
+        },
+        {
+          "id": "soN6tS5KI_w",
+          "title": "The Unexpected Cross Court Defence - VACADEMY #4",
+          "url": "https://www.youtube.com/watch?v=soN6tS5KI_w",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/soN6tS5KI_w.json"
+        },
+        {
+          "id": "14Fhs7LBJGk",
+          "title": "HOW TO GET A POWERFUL SMASH - VACADEMY #5",
+          "url": "https://www.youtube.com/watch?v=14Fhs7LBJGk",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/14Fhs7LBJGk.json"
+        },
+        {
+          "id": "YtcNwDno-Oc",
+          "title": "OUR TOP 3 FAVORITE STRETCHES - VACADEMY #6",
+          "url": "https://www.youtube.com/watch?v=YtcNwDno-Oc",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/YtcNwDno-Oc.json"
+        },
+        {
+          "id": "xfW3DHa07ug",
+          "title": "WHAT TO EAT POST WORKOUT? - VACADEMY #7",
+          "url": "https://www.youtube.com/watch?v=xfW3DHa07ug",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "营养类；字幕面板多次加载失败，且饮食建议不属于技术教练范围"
+        },
+        {
+          "id": "H2uafRddb7s",
+          "title": "I DO THESE EXERCISES EVERY DAY TO PREVENT INJURY - stability /w Sean Casey - VACADEMY #8",
+          "url": "https://www.youtube.com/watch?v=H2uafRddb7s",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/H2uafRddb7s.json"
+        },
+        {
+          "id": "bu4oyp-sgvA",
+          "title": "What is my favourite supplement? /w Sean Casey - VACADEMY #9",
+          "url": "https://www.youtube.com/watch?v=bu4oyp-sgvA",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "补剂推荐，不适合作为教练模型的建议来源"
+        },
+        {
+          "id": "tYXDYHzpfOU",
+          "title": "BADMINTON FOOTWORK EXERCISES TO DO AT HOME FOR BEGINNERS! - VACADEMY #11",
+          "url": "https://www.youtube.com/watch?v=tYXDYHzpfOU",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/tYXDYHzpfOU.json"
+        },
+        {
+          "id": "AVhcLi_6lME",
+          "title": "3 EXERCISES TO IMPROVE YOUR LEG STRENGHT AT HOME - VACADEMY #12",
+          "url": "https://www.youtube.com/watch?v=AVhcLi_6lME",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "视频没有任何字幕轨"
+        },
+        {
+          "id": "jZIO4ROnA0A",
+          "title": "HOW TO GET A PERFECT SMASH WHILE BEING STUCK AT HOME - VACADEMY #13",
+          "url": "https://www.youtube.com/watch?v=jZIO4ROnA0A",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "视频没有任何字幕轨"
+        },
+        {
+          "id": "pTj_l_29g7I",
+          "title": "HOW TO CORRECTLY DEFEND DROPS AND SMASHES! (SINGLES)",
+          "url": "https://www.youtube.com/watch?v=pTj_l_29g7I",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/pTj_l_29g7I.json"
+        },
+        {
+          "id": "rIwv1otT2Fg",
+          "title": "MY FAVORITE BACKHAND SHOT!",
+          "url": "https://www.youtube.com/watch?v=rIwv1otT2Fg",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/rIwv1otT2Fg.json"
+        },
+        {
+          "id": "PssG66dzkwg",
+          "title": "How To Grip Your Badminton Racket in 2024 by Viktor Axelsen",
+          "url": "https://www.youtube.com/watch?v=PssG66dzkwg",
+          "playlist": "Tips 23-24 (PLSTNmnArDp0InVClRi0gF6WWPl1ssDSyU)",
+          "status": "noted",
+          "note": "notes/axelsen/PssG66dzkwg.json"
+        },
+        {
+          "id": "f8lvBqeQz7A",
+          "title": "AXELSEN - 5 ADVICE - TO YOUNG BADMINTON PLAYERS",
+          "url": "https://www.youtube.com/watch?v=f8lvBqeQz7A",
+          "playlist": "VA 5 ADVICE (PLSTNmnArDp0JjS0sFTzmU29izuoNbRRp7)",
+          "status": "noted",
+          "note": "notes/axelsen/f8lvBqeQz7A.json"
+        },
+        {
+          "id": "PAvW9Yz7vgI",
+          "title": "AXELSEN – MY 5 ADVICE - PREPARE YOURSELF",
+          "url": "https://www.youtube.com/watch?v=PAvW9Yz7vgI",
+          "playlist": "VA 5 ADVICE (PLSTNmnArDp0JjS0sFTzmU29izuoNbRRp7)",
+          "status": "noted",
+          "note": "notes/axelsen/PAvW9Yz7vgI.json"
+        },
+        {
+          "id": "WXinfrK5G_s",
+          "title": "AXELSEN - MY 5 ADVICE - WHAT'S IN MY YONEX RACKETBAG?",
+          "url": "https://www.youtube.com/watch?v=WXinfrK5G_s",
+          "playlist": "VA 5 ADVICE (PLSTNmnArDp0JjS0sFTzmU29izuoNbRRp7)",
+          "status": "skipped",
+          "reason": "球包/器材展示，与技术指导无关"
+        },
+        {
+          "id": "eCnaG5fpYws",
+          "title": "VACEDEMY - TRICKSHOT 1",
+          "url": "https://www.youtube.com/watch?v=eCnaG5fpYws",
+          "playlist": "Trick Shot Tutorials with Axelsen (PLSTNmnArDp0Koo-Uc56r-_DFCefkRkhrH)",
+          "status": "skipped",
+          "reason": "约 1 分钟花式球展示，没有字幕"
+        },
+        {
+          "id": "wzXEnPKFaJk",
+          "title": "VACEDEMY - TRICKSHOT - 2",
+          "url": "https://www.youtube.com/watch?v=wzXEnPKFaJk",
+          "playlist": "Trick Shot Tutorials with Axelsen (PLSTNmnArDp0Koo-Uc56r-_DFCefkRkhrH)",
+          "status": "skipped",
+          "reason": "约 1 分钟花式球展示，几乎没有讲解"
+        },
+        {
+          "id": "rp0i6z3iLz0",
+          "title": "VACEDEMY TRICKSHOT - 3",
+          "url": "https://www.youtube.com/watch?v=rp0i6z3iLz0",
+          "playlist": "Trick Shot Tutorials with Axelsen (PLSTNmnArDp0Koo-Uc56r-_DFCefkRkhrH)",
+          "status": "skipped",
+          "reason": "约 1 分钟花式球展示，几乎没有讲解"
+        }
+      ]
+    },
+    {
+      "coach": "郑思维 (Zheng Siwei)",
+      "platform": "bilibili",
+      "channel": "https://space.bilibili.com/383058245",
+      "scope": "《羽球思维》系列（截至第 132 期）及体能教学短片；抖音账号发布同系列内容。下表只是未登录搜索能看到的部分期数。",
+      "status": "blocked_login",
+      "reason": "未登录时 B 站视频不返回字幕（AI 字幕需要登录），UP 主空间的视频列表也看不到；抖音未登录时搜索结果为空。",
+      "videos": [
+        {
+          "id": "BV11o4ZePEPt",
+          "title": "欢迎进入羽球思维第一期🏸接发球教学",
+          "url": "https://www.bilibili.com/video/BV11o4ZePEPt/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1JcKPenEiW",
+          "title": "羽球思维四十三期🏸双打实用的接发球方法",
+          "url": "https://www.bilibili.com/video/BV1JcKPenEiW/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1TzhuziEzQ",
+          "title": "羽球思维第七十一期🏸被推压反手底线如何处理",
+          "url": "https://www.bilibili.com/video/BV1TzhuziEzQ/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1ra7G6DEja",
+          "title": "羽球思维第116期 接发球后如回连贯扑压",
+          "url": "https://www.bilibili.com/video/BV1ra7G6DEja/",
+          "status": "pending"
+        },
+        {
+          "id": "BV18iTs6gExU",
+          "title": "羽球思维第117期 打球前的高效运动热身方式",
+          "url": "https://www.bilibili.com/video/BV18iTs6gExU/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1YrNE6REpc",
+          "title": "羽球思维第118期 如何做好正手中半场勾对角",
+          "url": "https://www.bilibili.com/video/BV1YrNE6REpc/",
+          "status": "pending"
+        },
+        {
+          "id": "BV11PGA6nEdo",
+          "title": "羽球思维第120期 简单全面高效体能锻炼方式",
+          "url": "https://www.bilibili.com/video/BV11PGA6nEdo/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1oFu468EaD",
+          "title": "羽球思维第121期 对方接发球放网如何利用快切占据主动",
+          "url": "https://www.bilibili.com/video/BV1oFu468EaD/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1Q5tc6fEKq",
+          "title": "羽球思维第124期 球路讲解2026印度世锦赛 男双决赛",
+          "url": "https://www.bilibili.com/video/BV1Q5tc6fEKq/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1pZti67Ecz",
+          "title": "羽球思维第125期 如何打好接发球抢网拿回头球",
+          "url": "https://www.bilibili.com/video/BV1pZti67Ecz/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1MhJ96nEvg",
+          "title": "羽球思维第130期 2024全英公开赛 第三局10：6处",
+          "url": "https://www.bilibili.com/video/BV1MhJ96nEvg/",
+          "status": "pending"
+        },
+        {
+          "id": "BV13Unb6REAJ",
+          "title": "羽球思维第131期 接对手中腰球的接球思路",
+          "url": "https://www.bilibili.com/video/BV13Unb6REAJ/",
+          "status": "pending"
+        },
+        {
+          "id": "BV1hJxe6mEJS",
+          "title": "羽球思维第132期 2026丹麦公开赛 第一局4：4处",
+          "url": "https://www.bilibili.com/video/BV1hJxe6mEJS/",
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}

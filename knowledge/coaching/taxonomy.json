@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "strokes": {
+    "serve_short": {"zh": "发网前球", "shuttleset": ["發短球"]},
+    "serve_flick": {"zh": "发后场球（平高/高远）", "shuttleset": ["發長球"]},
+    "clear": {"zh": "正手高远球", "shuttleset": ["長球"]},
+    "backhand_clear": {"zh": "反手高远球", "shuttleset": ["長球"]},
+    "smash": {"zh": "杀球", "shuttleset": ["殺球", "點扣"]},
+    "jump_smash": {"zh": "起跳杀球", "shuttleset": ["殺球"]},
+    "backhand_smash": {"zh": "反手杀球", "shuttleset": ["殺球"]},
+    "drop": {"zh": "吊球", "shuttleset": ["切球"]},
+    "slice": {"zh": "切吊/反切（正手）", "shuttleset": ["切球"]},
+    "backhand_slice": {"zh": "反手切吊", "shuttleset": ["切球"]},
+    "net_shot": {"zh": "放网/搓球/勾对角", "shuttleset": ["放小球", "勾球"]},
+    "net_kill": {"zh": "扑球", "shuttleset": ["撲球"]},
+    "lift": {"zh": "挑球", "shuttleset": ["挑球", "防守回挑"]},
+    "push": {"zh": "推球", "shuttleset": ["推球"]},
+    "drive": {"zh": "平抽挡", "shuttleset": ["平球", "小平球", "後場抽平球", "防守回抽"]},
+    "defense": {"zh": "接杀防守", "shuttleset": ["擋小球", "防守回挑", "防守回抽"]},
+    "trick_shot": {"zh": "花式球", "shuttleset": []}
+  },
+  "aspects": {
+    "technique": "技术动作",
+    "grip": "握拍",
+    "footwork": "步法",
+    "split_step": "启动步",
+    "deception": "假动作/隐蔽性",
+    "tactics": "战术/球路",
+    "mental": "心理",
+    "match_preparation": "赛前准备",
+    "physical": "体能/力量",
+    "stability": "稳定性训练",
+    "flexibility": "柔韧性",
+    "warmup": "热身",
+    "injury_prevention": "伤病预防",
+    "equipment": "器材",
+    "training_habits": "训练习惯"
+  },
+  "levels": ["beginner", "intermediate", "advanced", "all"],
+  "transcript_sources": ["youtube_auto_captions", "youtube_uploaded_captions", "bilibili_ai_subtitles", "bilibili_uploaded_subtitles", "douyin_captions", "description_only"]
+}

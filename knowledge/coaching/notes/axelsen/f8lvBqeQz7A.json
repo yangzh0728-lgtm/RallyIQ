@@ -1,0 +1,56 @@
+{
+  "id": "axelsen-yt-f8lvBqeQz7A",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=f8lvBqeQz7A",
+  "title": "AXELSEN - 5 ADVICE - TO YOUNG BADMINTON PLAYERS",
+  "series": "VA 5 ADVICE",
+  "published": "2017-08-31",
+  "duration_s": 237,
+  "language": "en",
+  "transcript_source": "youtube_uploaded_captions",
+  "level": "beginner",
+  "topic": "给青少年球员的五条建议",
+  "strokes": [],
+  "aspects": [
+    "mental",
+    "flexibility",
+    "physical",
+    "training_habits"
+  ],
+  "summary": "五条建议：1）保持乐趣，认真训练也要会玩；2）多看比赛视频，看喜欢的球员怎么打，再去场上模仿练习；3）尊重教练和队友，好的陪练是进步的前提；4）每天至少花 10 分钟做柔韧性训练（拉伸、泡沫轴），并先打好稳定性和力量基础再逐步加重量；5）为自己的训练负责，不必事事等教练，可以和队友互相喂球、打小比赛。",
+  "key_points": [
+    "保持乐趣：年轻球员变得太严肃太快；认真训练的同时也要玩。",
+    "多看高水平比赛视频，然后到场上模仿练习好的击球。",
+    "尊重所有人；羽毛球虽是个人项目，但需要好的陪练才能进步。",
+    "每天至少 10 分钟柔韧性训练（拉伸、泡沫轴）预防伤病、动作更自由。",
+    "力量训练先打基础（柔韧、稳定），再慢慢增加负重。",
+    "自己对训练负责：和队友互相喂球、打小比赛；单独指导不是必须的。"
+  ],
+  "common_mistakes": [
+    "过早过度严肃，失去乐趣。",
+    "看不起水平较低的队友。",
+    "一开始就上大重量。",
+    "只等教练安排，自己不主动加练。"
+  ],
+  "drills": [
+    {
+      "name": "每日柔韧 10 分钟",
+      "how": "拉伸或泡沫轴，每天至少 10 分钟。"
+    },
+    {
+      "name": "队友互喂 + 小比赛",
+      "how": "自带旧球和队友轮流喂球，再打小分制比赛。"
+    }
+  ],
+  "coach_cues": [
+    "保持乐趣",
+    "看比赛学",
+    "尊重陪练",
+    "每天 10 分钟柔韧",
+    "自己负责"
+  ],
+  "related_metrics": [],
+  "content_caveats": "2017 年早期视频，偏理念类建议。"
+}

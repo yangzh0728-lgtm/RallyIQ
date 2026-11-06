@@ -1,0 +1,43 @@
+{
+  "id": "axelsen-yt-ytvx-z5Tj8s",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=ytvx-z5Tj8s",
+  "title": "Stop Moving Wrong! Split Step Tutorial for Beginners",
+  "series": "VA Academy",
+  "published": "2026-02-17",
+  "duration_s": 640,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "beginner",
+  "topic": "启动步（split step）与上网、退后场步法",
+  "strokes": [],
+  "aspects": ["footwork", "split_step"],
+  "summary": "移动是成为好球员的基础，而每一步移动之前都要有启动步：双脚轻微离地、落地成宽站姿，重心低，像有人从后面拉你的髋。上正手网前：启动步后左脚先小幅调整，再左-右-左（左脚用两次）上步。退后场：启动步后以左脚为轴转体（右手持拍者），侧身、保持高肘，根据距离用并步（他称“丹麦式 shuffle”，也有人叫马来西亚步）退到位，再用右腿蹬地发力。全程要低、放松，不要僵硬。",
+  "key_points": [
+    "每一次移动前都要做启动步：小跳、落地成宽站姿。",
+    "启动步不要跳太高，稍微离地即可；站得低，想象有人从后面拉你的髋。",
+    "双脚站位要平行，不要右脚过于靠前。",
+    "上正手网前：启动步 → 左脚小幅调整 → 左-右-左上步（左脚用两次）。",
+    "退后场：启动步 → 以左脚为轴转体、侧身 → 并步后退 → 右腿蹬地击球；保持高肘。",
+    "后退时双脚不要并得太近，要保持步幅和支撑面。",
+    "后退距离决定需要多大的蹬地力量。",
+    "移动要放松、重心低；僵硬会浪费体力，放松才能节省能量。"
+  ],
+  "common_mistakes": [
+    "启动步跳得太高。",
+    "站得太直太高，重心不够低。",
+    "上网少了一步或多走一步，步伐顺序混乱。",
+    "退后场时“走”过去而不是转体并步，或双脚并得太近。",
+    "全身过于紧张僵硬。"
+  ],
+  "drills": [
+    {"name": "原地启动步", "how": "宽站姿、低重心，反复做小幅启动步，检查双脚平行、落地稳定。"},
+    {"name": "启动步 + 上网", "how": "从中场做启动步，按左-右-左节奏上到正手网前，逐渐加快。"},
+    {"name": "启动步 + 退后场", "how": "启动步后以左脚为轴转体、并步退到后场，保持高肘，做挥拍模仿。"}
+  ],
+  "coach_cues": ["每步前启动步", "低", "宽站姿", "左脚两次", "转体并步", "放松"],
+  "related_metrics": ["{pid}.move.per_rally_m", "{pid}.move.per_min_m", "{pid}.cover.ratio_pct", "{pid}.pos.depth_mean_m"],
+  "content_caveats": "安赛龙因背伤只做慢速示范，主要由业余球员演示；字幕为口语，部分步法细节需看画面。"
+}

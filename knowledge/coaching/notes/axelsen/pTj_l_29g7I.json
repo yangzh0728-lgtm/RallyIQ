@@ -1,0 +1,35 @@
+{
+  "id": "axelsen-yt-pTj_l_29g7I",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=pTj_l_29g7I",
+  "title": "HOW TO CORRECTLY DEFEND DROPS AND SMASHES! (SINGLES)",
+  "series": "VACADEMY",
+  "published": "2020-09-29",
+  "duration_s": 201,
+  "language": "en",
+  "transcript_source": "youtube_uploaded_captions",
+  "level": "intermediate",
+  "topic": "单打防守练习：两侧杀球 + 随机吊球",
+  "strokes": ["defense", "smash", "drop"],
+  "aspects": ["footwork", "split_step", "technique"],
+  "summary": "和教练 Lian 做单打防守练习：教练在高处向左右两侧杀球，2–3 拍杀球后突然吊网前。安赛龙的重点：每拍前做启动步，降低重心、髋向后坐，快速转体去接杀；防守时手臂和手腕动作要少，由腿部完成移动和到位，手臂伸直、用受控的短动作挡回；接完杀球要保持腿部准备，随时蹬地上前接吊球。",
+  "key_points": [
+    "防守前先做启动步，再转体去接两侧杀球。",
+    "降低重心、髋向后坐，让腿做主要工作。",
+    "每次接杀后迅速从边角回中，保持随时上前的准备。",
+    "接吊球时用腿蹬地向前。",
+    "接杀时手臂伸直，动作短而受控，不要用太多手腕和手臂摆动。"
+  ],
+  "common_mistakes": [
+    "防守时手臂/手腕动作过大，导致失控。",
+    "重心太高、腿不准备，接不到后续吊球。"
+  ],
+  "drills": [
+    {"name": "两侧杀球 + 随机吊球", "how": "教练站高处交替向左右杀球，每 2–3 拍后吊网前；防守方练启动步、转体接杀和上网接吊。先只练杀球热身。"}
+  ],
+  "coach_cues": ["启动步", "髋后坐", "腿做功", "伸直手臂", "短动作"],
+  "related_metrics": ["{pid}.pos.lateral_zones", "{pid}.move.per_rally_m", "{pid}.cover.ratio_pct"],
+  "content_caveats": "字幕为上传的人工字幕，内容较短。"
+}

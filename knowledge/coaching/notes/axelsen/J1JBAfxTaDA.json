@@ -1,0 +1,40 @@
+{
+  "id": "axelsen-yt-J1JBAfxTaDA",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=J1JBAfxTaDA",
+  "title": "YOU'RE TOO EASY TO READ",
+  "series": "VA Academy",
+  "published": "2026-07-26",
+  "duration_s": 993,
+  "language": "en",
+  "transcript_source": "youtube_auto_captions",
+  "level": "intermediate",
+  "topic": "反手网前假动作：直线搓切放网与假挑真斜线",
+  "strokes": ["net_shot", "lift"],
+  "aspects": ["technique", "deception", "tactics"],
+  "summary": "高水平比赛里每个人都需要假动作。安赛龙示范反手网前两种：一是做出要早点击球/挑球的样子，然后拍子从左向右并下沉，切球底部让球贴网下坠（直线）；二是先做快速挑球动作，再在球旁边突然改成斜线放网。假动作的目的不只是直接得分，更是逼对手猜、多跑、多耗体力。",
+  "key_points": [
+    "八九成时间仍应该尽早在高点击球；假动作是偶尔使用的变化，不能每球都用。",
+    "比赛前段一直早点击球，建立对手预期后，突然放慢拍速打短球最有效。",
+    "无论真假都要提前准备；拍子先稍向左侧引出，再做由左向右并下沉的短动作，切球底部做出贴网效果。",
+    "初学时球可以放得稍长，熟练后逐渐越放越短。",
+    "斜线假动作：先做快速挑球的动作，然后在球旁边突然改成斜线；对放网或吊球这类慢来球有效，对快速平抽来球效果差。",
+    "进阶变化：让球再落低一些，肩部随之下沉，几乎在小腿高度出手（更冒险，适合自信、占优时用）。",
+    "不必照搬，每个人要找到自己的假动作方式；即使不得分，让对手多跑一步也是赢。"
+  ],
+  "common_mistakes": [
+    "引拍动作太大，像正常挥拍，反而暴露意图。",
+    "拍子直接向下切而不是先由左向右再下沉，切球效果不够。",
+    "出手太早，没等球来到合适位置。",
+    "在高速平抽来球时硬做假动作。"
+  ],
+  "drills": [
+    {"name": "反手网前假动作喂球", "how": "同伴在对面向反手网前抛球，交替练直线搓切放网、假挑真斜线、低点下坠版本，各做多组重复。"},
+    {"name": "训练收尾自由练习", "how": "训练结束或周末和朋友一起，用这些假动作自由玩球，培养球感。"}
+  ],
+  "coach_cues": ["先早准备", "由左向右再下沉", "等球", "偶尔用", "让对手多跑一步"],
+  "related_metrics": ["{pid}.hit.zones", "{pid}.win.own_last_shot_pct", "match.rally_len.mean"],
+  "content_caveats": "字幕后半段是现场纠正同伴动作的口语，不完整；动作细节以画面为准。"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "axelsen-yt-rIwv1otT2Fg",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=rIwv1otT2Fg",
+  "title": "MY FAVORITE BACKHAND SHOT!",
+  "series": "VACADEMY",
+  "published": "2020-10-06",
+  "duration_s": 192,
+  "language": "en",
+  "transcript_source": "youtube_uploaded_captions",
+  "level": "advanced",
+  "topic": "反手后场反切（反手切吊）",
+  "strokes": ["backhand_slice", "drop"],
+  "aspects": ["technique", "deception"],
+  "summary": "反手后场反切，安赛龙最喜欢的反手球之一，但难度很高。和其他反手后场球一样：快速到位、手臂伸直举高、肘部向前驱动，触球后把拍子向对侧肩方向带过去，做出切削。不能在低点打，必须在高点触球后再切。最好的学习方法是反复看慢动作找时机。",
+  "key_points": [
+    "与其他反手后场球同样的准备：快速到位，手臂向上伸直。",
+    "肘部向前驱动，高点触球。",
+    "触球后拍子向对侧肩膀方向带，产生反切效果。",
+    "不能在低点打；必须到位后在高点出手。",
+    "这只是适合他的一种做法，方法不唯一；关键是找到时机。"
+  ],
+  "common_mistakes": [
+    "到位慢，只能在低点击球。",
+    "手臂没有伸直。"
+  ],
+  "drills": [
+    {"name": "反手后场反切多球", "how": "反复观看慢动作，再由同伴喂反手后场高球，专注高点触球和向对侧肩随挥。"}
+  ],
+  "coach_cues": ["快到位", "伸直", "肘向前", "带向对侧肩"],
+  "related_metrics": ["{pid}.hit.zones", "{pid}.pos.lateral_zones"],
+  "content_caveats": "字幕为上传的人工字幕；动作要点主要靠慢动作画面。"
+}
