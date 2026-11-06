@@ -1,0 +1,267 @@
+{
+  "$defs": {
+    "Distribution": {
+      "additionalProperties": false,
+      "description": "Counts over named categories (e.g. shot types, court zones, rally lengths).",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "n": {
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "counts",
+        "n",
+        "status",
+        "confidence"
+      ],
+      "title": "Distribution",
+      "type": "object"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "One computed number with its evidence size and reliability.\n\n``value`` is null when the metric cannot be computed (e.g. no calibration, no\nwinners entered). ``status`` follows the README levels; ``confidence`` is the\nplain-language reliability used by the coach to phrase caveats.",
+      "properties": {
+        "key": {
+          "description": "stable dotted key, e.g. 'P1.movement.distance_m'",
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "description": "Chinese display label",
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "n": {
+          "description": "sample size the value is computed from",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "value",
+        "n",
+        "status",
+        "confidence"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "PlayerStats": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "distributions": {
+          "items": {
+            "$ref": "#/$defs/Distribution"
+          },
+          "title": "Distributions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "player_id",
+        "metrics"
+      ],
+      "title": "PlayerStats",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Post-match statistics computed from effective events + player tracks.\n\nPure function of the inputs (no model is called). ``fingerprint`` changes\nwhenever the inputs change, so a cached coach report can be marked stale.",
+  "properties": {
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "fingerprint": {
+      "title": "Fingerprint",
+      "type": "string"
+    },
+    "duration_ms": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Duration Ms"
+    },
+    "calibration_status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Status"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "shot_types_available": {
+      "description": "false until a stroke classifier fills ShotEvent.shot_type",
+      "title": "Shot Types Available",
+      "type": "boolean"
+    },
+    "metrics": {
+      "items": {
+        "$ref": "#/$defs/Metric"
+      },
+      "title": "Metrics",
+      "type": "array"
+    },
+    "distributions": {
+      "items": {
+        "$ref": "#/$defs/Distribution"
+      },
+      "title": "Distributions",
+      "type": "array"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/PlayerStats"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "caveats": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Caveats",
+      "type": "array"
+    }
+  },
+  "required": [
+    "video_id",
+    "fingerprint",
+    "shot_types_available",
+    "metrics",
+    "players"
+  ],
+  "title": "MatchStats",
+  "type": "object"
+}

@@ -39,14 +39,20 @@ from ..contracts import (
     OverlayData,
     PlayerTracks,
     Point2,
+    CoachReport,
+    MatchReport,
+    MatchStats,
     Video,
 )
 from ..contracts.geometry import COURT_CORNERS_M, homography_from_corners
 from ..pipeline.runner import MANUAL_CALIBRATION, stages_from
 from ..pipeline.worker import Worker
+from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
+from ..report.coach import default_provider_name
 from ..store import Store
 from .corrections import CorrectionError, apply_corrections, validate
 
+COACH_ARTIFACT = "coach"
 ALLOWED_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}
 
 
@@ -57,6 +63,10 @@ class JobRequest(BaseModel):
 class EffectiveEvents(EventsResult):
     corrections_applied: int = 0
     corrections_skipped: list[str] = Field(default_factory=list)
+
+
+class CoachRequest(BaseModel):
+    provider: str | None = Field(default=None, description="null = server default (Claude, offline fallback)")
 
 
 class ManualCalibration(BaseModel):
@@ -270,6 +280,55 @@ def create_app(store: Store | None = None, start_worker: bool | None = None) -> 
                     n += 1
         return HeatmapData(video_id=video_id, player_id=player_id, cell_m=cell_m, nx=nx, ny=ny,
                            counts=grid.tolist(), samples=n)
+
+    # ---------------------------------------------------------------- report
+
+    def match_stats(video_id: str) -> MatchStats:
+        ev, _ = effective_events(video_id)
+        return compute_match_stats(
+            ev, store.load_artifact(video_id, "players", PlayerTracks),
+            store.load_artifact(video_id, "calibration", CourtCalibration), store.get_video_meta(video_id),
+        )
+
+    def match_report(video_id: str) -> MatchReport:
+        stats = match_stats(video_id)
+        coach = store.load_artifact(video_id, COACH_ARTIFACT, CoachReport)
+        return MatchReport(stats=stats, coach=coach,
+                           coach_stale=coach is not None and coach.stats_fingerprint != stats.fingerprint)
+
+    @app.get("/api/coach/providers")
+    def coach_providers() -> dict:
+        return {"default": default_provider_name(), "providers": list_providers()}
+
+    @app.get("/api/videos/{video_id}/report", response_model=MatchReport)
+    def get_report(video_id: str) -> MatchReport:
+        video_or_404(video_id)
+        return match_report(video_id)
+
+    @app.post("/api/videos/{video_id}/report/coach", response_model=CoachReport)
+    def create_coach_report(video_id: str, req: CoachRequest | None = None) -> CoachReport:
+        """Generate (or regenerate) the AI coach comments for the current stats. Synchronous."""
+        video_or_404(video_id)
+        stats = match_stats(video_id)
+        try:
+            coach = generate_coach_report(stats, req.provider if req else None)
+        except CoachUnavailable as e:
+            raise HTTPException(503, str(e)) from e
+        store.save_artifact(video_id, COACH_ARTIFACT, coach)
+        return coach
+
+    @app.get("/api/videos/{video_id}/report/export")
+    def export_report(video_id: str, format: Literal["md", "json"] = "md"):
+        v = video_or_404(video_id)
+        rep = match_report(video_id)
+        if format == "json":
+            return Response(
+                content=rep.model_dump_json(indent=1), media_type="application/json",
+                headers={"Content-Disposition": f'attachment; filename="{video_id}_report.json"'},
+            )
+        md = render_markdown(rep.stats, rep.coach, title=f"赛后报告 · {v.filename}", coach_stale=rep.coach_stale)
+        return PlainTextResponse(md, media_type="text/markdown; charset=utf-8",
+                                 headers={"Content-Disposition": f'attachment; filename="{video_id}_report.md"'})
 
     # ---------------------------------------------------------------- export
 

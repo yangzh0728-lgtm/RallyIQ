@@ -288,6 +288,13 @@ function Analysis({ video, onRerun }: { video: Video; onRerun: (job: Job) => voi
           error={actionError}
         />
         <div className="panel">
+          <h3>赛后报告</h3>
+          <div className="muted small" style={{ marginBottom: 6 }}>回合、跑动、覆盖、得失分统计和 AI 教练点评（基于修正后的数据）。</div>
+          <a href={`#/videos/${encodeURIComponent(video.video_id)}/report`}>
+            <button className="primary" style={{ width: "100%" }}>查看赛后报告 →</button>
+          </a>
+        </div>
+        <div className="panel">
           <h3>导出</h3>
           <div className="row">
             <button onClick={() => void doExport("json")}>JSON（含原始预测和修正）</button>
