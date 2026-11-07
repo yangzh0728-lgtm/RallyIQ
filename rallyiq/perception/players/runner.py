@@ -40,11 +40,13 @@ class PlayerTrackingConfig:
     far_boost: str = "auto"
     far_boost_max_px: float = 110.0  # "auto": boost when the far player is shorter than this in the model input
     # Without calibration (camera cut, or a calibration the players contradicted)
-    # the far half is located from the nearest standing player instead: a box above
-    # their head, sized for a far player ``far_ratio`` times their height. Runs only
-    # on frames where fewer players than the format needs were found.
-    far_ratio: float = 0.35
-    far_crop_per_player: float = 5.0  # box side in far-player heights
+    # the far player is looked for in the floor band around the nearest standing
+    # player (see ``far_roi_from_players``), only on frames where fewer players than
+    # the format needs were found. People it adds must pass ``plausible_far_player``.
+    far_ratio: float = 0.35  # expected far/near height, for the "auto" size check
+    far_band_above: float = 0.6  # crop top, in near-player heights above their head
+    far_feet_above: float = 0.25  # far player's feet at most this far above the near head
+    far_max_height_ratio: float = 0.75
 
 
 class PlayerTrackingOutput(list):
@@ -151,12 +153,15 @@ def track_players(
         dets = estimator(img, far_roi=roi) if roi is not None else estimator(img)
         if H is None and cfg.far_boost != "off" and hasattr(estimator, "detect_roi"):
             want = 4 if (tracker is not None and out.match_format == "doubles") or cfg.match_format == "doubles" else 2
-            roi = far_roi_from_players(dets, (img.shape[1], img.shape[0]), want, cfg)
+            found = far_roi_from_players(dets, (img.shape[1], img.shape[0]), want, cfg)
+            roi, near = found if found else (None, None)
             if roi is not None and cfg.far_boost == "auto":
                 need = estimator.far_player_px(img.shape, roi)
                 roi = roi if need is not None and need < cfg.far_boost_max_px else None
             if roi is not None:
-                dets = estimator.detect_roi(img, roi, dets)
+                before = {id(d) for d in dets}
+                dets = [d for d in estimator.detect_roi(img, roi, dets)
+                        if id(d) in before or plausible_far_player(d, near, roi, cfg)]
         region = region_for(frame_idx) if region_for else None
         cands = build_candidates(dets, H, (img.shape[1], img.shape[0]), cfg.filter, region)
         for c in cands:
@@ -180,34 +185,50 @@ def _standing(dets: list[PersonDetection], conf: float = 0.3, min_kps: int = 6) 
 
 
 def far_roi_from_players(dets: list[PersonDetection], image_size: tuple[int, int], want: int,
-                         cfg: PlayerTrackingConfig) -> tuple[int, int, int, int, float] | None:
+                         cfg: PlayerTrackingConfig) -> tuple[tuple[int, int, int, int, float], PersonDetection] | None:
     """Box where the far player should be when there is no homography, in the
-    ``far_court_roi`` format ``(x1, y1, x2, y2, far_player_px)``.
+    ``far_court_roi`` format ``(x1, y1, x2, y2, far_player_px)``, and the near
+    player it was placed from.
 
-    The tallest standing person is taken as the near player. The box sits above
-    their head (its lower edge cuts through the head, so their body is dropped by
-    the crop's edge rule), centred on them horizontally, with sides of
-    ``far_crop_per_player`` expected far-player heights. None when enough players
-    were already found, nobody stands in view, or the box would not be smaller
-    than the frame (no upscaling to gain).
+    The tallest standing person is taken as the near player. Their feet and head
+    bound the floor band where the far player stands: on a low camera the far
+    player's feet are level with the near player's upper body, on a raised one a
+    little above their head. The box spans from ``far_band_above`` near-player
+    heights above their head down to just below their feet, as wide as it is
+    tall, centred on them. None when enough players were already found, nobody
+    stands in view, or the box would not be smaller than the frame.
     """
     people = _standing(dets)
     if not people or len(people) >= want:
         return None
     near = max(people, key=lambda d: d.height)
     w, h = image_size
-    far_px = cfg.far_ratio * float(near.height)
-    side = cfg.far_crop_per_player * far_px
-    if far_px <= 0 or side >= 0.9 * min(w, h):
+    hp = float(near.height)
+    if hp <= 0:
         return None
-    y2 = min(float(near.bbox[1]) + 0.15 * float(near.height), h)
-    y1 = max(y2 - side, 0.0)
+    y1 = max(float(near.bbox[1]) - cfg.far_band_above * hp, 0.0)
+    y2 = min(float(near.bbox[3]) + 0.1 * hp, float(h))
+    side = y2 - y1
+    if side >= 0.9 * min(w, h):
+        return None  # no upscaling to gain
     cx = 0.5 * float(near.bbox[0] + near.bbox[2])
     x1 = min(max(cx - side / 2, 0.0), max(w - side, 0.0))
-    x2 = min(x1 + side, w)
-    if y2 - y1 < 2 * far_px or x2 - x1 < 16:
-        return None  # near player's head is at the top of the frame: no room for a far half
-    return int(x1), int(y1), int(np.ceil(x2)), int(np.ceil(y2)), far_px
+    x2 = min(x1 + side, float(w))
+    return (int(x1), int(y1), int(np.ceil(x2)), int(np.ceil(y2)), cfg.far_ratio * hp), near
+
+
+def plausible_far_player(d: PersonDetection, near: PersonDetection, roi: tuple, cfg: PlayerTrackingConfig) -> bool:
+    """A person the uncalibrated far pass found that can be the far player:
+    not cut off by the crop's top edge (a curtain or light fitted as a tall box),
+    clearly smaller than the near player, and feet in the floor band between the
+    near player's head and feet."""
+    hp = float(near.height)
+    if float(d.bbox[1]) <= roi[1] + 2:
+        return False
+    if float(d.height) > cfg.far_max_height_ratio * hp:
+        return False
+    foot = float(d.bbox[3])
+    return float(near.bbox[1]) - cfg.far_feet_above * hp <= foot <= float(near.bbox[3])
 
 
 def _decided(d: FormatDecision) -> tuple[str, FormatDecision]:
