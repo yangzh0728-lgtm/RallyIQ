@@ -126,7 +126,28 @@ class Session:
         if not cand:
             return False
         self.seek(cand[0] if forward else cand[-1])
+        if forward and self.frame > int(self.doc.get("review_frame", -1)):
+            self.doc["review_frame"] = self.frame  # where to resume next time
+            self.dirty = True
         return True
+
+    def uncertain_done(self) -> int:
+        """How many uncertain frames are at or before the current frame."""
+        return sum(1 for f in self.uncertain if f <= self.frame)
+
+    def resume_frame(self, prefill: dict | None = None) -> int | None:
+        """Frame to reopen at: the saved review position, else the last frame whose
+        shuttle label differs from the prefill (labels saved before this was tracked)."""
+        if "review_frame" in self.doc:
+            return int(self.doc["review_frame"])
+        if not prefill:
+            return None
+        before = {it["t_ms"]: (it.get("visible"), it.get("xy")) for it in prefill.get("shuttle", [])}
+        changed = [it["t_ms"] for it in self.doc.get("shuttle", [])
+                   if before.get(it["t_ms"]) != (it.get("visible"), it.get("xy"))]
+        if not changed:
+            return None
+        return int(round((max(changed) - self.start_ms) * self.fps / 1000.0))
 
     # ---------------- 事件
     def hit(self, side: str) -> None:
@@ -245,8 +266,14 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
     doc = load_or_create(clip_id, meta, labels_dir, prefill)
     s = Session(doc, meta["start_ms"], reader.n, stride)
     if prefill:
-        s.uncertain = uncertain_frames(schema.load(prefill), meta["start_ms"])
+        pre = schema.load(prefill)
+        s.uncertain = uncertain_frames(pre, meta["start_ms"])
         print(f"{len(s.uncertain)} 个可疑帧（羽毛球模式按 g / G 跳转），共 {reader.n} 帧")
+        r = s.resume_frame(pre)
+        if r is not None:
+            s.seek(r)
+            s.mode = "shuttle"
+            print(f"从第 {s.frame} 帧继续（已过 {s.uncertain_done()}/{len(s.uncertain)} 个可疑帧），按 g 接着往下")
     uncertain_set = set(s.uncertain)
     out_path = labels_dir / f"{clip_id}.json"
     win = f"RallyIQ label - {clip_id}"
@@ -278,7 +305,9 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
             cv2.circle(img, (int(sh["xy"][0]), int(sh["xy"][1])), 8, (0, 255, 255), 1, cv2.LINE_AA)
         near_hits = [h for h in doc["hits"] if abs(h["t_ms"] - s.t()) <= 3000 / s.fps]
         in_rally = any(r["start_ms"] <= s.t() <= r["end_ms"] for r in doc["rallies"]) or s.open_rally is not None
-        unsure = "  ?CHECK" if s.frame in uncertain_set else ""
+        unsure = ""
+        if s.uncertain and s.mode == "shuttle":
+            unsure = f"  {'?CHECK ' if s.frame in uncertain_set else ''}{s.uncertain_done()}/{len(s.uncertain)}"
         bar = (f"[{s.mode}] frame {s.frame}/{s.n - 1}{unsure}  t={s.t()}ms  {doc['status']}  "
                f"hits={len(doc['hits'])} rallies={len(doc['rallies'])} shuttle={len(doc['shuttle'])}"
                f"{'  IN-RALLY' if in_rally else ''}{'  HIT ' + near_hits[0]['side'] if near_hits else ''}  {msg}")
