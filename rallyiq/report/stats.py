@@ -431,6 +431,8 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
             player_stats = [p.model_copy(update={"metrics": p.metrics + res.metrics.get(p.player_id, []),
                                                  "distributions": p.distributions + res.distributions.get(p.player_id, [])})
                             for p in player_stats]
+        if any(s.note and s.note.startswith("相邻两拍") for s in styles):
+            caveats.append(next(s.note for s in styles if s.note and s.note.startswith("相邻两拍")) + "。")
         if any(s.status == "undeterminable" for s in styles):
             caveats.append(f"有球员已分类的击球不足 {MIN_SHOTS} 拍，打法风格暂不判断。")
         caveats.append("打法风格由规则原型匹配得出（没有用标注数据训练），参考区间来自职业单打统计，业余比赛只作倾向参考。")

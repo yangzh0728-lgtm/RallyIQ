@@ -76,6 +76,9 @@ PHASE_ADVICE = {
 
 MIN_SHOTS = 20  # classified non-serve shots below which no style is given
 MIN_BASIS = 5  # a feature needs at least this many samples to count
+SHRINK_K = 10  # small samples are pulled toward "typical": match = 0.5 + (m - 0.5) * n / (n + SHRINK_K)
+MIN_ALTERNATION = 0.8  # singles: share of consecutive hits by different players below which hitters look wrong
+UNUSABLE_ALTERNATION = 0.6  # below this the hitters are close to random: no style verdict at all
 MIN_COVERAGE = 0.5  # share of a prototype's weight that must be measurable
 CLOSE_POINTS = 5.0  # second style shown when within this many points
 CLEAR_STYLE = 60.0  # below this the player is called balanced
@@ -601,6 +604,7 @@ def match_prototype(p: Prototype, values: dict[str, tuple[float | None, int, str
         lo, hi = _range(name, doubles)
         x = min(1.0, max(0.0, (v - lo) / (hi - lo)))
         m = x if w > 0 else 1 - x
+        m = 0.5 + (m - 0.5) * n / (n + SHRINK_K)  # a handful of samples cannot make a style
         got += abs(w) * m
         wsum += abs(w)
         if m >= 0.6:
@@ -716,6 +720,9 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
     protos = DOUBLES_SYSTEMS if doubles else SINGLES_STYLES
     by_code = {p.code: p for p in protos}
     rallies = _contexts(events, players, fps)
+    alternation = hitter_alternation(events) if not doubles else None
+    bad_hitters = alternation is not None and alternation[1] >= 20 and alternation[0] < MIN_ALTERNATION
+    no_hitters = bad_hitters and alternation[0] < UNUSABLE_ALTERNATION
     geo = {"opp_reach_m", "corner_pct", "straight_pct", "variety", "fb_pct", "fb_attack_pct", "sbs_defense_pct",
            "fixed_front_pct", "front_kill_pct"}
     metrics: dict[str, list[Metric]] = {}
@@ -740,6 +747,14 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
         scores = sorted((match_prototype(p, values, doubles) for p in protos),
                         key=lambda x: -(x.score if x.score is not None else -1))
         primary, second, label = _verdict(scores, own_n)
+        status, conf = _conf(own_n, 80, MIN_SHOTS)
+        if own_n < MIN_SHOTS:
+            status = "undeterminable"
+        elif no_hitters:  # hitters near random: a verdict would describe the tracker, not the player
+            status, conf = "undeterminable", "low"
+            primary, second, label = None, None, "证据不足（击球者识别不可靠）"
+        elif bad_hitters:  # hits are misattributed: every per-player feature is suspect
+            status, conf = "needs_review", "low"
         if primary is not None:
             ms.append(_metric(f"{s}.style.match_score", f"与{primary.name}原型的吻合度", primary.score, None,
                               own_n, 80, 30))
@@ -748,9 +763,6 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
         if used:
             ds.append(_dist(f"{s}.style.tactics", "战术套路使用次数", {t.name: t.uses for t in used}, 10, 3))
         metrics[s], dists[s] = ms, ds
-        status, conf = _conf(own_n, 80, MIN_SHOTS)
-        if own_n < MIN_SHOTS:
-            status = "undeterminable"
         used_feats = set(by_code[primary.code].weights) if primary is not None else set()
         evidence = [m.key for m in ms if m.value is not None and m.status != "undeterminable"
                     and m.key.rsplit(".", 1)[-1] in used_feats | {"match_score"}]
@@ -771,8 +783,11 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
                          opp_style if o["primary"] is not None else None, o["habits"], by_code) \
             if p["status"] != "undeterminable" else []
         note = None
-        if p["status"] == "undeterminable":
+        if p["status"] == "undeterminable" and not no_hitters:
             note = f"只有 {p['n']} 拍已分类的非发球击球，至少需要 {MIN_SHOTS} 拍才判断打法"
+        elif bad_hitters:
+            note = (f"相邻两拍由不同球员击出的只有 {100 * alternation[0]:.0f}%（单打应接近 100%），"
+                    "击球者识别可能有误，打法判断只作参考；在工作台修正击球者后会更准")
         elif not metric_ok:
             note = "球场标定未确认，与站位相关的特征（调动距离、直线/斜线、四角）只作参考"
         styles.append(PlayerStyle(
@@ -783,6 +798,19 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
             note=note,
         ))
     return StyleResult(styles=styles, metrics=metrics, distributions=dists)
+
+
+def hitter_alternation(events: EventsResult) -> tuple[float, int] | None:
+    """(share of consecutive in-rally hits by different players, number of pairs); singles hits must alternate."""
+    shots_by_id = {s.shot_id: s for s in events.shots}
+    pairs = alt = 0
+    for rally in events.rallies:
+        seq = [s for s in sorted((shots_by_id[i] for i in rally.shot_ids if i in shots_by_id), key=lambda s: s.frame)
+               if s.hitter is not None]
+        for a, b in zip(seq, seq[1:], strict=False):
+            pairs += 1
+            alt += a.hitter != b.hitter
+    return (alt / pairs, pairs) if pairs else None
 
 
 def style_by_subject(styles: list[PlayerStyle]) -> dict[str, PlayerStyle]:

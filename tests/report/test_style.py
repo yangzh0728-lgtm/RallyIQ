@@ -205,13 +205,17 @@ def test_moments_carry_the_hitters_state():
 
 def test_prototype_scoring():
     p = next(x for x in SINGLES_STYLES if x.code == "power_attack")
-    hi = {"smash_pct": (25.0, 50, "杀球占比", "%"), "attack_pct": (40.0, 50, "", "%"),
-          "attack_run": (3.0, 20, "", "拍"), "convert_pct": (90.0, 20, "", "%"), "forced_pct": (45.0, 50, "", "%"),
-          "defense_pct": (5.0, 50, "", "%")}
+    big = 10**6  # large samples: no shrinkage toward "typical"
+    hi = {"smash_pct": (25.0, big, "杀球占比", "%"), "attack_pct": (40.0, big, "", "%"),
+          "attack_run": (3.0, big, "", "拍"), "convert_pct": (90.0, big, "", "%"), "forced_pct": (45.0, big, "", "%"),
+          "defense_pct": (5.0, big, "", "%")}
     s = match_prototype(p, hi)
     assert s.score == 100.0 and s.coverage == 1.0 and s.reasons[0].startswith("杀球占比 25%")
-    lo = {k: (0.0, 50, "", None) for k in hi}
+    lo = {k: (0.0, big, "", None) for k in hi}
     assert match_prototype(p, lo).score == pytest.approx(100 * 1 / 11, abs=0.1)  # only defense_pct (low) matches
+    # ten samples per feature: halfway between the data and "typical" (50)
+    ten = {k: (v[0], 10, "", None) for k, v in hi.items()}
+    assert match_prototype(p, ten).score == pytest.approx(75.0, abs=0.1)
     few = {"smash_pct": (25.0, 50, "", "%")}
     assert match_prototype(p, few).score is None  # under half of the weight measurable
     tiny = {k: (v[0], 2, "", None) for k, v in hi.items()}
@@ -272,3 +276,25 @@ def test_doubles_systems_and_formation():
     assert keys["A.style.fb_pct"].value == 100.0  # P1 back / P3 front at every A shot
     assert keys["A.style.smash_conc_pct"].value == 100.0
     assert by["A"].tactics == []  # singles tactics are not counted for doubles
+
+
+def test_misattributed_hitters_lower_confidence():
+    # the same player credited with consecutive hits: singles hits must alternate
+    events, players = _rallies(POWER)
+    shots = [sh.model_copy(update={"hitter": "P1"}) if k % 3 == 0 else sh for k, sh in enumerate(events.shots)]
+    events = events.model_copy(update={"shots": shots})
+    stats = compute_match_stats(events, players, _cal())
+    p1 = next(s for s in stats.styles if s.subject == "P1")
+    assert p1.confidence == "low" and p1.status == "needs_review"
+    assert p1.note.startswith("相邻两拍由不同球员击出的只有")
+    assert any(c.startswith("相邻两拍") for c in stats.caveats)
+
+
+def test_random_hitters_give_no_verdict():
+    events, players = _rallies(POWER)
+    shots = [sh.model_copy(update={"hitter": "P1" if k % 4 < 2 else "P2"}) for k, sh in enumerate(events.shots)]
+    stats = compute_match_stats(events.model_copy(update={"shots": shots}), players, _cal())
+    for st in stats.styles:
+        assert st.status == "undeterminable" and st.primary is None and st.advice == []
+        assert st.label == "证据不足（击球者识别不可靠）"
+    assert not any(m.key.endswith("style.match_score") for p in stats.players for m in p.metrics)
