@@ -117,3 +117,25 @@ def test_loop_prefers_own_footage_and_keeps_holdout_last(tmp_path):
     assert loop.manifest_holdout(manifest) == ["held"]
     lines = loop.suggest_next({"uncut": manifest["uncut"]}, {}, cdir, tmp_path / "runs")
     assert "extract_clips --only uncut" in lines[0] and "--download" not in lines[0]
+
+
+def test_manual_calibration_from_named_points_recovers_corners():
+    from rallyiq.contracts.geometry import COURT_CORNERS_M, apply_homography, fit_homography
+    from scripts import real_run
+
+    # a made-up camera: court metres -> image px
+    true_corners = [[300.0, 1300.0], [1700.0, 1300.0], [1250.0, 620.0], [700.0, 620.0]]
+    court_to_img = fit_homography(COURT_CORNERS_M, true_corners)
+    look = real_run.court_lookup()
+    names = ["near_short_service/left_doubles_sideline", "near_short_service/right_doubles_sideline",
+             "far_baseline/left_doubles_sideline", "far_baseline/right_doubles_sideline",
+             "far_short_service/centre_line"]
+    pts = {n: apply_homography(court_to_img, [look[n]])[0] for n in names}
+    cal = real_run.manual_calibration("v1", pts, 600)
+    seg = cal.segments[0]
+    assert seg.method == "manual" and seg.status == "ok" and seg.end_frame == 599
+    for got, want in zip(seg.image_corners, true_corners):
+        assert abs(got[0] - want[0]) < 0.5 and abs(got[1] - want[1]) < 0.5  # off-screen corners too
+    assert seg.reprojection_error_px < 0.5
+    with pytest.raises(ValueError):
+        real_run.manual_calibration("v1", {"nope": [0, 0], **pts}, 600)

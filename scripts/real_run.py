@@ -10,6 +10,11 @@ For each ``<clip_id>.mp4`` (+ ``.meta.json`` written by ``evaluation.tools.extra
    which ``evaluation.tools.label_tool --prefill`` uses as the starting point for labeling;
 3. compute label-free statistics per module (coverage, detection rate, counts, speed).
 
+Fixed-camera clips can carry ``court_points`` in their meta.json (from ``court_points`` in
+``evaluation/own_clips.yaml``): named court-line intersections in clip pixels. They are fitted
+into a manual calibration for the whole clip, which replaces automatic calibration, the same way
+the web app's 4-corner override does. Use this when auto calibration locks onto the wrong court.
+
 When reviewed labels exist in ``evaluation/labels/`` the real benchmark is run as well and
 its markdown is appended. Without labels the report only shows how much each module
 produced, which is NOT accuracy; the report says so.
@@ -32,6 +37,9 @@ sys.path.insert(0, str(ROOT))
 
 from evaluation import benchmark, from_contracts, schema  # noqa: E402
 from rallyiq.contracts import STAGES  # noqa: E402
+from rallyiq.contracts import CalibrationSegment, CourtCalibration, CourtKeypoint  # noqa: E402
+from rallyiq.contracts.geometry import COURT_CORNERS_M, apply_homography, fit_homography, invert_homography  # noqa: E402
+from rallyiq.pipeline.runner import MANUAL_CALIBRATION  # noqa: E402
 from rallyiq.pipeline.runner import run_job  # noqa: E402
 from rallyiq.store import Store  # noqa: E402
 
@@ -104,6 +112,38 @@ def clip_stats(art: Path) -> dict[str, Any]:
     return out
 
 
+def court_lookup() -> dict[str, tuple[float, float]]:
+    """Court coordinates (m) of every name usable in ``court_points``: line intersections + outer corners."""
+    from rallyiq.perception.calibration import court_model as cm
+
+    names = {k.name: k.xy for k in cm.keypoints()}
+    return names | {f"{k}_corner": v for k, v in cm.CORNERS.items()}
+
+
+def manual_calibration(video_id: str, points: dict[str, list[float]], frame_count: int) -> CourtCalibration:
+    """One manual segment for the whole clip from >= 4 named image points (fixed camera)."""
+    lookup = court_lookup()
+    unknown = sorted(set(points) - set(lookup))
+    if unknown:
+        raise ValueError(f"unknown court point names: {unknown}")
+    if len(points) < 4:
+        raise ValueError("court_points needs at least 4 points")
+    names = list(points)
+    img = [list(map(float, points[n])) for n in names]
+    court = [list(lookup[n]) for n in names]
+    h = fit_homography(img, court)
+    resid = [((cx - px) ** 2 + (cy - py) ** 2) ** 0.5
+             for (cx, cy), (px, py) in zip(img, apply_homography(invert_homography(h), court))]
+    corners = apply_homography(invert_homography(h), COURT_CORNERS_M)
+    seg = CalibrationSegment(
+        start_frame=0, end_frame=max(frame_count - 1, 0), homography=h, image_corners=corners,
+        keypoints=[CourtKeypoint(name=n, image=i, court=c) for n, i, c in zip(names, img, court)],
+        reprojection_error_px=round(max(resid), 2), method="manual", confidence=1.0, status="ok",
+        notes=[f"fixed camera: {len(names)} court points from own_clips.yaml"],
+    )
+    return CourtCalibration(video_id=video_id, segments=[seg])
+
+
 def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path, on_progress=None) -> dict[str, Any]:
     meta_p = clip.with_suffix(".meta.json")
     cmeta = json.loads(meta_p.read_text(encoding="utf-8")) if meta_p.exists() else {}
@@ -111,6 +151,9 @@ def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path, on_p
     video_id, dest = store.create_video(clip.name, clip.suffix)
     shutil.copyfile(clip, dest)
     store.register_video(video_id, clip.name, dest)
+    if cmeta.get("court_points"):
+        n = int(cmeta.get("frame_count") or round(cmeta["duration_ms"] / 1000 * cmeta["fps"]))
+        store.save_artifact(video_id, MANUAL_CALIBRATION, manual_calibration(video_id, cmeta["court_points"], n))
     job = store.create_job(video_id, list(STAGES))
 
     t0 = time.monotonic()

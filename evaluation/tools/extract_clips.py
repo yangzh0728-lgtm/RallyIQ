@@ -116,6 +116,15 @@ def main(argv: list[str] | None = None) -> int:
         out = data / "clips" / f"{c['id']}.mp4"
         meta_p = out.with_suffix(".meta.json")
         if out.exists() and meta_p.exists():
+            if is_own(c):  # 清单里的球场点可能后来才补上：只更新 meta，不重新切
+                meta = json.loads(meta_p.read_text(encoding="utf-8"))
+                if meta.get("court_points") != c.get("court_points"):
+                    meta.pop("court_points", None)
+                    if c.get("court_points"):
+                        meta["court_points"] = c["court_points"]
+                    meta_p.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+                    print(f"[更新] {c['id']} 的球场点")
+                    continue
             print(f"[跳过] {c['id']} 已存在")
             continue
         if is_own(c):
@@ -128,6 +137,8 @@ def main(argv: list[str] | None = None) -> int:
             meta = {"clip_id": c["id"], "video_id": Path(c["file"]).stem, "source_file": c["file"],
                     "start_ms": int(round(c["start_s"] * 1000)), "duration_ms": int(round(c["duration_s"] * 1000)),
                     **info}
+            if c.get("court_points"):
+                meta["court_points"] = c["court_points"]
             meta_p.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
             print(f"[完成] {c['id']}  {info['width']}x{info['height']} @ {info['fps']}fps → {out}")
             continue
