@@ -1,0 +1,82 @@
+# 自有素材片段清单（sam 自己拍的业余比赛和对练，原片在外接硬盘上）
+#
+# 仓库只保存文件名、时间段和人工标注，不保存任何视频或帧图像，也不写人名。
+# 原片根目录默认 /Volumes/T7/YZH/Badminton Film，可用 --footage 或环境变量
+# RALLYIQ_FOOTAGE 覆盖。extract_clips 在根目录下按文件名查找（DJI 文件名唯一），
+# 只切出清单里的时间段，缩到 1080p 以内，放进和 BWF 片段相同的 clips 目录，
+# 所以 real_run / label_tool / shuttle_loop 不用改用法。
+#
+# 字段和 clips.yaml 相同，只是用 file 代替 video_id：
+#   file          原片文件名（在根目录下递归查找）
+#   start_s       片段在原片中的起点（秒）。标注时间仍是原片毫秒时间
+#   holdout       true = 整段只当考试题，shuttle_loop 不拿它训练
+#   segment_verified  false = 起点只是取了原片中间，还没确认画面里是回合；
+#                 抽片后快速看一眼，必要时调整 start_s
+#
+# 机位（conditions.camera）：
+#   amateur_baseline   底线后方低机位，整块场地可见（与 DJI_0009 同类）
+#   amateur_side       场边斜角低机位
+#   amateur_multicourt 高中比赛场馆，画面里同时有多块球场，用于验证目标球场锁定
+
+clips:
+  # ---------------- 2026-05-29 对练：与 DJI_0009 同场次同机位（2688×1512，60fps） ----------------
+  - id: own0529_0008
+    file: DJI_20030505184606_0008_D.MP4
+    start_s: 265
+    duration_s: 120
+    segment_verified: false
+    split: train
+    conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
+
+  - id: own0529_0006
+    file: DJI_20030505181751_0006_D.MP4
+    start_s: 528
+    duration_s: 120
+    segment_verified: false
+    split: train
+    conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
+
+  - id: own0529_0009
+    # 即 DJI_0009：击球建议和打法风格都在它上面试跑，整段只当考试题
+    file: DJI_20030505185816_0009_D.MP4
+    start_s: 500
+    duration_s: 120
+    segment_verified: false
+    split: eval
+    holdout: true
+    conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
+
+  # ---------------- 其他场馆：底线后方，换场馆测泛化 ----------------
+  - id: own0820_7696
+    file: IMG_7696.MOV
+    start_s: 136
+    duration_s: 120
+    segment_verified: false
+    split: eval
+    conditions: {event: own_0820, venue: own_green_b, discipline: singles, camera: amateur_baseline, source: own}
+
+  # ---------------- 2026-09-06：场边斜角，双打（4K，30fps） ----------------
+  - id: own0906_0620
+    file: DJI_20260907023905_0620_D.MP4
+    start_s: 935
+    duration_s: 120
+    segment_verified: false
+    split: train
+    conditions: {event: own_0906, venue: own_green_c, discipline: doubles, camera: amateur_side, source: own}
+
+  # ---------------- 高中比赛：多球场画面，验证目标球场锁定（4K，60fps） ----------------
+  - id: own_hs0319_0233
+    file: DJI_20030223224307_0233_D.MP4
+    start_s: 480
+    duration_s: 60
+    segment_verified: false
+    split: eval
+    conditions: {event: hs_league_2026, venue: hs_wilson, discipline: unknown, camera: amateur_multicourt, source: own}
+
+  - id: own_hs0324_0245
+    file: DJI_20030228235320_0245_D.MP4
+    start_s: 510
+    duration_s: 60
+    segment_verified: false
+    split: eval
+    conditions: {event: hs_league_2026, venue: hs_walnut, discipline: unknown, camera: amateur_multicourt, source: own}
