@@ -4,6 +4,103 @@
 
 > 状态：MVP 开发中。后端骨架、任务队列、共享数据契约、球员/羽毛球感知、回合与击球候选、击球类型分类和网页工作台已就绪。本 README 是研发蓝图的摘要。
 
+## 本地部署
+
+RallyIQ 在你自己的电脑上运行：视频、分析结果和个人档案都只存在本机（默认 `./data`），不需要任何云服务或账号。
+
+### 系统要求
+
+| 项目 | 要求 |
+| --- | --- |
+| 系统 | macOS 13+（推荐 Apple Silicon，PyTorch 走 MPS、姿态模型走 CoreML）；Linux x86_64（有 NVIDIA 显卡时自动用 CUDA，没有也能用 CPU 跑，只是慢）。Windows 请用 WSL2（未专门测试） |
+| 内存 | 16 GB 以上；如果同时用本地 AI 教练（Qwen 7B），再多留约 5 GB |
+| 磁盘 | 依赖和模型约 3–5 GB，另加视频本身（手机 1080p 约 6 GB/小时） |
+| 软件 | Python ≥ 3.11、FFmpeg（含 ffprobe）、Node.js ≥ 20（只用来构建网页界面）、git |
+
+安装前置软件：
+
+```bash
+# macOS（Homebrew）
+brew install python@3.12 ffmpeg node git
+# Ubuntu / Debian
+sudo apt install python3 python3-venv ffmpeg git
+# Node.js：发行版自带的往往太旧，建议用 nvm（https://github.com/nvm-sh/nvm）：nvm install 22
+```
+
+### 一键安装并启动
+
+```bash
+git clone https://github.com/yangzh0728-lgtm/RallyIQ.git
+cd RallyIQ
+bash scripts/setup_local.sh     # 检查依赖 → 建 .venv → 下载模型权重 → 构建网页（重复运行会跳过已完成的步骤）
+bash scripts/start_local.sh     # 打开 http://localhost:8000
+```
+
+在网页上拖入一段比赛或训练视频，上传后自动开始分析，页面会显示各阶段进度；完成后点进视频即可回放、看骨架和球轨迹、逐拍修正、导出。按 `Ctrl+C` 停止服务。
+
+### 分步安装（想自己控制每一步时）
+
+```bash
+# 1. Python 环境和分析模型的依赖（PyTorch、ONNX Runtime、OpenCV）
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e '.[calibration,players,shuttle]'
+
+# 2. 模型权重 → weights/pose.onnx（RTMO 姿态，Apache-2.0）和 weights/shuttle/heatmap.pt（羽毛球检测，MIT）
+bash scripts/fetch_weights.sh            # POSE_VARIANT=rtmo-m 换更大的姿态模型（远端球员更准、更慢）
+
+# 3. 网页界面
+(cd web && npm ci && npm run build)
+
+# 4. 启动（API、分析队列和网页在同一个进程里）
+RALLYIQ_WEB_DIR=web/dist uvicorn rallyiq.api.app:app --port 8000
+```
+
+- 模型放在 `weights/` 下会被自动找到，不用设环境变量；放在别处时用 `RALLYIQ_POSE_MODEL`、`RALLYIQ_SHUTTLE_WEIGHTS` 指定。
+- 羽毛球权重托管在 Google Drive。下载不了时，手动打开 `scripts/fetch_shuttle_weights.py` 里的 `DRIVE_URL` 下载 zip，
+  再运行 `python scripts/fetch_shuttle_weights.py --zip 下载的文件.zip`。
+- 缺少某个模型时不会报错：对应阶段输出空结果（界面上没有骨架或球轨迹），其余阶段照常运行，日志里会提示缺哪个模型。
+- 开发模式：`uvicorn rallyiq.api.app:app --reload --port 8000`，另开终端 `cd web && npm run dev`，打开 http://localhost:5173
+  （`/api` 自动转发到 8000）。不装任何模型也能先看界面：`RALLYIQ_DEMO=1` 让各阶段输出合成数据，或打开 `?mock` 演示模式。
+
+### 不开网页，直接分析一段视频
+
+```bash
+source .venv/bin/activate
+python -m rallyiq.pipeline analyze match.mp4    # 打印各阶段状态和结果目录 data/videos/<video_id>/artifacts/
+```
+
+分析过的视频也会出现在网页的视频列表里。结果是 JSON（球场标定、球员轨迹、羽毛球轨迹、回合与击球、击球类型、叠加层），
+格式见 `contracts/README.md`；网页上可以导出 JSON / CSV、赛后报告（Markdown）和回合片段（MP4）。
+
+### 可选：本地 AI 教练点评（Ollama + Qwen）
+
+赛后报告里的"教练点评"默认用本机运行的开源大模型，免费、数据不出本机：
+
+```bash
+# macOS
+brew install ollama
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh
+
+ollama serve &                # 已作为系统服务运行时可省略
+ollama pull qwen2.5:7b        # 约 4.7 GB；内存充足可换 qwen2.5:14b，并设置 RALLYIQ_OLLAMA_MODEL=qwen2.5:14b
+```
+
+RallyIQ 会自动连接 `http://localhost:11434`（`RALLYIQ_OLLAMA_URL` 可改）。没有装 Ollama 时，报告改用离线规则模板并注明原因；
+也可以改用 Claude API：`pip install -e '.[coach]'` 并设置 `ANTHROPIC_API_KEY`（按调用付费）。详见 `rallyiq/report/README.md`。
+
+### 常见问题
+
+- **怎么确认用上了 GPU？** `setup_local.sh` 结束前会打印 `torch … -> mps / cuda / cpu` 和 ONNX Runtime 的可用后端。
+  Apple Silicon 第一次分析时 CoreML 要编译姿态模型，会多等一两分钟，之后有缓存（`~/.cache/rallyiq/coreml`）。
+- **NVIDIA 显卡上的姿态模型**：默认的 `onnxruntime` 只用 CPU；需要时 `pip install onnxruntime-gpu`（先 `pip uninstall onnxruntime`）。
+- **数据在哪、怎么删？** 全部在 `RALLYIQ_DATA`（默认 `./data`）：`rallyiq.db`（SQLite）和 `videos/<id>/`。网页上每个视频都有"删除"按钮，
+  会一起删掉视频、分析结果和修正记录。备份时复制整个目录即可。
+- **换端口 / 让同一局域网的手机访问**：`PORT=8080 HOST=0.0.0.0 bash scripts/start_local.sh`。默认没有登录，只在可信网络里这样做；
+  需要账号时设置 `RALLYIQ_AUTH=on RALLYIQ_INVITE_CODE=自定义邀请码`（见 `rallyiq/api/auth.py`）。
+- **更新到新版本**：`git pull && bash scripts/setup_local.sh`，已有数据会保留，数据库表结构自动升级。
+- **在服务器或多台机器上部署**（Docker、PostgreSQL、S3 存储、独立 GPU worker）是可选的进阶用法，见 [`docs/deploy.md`](docs/deploy.md)。
+
 ## 项目定位
 
 RallyIQ 把视觉感知、人体与球拍运动学、羽毛球轨迹、击球时序、战术推断和训练复测连成一个闭环，并持续积累成一份**可更新的个人打法档案**。目标是真正提高使用者的比赛决策和竞技表现，而不只是生成好看的视频标注。
@@ -108,14 +205,16 @@ rallyiq/ingest/                 视频输入评估（机位、帧率、画质、
 rallyiq/memory/                 个人长期档案：只追加的分析事件日志、球员画像与训练复测、对手习惯报告
 rallyiq/review/                 难例收集：人工修正按视频条件分组，找出最弱场景
 rallyiq/pipeline/               阶段注册、任务执行、队列 worker、视频探测、叠加层合成
-rallyiq/report/                 赛后统计与 AI 教练点评（可插拔 LLM，默认 Claude）
+rallyiq/report/                 赛后统计与 AI 教练点评（可插拔 LLM，默认本地 Ollama + Qwen）
 rallyiq/api/                    FastAPI 后端（上传、任务、结果、修正、报告、导出）
 rallyiq/store.py                数据库（db.py：SQLite / PostgreSQL）+ 文件存储（blobs.py：本地 / S3）
 rallyiq/api/auth.py             账号与会话（默认关闭，线上 RALLYIQ_AUTH=on）
-Dockerfile, docker/, deploy/    web+API 镜像、GPU worker 镜像、Fly.io / Modal 部署配置
+scripts/setup_local.sh 等        本地安装与启动；Dockerfile、docker/、deploy/ 为可选的服务器部署
 contracts/schemas, examples     由契约自动生成的 JSON Schema 和示例
 web/                            网页回放与修正界面
 ```
+
+开发与测试（安装和运行见上方"本地部署"）：
 
 ```bash
 pip install -e '.[dev]'                       # 需要 ffmpeg/ffprobe
@@ -123,12 +222,6 @@ RALLYIQ_DEMO=1 uvicorn rallyiq.api.app:app --port 8000   # 未接入模型的阶
 python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水线
 pytest
 ```
-
-### 在线部署
-
-同一套代码也能作为网站运行：PostgreSQL 任务队列（多 GPU worker、租约重试）、S3 / Cloudflare R2 视频存储（浏览器直传）、
-邮箱 + 密码账号（邀请码注册，按用户隔离数据），web + API 一个 CPU 容器，分析在按需启动、空闲关机的云 GPU 上跑。
-方案、步骤和费用估算见 [`docs/deploy.md`](docs/deploy.md)；本地体验线上同款环境：`docker compose up --build`。
 
 主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/clip?rally_id=…`（或 `start_ms`/`end_ms`）导出回合片段 MP4；`GET /videos/{id}/quality` 视频条件与各项输出可信度；`PUT /videos/{id}/people` 标注谁是我、对手是谁；`POST /videos/{id}/memory/commit` 把确认过的比赛写入档案（`/memory/withdraw` 撤下，均为追加）；`GET /profile`（`?person=`）个人画像、趋势与训练复测；`GET /opponents/{name}` 对手习惯；`GET /people`；`GET /memory/log`；`GET /hard_examples`（`?format=jsonl`）与 `GET /hard_examples/summary` 难例及按条件分组的错误率（命令行：`python -m rallyiq.review export --out hard_examples/`）；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
 

@@ -46,3 +46,26 @@ def test_merge_detections_nms():
     b = PersonDetection([1, 0, 11, 20], np.zeros((17, 3)), 0.5)
     c = PersonDetection([50, 0, 60, 20], np.zeros((17, 3)), 0.4)
     assert [d.score for d in merge_detections([b, a, c])] == [0.9, 0.4]
+
+
+def test_find_pose_model_order(tmp_path, monkeypatch):
+    from rallyiq.perception.players import pose
+
+    explicit = tmp_path / "mine.onnx"
+    explicit.write_bytes(b"x")
+    env = tmp_path / "env.onnx"
+    env.write_bytes(b"x")
+    monkeypatch.setenv("RALLYIQ_POSE_MODEL", str(env))
+    assert pose.find_pose_model(str(explicit)) == str(explicit)
+    assert pose.find_pose_model() == str(env)
+    monkeypatch.setenv("RALLYIQ_POSE_MODEL", str(tmp_path / "missing.onnx"))
+    assert pose.find_pose_model() is None  # an explicit setting that is wrong is not silently replaced
+
+    monkeypatch.delenv("RALLYIQ_POSE_MODEL")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    cache = tmp_path / ".cache" / "rallyiq" / "weights"
+    cache.mkdir(parents=True)
+    (cache / "rtmo-s_body7-640x640.onnx").write_bytes(b"x")
+    repo_default = pose.Path(pose.__file__).resolve().parents[3] / "weights" / "pose.onnx"
+    want = str(repo_default) if repo_default.is_file() else str(cache / "rtmo-s_body7-640x640.onnx")
+    assert pose.find_pose_model() == want
