@@ -40,6 +40,13 @@ class EventsConfig:
     pose_search_frames: int = 3  # look this many frames around a hit for a pose
     landing_window_ms: float = 250.0  # direction change this close to a static end is a landing
 
+    # Broadcasts cut to close-ups and replays between rallies; shuttle-like blobs and large people there make
+    # false rallies and hits. When most of the video is calibrated, frames of camera segments whose calibration
+    # failed (not the court view) are ignored. Needs the calibration (stage passes it). Videos calibrated on less
+    # than ``court_view_min_share`` of their frames are left alone (e.g. footage without calibration at all).
+    mask_off_court_views: bool = False
+    court_view_min_share: float = 0.5
+
     # --- learned hit scorer (learned.py) ---
     # "auto": bundled model (models/hit_scorer.json) if present; "off": hand-weighted rules; or a JSON path.
     # The model's own thresholds (keep / ok / min_candidate) replace the three below unless overridden.

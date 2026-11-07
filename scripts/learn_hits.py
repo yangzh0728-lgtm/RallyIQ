@@ -41,12 +41,13 @@ sys.path.insert(0, str(ROOT))
 
 from evaluation import benchmark, from_contracts, schema  # noqa: E402
 from evaluation import metrics as M  # noqa: E402
-from rallyiq.contracts import PlayerTracks, ShuttleTrack  # noqa: E402
+from rallyiq.contracts import CourtCalibration, PlayerTracks, ShuttleTrack  # noqa: E402
 from rallyiq.events import hits as H  # noqa: E402
-from rallyiq.events.adapters import events_to_contract, poses_from_contract, shuttle_from_contract  # noqa: E402
+from rallyiq.events.adapters import (calibration_segments, events_to_contract, poses_from_contract,  # noqa: E402
+                                    shuttle_from_contract)
 from rallyiq.events.config import EventsConfig  # noqa: E402
 from rallyiq.events.learned import BUNDLED, FEATURES, HitScorer  # noqa: E402
-from rallyiq.events.pipeline import segment_events  # noqa: E402
+from rallyiq.events.pipeline import off_court_views, segment_events  # noqa: E402
 
 PLAYER_IDS = {"P1", "P2", "P3", "P4"}
 
@@ -64,6 +65,9 @@ class Clip:
         self.shuttle = shuttle_from_contract(sh)
         self.poses = poses_from_contract(self.players)
         self.match_format = self.players.match_format if self.players is not None else "singles"
+        cp = art / "calibration.json"
+        cal = CourtCalibration.model_validate_json(cp.read_text(encoding="utf-8")) if cp.exists() else None
+        self.cal_segments = calibration_segments(cal)
         self.rallies: list[dict[str, Any]] = []
         self.X = np.zeros((0, len(FEATURES)))
         self.y = np.zeros(0)
@@ -71,14 +75,17 @@ class Clip:
     def t_label(self, frame: int) -> float:
         return self.offset + frame * 1000.0 / self.fps
 
+    def off_court(self, cfg: EventsConfig) -> list[tuple[int, int]]:
+        return off_court_views(self.cal_segments, cfg.court_view_min_share) if cfg.mask_off_court_views else []
+
     def run(self, cfg: EventsConfig):
-        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms)
+        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms, off_court=self.off_court(cfg))
 
     def collect(self, cfg: EventsConfig, tol_frames: float) -> None:
         """Candidates per rally with features and labels (scorer off: rule confidences kept)."""
         sink: list = []
         rallies = segment_events(self.shuttle, self.poses, replace(cfg, hit_scorer="off"),
-                                 video_end_ms=self.duration_ms, collect=sink)
+                                 video_end_ms=self.duration_ms, collect=sink, off_court=self.off_court(cfg))
         by_id = {r.rally_id: {"start_ms": r.start_ms, "cands": [], "serve": None} for r in rallies}
         self.pred_rallies = [{"start_ms": self.offset + r.start_ms, "end_ms": self.offset + r.end_ms}
                              for r in rallies if r.end_ms > r.start_ms]

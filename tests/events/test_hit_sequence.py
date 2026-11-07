@@ -83,3 +83,30 @@ def test_mixed_scale_shrinks_the_near_players_reach_among_small_far_players():
     assert by_mixed["P1"] == 0.0
     # At the near player's racket nothing changes.
     assert _scores(EventsConfig(), (650, 640))["P1"] == _scores(mixed, (650, 640))["P1"]
+
+
+# -- close-ups and replays between rallies ----------------------------------------------------
+
+def test_off_court_views_only_when_most_of_the_video_is_calibrated():
+    from rallyiq.events.pipeline import off_court_views
+
+    segs = [(0, 99, True), (100, 149, False), (150, 399, True)]
+    assert off_court_views(segs, 0.5) == [(100, 149)]
+    assert off_court_views([(0, 99, False), (100, 120, True)], 0.5) == []  # mostly uncalibrated footage
+    assert off_court_views([], 0.5) == []
+
+
+def test_rallies_in_off_court_views_are_masked():
+    from rallyiq.events.pipeline import segment_events
+    from rallyiq.events.synthetic import make_video
+
+    v = make_video(n_rallies=3, seed=2)
+    base = segment_events(v.shuttle, v.poses)
+    assert len(base) == 3
+    r = base[1]
+    off = [(r.start_frame - 5, r.end_frame + 5)]
+    on = replace(EventsConfig(), mask_off_court_views=True)
+    masked = segment_events(v.shuttle, v.poses, on, off_court=off)
+    assert [x.start_frame for x in masked] == [base[0].start_frame, base[2].start_frame]
+    # off by default
+    assert len(segment_events(v.shuttle, v.poses, EventsConfig(), off_court=off)) == 3
