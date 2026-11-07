@@ -203,7 +203,7 @@ function CoachView({ coach, idx, onJump }: { coach: CoachReport; idx: Map<string
       {(coach.shot_advice?.length ?? 0) > 0 && (
         <>
           <h3>逐拍建议</h3>
-          <div className="muted small">结合击球类型和双方站位找出的、可以换一种打法的击球。点时间可跳到那一拍回看。</div>
+          <div className="muted small">结合击球类型、双方站位和脚步找出的、可以换一种打法或步法的击球。点时间可跳到那一拍回看。</div>
           <ol className="training shot-advice">
             {coach.shot_advice!.map((a) => (
               <li key={a.moment_id}>
@@ -219,6 +219,7 @@ function CoachView({ coach, idx, onJump }: { coach: CoachReport; idx: Map<string
                   <b>{a.advice}</b>
                 </div>
                 <div className="muted small">{a.why}</div>
+                {a.footwork && <div className="small">👣 脚步：{a.footwork}</div>}
                 {a.warnings.map((w) => (
                   <div key={w} className="small" style={{ color: "var(--warn)" }}>
                     ⚠ {w}

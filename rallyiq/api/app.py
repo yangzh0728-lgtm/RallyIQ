@@ -47,6 +47,7 @@ from ..contracts import (
     CourtCalibration,
     CourtKeypoint,
     EventsResult,
+    FootworkResult,
     StrokesResult,
     HeatmapData,
     Job,
@@ -74,6 +75,7 @@ from ..review import video_conditions
 from ..pipeline.clips import ClipError, cut_clip
 from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
+from ..footwork import analyze_footwork
 from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
 from ..report.coach import default_provider_name
 from ..store import CONTENT_TYPES, Store, now
@@ -642,6 +644,19 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
             ev, store.load_artifact(video_id, "players", PlayerTracks),
             store.load_artifact(video_id, "calibration", CourtCalibration), store.get_video_meta(video_id),
         )
+
+    @app.get("/api/videos/{video_id}/footwork", response_model=FootworkResult)
+    def get_footwork(video_id: str, user: User | None = Depends(current_user)) -> FootworkResult:
+        """Foot contacts, steps and footwork actions (split step, lunge, jump, chassé, cross step, recovery)
+        from the ankle keypoints, linked to the effective hits. Computed on demand."""
+        video_or_404(video_id, user)
+        players = store.load_artifact(video_id, "players", PlayerTracks)
+        if players is None:
+            raise HTTPException(404, "players not available yet")
+        ev, _ = effective_events(video_id)
+        meta = store.get_video_meta(video_id)
+        return analyze_footwork(ev, players, store.load_artifact(video_id, "calibration", CourtCalibration),
+                                meta.fps if meta else 30.0)
 
     def match_report(video_id: str) -> MatchReport:
         stats = match_stats(video_id)

@@ -333,6 +333,8 @@ export interface ShotAdvice {
   why: string;
   confidence: MetricConfidence;
   source: "model" | "rules";
+  /** The hitter's footwork on this shot (split step, steps, lunge, recovery). */
+  footwork?: string | null;
   warnings: string[];
 }
 
@@ -526,5 +528,89 @@ export interface OpponentReport {
   distributions: Distribution[];
   habits: Habit[];
   next_shot: Habit[];
+  caveats: string[];
+}
+
+// ------------------------------------------------------------------ footwork (GET /videos/{id}/footwork)
+
+export type FootSide = "left" | "right";
+export type FootworkKind = "split_step" | "lunge" | "jump" | "chasse" | "cross_step" | "run" | "recovery";
+export type SplitStepTiming = "on_time" | "early" | "late" | "none" | "unknown";
+
+/** One foot planted on the floor (from landing to lift-off). */
+export interface FootContact {
+  player_id: PlayerId;
+  foot: FootSide;
+  start_frame: number;
+  end_frame: number;
+  t_ms: number;
+  end_ms: number;
+  image: Point;
+  court: Point | null;
+}
+
+export interface FootStep {
+  player_id: PlayerId;
+  foot: FootSide;
+  start_frame: number;
+  end_frame: number;
+  t_ms: number;
+  length_m: number;
+  from_court: Point;
+  to_court: Point;
+}
+
+export interface FootworkEvent {
+  event_id: string;
+  player_id: PlayerId;
+  kind: FootworkKind;
+  frame: number;
+  t_ms: number;
+  start_frame: number;
+  end_frame: number;
+  court: Point | null;
+  value: number | null;
+  shot_id: string | null;
+  label: string;
+  confidence: number;
+}
+
+export interface ShotFootwork {
+  shot_id: string;
+  player_id: PlayerId;
+  t_ms: number;
+  split_step: SplitStepTiming;
+  split_offset_ms: number | null;
+  reaction_ms: number | null;
+  steps: number | null;
+  move_m: number | null;
+  peak_speed_mps: number | null;
+  pattern: FootworkKind[];
+  finish: "lunge" | "jump" | "planted" | "unknown";
+  stance_m: number | null;
+  recovery_ms: number | null;
+  recovery_gap_m: number | null;
+  summary: string;
+  confidence: number;
+}
+
+export interface PlayerFootworkQuality {
+  player_id: PlayerId;
+  tracked_pct: number | null;
+  jitter_m: number | null;
+  status: Status;
+}
+
+export interface FootworkResult {
+  schema_version: string;
+  video_id: string;
+  fingerprint: string;
+  base: Point;
+  base_radius_m: number;
+  contacts: FootContact[];
+  steps: FootStep[];
+  events: FootworkEvent[];
+  shots: ShotFootwork[];
+  quality: PlayerFootworkQuality[];
   caveats: string[];
 }

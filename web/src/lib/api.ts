@@ -1,9 +1,10 @@
 import { applyCorrections } from "./corrections";
 import { boundaryLinesM, CORNERS_M, homographyFrom4, projectCourtLines, projectLines } from "./court";
 import { generateMock, type MockAnalysis } from "./mock";
+import { mockFootwork } from "./footwork";
 import { mockQuality } from "./quality";
 import { mockCoach, mockStats } from "./report";
-import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality, HardExampleSummary, OpponentReport, PeopleAssignment, PersonSummary, PlayerProfile } from "./types";
+import type { CoachReport, Correction, FootworkResult, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality, HardExampleSummary, OpponentReport, PeopleAssignment, PersonSummary, PlayerProfile } from "./types";
 
 /** Per-video singles/doubles choice; "auto" lets the players stage decide. */
 export type MatchFormatSetting = "auto" | "singles" | "doubles";
@@ -62,6 +63,8 @@ export interface Api {
   reportExportUrl(videoId: string, format: "md" | "json"): string | null;
   /** Input assessment: camera view, picture, visibility and how far each output can be trusted. */
   getQuality(videoId: string): Promise<VideoQuality>;
+  /** Foot contacts, steps and footwork actions (split step, lunge, jump, ...) linked to the effective hits. */
+  getFootwork(videoId: string): Promise<FootworkResult>;
   /** MP4 clip of one rally (padded 1 s), or null when there is no source file (mock). */
   clipUrl(videoId: string, rallyId: string): string | null;
   /** Who P1..P4 are in this video, and which one is the user. */
@@ -201,6 +204,7 @@ export const liveApi: Api = {
     http<CoachReport>(`/videos/${enc(id)}/report/coach`, { method: "POST", body: JSON.stringify({ provider: provider ?? null }) }),
   reportExportUrl: (id, format) => `${BASE}/videos/${enc(id)}/report/export?format=${format}`,
   getQuality: (id) => http<VideoQuality>(`/videos/${enc(id)}/quality`),
+  getFootwork: (id) => http<FootworkResult>(`/videos/${enc(id)}/footwork`),
   getPeople: (id) => http<PeopleAssignment>(`/videos/${enc(id)}/people`),
   setPeople: (id, people, self_player) =>
     http<PeopleAssignment>(`/videos/${enc(id)}/people`, { method: "PUT", body: JSON.stringify({ people, self_player }) }),
@@ -424,6 +428,10 @@ export function createMockApi(): Api {
     async getQuality(id) {
       must(id);
       return delay(mockQuality(analysis(id).overlay));
+    },
+    async getFootwork(id) {
+      must(id);
+      return delay(mockFootwork(analysis(id).overlay, applyCorrections(analysis(id).events, corrections[id] ?? [], fps(id))));
     },
     async getHardExampleSummary() {
       const all = Object.values(corrections).flat().filter((c) => c.hard_example);

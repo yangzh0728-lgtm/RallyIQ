@@ -212,6 +212,14 @@ def test_match_report_and_coach(client, sample_video, monkeypatch):
     assert rep["coach_stale"] is True
     won = next(m for m in rep["stats"]["players"][0]["metrics"] if m["key"] == "P1.win.won")
     assert won["value"] == 1
+    p1_keys = {m["key"] for m in rep["stats"]["players"][0]["metrics"]}
+    assert {"P1.footwork.split_step_pct", "P1.footwork.recovered_pct", "P1.footwork.lunges"} <= p1_keys
+
+    fw = client.get(f"/api/videos/{vid}/footwork")
+    assert fw.status_code == 200, fw.text
+    fw = fw.json()
+    assert fw["video_id"] == vid and fw["contacts"] and {q["player_id"] for q in fw["quality"]} == {"P1", "P2"}
+    assert client.get("/api/videos/nope/footwork").status_code == 404
 
     md = client.get(f"/api/videos/{vid}/report/export", params={"format": "md"})
     assert md.status_code == 200 and md.headers["content-type"].startswith("text/markdown")

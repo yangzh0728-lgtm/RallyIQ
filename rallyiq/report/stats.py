@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from bisect import bisect_right
 from collections import Counter
 from collections.abc import Iterable
@@ -39,7 +40,10 @@ from ..contracts import (
     team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
+from ..footwork import Footwork
 from .moments import shot_moments
+
+log = logging.getLogger("rallyiq.report")
 
 PLAYERS = ("P1", "P2")
 DOUBLES_PLAYERS = ("P1", "P3", "P2", "P4")
@@ -224,8 +228,64 @@ def _movement(samples, spans, fps: float) -> dict:
     return res
 
 
+def _footwork_stats(pid: str, fw: Footwork, spans: list[tuple[int, int]], metric_ok: bool,
+                    singles: bool) -> tuple[list[Metric], list[Distribution]]:
+    """Footwork metrics of one player (脚步): split steps, reaction, recovery, steps, lunges, jumps, speed."""
+    q = next((x for x in fw.quality(spans) if x.player_id == pid), None)
+    if q is None:
+        return [], []
+    degrade = not metric_ok or q.status != "ok"
+    noise = (f"脚部定位误差约 {q.jitter_m:.2f} 米，只作参考" if q.status != "ok" and q.jitter_m is not None else None)
+    m: list[Metric] = []
+    d: list[Distribution] = []
+    starts = [a for a, _ in spans]
+    in_rally = [e for e in fw.footwork_events if e.player_id == pid and _span_of(e.frame, spans, starts) is not None]
+    shots = [x for x in fw.shots if x.player_id == pid]
+    if singles:
+        judged = [v for k, (p, v, _) in fw.split_judgements().items() if p == pid and v != "unknown"]
+        split = [v for v in judged if v != "none"]
+        on_time = [v for v in judged if v == "on_time"]
+        offsets = [e.value for e in in_rally if e.kind == "split_step" and e.value is not None]
+        m.append(_metric(f"{pid}.footwork.split_step_pct", "对手击球时做启动步的比例", _pct(len(split), len(judged)), "%",
+                         len(judged), 30, 10, degrade, noise or "启动步 = 对手击球前后双脚同时轻跳再落地"))
+        m.append(_metric(f"{pid}.footwork.split_on_time_pct", "启动步时机合适的比例", _pct(len(on_time), len(judged)), "%",
+                         len(judged), 30, 10, degrade, "合适 = 在对手击球前 0.1 秒到击球后 0.3 秒之间落地"))
+        m.append(_metric(f"{pid}.footwork.split_offset_ms", "启动步落地时刻（相对对手击球，中位数）",
+                         float(median(offsets)) if offsets else None, "ms", len(offsets), 20, 6, degrade,
+                         "负数 = 在对手击球前就落地了", digits=0))
+        react = [x.reaction_ms for x in shots if x.reaction_ms is not None]
+        m.append(_metric(f"{pid}.footwork.reaction_ms", "对手击球到起动（中位数）", float(median(react)) if react else None,
+                         "ms", len(react), 20, 6, degrade, "朝自己下一拍击球位置方向的移动；0 = 对手击球时已在移动",
+                         digits=0))
+        gaps = [x.recovery_gap_m for x in shots if x.recovery_gap_m is not None]
+        m.append(_metric(f"{pid}.footwork.recovery_gap_m", "对手击球时离中心的距离（中位数）",
+                         float(median(gaps)) if gaps else None, "m", len(gaps), 20, 6, degrade, noise))
+        m.append(_metric(f"{pid}.footwork.recovered_pct", "对手击球前回到中心的比例",
+                         _pct(sum(g <= fw.base_radius for g in gaps), len(gaps)), "%", len(gaps), 20, 6, degrade,
+                         f"中心 = 本方半场中线、离底线 {fw.base[1]:.1f} 米处，半径 {fw.base_radius:.1f} 米"))
+        steps = [x.steps for x in shots if x.steps is not None]
+        m.append(_metric(f"{pid}.footwork.steps_per_shot", "每拍移动步数（中位数）", float(median(steps)) if steps else None,
+                         "步", len(steps), 20, 6, degrade, noise))
+    kinds = Counter(e.kind for e in in_rally)
+    m.append(_metric(f"{pid}.footwork.lunges", "弓步击球次数", kinds.get("lunge", 0), "次", len(shots), 20, 6, degrade,
+                     "两脚相距 1 米以上且最后一步跨出 0.5 米以上", digits=0))
+    m.append(_metric(f"{pid}.footwork.jumps", "起跳次数", kinds.get("jump", 0), "次", len(shots), 20, 6, degrade, digits=0))
+    m.append(_metric(f"{pid}.footwork.steps", "回合内步数", sum(1 for st in fw.steps_of(pid)
+                                                                  if _span_of(st.end_frame, spans, starts) is not None),
+                     "步", len(shots), 20, 6, degrade, noise, digits=0))
+    sp = fw.speeds(pid, spans)
+    m.append(_metric(f"{pid}.footwork.top_speed_mps", "最快移动速度（前 5%）", float(np.percentile(sp, 95)) if len(sp) else None,
+                     "m/s", len(sp), 300, 60, degrade, noise))
+    d.append(_dist(f"{pid}.footwork.patterns", "步法使用（次数）",
+                   {"并步": kinds.get("chasse", 0), "交叉步": kinds.get("cross_step", 0), "跑动": kinds.get("run", 0),
+                    "弓步": kinds.get("lunge", 0), "起跳": kinds.get("jump", 0)}, 30, 10, degrade,
+                   "从对手击球到本人击球之间的步法"))
+    return m, d
+
+
 def _player_stats(pid: str, events: EventsResult, rallies_by_id: dict[str, Rally], players: PlayerTracks | None,
-                  spans: list[tuple[int, int]], fps: float, metric_ok: bool, rally_minutes: float) -> PlayerStats:
+                  spans: list[tuple[int, int]], fps: float, metric_ok: bool, rally_minutes: float,
+                  fw: Footwork | None = None) -> PlayerStats:
     shots = [s for s in events.shots if s.hitter == pid]
     n_shots_known = sum(1 for s in events.shots if s.hitter is not None)
     degrade = not metric_ok
@@ -269,6 +329,12 @@ def _player_stats(pid: str, events: EventsResult, rallies_by_id: dict[str, Rally
                        {z[0]: mv["depth"].get(z[0], 0) for z in DEPTH_ZONES}, 300, 60, degrade))
         d.append(_dist(f"{pid}.pos.lateral_zones", "回合内站位：左中右（本人视角，帧数）",
                        {z[0]: mv["lateral"].get(z[0], 0) for z in LATERAL_ZONES}, 300, 60, degrade))
+
+    # ---- footwork (脚步) from the ankle keypoints
+    if fw is not None:
+        fm, fd = _footwork_stats(pid, fw, spans, metric_ok, events.match_format == "singles")
+        m += fm
+        d += fd
 
     # ---- where they hit from
     hit_zones: Counter = Counter()
@@ -409,10 +475,18 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
     if not shot_types_available:
         caveats.append("击球类型分类尚未接入，暂不评价具体技术动作或球路选择。")
 
-    moments = shot_moments(events, players, fps, metric_ok) if shot_types_available else []
+    fw = None
+    if players is not None and calibration is not None:
+        try:
+            fw = Footwork(events, players, calibration, fps)
+        except Exception:  # noqa: BLE001 - footwork is an extra; never fail the report on it
+            log.warning("footwork analysis failed for %s", events.video_id, exc_info=True)
+    if fw is not None and fw.runs:
+        caveats.append("脚步数据来自脚踝关键点：远端球员或低分辨率画面下步伐细节只作参考；启动步与回位以识别出的击球时刻为准。")
+    moments = shot_moments(events, players, fps, metric_ok, footwork=fw) if shot_types_available else []
     if shot_types_available and players is not None and events.match_format == "doubles":
         caveats.append("逐拍击球建议暂只支持单打。")
-    player_stats = [_player_stats(pid, events, rallies_by_id, players, spans, fps, metric_ok, rally_minutes)
+    player_stats = [_player_stats(pid, events, rallies_by_id, players, spans, fps, metric_ok, rally_minutes, fw)
                     for pid in (DOUBLES_PLAYERS if events.match_format == "doubles" else PLAYERS)]
     return MatchStats(
         video_id=events.video_id, fingerprint=fingerprint(events, players, calibration),

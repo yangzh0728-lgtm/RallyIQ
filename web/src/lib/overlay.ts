@@ -1,4 +1,5 @@
 import { CORNER_NAMES } from "./court";
+import { drawFootwork, type FootIndex } from "./footwork";
 import type { CourtLines, OverlayData, OverlayFrame, PlayerId, Point } from "./types";
 
 /** Index of the last frame with t_ms <= t (binary search; frames are sorted by time). */
@@ -52,10 +53,11 @@ export interface Layers {
   bbox: boolean;
   shuttle: boolean;
   court: boolean;
+  feet: boolean; // footprints (planted / just lifted) and footwork actions
   opacity: number; // 0..1
 }
 
-export const DEFAULT_LAYERS: Layers = { ai: true, skeleton: true, bbox: false, shuttle: true, court: true, opacity: 0.9 };
+export const DEFAULT_LAYERS: Layers = { ai: true, skeleton: true, bbox: false, shuttle: true, court: true, feet: true, opacity: 0.9 };
 
 const KP_MIN_CONF = 0.3;
 const TRAIL_FRAMES = 14;
@@ -68,6 +70,7 @@ export function drawOverlay(
   colorOf: (playerId: PlayerId | null) => string,
   calibPoints: Point[] | null,
   choosingCourt = false,
+  feet: FootIndex | null = null,
 ) {
   const { canvas } = ctx;
   const sx = canvas.width / data.video.width;
@@ -161,6 +164,8 @@ export function drawOverlay(
       }
     }
   }
+
+  if (layers.feet && feet && f) drawFootwork(ctx, feet, f.frame, data.video.fps, colorOf, px, layers.opacity);
 
   ctx.globalAlpha = layers.opacity;
   if (layers.shuttle && idx >= 0) {
