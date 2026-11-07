@@ -79,16 +79,20 @@ def download_section(video_id: str, start_s: float, dur_s: float, dest: Path) ->
     return out
 
 
-def cut_cmd(src: Path, offset_s: float, dur_s: float, out: Path, max_height: int | None = None) -> list[str]:
+def cut_cmd(src: Path, offset_s: float, dur_s: float, out: Path, max_height: int | None = None,
+            audio: bool = True) -> list[str]:
     vf = ["-vf", f"scale=-2:'min({max_height},ih)'"] if max_height else []
+    # 自有素材不要音轨：iPhone 的 .MOV 带 apple_apac（空间音频），ffmpeg 解不了，会让整段切片失败
+    a = ["-map", "0:a?", "-c:a", "aac"] if audio else ["-an"]
     return ["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{offset_s:.3f}", "-i", str(src),
-            "-t", f"{dur_s:.3f}", "-map", "0:v:0", "-map", "0:a?", *vf, "-c:v", "libx264", "-crf", "16",
-            "-preset", "medium", "-pix_fmt", "yuv420p", "-c:a", "aac", str(out)]
+            "-t", f"{dur_s:.3f}", "-map", "0:v:0", *vf, "-c:v", "libx264", "-crf", "16",
+            "-preset", "medium", "-pix_fmt", "yuv420p", *a, str(out)]
 
 
-def cut(src: Path, offset_s: float, dur_s: float, out: Path, max_height: int | None = None) -> None:
+def cut(src: Path, offset_s: float, dur_s: float, out: Path, max_height: int | None = None,
+        audio: bool = True) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(cut_cmd(src, offset_s, dur_s, out, max_height), check=True)
+    subprocess.run(cut_cmd(src, offset_s, dur_s, out, max_height, audio), check=True)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -119,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
             if src is None:
                 own_missing.append(c)
                 continue
-            cut(src, c["start_s"], c["duration_s"], out, MAX_HEIGHT)
+            cut(src, c["start_s"], c["duration_s"], out, MAX_HEIGHT, audio=False)
             info = probe(out)
             meta = {"clip_id": c["id"], "video_id": Path(c["file"]).stem, "source_file": c["file"],
                     "start_ms": int(round(c["start_s"] * 1000)), "duration_ms": int(round(c["duration_s"] * 1000)),

@@ -52,6 +52,17 @@ def test_cut_cmd_scales_only_when_asked():
     cmd = extract_clips.cut_cmd(Path("a.mp4"), 1.5, 2.0, Path("b.mp4"), 1080)
     assert "scale=-2:'min(1080,ih)'" in cmd and cmd[cmd.index("-ss") + 1] == "1.500"
     assert "-vf" not in extract_clips.cut_cmd(Path("a.mp4"), 1.5, 2.0, Path("b.mp4"))
+    assert "0:a?" in cmd and "-an" not in cmd
+    no_audio = extract_clips.cut_cmd(Path("a.mov"), 0, 1, Path("b.mp4"), 1080, audio=False)
+    assert "-an" in no_audio and "0:a?" not in no_audio  # iPhone apple_apac audio can't be decoded
+
+
+def test_label_tool_hit_tag_handles_unknown_side():
+    from evaluation.tools.label_tool import hit_tag
+
+    assert hit_tag([]) == ""
+    assert hit_tag([{"t_ms": 1, "side": "near"}]) == "  HIT near"
+    assert hit_tag([{"t_ms": 1, "side": None}]) == "  HIT ?"  # pre-annotations leave side empty
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
