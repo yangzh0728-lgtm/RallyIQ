@@ -18,7 +18,8 @@ What it does:
   frames. BatchNorm stays frozen by default (batches are tiny).
 * Validation on held-out clips: one centre-weighted pass like the detector, then a peak
   per frame; a hit is a peak within ``tol_px`` source pixels (scaled for 1080p). Reports
-  precision / recall / F1 at a few peak thresholds; the best epoch by F1 at 0.5 is kept.
+  precision / recall / F1 at a few peak thresholds; the best epoch by F1 at ``select_at`` (the
+  detector's operating peak threshold, 0.2) is kept.
 
 The checkpoint is written in the format the detector loads (``model`` + ``param_dict``)
 plus a ``finetune`` block describing the data and the validation result.
@@ -64,6 +65,10 @@ class TrainConfig:
     seed: int = 0
     tol_px: float = 10.0  # at 1080p; scaled with the frame height
     thresholds: tuple[float, ...] = (0.5, 0.3, 0.2)
+    # Epochs are compared by F1 at this peak threshold: the one the detector runs at
+    # (DetectorConfig.peak_threshold). Selecting at 0.5 once picked an epoch that was
+    # worse at 0.2 (more low-score false positives).
+    select_at: float = 0.2
 
 
 @dataclass
@@ -72,9 +77,8 @@ class ValResult:
     loss: float
     per_threshold: dict[str, dict[str, float]] = field(default_factory=dict)
 
-    @property
-    def f1(self) -> float:
-        return self.per_threshold.get("0.5", {}).get("f1", 0.0)
+    def score(self, at: float) -> float:
+        return self.per_threshold.get(str(at), {}).get("f1", 0.0)
 
 
 # --------------------------------------------------------------------- data
@@ -278,8 +282,12 @@ def train(
     out: Path,
     cfg: TrainConfig | None = None,
     progress: Callable[[str], None] = print,
+    compare: dict[str, Path] | None = None,
 ) -> dict:
-    """Fine-tune ``weights`` and write the best checkpoint to ``out``. Returns the report."""
+    """Fine-tune ``weights`` and write the best checkpoint to ``out``. Returns the report.
+
+    ``compare`` names other checkpoints (e.g. the model currently in use) to evaluate on
+    the same validation frames first; their results are in ``report["compare"]``."""
     import torch
 
     from .detector import pick_device
@@ -301,12 +309,24 @@ def train(
     if not pool:
         raise ValueError("no training windows: check that the train clips have labeled frames")
 
+    if cfg.select_at not in cfg.thresholds:
+        cfg.thresholds = (*cfg.thresholds, cfg.select_at)
+    compared: dict[str, dict] = {}
+    for name, path in (compare or {}).items():
+        if not val_data:
+            break
+        other, _ = load_model(Path(path), device)
+        _loss, res = evaluate(other, val_data, cfg, device)
+        compared[name] = {"weights": str(path), "val": res}
+        progress(f"{name}: " + _fmt(res))
+        del other
+
     history: list[ValResult] = []
     if val_data:
         loss, res = evaluate(net, val_data, cfg, device)
         history.append(ValResult(0, loss, res))
-        progress(f"epoch 0 (pretrained): val loss {loss:.4f} " + _fmt(res))
-    best = history[0].f1 if history else -1.0
+        progress(f"epoch 0 (start): val loss {loss:.2e} " + _fmt(res))
+    best = history[0].score(cfg.select_at) if history else -1.0
     best_state = {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
     best_epoch = 0
 
@@ -335,13 +355,13 @@ def train(
             loss.backward()
             opt.step()
             tl.append(float(loss.detach()))
-        msg = f"epoch {epoch}: train loss {np.mean(tl):.4f}"
+        msg = f"epoch {epoch}: train loss {np.mean(tl):.2e}"
         if val_data:
             vloss, res = evaluate(net, val_data, cfg, device)
             history.append(ValResult(epoch, vloss, res))
-            msg += f", val loss {vloss:.4f} " + _fmt(res)
-            if history[-1].f1 > best:
-                best, best_epoch = history[-1].f1, epoch
+            msg += f", val loss {vloss:.2e} " + _fmt(res)
+            if history[-1].score(cfg.select_at) > best:
+                best, best_epoch = history[-1].score(cfg.select_at), epoch
                 best_state = {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
         else:
             best_state = {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
@@ -351,6 +371,9 @@ def train(
     report = {
         "base_weights": str(weights),
         "best_epoch": best_epoch,
+        "select_at": cfg.select_at,
+        "best_val": next((h.per_threshold for h in history if h.epoch == best_epoch), None),
+        "compare": compared,
         "train_clips": {c.clip_id: len(c.labels) for c in train_clips},
         "val_clips": {c.clip_id: len(c.labels) for c in val_clips},
         "config": {k: v for k, v in asdict(cfg).items() if k != "device"},
