@@ -30,6 +30,7 @@ from typing import Any
 import numpy as np
 
 from ..contracts import SHOT_TYPES
+from .context import CONTEXT_FEATURES, context_features
 from .features import StrokeFeatures
 
 SKLEARN_NAME = "sklearn_hgb"
@@ -47,6 +48,13 @@ FEATURES = (
     "last_in_rally",
     "index_in_rally",
 )
+
+
+# Feature set "v2": the base evidence plus the rally context, direction, pose and early-flight
+# features of ``context.py``. On 6 held-out ShuttleSet matches it lifted accuracy from ~0.56 to
+# ~0.63 (see rallyiq/strokes/README.md). Models remember which set they were trained on.
+FEATURES_V2 = FEATURES + CONTEXT_FEATURES
+FEATURE_SETS = {"base": FEATURES, "v2": FEATURES_V2}
 
 
 class SklearnUnavailable(RuntimeError):
@@ -67,6 +75,26 @@ def feature_row(f: StrokeFeatures) -> list[float]:
 
 def feature_matrix(feats: Sequence[StrokeFeatures]) -> np.ndarray:
     return np.asarray([feature_row(f) for f in feats], dtype=float).reshape(-1, len(FEATURES))
+
+
+def full_matrix(feats: Sequence[StrokeFeatures], events=None, shuttle=None, players=None,
+                feature_set: str = "v2") -> np.ndarray:
+    """The model input for ``feature_set`` ("base" or "v2"; v2 needs the clip's events/shuttle/players)."""
+    X = feature_matrix(feats)
+    if feature_set == "base":
+        return X
+    if feature_set != "v2":
+        raise ValueError(f"unknown stroke feature set {feature_set!r}")
+    if events is None:
+        raise ValueError("feature set v2 needs the events of the clip")
+    return np.hstack([X, context_features(events, shuttle, players, feats)])
+
+
+def feature_set_of(names: Sequence[str]) -> str | None:
+    for k, v in FEATURE_SETS.items():
+        if list(names) == list(v):
+            return k
+    return None
 
 
 def _sklearn():
@@ -168,13 +196,15 @@ def train(X: np.ndarray, y: Sequence[str], groups: Sequence[str], cfg: TrainConf
     return model, report
 
 
-def save(model: Any, path: str | Path, meta: dict[str, Any] | None = None) -> None:
+def save(model: Any, path: str | Path, meta: dict[str, Any] | None = None, feature_set: str = "base") -> None:
     import joblib
     import sklearn
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump({"model": model, "features": list(FEATURES), "sklearn": sklearn.__version__, **(meta or {})}, path)
+    blob = {"model": model, "features": list(FEATURE_SETS[feature_set]), "feature_set": feature_set,
+            "sklearn": sklearn.__version__, **(meta or {})}
+    joblib.dump(blob, path)
 
 
 def load(path: str | Path) -> dict[str, Any]:
@@ -185,16 +215,20 @@ def load(path: str | Path) -> dict[str, Any]:
     if not p.is_file():
         raise SklearnUnavailable(f"stroke model not found: {p}")
     blob = joblib.load(p)
-    if list(blob.get("features", [])) != list(FEATURES):
+    fs = feature_set_of(blob.get("features", []))
+    if fs is None:
         raise SklearnUnavailable(f"{p}: trained on different features {blob.get('features')}; retrain it")
+    blob["feature_set"] = fs
     return blob
 
 
-def predict_proba(model: Any, feats: Sequence[StrokeFeatures]) -> list[dict[str, float]]:
-    """One {type: p} per shot over all 12 types (types the model never saw get 0)."""
+def predict_proba(model: Any, feats: Sequence[StrokeFeatures], X: np.ndarray | None = None) -> list[dict[str, float]]:
+    """One {type: p} per shot over all 12 types (types the model never saw get 0).
+
+    ``X`` is the model input when it is not the base feature matrix (feature set v2)."""
     if not feats:
         return []
-    P = model.predict_proba(feature_matrix(feats))
+    P = model.predict_proba(feature_matrix(feats) if X is None else X)
     classes = [str(c) for c in model.classes_]
     out = []
     for row in P:
@@ -208,9 +242,11 @@ def predict_proba(model: Any, feats: Sequence[StrokeFeatures]) -> list[dict[str,
 
 def make_model_fn(model_path: str | Path):
     """A ``classify`` model backend from a saved model file."""
-    model = load(model_path)["model"]
+    blob = load(model_path)
+    model, fs = blob["model"], blob["feature_set"]
 
-    def fn(events, shuttle, players, feats):  # noqa: ARG001 - ModelFn signature
-        return {f.shot_id: p for f, p in zip(feats, predict_proba(model, feats))}
+    def fn(events, shuttle, players, feats):
+        X = full_matrix(feats, events, shuttle, players, fs)
+        return {f.shot_id: p for f, p in zip(feats, predict_proba(model, feats, X))}
 
     return fn

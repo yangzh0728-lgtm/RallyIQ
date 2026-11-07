@@ -81,9 +81,10 @@ API 把它按 `shot_id` 合并进 `GET /api/videos/{id}/events`（`shot_type` + 
 ```bash
 # 合成数据快速检查（不代表真实视频精度）
 python scripts/learn_strokes.py --source synthetic --out ~/rallyiq-data/models/strokes_synth.joblib
-# ShuttleSet 训练片段（scripts/build_train_set.py 已跑过管线，只读缓存产物）
-python scripts/learn_strokes.py --source shuttleset --data ~/rallyiq-data/public/shuttleset_train \
-    --out ~/rallyiq-data/models/strokes.joblib
+# ShuttleSet 训练片段（scripts/build_train_set.py 已跑过管线，只读缓存产物；可给多个文件夹）
+python scripts/learn_strokes.py --source shuttleset \
+    --data ~/rallyiq-data/public/shuttleset_train ~/rallyiq-data/public/shuttleset_train_v3 \
+    --out ~/rallyiq-data/models/strokes.joblib   # 默认 --features v2
 # 在留出的比赛上评估
 python scripts/learn_strokes.py --source shuttleset --data ~/rallyiq-data/public/shuttleset_test \
     --eval ~/rallyiq-data/models/strokes.joblib
@@ -96,6 +97,27 @@ python scripts/learn_strokes.py --source shuttleset --data ~/rallyiq-data/public
 
 合成数据 16 段视频（658 拍）上：规则 0.88，sklearn 交叉验证 0.93（宏 F1 0.92），
 主要混淆仍是 推球/平抽、放网/勾对角。同样只说明流程可用，真实精度要用 ShuttleSet 跑出来。
+
+### 特征集 v2（`context.py`）和真实视频上的结果
+
+`--features v2`（默认）在上面的证据之外再加 18 个特征，都来自管线已有的结果，不增加计算：
+
+- **回合上下文**：来球（上一拍的飞行时间、弧高、对手的击球高度、站位深度）和回球（下一拍的击球高度、飞行时间）。挡网接杀球、挑球接放网，这些靠单拍本身分不出来。
+- **方向**：击球方和接球方的左右位置（以击球方自己的左右为准）以及是否斜线（`cross < 0`）。
+- **姿态和出球**：最高手腕和手肘相对头部的高度、手腕离身体的距离，以及击球前后 200 ms 内羽毛球在画面里的速度（以击球者身高为单位）。
+
+ShuttleSet 结果（2026-11-07；训练 = 38 场里已跑完的 59 段、915 拍；测试 = 整场留出的 6 场、184 拍；
+只统计时间上对上标注的击球，±3 帧）：
+
+| 方法 | 测试准确率 | 测试宏 F1 | 训练集按比赛交叉验证 |
+| --- | --- | --- | --- |
+| 规则 `rules_v1` | 45.7% | — | 42.4% |
+| sklearn，基础特征 | 56.0% | 0.43 | 64.5% |
+| sklearn，特征 v2 | **63.6%** | **0.51** | 67.4% |
+
+经过完整 `strokes` 阶段（含复核策略）时 v2 在测试集上是 62.5%。测试只有 184 拍，±3.5 个百分点以内的差别不可靠；
+交叉验证和测试两边 v2 都更好。去掉任何一组特征（方向、来球、回球、出球速度）测试准确率都会下降；姿态组单独加效果不明显，
+保留是因为交叉验证上有帮助。仍然最难的是 推球/挑球、平抽/挡网、放网/勾对角。旧模型（基础特征）照样能加载。
 
 ## 可选：BST（骨架 + 羽毛球 Transformer）
 

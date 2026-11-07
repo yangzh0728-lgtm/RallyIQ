@@ -64,8 +64,13 @@ def segment_events(
             end_reason=span.end_reason,
             hits=hits,
         )
-        _decide_rally(rally, cfg)
         rallies.append(rally)
+    if cfg.pose_hits != "off":
+        from .pose_hits import get_model, recover
+
+        recover(rallies, poses, get_model(cfg.pose_hits), frame_ms=fps_ms)
+    for rally in rallies:
+        _decide_rally(rally, cfg)
     return rallies
 
 

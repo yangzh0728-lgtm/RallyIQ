@@ -6,7 +6,8 @@
     python scripts/learn_strokes.py --source synthetic --out ~/rallyiq-data/models/strokes_synth.joblib
 
     # ShuttleSet clips built and run by scripts/build_train_set.py (cached artifacts, no video work)
-    python scripts/learn_strokes.py --source shuttleset --data ~/rallyiq-data/public/shuttleset_train \\
+    python scripts/learn_strokes.py --source shuttleset \\
+        --data ~/rallyiq-data/public/shuttleset_train ~/rallyiq-data/public/shuttleset_train_v3 \\
         --out ~/rallyiq-data/models/strokes.joblib
 
     # score a saved model on the held-out matches (build_train_set.py --split test)
@@ -47,16 +48,20 @@ from rallyiq.strokes.taxonomy import from_shuttleset  # noqa: E402
 
 
 class Example:
-    """One clip's matched shots: features, labelled types, rules' prediction."""
+    """One clip's matched shots: features, model inputs per feature set, labelled types, rules' prediction."""
 
-    def __init__(self, group: str, feats, y: list[str], rules: list[str | None]):
-        self.group, self.feats, self.y, self.rules = group, feats, y, rules
+    def __init__(self, group: str, feats, X: dict[str, np.ndarray], y: list[str], rules: list[str | None]):
+        self.group, self.feats, self.X, self.y, self.rules = group, feats, X, y, rules
 
 
 def _from_clip(group: str, events: EventsResult, shuttle, players, fps: float, truth: dict[str, str]) -> Example:
-    feats = [f for f in shot_features(events, shuttle, players, fps) if f.shot_id in truth]
+    all_feats = shot_features(events, shuttle, players, fps)
+    keep = [i for i, f in enumerate(all_feats) if f.shot_id in truth]
+    feats = [all_feats[i] for i in keep]
+    # context features look at each shot's neighbours, so compute them on the whole clip first
+    X = {fs: L.full_matrix(all_feats, events, shuttle, players, fs)[keep] for fs in L.FEATURE_SETS}
     rules = {s.shot_id: s.stroke.shot_type for s in classify(events, shuttle, players, fps).shots}
-    return Example(group, feats, [truth[f.shot_id] for f in feats], [rules.get(f.shot_id) for f in feats])
+    return Example(group, feats, X, [truth[f.shot_id] for f in feats], [rules.get(f.shot_id) for f in feats])
 
 
 # ------------------------------------------------------------------ synthetic
@@ -143,7 +148,9 @@ def _rules_line(ex: list[Example]) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--source", choices=("synthetic", "shuttleset"), required=True)
-    ap.add_argument("--data", type=Path, help="shuttleset: build_train_set.py output folder")
+    ap.add_argument("--data", type=Path, nargs="+", help="shuttleset: build_train_set.py output folder(s)")
+    ap.add_argument("--features", choices=tuple(L.FEATURE_SETS), default="v2",
+                    help="base = the rules' evidence only; v2 = plus rally context, direction, pose, early flight")
     ap.add_argument("--shuttleset", type=Path, help="ShuttleSet/set dir, for label files without shot_type")
     ap.add_argument("--seeds", type=int, default=24, help="synthetic: number of videos")
     ap.add_argument("--tol", type=float, default=3, help="frames between a predicted shot and its labelled stroke")
@@ -158,34 +165,38 @@ def main(argv: list[str] | None = None) -> int:
         if a.data is None:
             ap.error("--data is required for --source shuttleset")
         set_dir = None
-        if a.shuttleset or not a.data.joinpath("labels").exists():
+        if a.shuttleset or not all(d.expanduser().joinpath("labels").exists() for d in a.data):
             import public_eval
 
             set_dir = public_eval.shuttleset_dir(a.shuttleset)
-        ex = shuttleset_examples(a.data.expanduser(), set_dir, a.tol)
+        ex = [e for d in a.data for e in shuttleset_examples(d.expanduser(), set_dir, a.tol)]
     ex = [e for e in ex if e.feats]
     if not ex:
         print("no labelled shots found")
         return 1
-    X = np.vstack([L.feature_matrix(e.feats) for e in ex])
     y = [t for e in ex for t in e.y]
     groups = [e.group for e in ex for _ in e.y]
     print(f"\n{len(y)} shots, {len(set(groups))} groups, types: {dict(Counter(y).most_common())}")
     print(_rules_line(ex))
 
     if a.eval:
-        model = L.load(a.eval)["model"]
+        blob = L.load(a.eval)
+        model = blob["model"]
+        X = np.vstack([e.X[blob["feature_set"]] for e in ex])
         pred = model.predict(X)
         acc = float(np.mean(pred == np.asarray(y, dtype=object)))
         print(f"{a.eval.name}: accuracy {acc:.3f}")
         return 0
 
+    X = np.vstack([e.X[a.features] for e in ex])
     model, report = L.train(X, y, groups, L.TrainConfig(folds=a.folds))
-    md = f"# Stroke-type model ({L.SKLEARN_NAME}, source: {a.source})\n\n{_rules_line(ex)}\n\n{report.markdown()}"
+    md = (f"# Stroke-type model ({L.SKLEARN_NAME}, features: {a.features}, source: {a.source})\n\n"
+          f"{_rules_line(ex)}\n\n{report.markdown()}")
     print("\n" + md)
     if a.out:
         out = a.out.expanduser()
-        L.save(model, out, {"source": a.source, "n": len(y), "cv": {"accuracy": report.accuracy, "macro_f1": report.macro_f1}})
+        L.save(model, out, {"source": a.source, "n": len(y), "cv": {"accuracy": report.accuracy, "macro_f1": report.macro_f1}},
+               feature_set=a.features)
         out.with_suffix(".md").write_text(md, encoding="utf-8")
         print(f"saved {out} (+ {out.with_suffix('.md').name})")
     return 0

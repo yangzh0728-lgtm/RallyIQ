@@ -78,3 +78,30 @@ frames, same player). Current numbers (10 seeds × 4 rallies):
 
 These numbers only show the rules behave as designed; they say nothing yet
 about real video. Re-tune on the first real clips.
+
+## Pose-sequence hit recovery (`pose_hits.py`, optional)
+
+The candidates above come from the shuttle, so a hit is lost when the shuttle is not seen around the
+contact. `pose_hits.py` reads each player's pose over ~0.5 s (wrist height and speed, elbow, lean,
+crouch) and gives the probability that this player hits right then. After the shuttle-based pass it
+adds, per rally, **the serve** before the first hit (by the other side) and **the missed hit between two
+consecutive same-side hits**, each tagged `pose_recovered` and `needs_review` (source `pose_v1`).
+Switch it on with `{"events": {"pose_hits": "auto"}}` (bundled `models/pose_hits.json`) or a path;
+the default is `"off"`.
+
+Model: gradient-boosted trees exported to JSON, evaluated with numpy (no scikit-learn at run time).
+`scripts/learn_pose_hits.py train` trains it on the ShuttleSet clips and tunes the two thresholds on
+out-of-fold predictions; `eval` compares with / without on held-out clips.
+
+ShuttleSet, 2026-11-07, shuttle scorer `hit_scorer_v1e` (±3 frames, same side):
+
+| | precision | recall | hit F1 |
+| --- | --- | --- | --- |
+| training matches, out of fold (59 clips): shuttle only | 77.7% | 62.7% | 69.4% |
+| + pose recovery | 77.5% | 65.7% | **71.1%** |
+| 6 held-out matches (14 clips): shuttle only | 80.5% | 61.1% | 69.5% |
+| + pose recovery | 77.6% | 66.1% | **71.4%** |
+
+Most of the gain is the same-side gap. Serves are often missed because the pose stage has no pose
+for the server around the serve (between-rally camera cuts), so pose recovery finds few of them.
+Correcting a detected hit's side from the pose model was tried and lowered F1, so it is not done.
