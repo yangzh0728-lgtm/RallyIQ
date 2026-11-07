@@ -198,3 +198,22 @@ def test_uncertain_frames_and_jump():
     assert s.jump_uncertain(forward=False) and s.frame == 14
     s.seek(79)
     assert not s.jump_uncertain()
+
+
+def test_label_session_resume_position():
+    fps = 30.0
+    t = lambda f: int(round(START + f * 1000 / fps))  # noqa: E731
+    pre = schema.empty_doc("x", "prediction", 1920, 1080, fps, (START, START + 10_000))
+    pre["shuttle"] = [{"t_ms": t(f), "visible": True, "xy": [10.0, 10.0]} for f in range(50)]
+    doc = schema.empty_doc("x", "label", 1920, 1080, fps, (START, START + 10_000))
+    doc["shuttle"] = [dict(it) for it in pre["shuttle"]]
+    s = Session(doc, START, 100)
+    assert s.resume_frame(pre) is None  # nothing edited yet
+    s.seek(17); s.shuttle_click(50, 50)
+    assert s.resume_frame(pre) == 17  # inferred from the last edited frame
+    s.uncertain = [5, 20, 30]
+    s.seek(0); s.jump_uncertain(); s.jump_uncertain()
+    assert doc["review_frame"] == 20 and s.uncertain_done() == 2
+    s.jump_uncertain(forward=False)
+    assert doc["review_frame"] == 20 and s.resume_frame(pre) == 20
+    schema.validate(doc)
