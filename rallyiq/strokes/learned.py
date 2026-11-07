@@ -34,6 +34,9 @@ from .context import CONTEXT_FEATURES, context_features
 from .features import StrokeFeatures
 
 SKLEARN_NAME = "sklearn_hgb"
+GBT_NAME = "gbt_v2"
+# Trained on ShuttleSet broadcast singles by scripts/learn_strokes.py --out <...>.json (see README.md).
+BUNDLED = Path(__file__).with_name("models") / "strokes_v2.json"
 
 FEATURES = (
     "contact_h",
@@ -107,7 +110,7 @@ def _sklearn():
 @dataclass(frozen=True)
 class TrainConfig:
     learning_rate: float = 0.08
-    max_iter: int = 300
+    max_iter: int = 100  # more trees did not help on ShuttleSet and triple the bundled JSON
     max_leaf_nodes: int = 15
     min_samples_leaf: int = 10
     l2_regularization: float = 1.0
@@ -207,14 +210,34 @@ def save(model: Any, path: str | Path, meta: dict[str, Any] | None = None, featu
     joblib.dump(blob, path)
 
 
-def load(path: str | Path) -> dict[str, Any]:
-    _sklearn()
-    import joblib
+def export_json(model: Any, feature_set: str, meta: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A fitted ``HistGradientBoostingClassifier`` as JSON (no pickle; loads without scikit-learn)."""
+    from ..gbt import export_hgb
 
+    return {"kind": "strokes_gbt", "features": list(FEATURE_SETS[feature_set]), "feature_set": feature_set,
+            **export_hgb(model), **(meta or {})}
+
+
+def load(path: str | Path) -> dict[str, Any]:
+    """``{"model", "features", "feature_set", ...}`` from a ``.json`` (numpy only) or ``.joblib`` file."""
     p = Path(path).expanduser()
     if not p.is_file():
         raise SklearnUnavailable(f"stroke model not found: {p}")
-    blob = joblib.load(p)
+    if p.suffix == ".json":
+        import json
+
+        from ..gbt import GBT
+
+        spec = json.loads(p.read_text(encoding="utf-8"))
+        if spec.get("kind") != "strokes_gbt":
+            raise SklearnUnavailable(f"{p}: not a stroke model (kind {spec.get('kind')!r})")
+        blob = {k: v for k, v in spec.items() if k not in ("trees", "baseline")}
+        blob["model"] = GBT(spec)
+    else:
+        _sklearn()
+        import joblib
+
+        blob = joblib.load(p)
     fs = feature_set_of(blob.get("features", []))
     if fs is None:
         raise SklearnUnavailable(f"{p}: trained on different features {blob.get('features')}; retrain it")

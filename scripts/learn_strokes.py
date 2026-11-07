@@ -5,6 +5,7 @@
     # quick check on synthetic rallies (says nothing about real video)
     python scripts/learn_strokes.py --source synthetic --out ~/rallyiq-data/models/strokes_synth.joblib
 
+    # .json output = numpy-only model; rallyiq/strokes/models/strokes_v2.json is the bundled one
     # ShuttleSet clips built and run by scripts/build_train_set.py (cached artifacts, no video work)
     python scripts/learn_strokes.py --source shuttleset \\
         --data ~/rallyiq-data/public/shuttleset_train ~/rallyiq-data/public/shuttleset_train_v3 \\
@@ -195,8 +196,12 @@ def main(argv: list[str] | None = None) -> int:
     print("\n" + md)
     if a.out:
         out = a.out.expanduser()
-        L.save(model, out, {"source": a.source, "n": len(y), "cv": {"accuracy": report.accuracy, "macro_f1": report.macro_f1}},
-               feature_set=a.features)
+        meta = {"source": a.source, "n": len(y), "cv": {"accuracy": report.accuracy, "macro_f1": report.macro_f1}}
+        if out.suffix == ".json":  # numpy-only JSON trees (what the repository ships)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(json.dumps(L.export_json(model, a.features, meta), separators=(",", ":")), encoding="utf-8")
+        else:
+            L.save(model, out, meta, feature_set=a.features)
         out.with_suffix(".md").write_text(md, encoding="utf-8")
         print(f"saved {out} (+ {out.with_suffix('.md').name})")
     return 0

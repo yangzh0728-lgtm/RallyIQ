@@ -32,6 +32,7 @@ include = ["rallyiq*"]
 
 [tool.setuptools.package-data]
 "rallyiq.events" = ["models/*.json"]
+"rallyiq.strokes" = ["models/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "evaluation/tests"]

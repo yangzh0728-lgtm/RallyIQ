@@ -97,10 +97,10 @@ ShuttleSet, 2026-11-07, shuttle scorer `hit_scorer_v1e` (±3 frames, same side):
 
 | | precision | recall | hit F1 |
 | --- | --- | --- | --- |
-| training matches, out of fold (59 clips): shuttle only | 77.7% | 62.7% | 69.4% |
-| + pose recovery | 77.5% | 65.7% | **71.1%** |
+| training matches, out of fold (85 clips, 19 matches): shuttle only | 77.3% | 64.3% | 70.2% |
+| + pose recovery | 77.3% | 66.8% | **71.7%** |
 | 6 held-out matches (14 clips): shuttle only | 80.5% | 61.1% | 69.5% |
-| + pose recovery | 77.6% | 66.1% | **71.4%** |
+| + pose recovery | 78.7% | 66.1% | **71.9%** |
 
 Most of the gain is the same-side gap. Serves are often missed because the pose stage has no pose
 for the server around the serve (between-rally camera cuts), so pose recovery finds few of them.
