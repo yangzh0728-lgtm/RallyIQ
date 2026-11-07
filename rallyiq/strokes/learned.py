@@ -32,11 +32,12 @@ import numpy as np
 from ..contracts import SHOT_TYPES
 from .context import CONTEXT_FEATURES, context_features
 from .features import StrokeFeatures
+from .trajectory import TRAJ_FEATURES, traj_features
 
 SKLEARN_NAME = "sklearn_hgb"
-GBT_NAME = "gbt_v2"
+GBT_NAME = "gbt_v3"
 # Trained on ShuttleSet broadcast singles by scripts/learn_strokes.py --out <...>.json (see README.md).
-BUNDLED = Path(__file__).with_name("models") / "strokes_v2.json"
+BUNDLED = Path(__file__).with_name("models") / "strokes_v3.json"
 
 FEATURES = (
     "contact_h",
@@ -57,7 +58,9 @@ FEATURES = (
 # features of ``context.py``. On 6 held-out ShuttleSet matches it lifted accuracy from ~0.56 to
 # ~0.63 (see rallyiq/strokes/README.md). Models remember which set they were trained on.
 FEATURES_V2 = FEATURES + CONTEXT_FEATURES
-FEATURE_SETS = {"base": FEATURES, "v2": FEATURES_V2}
+# Feature set "v3": v2 plus the flight shape of ``trajectory.py`` (aimed at push vs lift).
+FEATURES_V3 = FEATURES_V2 + TRAJ_FEATURES
+FEATURE_SETS = {"base": FEATURES, "v2": FEATURES_V2, "v3": FEATURES_V3}
 
 
 class SklearnUnavailable(RuntimeError):
@@ -86,11 +89,14 @@ def full_matrix(feats: Sequence[StrokeFeatures], events=None, shuttle=None, play
     X = feature_matrix(feats)
     if feature_set == "base":
         return X
-    if feature_set != "v2":
+    if feature_set not in ("v2", "v3"):
         raise ValueError(f"unknown stroke feature set {feature_set!r}")
     if events is None:
-        raise ValueError("feature set v2 needs the events of the clip")
-    return np.hstack([X, context_features(events, shuttle, players, feats)])
+        raise ValueError(f"feature set {feature_set} needs the events of the clip")
+    X = np.hstack([X, context_features(events, shuttle, players, feats)])
+    if feature_set == "v3":
+        X = np.hstack([X, traj_features(events, shuttle, players, feats)])
+    return X
 
 
 def feature_set_of(names: Sequence[str]) -> str | None:
@@ -109,12 +115,15 @@ def _sklearn():
 
 @dataclass(frozen=True)
 class TrainConfig:
-    learning_rate: float = 0.08
-    max_iter: int = 100  # more trees did not help on ShuttleSet and triple the bundled JSON
-    max_leaf_nodes: int = 15
-    min_samples_leaf: int = 10
+    # Chosen by 5-fold grouped CV over 40 settings on the 34 training matches (only then scored
+    # once on the held-out matches): 71.7% -> 73.1% CV. With 34 matches, more and larger trees pay
+    # off, and class weighting no longer helps accuracy.
+    learning_rate: float = 0.06
+    max_iter: int = 300
+    max_leaf_nodes: int = 31
+    min_samples_leaf: int = 40
     l2_regularization: float = 1.0
-    class_weight: str | None = "balanced"  # rare types (net kill, block) still count
+    class_weight: str | None = None
     folds: int = 5
     seed: int = 0
 
