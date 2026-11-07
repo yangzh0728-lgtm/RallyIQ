@@ -1,0 +1,346 @@
+"""Continuous shuttle-model improvement: label -> train -> compare -> keep only if better.
+
+    python scripts/shuttle_loop.py              # run one round (train + compare + maybe promote)
+    python scripts/shuttle_loop.py --status     # current model, history, what to label next
+    python scripts/shuttle_loop.py --rollback   # go back to the previous model
+
+Each round:
+
+1. Collects every **reviewed** label in ``evaluation/labels/``. Each clip is split by time:
+   the first 70% trains, the last 30% validates (``--val-frac``). ``--holdout ID`` keeps a
+   whole clip for validation only, e.g. a camera the model has never been trained on.
+2. Fine-tunes a candidate starting from the original pretrained weights (``--from champion``
+   to continue from the current model instead), picking the best epoch by F1 at the
+   detector's operating peak threshold (0.2).
+3. Evaluates the model currently in use (the "champion") on the **same** validation frames,
+   so the comparison is fair even though the validation set grows as labels are added.
+4. Promotes the candidate only if F1@0.2 improves by at least ``--min-gain`` (0.01) and
+   precision@0.2 drops by no more than ``--max-precision-drop`` (0.03). The margin is there
+   because the candidate's epoch was itself picked on these frames, which flatters it a little. A promoted model is
+   copied to ``weights/shuttle/heatmap.pt``, which the pipeline loads by default (unless
+   ``RALLYIQ_SHUTTLE_WEIGHTS`` points elsewhere). Every model is kept in ``weights/shuttle/loop/``.
+5. Prints which clips to label next, with the exact commands.
+
+A round is skipped when no labels changed since the last one (``--force`` to run anyway).
+``--holdout`` is remembered for later rounds (``--holdout`` with no ids clears it).
+State lives in ``weights/shuttle/loop/state.json``; a log of every round is appended to
+``weights/shuttle/loop/history.md``.
+
+The validation numbers are frame-level detection scores on your own labels. Before trusting
+a promoted model for match statistics, also rerun ``scripts/real_run.py`` and
+``scripts/hits_ablation.py`` on a clip that was not trained on (the script prints the command).
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import shutil
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from evaluation import schema
+from scripts.finetune_shuttle import clip_labels, split_by_time
+
+LABELS = ROOT / "evaluation" / "labels"
+MANIFEST = ROOT / "evaluation" / "clips.yaml"
+WEIGHTS = ROOT / "weights" / "shuttle"
+DEFAULT_CLIPS = Path.home() / "rallyiq-data" / "bwf" / "clips"
+RUNS = Path.home() / "rallyiq-data" / "runs"
+SELECT_AT = 0.2
+
+
+# ------------------------------------------------------------------ state
+
+
+def loop_dir(weights_dir: Path) -> Path:
+    return weights_dir / "loop"
+
+
+def load_state(weights_dir: Path) -> dict:
+    p = loop_dir(weights_dir) / "state.json"
+    return json.loads(p.read_text()) if p.exists() else {}
+
+
+def save_state(weights_dir: Path, state: dict) -> None:
+    d = loop_dir(weights_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    tmp = d / "state.json.tmp"
+    tmp.write_text(json.dumps(state, indent=1, ensure_ascii=False))
+    tmp.replace(d / "state.json")
+
+
+def init_state(weights_dir: Path, base: Path) -> dict:
+    """First run: keep a copy of the pretrained checkpoint; it is the first champion."""
+    d = loop_dir(weights_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    kept = d / "base.pt"
+    if not kept.exists():
+        shutil.copyfile(base, kept)
+    return {"base": str(kept), "base_source": str(base), "champion": str(kept), "previous": [], "rounds": []}
+
+
+def install(weights_dir: Path, model: Path) -> Path:
+    """Make ``model`` the pipeline default (weights/shuttle/heatmap.pt)."""
+    dst = weights_dir / "heatmap.pt"
+    tmp = weights_dir / "heatmap.pt.tmp"
+    shutil.copyfile(model, tmp)
+    tmp.replace(dst)
+    return dst
+
+
+# ------------------------------------------------------------------- data
+
+
+def reviewed_docs(labels_dir: Path) -> dict[str, dict]:
+    return {cid: d for cid, d in schema.load_dir(labels_dir).items()
+            if d.get("status") == "reviewed" and d.get("shuttle")}
+
+
+def labels_fingerprint(docs: dict[str, dict]) -> str:
+    h = hashlib.sha256()
+    for cid in sorted(docs):
+        h.update(cid.encode())
+        h.update(json.dumps(docs[cid]["shuttle"], sort_keys=True).encode())
+    return h.hexdigest()[:16]
+
+
+def build_split(docs: dict[str, dict], clips_dir: Path, val_frac: float, holdout: list[str]):
+    """TrainClips for training and validation, plus clips that could not be used."""
+    from rallyiq.perception.shuttle.training import TrainClip
+
+    train, val, missing = [], [], []
+    for cid, doc in sorted(docs.items()):
+        video, meta_p = clips_dir / f"{cid}.mp4", clips_dir / f"{cid}.meta.json"
+        if not video.exists() or not meta_p.exists():
+            missing.append(cid)
+            continue
+        start_ms = int(json.loads(meta_p.read_text(encoding="utf-8"))["start_ms"])
+        labels = clip_labels(doc, start_ms)
+        fps = float(doc["video"]["fps"])
+        if cid in holdout:
+            val.append(TrainClip(cid, video, fps, labels))
+            continue
+        a, b = split_by_time(labels, 1.0 - val_frac)
+        if a:
+            train.append(TrainClip(f"{cid}[train]", video, fps, a))
+        if b:
+            val.append(TrainClip(f"{cid}[val]", video, fps, b))
+    return train, val, missing
+
+
+# --------------------------------------------------------------- decision
+
+
+def decide(candidate: dict, champion: dict, at: float = SELECT_AT, min_gain: float = 0.01,
+           max_precision_drop: float = 0.03) -> tuple[bool, str]:
+    """``candidate`` / ``champion``: per-threshold metrics as returned by training.evaluate."""
+    c, k = candidate.get(str(at), {}), champion.get(str(at), {})
+    cf, kf = c.get("f1", 0.0), k.get("f1", 0.0)
+    cp, kp = c.get("precision", 0.0), k.get("precision", 0.0)
+    cr, kr = c.get("recall", 0.0), k.get("recall", 0.0)
+    nums = f"F1@{at} {kf:.3f} -> {cf:.3f}（精确率 {kp:.3f} -> {cp:.3f}，召回率 {kr:.3f} -> {cr:.3f}）"
+    if cf < kf + min_gain:
+        return False, f"{nums}，F1 提升不足 {min_gain}"
+    if cp < kp - max_precision_drop:
+        return False, f"{nums}，精确率下降超过 {max_precision_drop}"
+    return True, nums
+
+
+# ------------------------------------------------------------ suggestions
+
+
+def latest_pred(clip_id: str, runs: Path | None = None) -> Path | None:
+    runs = runs or RUNS
+    preds = sorted(runs.glob(f"*/preds/{clip_id}.json"), key=lambda p: p.stat().st_mtime) if runs.exists() else []
+    return preds[-1] if preds else None
+
+
+def camera(manifest: dict, cid: str) -> str:
+    return (manifest.get(cid, {}).get("conditions") or {}).get("camera", "") or ""
+
+
+def suggest_next(manifest: dict, docs_all: dict[str, dict], clips_dir: Path, runs: Path | None = None,
+                 n: int = 3) -> list[str]:
+    """Clips to label next: side-court first, then the rest; skip what is already reviewed."""
+    lines = []
+    reviewed = {cid for cid, d in docs_all.items() if d.get("status") == "reviewed"}
+    started = {cid for cid, d in docs_all.items() if d.get("status") != "reviewed"}
+
+    def rank(cid: str) -> tuple:
+        return (cid not in started, camera(manifest, cid) != "side_court_fixed",
+                manifest[cid].get("split") != "train", cid)
+
+    todo = sorted((c for c in manifest if c not in reviewed and (clips_dir / f"{c}.mp4").exists()), key=rank)
+    for cid in todo[:n]:
+        cam = camera(manifest, cid) or "?"
+        note = "（已开始，接着标）" if cid in started else ""
+        pred = latest_pred(cid, runs)
+        if pred is None:
+            lines.append(f"- {cid}（{cam}）{note}：先生成预标注 `python scripts/real_run.py --only {cid}`，"
+                         f"再 `python -m evaluation.tools.label_tool {cid} --prefill \"$(ls -t ~/rallyiq-data/runs/*/preds/{cid}.json | head -1)\"`")
+        else:
+            lines.append(f"- {cid}（{cam}）{note}：`python -m evaluation.tools.label_tool {cid} --prefill {pred}`")
+    missing = [c for c in manifest if c not in reviewed and not (clips_dir / f"{c}.mp4").exists()]
+    if not todo and missing:
+        lines.append(f"- 本地还没有视频的片段：{', '.join(missing[:5])}… 先运行 "
+                     f"`python -m evaluation.tools.extract_clips --download --only {missing[0]}`")
+    return lines
+
+
+# ------------------------------------------------------------------- main
+
+
+def status(state: dict, manifest: dict, labels_dir: Path, clips_dir: Path, weights_dir: Path,
+           runs: Path | None = None) -> str:
+    docs_all = schema.load_dir(labels_dir) if labels_dir.exists() else {}
+    rev = {c: d for c, d in docs_all.items() if d.get("status") == "reviewed" and d.get("shuttle")}
+    L = ["== 羽毛球模型持续训练 =="]
+    if state:
+        L.append(f"现役模型：{state['champion']}")
+        L.append(f"流水线默认加载：{weights_dir / 'heatmap.pt'}"
+                 f"{'' if (weights_dir / 'heatmap.pt').exists() else '（还没有，仍用原始预训练权重）'}")
+        for r in state.get("rounds", [])[-5:]:
+            L.append(f"  第 {r['round']} 轮 {r['time']}：{'采用' if r['promoted'] else '未采用'}，{r['reason']}")
+    else:
+        L.append("还没有跑过任何一轮。")
+    done = [f"{c}（{len(d['shuttle'])} 帧）" for c, d in sorted(rev.items())]
+    L.append("已复核的标注：" + (", ".join(done) or "无"))
+    if state.get("holdout"):
+        L.append("只用于验证的片段：" + ", ".join(state["holdout"]))
+    L.append("下一步建议标注：")
+    L += suggest_next(manifest, docs_all, clips_dir, runs) or ["- （没有可标的片段）"]
+    return "\n".join(L)
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--status", action="store_true", help="only show the current state and what to label next")
+    ap.add_argument("--rollback", action="store_true", help="reinstall the previous champion")
+    ap.add_argument("--force", action="store_true", help="run even if no labels changed since the last round")
+    ap.add_argument("--from", dest="start", choices=["base", "champion"], default="base",
+                    help="start each round from the original pretrained weights (default) or the current model")
+    ap.add_argument("--holdout", nargs="*", default=None,
+                    help="clip ids used only for validation (remembered; no ids clears it)")
+    ap.add_argument("--val-frac", type=float, default=0.3)
+    ap.add_argument("--epochs", type=int, default=10)
+    ap.add_argument("--steps", type=int, default=300)
+    ap.add_argument("--batch-size", type=int, default=4)
+    ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--min-gain", type=float, default=0.01)
+    ap.add_argument("--max-precision-drop", type=float, default=0.03)
+    ap.add_argument("--device", help="cuda | mps | cpu")
+    ap.add_argument("--labels", type=Path, default=LABELS)
+    ap.add_argument("--clips", type=Path, default=DEFAULT_CLIPS)
+    ap.add_argument("--weights-dir", type=Path, default=WEIGHTS)
+    ap.add_argument("--base", help="pretrained checkpoint for the first round (default: the installed one)")
+    ap.add_argument("--manifest", type=Path, default=MANIFEST, help=argparse.SUPPRESS)
+    ap.add_argument("--runs", type=Path, default=RUNS, help=argparse.SUPPRESS)
+    a = ap.parse_args(argv)
+    clips_dir, wdir = a.clips.expanduser(), a.weights_dir.expanduser()
+    manifest = schema.load_manifest(a.manifest)
+    runs = a.runs.expanduser()
+    state = load_state(wdir)
+
+    if a.status:
+        print(status(state, manifest, a.labels, clips_dir, wdir, runs))
+        return 0
+
+    if a.rollback:
+        if not state or not state.get("previous"):
+            print("没有可以回退的上一个模型。")
+            return 1
+        state["champion"] = state["previous"].pop()
+        install(wdir, Path(state["champion"]))
+        save_state(wdir, state)
+        print(f"已回退到 {state['champion']}（已复制为 {wdir / 'heatmap.pt'}）")
+        return 0
+
+    from rallyiq.perception.shuttle.detector import find_weights
+    from rallyiq.perception.shuttle.training import TrainConfig, train
+
+    if not state:
+        base = find_weights(a.base)
+        if base is None:
+            raise SystemExit("找不到预训练权重（见 rallyiq/perception/shuttle/README.md）")
+        state = init_state(wdir, base)
+        save_state(wdir, state)
+        print(f"第一次运行：已把预训练权重 {base} 备份为 {state['base']}")
+
+    docs = reviewed_docs(a.labels)
+    if not docs:
+        print("还没有已复核（reviewed）的标注，先标一段：")
+        print("\n".join(suggest_next(manifest, schema.load_dir(a.labels), clips_dir, runs)))
+        return 1
+    fp = labels_fingerprint(docs)
+    last = state["rounds"][-1] if state["rounds"] else None
+    if last and last.get("labels") == fp and not a.force:
+        print("自上一轮以来标注没有变化，先多标一些（或加 --force 重跑）。下一步建议标注：")
+        print("\n".join(suggest_next(manifest, schema.load_dir(a.labels), clips_dir, runs)))
+        return 0
+
+    if a.holdout is not None:
+        state["holdout"] = list(a.holdout)
+    holdout = state.get("holdout", [])
+    tr, va, missing = build_split(docs, clips_dir, a.val_frac, holdout)
+    for cid in missing:
+        print(f"跳过 {cid}：{clips_dir} 里没有视频")
+    if not tr or not va:
+        raise SystemExit("训练或验证数据为空：至少需要一段已复核且本地有视频的片段")
+    print("训练：" + ", ".join(f"{c.clip_id} {len(c.labels)} 帧" for c in tr))
+    print("验证：" + ", ".join(f"{c.clip_id} {len(c.labels)} 帧" for c in va))
+
+    n = len(state["rounds"]) + 1
+    out = loop_dir(wdir) / f"round-{n:03d}.pt"
+    start = Path(state["base"] if a.start == "base" else state["champion"])
+    cfg = TrainConfig(epochs=a.epochs, steps_per_epoch=a.steps, batch_size=a.batch_size, lr=a.lr,
+                      device=a.device, select_at=SELECT_AT)
+    compare = {} if Path(state["champion"]) == start else {"champion": Path(state["champion"])}
+    t0 = time.monotonic()
+    report = train(start, tr, va, out, cfg, compare=compare)
+    champ_val = (report["compare"].get("champion", {}).get("val") if compare else None) or report["history"][0]["val"]
+    ok, reason = decide(report["best_val"], champ_val, SELECT_AT, a.min_gain, a.max_precision_drop)
+    if report["best_epoch"] == 0 and a.start == "champion":
+        ok, reason = False, "训练没有带来改进（最好的是第 0 轮）"
+
+    rec = {
+        "round": n, "time": time.strftime("%Y-%m-%d %H:%M"), "labels": fp, "candidate": str(out),
+        "start": str(start), "best_epoch": report["best_epoch"], "promoted": ok, "reason": reason,
+        "train": report["train_clips"], "val": report["val_clips"],
+        "candidate_val": report["best_val"], "champion_val": champ_val,
+        "minutes": round((time.monotonic() - t0) / 60, 1),
+    }
+    if ok:
+        state["previous"].append(state["champion"])
+        state["champion"] = str(out)
+        install(wdir, out)
+    state["rounds"].append(rec)
+    save_state(wdir, state)
+    with open(loop_dir(wdir) / "history.md", "a", encoding="utf-8") as f:
+        f.write(f"- 第 {n} 轮 {rec['time']}：{'采用' if ok else '未采用'}，{reason}；"
+                f"训练 {sum(rec['train'].values())} 帧，验证 {sum(rec['val'].values())} 帧\n")
+
+    print()
+    print(f"== 第 {n} 轮结果：{'采用新模型' if ok else '保留现役模型'} ==")
+    print(reason)
+    if ok:
+        print(f"新模型已复制为 {wdir / 'heatmap.pt'}，之后的 real_run 会默认使用它。不满意可运行 --rollback 回退。")
+        check = sorted((c for c in manifest if c not in docs and (clips_dir / f"{c}.mp4").exists()),
+                       key=lambda c: (camera(manifest, c) != "side_court_fixed", c))[:2]
+        if check:
+            print("建议在没参与训练的片段上核对击球结果：")
+            print(f"  python scripts/real_run.py --only {' '.join(check)} --out ~/rallyiq-data/runs/round-{n:03d}")
+            print(f"  python scripts/hits_ablation.py --run ~/rallyiq-data/runs/round-{n:03d} "
+                  + " ".join(f"--clip {c}" for c in check))
+    print("下一步建议标注：")
+    print("\n".join(suggest_next(manifest, schema.load_dir(a.labels), clips_dir, runs)) or "- （没有可标的片段）")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
