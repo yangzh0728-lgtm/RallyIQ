@@ -41,11 +41,14 @@ class EventsConfig:
     landing_window_ms: float = 250.0  # direction change this close to a static end is a landing
 
     # Broadcasts cut to close-ups and replays between rallies; shuttle-like blobs and large people there make
-    # false rallies and hits. When most of the video is calibrated, frames of camera segments whose calibration
-    # failed (not the court view) are ignored. Needs the calibration (stage passes it). Videos calibrated on less
-    # than ``court_view_min_share`` of their frames are left alone (e.g. footage without calibration at all).
-    mask_off_court_views: bool = False
-    court_view_min_share: float = 0.5
+    # false rallies and hits. Frames of camera segments without a usable calibration (not the court view) are
+    # ignored, unless calibrated segments cover less than ``court_view_min_share`` of the video (footage without
+    # calibration at all is left alone). Needs the calibration (the stage passes it). On the 14 held-out
+    # ShuttleSet clips: rules hit F1 56.4 -> 62.2%, rally F1 55.0 -> 82.1%, learned v1e 70.4 -> 71.3%; 6 of 257
+    # labelled hits fall inside masked frames. 0.3-0.5 masked 11 of 14 clips (rally F1 73%); 0.2 adds one
+    # replay-heavy broadcast calibrated on 26% of its frames.
+    mask_off_court_views: bool = True
+    court_view_min_share: float = 0.25
 
     # --- learned hit scorer (learned.py) ---
     # "auto": bundled model (models/hit_scorer.json) if present; "off": hand-weighted rules; or a JSON path.

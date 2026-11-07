@@ -108,5 +108,6 @@ def test_rallies_in_off_court_views_are_masked():
     on = replace(EventsConfig(), mask_off_court_views=True)
     masked = segment_events(v.shuttle, v.poses, on, off_court=off)
     assert [x.start_frame for x in masked] == [base[0].start_frame, base[2].start_frame]
-    # off by default
-    assert len(segment_events(v.shuttle, v.poses, EventsConfig(), off_court=off)) == 3
+    # switched off
+    off_cfg = replace(EventsConfig(), mask_off_court_views=False)
+    assert len(segment_events(v.shuttle, v.poses, off_cfg, off_court=off)) == 3

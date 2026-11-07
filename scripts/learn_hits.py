@@ -54,6 +54,8 @@ PLAYER_IDS = {"P1", "P2", "P3", "P4"}
 
 # ------------------------------------------------------------------ data
 class Clip:
+    cal_segments: list[tuple[int, int, bool]] = []  # (start, end, calibrated) per camera segment
+
     def __init__(self, cid: str, art: Path, label: dict[str, Any], group: str):
         self.cid, self.art, self.label, self.group = cid, art, label, group
         meta = json.loads((art / "probe.json").read_text(encoding="utf-8"))
