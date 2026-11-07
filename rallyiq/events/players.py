@@ -118,11 +118,14 @@ class PoseIndex:
         if pf is None:
             return []
         out = []
+        local = self.scale_at(frame, shuttle_xy) if self.cfg.hitter_scale == "mixed" else None
         for p in pf.players:
             pts, used_wrist = self.racket_points(p)
             if not pts:
                 continue
             h = self.height_of(p)
+            if local is not None:
+                h = (h * local) ** 0.5
             d_rel = min(dist(q, shuttle_xy) for q in pts) / h
             score = max(0.0, 1.0 - d_rel / self.cfg.max_hitter_dist_rel)
             if not used_wrist:

@@ -58,6 +58,7 @@ class Candidate:
     prox: list[Proximity] = field(default_factory=list)
     reasons: list[str] = field(default_factory=list)
     confidence: float = 0.0
+    t_ms: float = 0.0  # time of the track point (sequence rules need the gap between hits)
 
     @property
     def best(self) -> Optional[Proximity]:
@@ -137,7 +138,7 @@ def _score_point(
     q = track.quality(i, cfg.window_ms, fps_ms)
     # Impulse |v_out - v_in| (in player heights / s) localises the contact
     # frame: it peaks where the racket changes the shuttle's velocity.
-    return Candidate(i, ang, max(turn, speed), sharp, q, impulse=full[2] / scale_px)
+    return Candidate(i, ang, max(turn, speed), sharp, q, impulse=full[2] / scale_px, t_ms=pt.t_ms)
 
 
 def detect_hits(
@@ -208,7 +209,13 @@ def detect_hits(
         if needed and (scorer is None or serve.confidence >= cfg.min_candidate_conf):
             out.insert(0, serve)
 
-    out = _alternating_subset(out, cfg)
+    return resolve_sequence(out, cfg)
+
+
+def resolve_sequence(cands: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Rally-level rules on the time-ordered candidates: alternation, quick repeats, re-attribution."""
+    out = _alternating_subset(cands, cfg)
+    out = _resolve_quick_repeats(out, cfg)
     _reattribute(out, cfg)
     _check_alternation(out)
     return out
@@ -279,7 +286,7 @@ def _inferred_serve(
     if not prox or prox[0].score <= 0.3:
         return None
     q = track.quality(i, cfg.window_ms, fps_ms, before=False)
-    c = Candidate(i, 0.0, 0.0, 0.0, q, prox=prox, reasons=[R_INFERRED_SERVE])
+    c = Candidate(i, 0.0, 0.0, 0.0, q, prox=prox, reasons=[R_INFERRED_SERVE], t_ms=pt.t_ms)
     # Proximity is the only evidence, so this always goes to review.
     c.confidence = round(0.5 * prox[0].score + 0.1 * q, 3)
     return c
@@ -331,6 +338,58 @@ def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candi
     ]
 
 
+def _other_side_alt(c: Candidate, key: str) -> Optional[int]:
+    """Index in ``c.prox`` of the closest player of a side other than ``key`` who is near the shuttle at all."""
+    for k, alt in enumerate(c.prox[1:], start=1):
+        if alt.score > 0 and alt.pose.team_key != key:
+            return k
+    return None
+
+
+def _hand_over(c: Candidate, k: int) -> None:
+    c.prox.insert(0, c.prox.pop(k))
+    c.reasons = [r for r in c.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
+    c.reasons.append(R_HITTER_FROM_ALTERNATION)
+
+
+def _resolve_quick_repeats(hits: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Two hits by the same side closer than ``same_side_min_gap_ms`` cannot both be right: a missed
+    opponent hit between them would need the shuttle to cross the net twice in that time. Either one of
+    them was the opponent's (a small far player loses the proximity contest to a large near player), or
+    one is not a hit at all (a wobble of the track around a single contact).
+
+    The pair is fixed by handing one hit to a player of the other side who is near the shuttle at all,
+    preferring the hand-over that does not clash with the neighbouring hits; with nobody there, the
+    weaker hit is dropped.
+    """
+    gap = cfg.same_side_min_gap_ms
+    if gap <= 0 or len(hits) < 2:
+        return hits
+    out = list(hits)
+    i = 0
+    while i + 1 < len(out):
+        a, b = out[i], out[i + 1]
+        key = _side_key(a)
+        if key is None or key != _side_key(b) or b.t_ms - a.t_ms >= gap:
+            i += 1
+            continue
+        options = []
+        for c, nb in ((a, out[i - 1] if i > 0 else None), (b, out[i + 2] if i + 2 < len(out) else None)):
+            k = _other_side_alt(c, key)
+            if k is None:
+                continue
+            clash = nb is not None and _side_key(nb) == c.prox[k].pose.team_key
+            options.append((not clash, c.prox[k].score, k, c))
+        if options:
+            _, _, k, c = max(options, key=lambda o: (o[0], o[1]))
+            _hand_over(c, k)
+            i += 1
+            continue
+        out.remove(a if a.confidence < b.confidence else b)
+        i = max(i - 1, 0)
+    return out
+
+
 def _reattribute(hits: list[Candidate], cfg: EventsConfig) -> None:
     """Fix a hitter that breaks alternation when another player of the right side is nearly as close.
 
@@ -343,13 +402,9 @@ def _reattribute(hits: list[Candidate], cfg: EventsConfig) -> None:
         ka, kb = _side_key(a), _side_key(b)
         if ka is None or kb is None or ka != kb:
             continue
-        best = b.best
-        for k, alt in enumerate(b.prox[1:], start=1):
-            if alt.score > 0 and alt.pose.team_key != ka and best.score - alt.score < 2 * cfg.hitter_margin:
-                b.prox.insert(0, b.prox.pop(k))
-                b.reasons = [r for r in b.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
-                b.reasons.append(R_HITTER_FROM_ALTERNATION)
-                break
+        k = _other_side_alt(b, ka)
+        if k is not None and b.best.score - b.prox[k].score < 2 * cfg.hitter_margin:
+            _hand_over(b, k)
 
 
 def _check_alternation(hits: list[Candidate]) -> None:
