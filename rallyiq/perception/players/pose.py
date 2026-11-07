@@ -249,6 +249,10 @@ class RTMOOnnx:
             out.append(d)
         return out
 
+    def detect_roi(self, image_bgr: np.ndarray, roi: tuple, dets: list[PersonDetection]) -> list[PersonDetection]:
+        """``dets`` (a full-frame pass) plus the people a second pass on the upscaled ``roi`` finds."""
+        return merge_detections(dets + self._infer_roi(image_bgr, roi, dets))
+
     def __call__(self, image_bgr: np.ndarray, far_roi: tuple | None = None) -> list[PersonDetection]:
         dets = self._infer(image_bgr)
         if far_roi is not None:
