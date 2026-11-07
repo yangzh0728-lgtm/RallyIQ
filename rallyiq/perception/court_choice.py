@@ -55,6 +55,8 @@ class CourtChoiceConfig:
     people_frames_min: float = 0.5
     min_people_frames: int = 4
     empty_court_max: float = 0.25
+    # A person this many times larger or smaller than the calibration expects at their feet.
+    size_contradiction: float = 4.0
 
 
 @dataclass
@@ -100,8 +102,20 @@ def _occupied_halves(H: np.ndarray, dets: Sequence[PersonDetection], cfg: CourtC
     return len(halves)
 
 
-def _standing_people(dets: Sequence[PersonDetection], cfg: CourtChoiceConfig) -> int:
-    n = 0
+def _size_contradicts(H: np.ndarray, d: PersonDetection, cfg: CourtChoiceConfig) -> bool:
+    """The person's pixel height is impossible for where the calibration puts their
+    feet (more than ``size_contradiction`` times off, or the feet map behind the
+    camera). Officials and spectators beside the court have plausible sizes."""
+    fp = foot_point(d, cfg.min_keypoint_conf)
+    exp_h = expected_pixel_height(H, fp)
+    if not exp_h or not np.isfinite(exp_h):
+        return True
+    r = d.height / exp_h
+    return not (1.0 / cfg.size_contradiction <= r <= cfg.size_contradiction)
+
+
+def _standing(dets: Sequence[PersonDetection], cfg: CourtChoiceConfig) -> list[PersonDetection]:
+    out = []
     for d in dets:
         if d.score < cfg.min_det_score:
             continue
@@ -109,28 +123,47 @@ def _standing_people(dets: Sequence[PersonDetection], cfg: CourtChoiceConfig) ->
             continue
         if is_seated(d, cfg.min_keypoint_conf):
             continue
-        n += 1
-    return n
+        out.append(d)
+    return out
 
 
 def contradicted(seg: CalibrationSegment, frames: Sequence[Sequence[PersonDetection]],
                  cfg: CourtChoiceConfig | None = None) -> CalibrationSegment | None:
-    """``seg`` marked undeterminable when people are clearly playing but none of them
-    stands on the calibrated court (sam's DJI_0009: a band of far-court lines was
-    fitted with status ok). None when the calibration is consistent with the people."""
+    """``seg`` marked undeterminable when the people in view contradict it (sam's
+    DJI_0009: a band of far-court lines was fitted with status ok, and every
+    player was then filtered out).
+
+    A sampled frame counts against the calibration when nobody stands on the
+    calibrated court although someone is in view, and either two or more people
+    are standing, or someone's pixel height is impossible where the calibration
+    puts their feet (a low camera often shows only the near player to the pose
+    model; that player measured 627 px where the wrong court expected 15906 px).
+    The segment is flagged when most sampled frames count against it.
+    None when the calibration is consistent with the people, or nobody is there.
+    """
     cfg = cfg or CourtChoiceConfig()
     if seg.homography is None or seg.method == "manual" or seg.status == "undeterminable" or not frames:
         return None
-    busy = [dets for dets in frames if _standing_people(dets, cfg) >= 2]
-    if len(busy) < cfg.min_people_frames or len(busy) < cfg.people_frames_min * len(frames):
-        return None
     H = np.asarray(seg.homography, dtype=np.float64)
-    occupied = float(np.mean([_occupied_halves(H, dets, cfg) for dets in busy]))
-    if occupied > cfg.empty_court_max:
+    against = 0
+    occupied = []
+    for dets in frames:
+        people = _standing(dets, cfg)
+        if not people:
+            continue
+        occ = _occupied_halves(H, people, cfg)
+        occupied.append(occ)
+        if occ == 0 and (len(people) >= 2 or any(_size_contradicts(H, d, cfg) for d in people)):
+            against += 1
+    if against < cfg.min_people_frames or against < cfg.people_frames_min * len(frames):
         return None
-    note = (f"calibration contradicted by the players: two or more people in {len(busy)}/{len(frames)} sampled "
-            f"frames, but the calibrated court is empty (occupied halves {occupied:.2f}); the court lines were "
-            f"probably fitted to the wrong lines. Pick the 4 corners by hand.")
+    mean_occ = float(np.mean(occupied)) if occupied else 0.0
+    if mean_occ > cfg.empty_court_max:
+        return None
+    note = (f"calibration contradicted by the players: in {against}/{len(frames)} sampled frames people are in "
+            f"view but none stands on the calibrated court (occupied halves {mean_occ:.2f}), or their size is "
+            f"impossible where it puts their feet; the court lines were probably fitted to the wrong lines. "
+            f"Pick the 4 corners by hand.")
     return seg.model_copy(update={"status": "undeterminable", "confidence": 0.0, "notes": [*seg.notes, note]})
 
 

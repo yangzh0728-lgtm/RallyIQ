@@ -94,3 +94,26 @@ def test_consistent_or_quiet_scenes_are_not_flagged():
     assert rechoose(cal, lambda idx: _frames(0.0, len(idx))) is None  # players on the court
     assert rechoose(cal, lambda idx: [[] for _ in idx]) is None  # nobody there (warm-up, break)
     assert rechoose(_cal(method="manual"), lambda idx: [[] for _ in idx]) is None
+
+
+def test_one_visible_player_with_impossible_size_flags_a_wrong_fit():
+    # Low camera: the pose model only sees the near player. The wrong fit (a court
+    # far behind) puts their feet off court where a person would be tiny.
+    from rallyiq.contracts.geometry import COURT_CORNERS_M, fit_homography
+
+    # A thin band of far lines fitted as the court (like DJI_0009), not the real court.
+    far = [[300.0, 262.0], [1600.0, 262.0], [1250.0, 240.0], [650.0, 240.0]]
+    wrong = fit_homography(far, COURT_CORNERS_M)
+    seg = _cal().segments[0].model_copy(update={"other_courts": [], "homography": wrong, "image_corners": far})
+    near_only = [[person_at_court(3.0, 2.0)] for _ in range(12)]
+    new = rechoose(CourtCalibration(video_id="v", segments=[seg]), lambda idx: near_only[: len(idx)])
+    assert new is not None and new.segments[0].status == "undeterminable"
+
+
+def test_one_official_beside_a_correct_court_is_not_flagged():
+    seg = _cal().segments[0].model_copy(update={"other_courts": []})
+    cal = CourtCalibration(video_id="v", segments=[seg])
+    official = [[person_at_court(-1.6, 6.7)] for _ in range(12)]  # line judge / umpire standing
+    assert rechoose(cal, lambda idx: official[: len(idx)]) is None
+    lone_player = [[person_at_court(3.0, 2.0)] for _ in range(12)]
+    assert rechoose(cal, lambda idx: lone_player[: len(idx)]) is None
