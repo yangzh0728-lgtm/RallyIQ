@@ -45,6 +45,11 @@ class EventsConfig:
     # before the labelled contact; learn_hits.py estimates this from labels and ships it with the model.
     hit_frame_offset: int = 0  # learned side model: confidence needed to overrule the nearest player
 
+    # --- pose-sequence hit recovery (pose_hits.py) ---
+    # "off" (default), "auto" (bundled models/pose_hits.json) or a JSON path. Adds the serve and the
+    # missed hit between two same-side hits from the players' swing when the shuttle was not seen.
+    pose_hits: str = "off"
+
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all
     keep_threshold: float = 0.45  # candidates below this survive only if alternation needs them
