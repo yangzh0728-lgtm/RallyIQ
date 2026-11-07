@@ -3,8 +3,10 @@
 Contract: ``run(ctx) -> StrokesResult`` using ``ctx.events``, ``ctx.shuttle`` and
 ``ctx.players``. Options in ``ctx.config["strokes"]``:
 
-* ``classifier``: ``"rules"`` (default) or ``"bst"`` (see ``bst.py``; falls back to the
-  rules with a warning unless ``require_model: true``);
+* ``classifier``: ``"rules"`` (default), ``"bst"`` (see ``bst.py``) or ``"sklearn"`` (see
+  ``learned.py``); a model backend that cannot load falls back to the rules with a warning
+  unless ``require_model: true``;
+* ``sklearn``: ``{"model": "/path/to/strokes.joblib"}`` (trained by ``scripts/learn_strokes.py``);
 * ``bst``: BST settings (``repo``, ``weights``, ``model_name``, ``pose_style``, ``seq_len``);
 * any field of :class:`~rallyiq.strokes.classify.StrokesConfig` (thresholds).
 """
@@ -48,6 +50,20 @@ def run(ctx: StageContext) -> StrokesResult:
             if opts.get("require_model"):
                 raise
             log.warning("BST unavailable (%s); using %s", e, RULES_NAME)
+    elif cfg.classifier == "sklearn":
+        from .learned import SKLEARN_NAME, SklearnUnavailable
+        from .learned import make_model_fn as make_sklearn_fn
+
+        path = (opts.get("sklearn") or {}).get("model")
+        try:
+            if not path:
+                raise SklearnUnavailable("strokes.sklearn.model (path to a .joblib file) is not set")
+            model = make_sklearn_fn(path)
+            name = SKLEARN_NAME
+        except SklearnUnavailable as e:
+            if opts.get("require_model"):
+                raise
+            log.warning("sklearn stroke model unavailable (%s); using %s", e, RULES_NAME)
     elif cfg.classifier != "rules":
         raise ValueError(f"unknown strokes classifier {cfg.classifier!r}")
 

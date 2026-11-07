@@ -21,6 +21,8 @@ from typing import Any
 
 import numpy as np
 
+from rallyiq.strokes.taxonomy import from_shuttleset
+
 from .. import schema
 
 SRC_W, SRC_H = 1280, 720
@@ -78,7 +80,7 @@ def load_strokes(set_csv: Path) -> list[dict[str, Any]]:
         if fn is None or not r.get("rally"):
             continue
         rows.append({"rally": int(float(r["rally"])), "frame": fn, "sec": _secs(r["time"]), "player": r.get("player"),
-                     "loc": (_f(r.get("player_location_x")), _f(r.get("player_location_y")))})
+                     "type": (r.get("type") or "").strip() or None, "loc": (_f(r.get("player_location_x")), _f(r.get("player_location_y")))})
     return rows
 
 
@@ -138,7 +140,11 @@ def build_label(clip_id: str, match: dict[str, Any], strokes: list[dict[str, Any
         if not r0 <= t <= r1:
             continue
         rallies.setdefault(s["rally"], []).append(t)
-        doc["hits"].append({"t_ms": t, "side": side_of(match, s["loc"]), "player": None})
+        hit = {"t_ms": t, "side": side_of(match, s["loc"]), "player": None}
+        shot_type = from_shuttleset(s["type"])[0] if s.get("type") else None
+        if shot_type:
+            hit["shot_type"] = shot_type  # extra field: the hit benchmark ignores it
+        doc["hits"].append(hit)
         doc["court"].append({"t_ms": t, "visible": True, "corners": corners})
     for ts in rallies.values():
         doc["rallies"].append({"start_ms": min(ts), "end_ms": min(max(ts) + RALLY_TAIL_MS, r1)})

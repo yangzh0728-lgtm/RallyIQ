@@ -73,6 +73,30 @@ API 把它按 `shot_id` 合并进 `GET /api/videos/{id}/events`（`shot_type` + 
 最难分的是 推球/平抽、挡网/平抽、放网/勾对角。**这些数字只说明规则按设计工作，不代表真实视频上的精度**；
 需要在 `evaluation/` 里加入真实击球类型标注后再调阈值。
 
+## 可选：scikit-learn 分类器（`sklearn`）
+
+`learned.py` 用 `HistGradientBoostingClassifier` 在**同一组证据**（上表的特征 + 回合中的位置）上学习类型，
+测不到的证据保持 NaN，不填猜测值。复核策略仍是上面那一套。安装：`pip install -e .[strokes-ml]`。
+
+```bash
+# 合成数据快速检查（不代表真实视频精度）
+python scripts/learn_strokes.py --source synthetic --out ~/rallyiq-data/models/strokes_synth.joblib
+# ShuttleSet 训练片段（scripts/build_train_set.py 已跑过管线，只读缓存产物）
+python scripts/learn_strokes.py --source shuttleset --data ~/rallyiq-data/public/shuttleset_train \
+    --out ~/rallyiq-data/models/strokes.joblib
+# 在留出的比赛上评估
+python scripts/learn_strokes.py --source shuttleset --data ~/rallyiq-data/public/shuttleset_test \
+    --eval ~/rallyiq-data/models/strokes.joblib
+```
+
+评估用 `GroupKFold`（按比赛分折，同一场比赛不会同时出现在训练和验证里），输出准确率、宏平均 F1、
+每类精确率/召回率和混淆矩阵，并在同一批击球上给出 `rules_v1` 的准确率作对比。
+管线里启用：`{"strokes": {"classifier": "sklearn", "sklearn": {"model": "<path>.joblib"}}}`，
+模型缺失时退回规则并告警（`require_model: true` 则报错）。joblib 本质是 pickle，只加载自己训练的模型。
+
+合成数据 16 段视频（658 拍）上：规则 0.88，sklearn 交叉验证 0.93（宏 F1 0.92），
+主要混淆仍是 推球/平抽、放网/勾对角。同样只说明流程可用，真实精度要用 ShuttleSet 跑出来。
+
 ## 可选：BST（骨架 + 羽毛球 Transformer）
 
 `bst.py` 按作者的数据预处理（"两拍之间"片段、`seq_len` 100、骨架按人框归一化并居中、
