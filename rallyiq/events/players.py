@@ -55,8 +55,8 @@ class PoseIndex:
     def empty(self) -> bool:
         return not any(f.players for f in self.by_frame.values())
 
-    def frame_near(self, frame: int) -> Optional[PoseFrame]:
-        for d in range(self.cfg.pose_search_frames + 1):
+    def frame_near(self, frame: int, search: Optional[int] = None) -> Optional[PoseFrame]:
+        for d in range((self.cfg.pose_search_frames if search is None else search) + 1):
             for f in (frame - d, frame + d):
                 pf = self.by_frame.get(f)
                 if pf is not None and pf.players:
@@ -112,9 +112,12 @@ class PoseIndex:
                 best, best_d = p, d
         return self.height_of(best) if best is not None else self.global_height
 
-    def proximities(self, frame: int, shuttle_xy: Vec) -> list[Proximity]:
-        """Every player's proximity to the shuttle at ``frame``, best first."""
-        pf = self.frame_near(frame)
+    def proximities(self, frame: int, shuttle_xy: Vec, search: Optional[int] = None) -> list[Proximity]:
+        """Every player's proximity to the shuttle at ``frame``, best first.
+
+        ``search``: how many frames around ``frame`` to look for a pose (default ``cfg.pose_search_frames``).
+        """
+        pf = self.frame_near(frame, search)
         if pf is None:
             return []
         out = []

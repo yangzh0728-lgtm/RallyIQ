@@ -3,7 +3,7 @@
 from dataclasses import replace
 
 from rallyiq.events.config import EventsConfig
-from rallyiq.events.hits import R_HITTER_FROM_ALTERNATION, Candidate, resolve_sequence
+from rallyiq.events.hits import R_HITTER_FROM_ALTERNATION, R_HITTER_FROM_SEQUENCE, Candidate, resolve_sequence
 from rallyiq.events.players import PoseIndex, Proximity
 from rallyiq.events.types import Keypoint, PlayerPose, PoseFrame
 
@@ -50,6 +50,33 @@ def test_slow_repeats_are_left_alone_and_rule_is_off_by_default():
     assert _who(resolve_sequence(slow, CFG)) == [(0, "P1"), (1200, "P1")]
     quick = [_cand(0, 0.9, (NEAR, 0.8)), _cand(300, 0.9, (NEAR, 0.8))]
     assert len(resolve_sequence(quick, EventsConfig())) == 2
+
+
+# -- hits without a known hitter -------------------------------------------------------------
+
+def test_hit_with_nobody_near_takes_the_player_the_alternation_calls_for():
+    # middle hit: shuttle beyond everyone's reach (score 0), the far player is the one who alternates
+    hits = [_cand(0, 0.9, (NEAR, 0.8)), _cand(1000, 0.9, (NEAR, 0.0), (FAR, 0.0)), _cand(2000, 0.9, (NEAR, 0.8))]
+    out = resolve_sequence(hits, EventsConfig())
+    assert _who(out) == [(0, "P1"), (1000, "P2"), (2000, "P1")]
+    assert out[1].hitter_known and R_HITTER_FROM_SEQUENCE in out[1].reasons
+    assert all(R_HITTER_FROM_SEQUENCE not in h.reasons for h in (out[0], out[2]))
+
+
+def test_hit_without_a_pose_uses_the_wider_pose_search():
+    # first hit of the rally: no pose at the contact frame, players found a few frames away
+    first = _cand(0, 0.9)
+    first.prox_wide = [Proximity("P1", 0.0, 1.2, True, NEAR), Proximity("P2", 0.0, 2.0, True, FAR)]
+    out = resolve_sequence([first, _cand(1000, 0.9, (NEAR, 0.8))], EventsConfig())
+    assert _who(out) == [(0, "P2"), (1000, "P1")]
+
+
+def test_hitter_fill_can_be_switched_off_and_needs_a_known_neighbour():
+    hits = [_cand(0, 0.9, (NEAR, 0.8)), _cand(1000, 0.9, (NEAR, 0.0), (FAR, 0.0))]
+    out = resolve_sequence([replace(h, prox=list(h.prox), reasons=[]) for h in hits], replace(EventsConfig(), hitter_fill=False))
+    assert not out[1].hitter_known
+    lonely = resolve_sequence([_cand(0, 0.9, (NEAR, 0.0), (FAR, 0.0))], EventsConfig())
+    assert not lonely[0].hitter_known
 
 
 # -- reach of a large near player -------------------------------------------------------------

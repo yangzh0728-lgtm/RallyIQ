@@ -74,6 +74,14 @@ class EventsConfig:
     # two net crossings): one is handed to the other side if a player there is near the shuttle, else the weaker
     # is dropped. 0 disables.
     same_side_min_gap_ms: float = 0.0
+    # A hit kept without a known hitter (nobody near the shuttle, or no pose within pose_search_frames) gets
+    # the player the alternation calls for (hits._fill_hitters), looking up to hitter_pose_fallback_frames
+    # around the contact for a pose. Such hits stay needs_review (reason hitter_from_sequence).
+    # 14 held-out ShuttleSet clips, near/far right among correctly timed hits: rules 87.0 -> 92.3%,
+    # v1e 89.7 -> 95.4%; hit F1 rules 61.8 -> 65.4%, v1e 70.4 -> 74.6%. Wrist-only proximity (no racket
+    # extension) and best-of-a-few-frames proximity were tried and were worse.
+    hitter_fill: bool = True
+    hitter_pose_fallback_frames: int = 25
     occlusion_gap_ms: float = 150.0  # no observation this close around a hit -> occluded
     long_exchange_ms: float = 2600.0  # no hit for this long inside a rally -> maybe missed one
     default_player_height_px: float = 200.0
