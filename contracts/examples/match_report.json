@@ -626,6 +626,8 @@
         "t_ms": 6000,
         "player_id": "P2",
         "shot_type": "lift",
+        "shot_label_zh": null,
+        "shot_detail_zh": null,
         "hitter_zone": "\u4e2d\u573a\u5de6\u4fa7",
         "hitter_pos": [
           1.5,
@@ -658,6 +660,8 @@
         "t_ms": 7000,
         "player_id": "P1",
         "shot_type": "lift",
+        "shot_label_zh": null,
+        "shot_detail_zh": null,
         "hitter_zone": "\u4e2d\u573a\u4e2d\u8def",
         "hitter_pos": [
           3.56,

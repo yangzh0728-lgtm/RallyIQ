@@ -8,6 +8,7 @@ import { computeHeat } from "./heatmap";
 import { generateMock } from "./mock";
 import { frameIndexAt } from "./overlay";
 import { jobProgress } from "./players";
+import { retypeDetail } from "./strokes";
 import { mergeStrokes, strokeStats } from "./strokes";
 import type { Correction, CorrectionOp, EventsResult } from "./types";
 
@@ -247,5 +248,23 @@ describe("switching the analysed court", () => {
     const after = courtsAfterSwitch(cal, other);
     expect(after).toEqual([cal.image_corners]);
     expect(pointInPolygon(cal.image_corners!, [640, 500])).toBe(true);
+  });
+});
+
+describe("retypeDetail", () => {
+  // expected texts produced by rallyiq.strokes.detail.retype on the same input
+  const d = {
+    family: "drop", subtype: null, source: "attrs_v1", description_zh: "x", role: null, intent: null,
+    hand: { value: "backhand", p: 0.7, source: "model" as const },
+    direction: { value: "straight", p: 0.9, source: "model" as const },
+    contact: { value: "high", p: 0.8, source: "model" as const },
+    pace: { value: "slow", p: null, source: "measured" as const },
+  };
+  it("matches the backend wording", () => {
+    expect(retypeDetail(d, "smash")?.description_zh).toBe("反手直线杀球，击球点较高，属于主动进攻，意图是直接施压，逼对手被动或失误。");
+    expect(retypeDetail(d, "cross_net")?.description_zh).toBe("反手勾对角，击球点较高，属于相持，意图是控制网前，逼对手起球，为下一拍进攻创造机会。");
+    expect(retypeDetail(d, "long_serve")).toMatchObject({ family: "serve", subtype: "long_serve", hand: null, direction: null, pace: null });
+    expect(retypeDetail(d, "drop")?.pace).toEqual(d.pace);
+    expect(retypeDetail(null, "smash")).toBeNull();
   });
 });

@@ -137,6 +137,39 @@ ShuttleSet 结果（2026-11-07；训练 = 38 场里已跑完的 59 段、915 拍
 另外试过两种扩展，都没有提升，没有采用：把击球前后的挥拍姿态序列加进特征（测试 61–63%），
 以及用前后拍的预测类型做第二阶段（测试 60.9%）。
 
+ShuttleSet 的 CSV 把“过渡切球”写成“過度切球”，之前的映射只认“過渡切球”，这类吊球被当成没有标签。
+现在两种写法都映射到 `drop`，`learn_strokes.py --shuttleset` 直接从 CSV 读类型。按修正后的标签重测，
+默认模型在 6 场留出比赛（189 拍）上是 65.1%；加上这些吊球重新训练是 61.9%，没有更好，所以模型没换。
+
+## 分层描述（`detail.py`，`StrokeInfo.detail`）
+
+教练不会只说“杀球”，而是说“正手直线杀球，击球点较高，出球快，属于主动进攻”。每一拍分好类型后，
+`strokes` 阶段再加上几层描述，并且每层都写明来源（`StrokeAttr.source`）：
+
+| 层 | 取值 | 来源 | 6 场留出比赛 |
+| --- | --- | --- | --- |
+| 大类 family | 高远球 杀球 吊球 平抽 挡网 推球 挑球 放网 扑球 发球 | 由类型合并 | — |
+| 细分 subtype | 勾对角、发短球、发高远球 | 由类型 | — |
+| 正反手 hand | 正手 / 反手 / 头顶 | 模型 `model` | 75.4%（平衡 72.0%，全猜正手 49.2%） |
+| 击球点 contact | 高（网上）/ 低（网下） | 模型 `model` | 83.8%（平衡 82.1%，全猜多数 60.2%） |
+| 方向 direction | 直线 / 斜线 | 模型 `model` | 93.5%（平衡 92.8%，全猜多数 61.4%） |
+| 快慢 pace | 快 / 中 / 慢（和同类球的常见速度比） | 按轨迹测量 `measured` | 没有标签可测 |
+| 主动/被动 role | 主动进攻 / 相持 / 被动防守 | 规则推断 `rule` | 没有标签可测 |
+| 意图 intent | 进攻 / 调动 / 控制 / 防守 / 过渡 | 规则推断 `rule` | 没有标签可测 |
+
+三个模型头（`models/stroke_attrs.json`，同样是 numpy 计算的 JSON 树）用 ShuttleSet 的 `backhand`、
+`aroundhead`、`hit_height` 列和击球点/落点坐标训练（19 场 1310 拍），在另外 6 场比赛上测试（191 拍），
+输入是 v2 特征 + 击球前后的姿态窗口 + 球相对身体的左右位置 + 从高点击球推出的持拍手。
+重新训练：`python scripts/learn_stroke_attrs.py --data <训练文件夹...> --test <留出文件夹>`。
+
+**认不了、没有输出的**：点杀、劈杀、劈吊、搓球（旋转放网）、平快发球、偷后场发球。ShuttleSet 没有这些标签
+（或者标签分不开：杀球 vs 点扣在留出比赛上 54%，等于瞎猜），只在视频上看不出拍面和切削。
+“欺骗”意图同样没有输出。主动/被动和意图是按类型、击球点高低、上一拍类型推出来的教练式解读，
+App 里用虚线标签显示，AI 教练也被告知这两项只作参考。只在 BWF 转播单打上测过，自己拍的视频还没有标注可测。
+
+人工改了类型（`set_shot_type`）时，正反手、方向、击球点保留，其余各层按新类型重新推出（前端 `retypeDetail` 与后端 `retype` 一致）。
+关闭：`{"strokes": {"detail": false}}`。
+
 ## 可选：BST（骨架 + 羽毛球 Transformer）
 
 `bst.py` 按作者的数据预处理（"两拍之间"片段、`seq_len` 100、骨架按人框归一化并居中、
@@ -162,5 +195,5 @@ ctx.config["strokes"] = {
 
 ## 配置（`ctx.config["strokes"]`）
 
-`classifier`、`ok_threshold`、`ok_margin`、`min_evidence_ok`、`min_evidence`、`min_rule_score`、`top_k`、
+`classifier`、`detail`（默认 true）、`ok_threshold`、`ok_margin`、`min_evidence_ok`、`min_evidence`、`min_rule_score`、`top_k`、
 `min_candidate_p`、`require_model`、`bst`。规则斜坡参数在 `rules.RulesConfig`，特征参数在 `features.FeatureConfig`。

@@ -58,6 +58,7 @@ SHUTTLESET = {
     "點扣": "smash",
     "防守回挑": "lift",
     "後場抽平球": "drive",
+    "過度切球": "drop",  # the spelling the ShuttleSet CSVs use
     "過渡切球": "drop",
     "防守回抽": "drive",
     "小平球": None,  # ShuttleSet moves these to "unknown"

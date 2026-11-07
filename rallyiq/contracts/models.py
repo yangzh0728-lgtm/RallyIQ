@@ -260,6 +260,32 @@ class ShotTypeScore(Contract):
     p: Confidence
 
 
+class StrokeAttr(Contract):
+    """One layer of a shot's description, and where it comes from."""
+
+    value: str
+    p: Confidence | None = Field(default=None, description="model probability; null when measured or a rule")
+    source: Literal["model", "measured", "rule"] = Field(
+        description="model = learned from ShuttleSet labels; measured = from tracked positions; "
+        "rule = a coach's reading of the other layers (no labels exist to learn it)"
+    )
+
+
+class StrokeDetail(Contract):
+    """Layered description of a shot on top of its stroke type (see ``rallyiq.strokes.detail``)."""
+
+    family: str | None = Field(default=None, description="clear smash drop drive block push lift net_shot net_kill serve")
+    subtype: str | None = Field(default=None, description="cross_court_net_shot, short_serve or long_serve; else null")
+    hand: StrokeAttr | None = Field(default=None, description="forehand, backhand or around_head")
+    contact: StrokeAttr | None = Field(default=None, description="high (above the net) or low")
+    direction: StrokeAttr | None = Field(default=None, description="straight or cross")
+    pace: StrokeAttr | None = Field(default=None, description="fast, medium or slow for this family")
+    role: StrokeAttr | None = Field(default=None, description="attacking, neutral or defensive")
+    intent: StrokeAttr | None = Field(default=None, description="attack, move, control, defend or transition")
+    description_zh: str = ""
+    source: str | None = Field(default=None, description="attribute model name, e.g. attrs_v1")
+
+
 class StrokeInfo(Contract):
     """Stroke-type prediction (or human label) for one shot."""
 
@@ -273,6 +299,7 @@ class StrokeInfo(Contract):
     evidence: dict[str, float | None] = Field(
         default_factory=dict, description="measured features behind the prediction (null = not measurable)"
     )
+    detail: StrokeDetail | None = Field(default=None, description="hand, direction, contact, pace, role, intent")
 
 
 class ShotStroke(Contract):
@@ -555,6 +582,8 @@ class ShotMoment(Contract):
     t_ms: int = Field(ge=0)
     player_id: PlayerId
     shot_type: ShotType
+    shot_label_zh: str | None = Field(default=None, description="stroke with hand/direction, e.g. '正手直线杀球'")
+    shot_detail_zh: str | None = Field(default=None, description="the layered description (StrokeDetail)")
     hitter_zone: str = Field(description="where the hitter stood, e.g. '后场左侧' (own view)")
     hitter_pos: Point2 = Field(description="hitter (lateral, depth) m, own-half frame")
     opponent_id: PlayerId

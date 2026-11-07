@@ -142,6 +142,7 @@ def test_taxonomy_matches_contract():
     assert from_shuttleset("Top_殺球") == ("smash", "far")
     assert from_shuttleset("Bottom_發短球") == ("short_serve", "near")
     assert from_shuttleset("未知球種") == (None, None)
+    assert from_shuttleset("Top_過度切球") == ("drop", "far")  # spelling used by the set CSVs
     assert {v for v in SHUTTLESET.values() if v} == set(SHOT_TYPES)
 
 

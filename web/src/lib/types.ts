@@ -142,6 +142,27 @@ export interface StrokeInfo {
   candidates?: ShotTypeScore[];
   reasons?: string[];
   evidence?: Record<string, number | null>;
+  detail?: StrokeDetail | null;
+}
+
+/** One layer of a shot's description: model = learned, measured = from positions, rule = inferred. */
+export interface StrokeAttr {
+  value: string;
+  p?: number | null;
+  source: "model" | "measured" | "rule";
+}
+
+export interface StrokeDetail {
+  family?: string | null;
+  subtype?: string | null;
+  hand?: StrokeAttr | null; // forehand | backhand | around_head
+  contact?: StrokeAttr | null; // high | low
+  direction?: StrokeAttr | null; // straight | cross
+  pace?: StrokeAttr | null; // fast | medium | slow
+  role?: StrokeAttr | null; // attacking | neutral | defensive
+  intent?: StrokeAttr | null; // attack | move | control | defend | transition
+  description_zh?: string;
+  source?: string | null;
 }
 
 export interface ShotStroke {
