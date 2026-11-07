@@ -97,3 +97,40 @@ def test_stage_uses_model_and_falls_back(trained, tmp_path: Path):
     ctx.config["strokes"]["require_model"] = True
     with pytest.raises(L.SklearnUnavailable):
         run(ctx)
+
+
+def test_context_features_shape_and_missing():
+    from rallyiq.strokes.context import CONTEXT_FEATURES, context_features
+
+    v = make_rallies(n_rallies=2, seed=3)
+    feats = shot_features(v.events, v.shuttle, v.players, v.fps)
+    C = context_features(v.events, v.shuttle, v.players, feats)
+    assert C.shape == (len(feats), len(CONTEXT_FEATURES))
+    side = C[:, CONTEXT_FEATURES.index("side")]
+    assert set(np.unique(side[~np.isnan(side)])) <= {-1.0, 1.0}
+    prev = C[:, CONTEXT_FEATURES.index("prev_flight_ms")]
+    firsts = [i for i, f in enumerate(feats) if f.first_in_rally]
+    assert firsts and np.isnan(prev[firsts]).all()  # the serve has no incoming shot
+    v2 = make_rallies(n_rallies=2, seed=3, court_known=False)
+    f2 = shot_features(v2.events, v2.shuttle, v2.players, v2.fps)
+    assert np.isnan(context_features(v2.events, v2.shuttle, v2.players, f2)[:, 0]).all()
+
+
+def test_v2_model_round_trip(tmp_path: Path):
+    X, y, g = [], [], []
+    for seed in range(6):
+        v = make_rallies(n_rallies=8, seed=seed)
+        feats = shot_features(v.events, v.shuttle, v.players, v.fps)
+        X.append(L.full_matrix(feats, v.events, v.shuttle, v.players, "v2"))
+        y += [v.truth[f.shot_id] for f in feats]
+        g += [f"s{seed}"] * len(feats)
+    X = np.vstack(X)
+    assert X.shape[1] == len(L.FEATURES_V2)
+    model, _ = L.train(X, y, g, L.TrainConfig(folds=3, max_iter=100))
+    path = tmp_path / "v2.joblib"
+    L.save(model, path, feature_set="v2")
+    assert L.load(path)["feature_set"] == "v2"
+    v = make_rallies(n_rallies=4, seed=99)
+    res = classify(v.events, v.shuttle, v.players, v.fps, model=L.make_model_fn(path), model_name=L.SKLEARN_NAME)
+    right = sum(s.stroke.shot_type == v.truth[s.shot_id] for s in res.shots)
+    assert right / len(res.shots) >= 0.7
