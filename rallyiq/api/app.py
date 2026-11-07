@@ -74,7 +74,9 @@ from ..review import video_conditions
 from ..pipeline.clips import ClipError, cut_clip
 from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
-from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
+from ..report import (
+    CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_html, render_markdown,
+)
 from ..report.coach import default_provider_name
 from ..store import CONTENT_TYPES, Store, now
 from ..strokes.classify import merge_strokes
@@ -674,9 +676,16 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
         return coach
 
     @app.get("/api/videos/{video_id}/report/export")
-    def export_report(video_id: str, format: Literal["md", "json"] = "md", user: User | None = Depends(current_user)):
+    def export_report(video_id: str, format: Literal["md", "json", "html"] = "md",
+                      user: User | None = Depends(current_user)):
         v = video_or_404(video_id, user)
         rep = match_report(video_id)
+        if format == "html":
+            ev, _ = effective_events(video_id)
+            page = render_html(rep, ev, store.load_artifact(video_id, "players", PlayerTracks),
+                               title=f"赛后报告 · {v.filename}", video_name=v.filename)
+            return Response(content=page, media_type="text/html; charset=utf-8",
+                            headers={"Content-Disposition": f'attachment; filename="{video_id}_report.html"'})
         if format == "json":
             return Response(
                 content=rep.model_dump_json(indent=1), media_type="application/json",

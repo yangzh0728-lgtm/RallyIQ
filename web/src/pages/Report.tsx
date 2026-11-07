@@ -40,13 +40,13 @@ export function Report({ videoId }: { videoId: string }) {
     }
   };
 
-  const doExport = (format: "md" | "json") => {
+  const doExport = (format: "md" | "json" | "html") => {
     const url = api.reportExportUrl(videoId, format);
     if (url) {
       window.location.href = url;
       return;
     }
-    if (!report) return;
+    if (!report || format === "html") return;
     if (format === "json") download(`${videoId}_report.json`, JSON.stringify(report, null, 1), "application/json");
     else download(`${videoId}_report.md`, reportMarkdown(`赛后报告 · ${video?.filename ?? videoId}`, report.stats, report.coach, report.coach_stale), "text/markdown");
   };
@@ -88,6 +88,11 @@ export function Report({ videoId }: { videoId: string }) {
         <span className="spacer" />
         <button onClick={() => doExport("md")}>导出 Markdown</button>
         <button onClick={() => doExport("json")}>导出 JSON</button>
+        {api.reportExportUrl(videoId, "html") && (
+          <button onClick={() => doExport("html")} title="一个独立的网页文件：图表都在文件里，离线可看，可直接发给教练或球友">
+            导出网页报告
+          </button>
+        )}
       </div>
 
       <section className="card">
