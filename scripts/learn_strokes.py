@@ -5,7 +5,7 @@
     # quick check on synthetic rallies (says nothing about real video)
     python scripts/learn_strokes.py --source synthetic --out ~/rallyiq-data/models/strokes_synth.joblib
 
-    # .json output = numpy-only model; rallyiq/strokes/models/strokes_v2.json is the bundled one
+    # .json output = numpy-only model; rallyiq/strokes/models/strokes_v3.json is the bundled one
     # ShuttleSet clips built and run by scripts/build_train_set.py (cached artifacts, no video work)
     python scripts/learn_strokes.py --source shuttleset \\
         --data ~/rallyiq-data/public/shuttleset_train ~/rallyiq-data/public/shuttleset_train_v3 \\

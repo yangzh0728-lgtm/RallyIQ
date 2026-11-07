@@ -3,7 +3,7 @@
 Contract: ``run(ctx) -> StrokesResult`` using ``ctx.events``, ``ctx.shuttle`` and
 ``ctx.players``. Options in ``ctx.config["strokes"]``:
 
-* ``classifier``: ``"auto"`` (default: bundled ``models/strokes_v2.json``, numpy only; the rules if
+* ``classifier``: ``"auto"`` (default: bundled ``models/strokes_v3.json``, numpy only; the rules if
   it is missing), ``"rules"``, ``"bst"`` (see ``bst.py``) or ``"sklearn"`` (see ``learned.py``); a
   model backend that cannot load falls back to the rules with a warning unless ``require_model: true``;
 * ``sklearn``: ``{"model": "/path/to/strokes.json"}`` (or ``.joblib``; trained by ``scripts/learn_strokes.py``);

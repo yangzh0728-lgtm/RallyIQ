@@ -1,7 +1,7 @@
 """Turn shots + perception into ``StrokesResult`` (one ``StrokeInfo`` per shot).
 
 The classifier backend is pluggable: ``auto`` (default: the gradient-boosting model bundled in
-``models/strokes_v2.json``, see ``learned.py``; the rules if it is missing), ``rules`` (no weights),
+``models/strokes_v3.json``, see ``learned.py``; the rules if it is missing), ``rules`` (no weights),
 ``bst`` (optional skeleton + shuttle transformer, see ``bst.py``) or ``sklearn`` (a model file you
 trained, ``.json`` or ``.joblib``). Whatever the backend,
 the review policy here is the same:
