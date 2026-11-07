@@ -139,3 +139,24 @@ def load_manifest(path: str | Path) -> dict[str, dict[str, Any]]:
             raise SchemaError(f"clips.yaml 中片段编号重复：{c['id']}")
         clips[c["id"]] = c
     return clips
+
+
+OWN_MANIFEST = Path(__file__).resolve().parent / "own_clips.yaml"
+
+
+def load_manifests(*paths: str | Path) -> dict[str, dict[str, Any]]:
+    """Merge several manifests (clips.yaml + own_clips.yaml); missing files are skipped."""
+    clips: dict[str, dict[str, Any]] = {}
+    for p in paths:
+        if not Path(p).exists():
+            continue
+        for cid, c in load_manifest(p).items():
+            if cid in clips:
+                raise SchemaError(f"片段编号在多个清单里重复：{cid}")
+            clips[cid] = c
+    return clips
+
+
+def is_own(clip: dict[str, Any]) -> bool:
+    """A clip cut from the user's own footage (own_clips.yaml) rather than a YouTube video."""
+    return bool(clip.get("file")) and not clip.get("video_id")
