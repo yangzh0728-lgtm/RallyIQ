@@ -3,8 +3,8 @@ import { MemoryCommit } from "../components/MemoryCommit";
 import { api } from "../lib/api";
 import { download } from "../lib/export";
 import { colorOf } from "../lib/players";
-import { CONF_LABEL, evidenceText, fmtValue, indexStats, KIND_LABEL, reportMarkdown, STATUS_LABEL, videoLink, type Evidence } from "../lib/report";
-import type { CoachReport, Distribution, MatchReport, Metric, Video } from "../lib/types";
+import { clock, CONF_LABEL, evidenceText, fmtValue, indexStats, KIND_LABEL, PHASE_LABEL, reportMarkdown, shotZh, STATUS_LABEL, styleWho, videoLink, type Evidence } from "../lib/report";
+import type { CoachReport, Distribution, MatchReport, Metric, PlayerStyle, Video } from "../lib/types";
 
 export function Report({ videoId }: { videoId: string }) {
   const [video, setVideo] = useState<Video | null>(null);
@@ -119,6 +119,20 @@ export function Report({ videoId }: { videoId: string }) {
           </p>
         )}
       </section>
+
+      {(stats.styles?.length ?? 0) > 0 && (
+        <section className="card">
+          <h2>打法风格</h2>
+          <div className="muted small">
+            按击球类型、攻防状态、节奏和双方站位，用规则和打法原型做匹配（没有用标注数据训练）。吻合度 0–100，参考区间来自职业单打统计，业余比赛看倾向即可。
+          </div>
+          <div className="report-players">
+            {stats.styles!.map((st) => (
+              <StyleCard key={st.subject} st={st} videoId={videoId} idx={idx} onJump={jump} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {(coach?.caveats ?? stats.caveats).length > 0 && (
         <section className="card">
@@ -318,6 +332,124 @@ function DistBars({ d, focus, color }: { d: Distribution; focus: string | null; 
             </span>
           </div>
         ))}
+    </div>
+  );
+}
+
+function StyleCard({ st, videoId, idx, onJump }: { st: PlayerStyle; videoId: string; idx: Map<string, Evidence>; onJump: (k: string) => void }) {
+  const color = colorOf(st.kind === "singles" ? st.subject : st.players[0]);
+  const ranked = st.scores.filter((x) => x.score !== null);
+  return (
+    <div className="style-card" style={{ borderTop: `3px solid ${color}` }}>
+      <div className="row">
+        <b>{styleWho(st)}</b>
+        <span className="style-label">{st.label}</span>
+        <span className="spacer" />
+        <span className={`pill ${st.status}`}>{STATUS_LABEL[st.status]}</span>
+      </div>
+      <div className="muted small">
+        依据 {st.n_shots} 拍已分类击球{st.note ? `；${st.note}` : ""}
+      </div>
+      {st.status !== "undeterminable" && (
+        <>
+          {st.primary && st.primary.score !== null && (
+            <div className="small">
+              最接近 <b>{st.primary.name}</b>（{st.primary.name_en}，代表：{st.primary.representatives.map((r) => r.split(" ")[0]).join("、")}）
+              {st.primary.reasons.length > 0 && <span className="muted"> · 依据：{st.primary.reasons.join("、")}</span>}
+            </div>
+          )}
+          <div className="style-scores">
+            {ranked.map((x) => (
+              <div key={x.code} className="dist-row small" title={x.reasons.join("、")}>
+                <span>{x.name}</span>
+                <div className="bar">
+                  <i style={{ width: `${x.score}%`, background: color }} />
+                </div>
+                <span className="mono muted">{Math.round(x.score!)}</span>
+              </div>
+            ))}
+          </div>
+          <h3>攻防状态</h3>
+          {st.phases
+            .filter((p) => p.shots > 0)
+            .map((p) => (
+              <div key={p.phase} className="small">
+                <b>{PHASE_LABEL[p.phase]}</b> {p.shots} 拍：
+                {Object.entries(p.counts)
+                  .map(([k, v]) => `${shotZh(k)} ${v}`)
+                  .join("，")}
+                {p.recommended_pct !== null && <span className="muted">（符合推荐打法 {Math.round(p.recommended_pct)}%）</span>}
+              </div>
+            ))}
+          {st.tactics.some((t) => t.uses > 0) && (
+            <>
+              <h3>战术套路</h3>
+              <table className="style-tactics small">
+                <thead>
+                  <tr>
+                    <th>套路</th>
+                    <th>次数</th>
+                    <th>胜率</th>
+                    <th>逼对手被动</th>
+                    <th>回看</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {st.tactics
+                    .filter((t) => t.uses > 0)
+                    .map((t) => (
+                      <tr key={t.code}>
+                        <td>{t.name}</td>
+                        <td className="mono">{t.uses}</td>
+                        <td className="mono">{t.success_pct === null ? "—" : `${Math.round(t.success_pct)}%（${t.won}/${t.decided}）`}</td>
+                        <td className="mono">{t.forced_pct === null ? "—" : `${Math.round(t.forced_pct)}%`}</td>
+                        <td>
+                          {t.examples_ms.map((ms) => (
+                            <a key={ms} className="chip mono" href={`#/videos/${encodeURIComponent(videoId)}?t=${ms}`}>
+                              {clock(ms)}
+                            </a>
+                          ))}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </>
+          )}
+          {st.habits.length > 0 && (
+            <>
+              <h3>回球习惯（预测下一拍）</h3>
+              <ul className="small">
+                {st.habits.map((h) => (
+                  <li key={h.after}>
+                    接{shotZh(h.after)}时 {Math.round(h.pct)}% 回{shotZh(h.reply)}（{h.n}/{h.of}）
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {st.advice.length > 0 && (
+            <>
+              <h3>建议</h3>
+              <ul className="small">
+                {st.advice.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {st.evidence.length > 0 && (
+            <div className="row evidence">
+              <span className="muted small">特征</span>
+              {st.evidence.map((k) => (
+                <button key={k} className="chip" title={idx.get(k) ? evidenceText(idx.get(k)!) : k} onClick={() => onJump(k)}>
+                  {idx.get(k)?.label ?? k}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

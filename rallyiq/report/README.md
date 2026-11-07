@@ -19,6 +19,7 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 | 击球 | `Pn.shots`、`Pn.shot_share`、`Pn.hit.zones`（击球位置）、`Pn.shot_types`（击球类型） |
 | 移动 | `Pn.move.distance_m`、`Pn.move.per_rally_m`、`Pn.move.per_min_m`、`Pn.move.tracked_pct` |
 | 覆盖与站位 | `Pn.cover.area_m2`、`Pn.cover.ratio_pct`、`Pn.pos.depth_mean_m`、`Pn.pos.depth_zones`、`Pn.pos.lateral_zones` |
+| 打法特征 | `Pn.style.*`：击球构成、进攻 / 被动占比、主动转化、连续进攻、抢攻、拉吊突击、防守反击、节奏、调动、直线比例、落点多样性、吻合度等（见下文“打法风格”） |
 | 得失分 | `Pn.win.won/rate_pct`、`short_rate_pct`、`long_rate_pct`、`serve_rate_pct`、`receive_rate_pct`、`own_last_shot_pct`、`lost_own_last_shot_pct`；`Pn.lost.last_shot_types`（失分回合中本人最后一拍的击球类型） |
 
 - 移动只统计回合内、非插值的足点；5 帧滑动中值去抖，速度 > 8 m/s 的跳变视为跟踪错误剔除，间隔 > 0.5 s 不连线。
@@ -47,6 +48,23 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 教练报告（`CoachReport.shot_advice`）为每一拍写一条 `ShotAdvice`：时间、回合、拍数和站位永远取自
 `ShotMoment`，模型只写 `advice`/`why`；模型漏写或写了不符的时间时改用规则说明（`source = "rules"`）。
 在“人物”里指定了哪位是“我”（`PeopleAssignment.self_player`）时只列本人的球，并用“你”称呼。
+
+## 打法风格（`style.py`，不调用模型）
+
+有击球类型时，为每位单打球员（双打为每队）判断打法风格，结果在 `MatchStats.styles`（`PlayerStyle`），特征作为
+`<Pn>.style.*` 指标（双打 `A.style.*` / `B.style.*`）出现在统计里，教练可以引用。详细的研究依据、特征和规则见
+[`docs/playing-style.md`](../../docs/playing-style.md)。
+
+- **攻防状态**：每一拍按来球判断击球者处于主动 / 中立 / 被动（对手挑球 → 主动，对手杀 / 扑 → 被动），
+  统计每种状态下打了什么、符合推荐打法的比例；逐拍建议的 `ShotMoment.phase` 也带上这个状态。
+- **打法原型匹配**：单打 8 种（强攻压制、速度抢攻、拉吊突击、控制组织、防守反击、多拍消耗、技术欺骗、节奏变化），
+  双打 5 种体系（后场强攻、平抽快挡、网前预判控制、防守转换、混双前封后攻）。每种打法是一组带方向和权重的特征，
+  吻合度 0–100；少于 20 拍为“证据不足”，最高分低于 60 为“均衡型”。
+- **六种战术套路**（单打）：四角调动、网前逼起球、拉吊突击、防守转攻、重复落点陷阱、节奏破坏，统计次数、所在回合胜率、
+  逼对手被动的比例和可回看的视频时间。
+- **回球习惯**：对手打某种球后此人最常见的回球（下一拍预测），用来提示对手的预判点。
+- **建议**（`PlayerStyle.advice`）：执行问题（主动不进攻、被动顶不住、进攻失误多……）、有效 / 无效的套路、学习对象、
+  针对对手打法的克制思路。主动转化低、被动顶不住、进攻失误多也会成为训练重点（`detect_focus`）去检索教学笔记。
 
 ## AI 教练（`coach/`）
 

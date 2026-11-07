@@ -139,6 +139,53 @@
       "title": "Metric",
       "type": "object"
     },
+    "PhaseChoice": {
+      "additionalProperties": false,
+      "description": "What a player did in one attack / neutral / defense state.",
+      "properties": {
+        "phase": {
+          "enum": [
+            "attack",
+            "neutral",
+            "defense"
+          ],
+          "title": "Phase",
+          "type": "string"
+        },
+        "shots": {
+          "minimum": 0,
+          "title": "Shots",
+          "type": "integer"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "stroke code -> count",
+          "title": "Counts",
+          "type": "object"
+        },
+        "recommended_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "share of these shots that were a recommended choice for the state",
+          "title": "Recommended Pct"
+        }
+      },
+      "required": [
+        "phase",
+        "shots"
+      ],
+      "title": "PhaseChoice",
+      "type": "object"
+    },
     "PlayerStats": {
       "additionalProperties": false,
       "properties": {
@@ -172,6 +219,216 @@
         "metrics"
       ],
       "title": "PlayerStats",
+      "type": "object"
+    },
+    "PlayerStyle": {
+      "additionalProperties": false,
+      "description": "Playing style of one singles player or one doubles team, from rule-based prototype matching.\n\nFeatures are ``Metric``s under ``<Pn|team>.style.*`` in ``MatchStats`` (cite those as evidence);\nthis object holds the style scores, tactics, attack/neutral/defense choices and next-shot habits.",
+      "properties": {
+        "subject": {
+          "description": "P1/P2 (singles) or A/B (doubles team)",
+          "title": "Subject",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "enum": [
+              "P1",
+              "P2",
+              "P3",
+              "P4"
+            ],
+            "type": "string"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "singles",
+            "doubles"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "primary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StyleScore"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "secondary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StyleScore"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "set when it is within a few points of primary"
+        },
+        "scores": {
+          "description": "every prototype, best first",
+          "items": {
+            "$ref": "#/$defs/StyleScore"
+          },
+          "title": "Scores",
+          "type": "array"
+        },
+        "label": {
+          "description": "one-line Chinese verdict, e.g. '\u62c9\u540a\u7a81\u51fb\u578b\uff08\u517c\u901f\u5ea6\u62a2\u653b\u578b\uff09' or '\u8bc1\u636e\u4e0d\u8db3'",
+          "title": "Label",
+          "type": "string"
+        },
+        "phases": {
+          "items": {
+            "$ref": "#/$defs/PhaseChoice"
+          },
+          "title": "Phases",
+          "type": "array"
+        },
+        "tactics": {
+          "items": {
+            "$ref": "#/$defs/TacticUse"
+          },
+          "title": "Tactics",
+          "type": "array"
+        },
+        "habits": {
+          "items": {
+            "$ref": "#/$defs/ReplyHabit"
+          },
+          "title": "Habits",
+          "type": "array"
+        },
+        "evidence": {
+          "description": "feature metric keys used",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "advice": {
+          "description": "rule advice: execution, state choices, vs this opponent",
+          "items": {
+            "type": "string"
+          },
+          "title": "Advice",
+          "type": "array"
+        },
+        "n_shots": {
+          "description": "classified non-serve shots the style is based on",
+          "minimum": 0,
+          "title": "N Shots",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "subject",
+        "kind",
+        "label",
+        "n_shots",
+        "status",
+        "confidence"
+      ],
+      "title": "PlayerStyle",
+      "type": "object"
+    },
+    "ReplyHabit": {
+      "additionalProperties": false,
+      "description": "Next-shot tendency: after the opponent plays ``after``, this player most often replies ``reply``.",
+      "properties": {
+        "after": {
+          "enum": [
+            "short_serve",
+            "long_serve",
+            "clear",
+            "smash",
+            "drop",
+            "net_shot",
+            "cross_net",
+            "push",
+            "net_kill",
+            "drive",
+            "lift",
+            "block"
+          ],
+          "title": "After",
+          "type": "string"
+        },
+        "reply": {
+          "enum": [
+            "short_serve",
+            "long_serve",
+            "clear",
+            "smash",
+            "drop",
+            "net_shot",
+            "cross_net",
+            "push",
+            "net_kill",
+            "drive",
+            "lift",
+            "block"
+          ],
+          "title": "Reply",
+          "type": "string"
+        },
+        "n": {
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "of": {
+          "minimum": 0,
+          "title": "Of",
+          "type": "integer"
+        },
+        "pct": {
+          "title": "Pct",
+          "type": "number"
+        }
+      },
+      "required": [
+        "after",
+        "reply",
+        "n",
+        "of",
+        "pct"
+      ],
+      "title": "ReplyHabit",
       "type": "object"
     },
     "ShotMoment": {
@@ -341,6 +598,24 @@
           "title": "Outcome",
           "type": "string"
         },
+        "phase": {
+          "anyOf": [
+            {
+              "enum": [
+                "attack",
+                "neutral",
+                "defense"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the hitter's state at this shot: attack / neutral / defense (from the incoming ball)",
+          "title": "Phase"
+        },
         "issue": {
           "description": "rule code, e.g. 'to_opponent', 'clear_to_rear', 'short_to_front'",
           "title": "Issue",
@@ -443,6 +718,145 @@
       ],
       "title": "Status",
       "type": "string"
+    },
+    "StyleScore": {
+      "additionalProperties": false,
+      "description": "How well one player's numbers match one playing-style prototype (rules, no trained model).",
+      "properties": {
+        "code": {
+          "description": "style / system code, e.g. 'power_attack', 'rear_attack'",
+          "title": "Code",
+          "type": "string"
+        },
+        "name": {
+          "description": "Chinese name, e.g. '\u5f3a\u653b\u538b\u5236\u578b'",
+          "title": "Name",
+          "type": "string"
+        },
+        "name_en": {
+          "title": "Name En",
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "0-100 match to the prototype; null when too few features were measurable",
+          "title": "Score"
+        },
+        "coverage": {
+          "description": "share of the prototype's feature weight that could be measured",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Coverage",
+          "type": "number"
+        },
+        "reasons": {
+          "description": "the features that matched best, with their values",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "representatives": {
+          "description": "well-known players of this style",
+          "items": {
+            "type": "string"
+          },
+          "title": "Representatives",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "name_en",
+        "score",
+        "coverage"
+      ],
+      "title": "StyleScore",
+      "type": "object"
+    },
+    "TacticUse": {
+      "additionalProperties": false,
+      "description": "How often a player ran one tactical pattern, and how it went.",
+      "properties": {
+        "code": {
+          "description": "space_control | net_to_attack | rally_to_attack | defence_to_attack | pattern_breaking | tempo_disruption",
+          "title": "Code",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "uses": {
+          "minimum": 0,
+          "title": "Uses",
+          "type": "integer"
+        },
+        "decided": {
+          "description": "uses in rallies with a known winner",
+          "minimum": 0,
+          "title": "Decided",
+          "type": "integer"
+        },
+        "won": {
+          "description": "of ``decided``, rallies the player (team) won",
+          "minimum": 0,
+          "title": "Won",
+          "type": "integer"
+        },
+        "success_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "won / decided",
+          "title": "Success Pct"
+        },
+        "forced_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "uses after which the opponent had to defend (lift / block) or lost the rally",
+          "title": "Forced Pct"
+        },
+        "examples_ms": {
+          "description": "video times of up to 3 uses, to replay",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Examples Ms",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "uses",
+        "decided",
+        "won"
+      ],
+      "title": "TacticUse",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -516,6 +930,14 @@
         "$ref": "#/$defs/ShotMoment"
       },
       "title": "Moments",
+      "type": "array"
+    },
+    "styles": {
+      "description": "playing style per player (singles) or team (doubles); needs stroke types",
+      "items": {
+        "$ref": "#/$defs/PlayerStyle"
+      },
+      "title": "Styles",
       "type": "array"
     },
     "caveats": {
