@@ -137,3 +137,12 @@ python scripts/shuttle_loop.py --rollback # 回到上一个模型
 所有模型、`state.json` 和 `history.md` 都在 `weights/shuttle/loop/`。标注没变化时不会重复训练
 （`--force` 强制）。采用后脚本会打印在没参与训练的片段上跑 `real_run.py` 和 `hits_ablation.py`
 的命令：验证分数是逐帧检测，击球结果还要单独核对。
+
+**标注检查。** 用预标注打底时，模型没检测到的每一帧都会被标成"看不见"，其中有些球其实看得见
+（比如发球前在手里）。这些帧会让训练学错、让验证把对的检测算成误报。所以每轮结束后，脚本用
+最后一轮（学得最多的）模型过一遍所有已标注帧，把和标注对不上的帧写到
+`weights/shuttle/loop/round-NNN-check.json`，并拼一张最有把握的 48 帧的图（`.jpg`，绿圈=标注，
+紫圈=模型）。然后用
+`python -m evaluation.tools.label_tool <clip> --check weights/shuttle/loop/round-NNN-check.json`
+只看这些帧：`g` 跳过（标注是对的），`y` 采用模型的点，左键点击或 `n` 改标注，`x` 删掉拿不准的帧
+（训练时忽略）。`--check WEIGHTS` 不训练，只对任意 checkpoint 做这项检查。

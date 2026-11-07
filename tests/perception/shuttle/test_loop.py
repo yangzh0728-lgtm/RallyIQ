@@ -94,6 +94,29 @@ def test_suggest_next_prefers_started_then_side_court(tmp_path):
     assert "real_run.py --only c" in lines[2]
 
 
+def test_check_summary_and_contact_sheet(tmp_path):
+    frames = [
+        {"clip": "a", "frame": 5, "kind": "fn", "score": None, "xy": None, "label": [30.0, 60.0], "part": "val"},
+        {"clip": "a", "frame": 3, "kind": "fp", "score": 0.3, "xy": [40.0, 60.0], "label": None, "part": "train"},
+        {"clip": "a", "frame": 9, "kind": "fp", "score": 0.8, "xy": [60.0, 60.0], "label": None, "part": "val"},
+    ]
+    assert [m["frame"] for m in loop.check_order(frames)] == [9, 3, 5]
+    doc = {"weights": "/w/round-001-last.pt", "frames": frames, "path": "/w/round-001-check.json", "sheet": None}
+    text = loop.check_summary(doc)
+    assert "共 3 帧（训练部分 1，验证部分 2）" in text and "误报（标注说看不见，模型说有球）：2" in text
+    assert "label_tool a --check /w/round-001-check.json" in text
+
+    cv2 = pytest.importorskip("cv2")
+    video = tmp_path / "a.mp4"
+    vw = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (320, 180))
+    for _ in range(12):
+        vw.write(np.full((180, 320, 3), 40, np.uint8))
+    vw.release()
+    out = loop.contact_sheet(frames, tmp_path, tmp_path / "sheet.jpg", cols=2)
+    img = cv2.imread(str(out))
+    assert img.shape == (26 + 2 * 240, 2 * 320, 3)
+
+
 def _args(tmp_path, labels, cdir, mpath, *extra):
     return ["--labels", str(labels), "--clips", str(cdir), "--manifest", str(mpath),
             "--weights-dir", str(tmp_path / "w"), "--runs", str(tmp_path / "runs"), *extra]
@@ -170,7 +193,18 @@ def test_rounds_promote_compare_and_rollback(tmp_path):
     ck = torch.load(loop.loop_dir(wdir) / "round-002.pt", weights_only=False)
     assert ck["finetune"]["compare"]["champion"]["weights"] == str(r1)
     assert st["rounds"][1]["champion_val"] == ck["finetune"]["compare"]["champion"]["val"]
-    assert "history.md" in {p.name for p in loop.loop_dir(wdir).iterdir()}
+    names = {p.name for p in loop.loop_dir(wdir).iterdir()}
+    assert {"history.md", "round-002-last.pt", "round-002-check.json", "round-002-check.jpg"} <= names
+    chk = json.loads((loop.loop_dir(wdir) / "round-002-check.json").read_text())
+    assert chk["weights"].endswith("round-002-last.pt") and st["rounds"][1]["check"]["frames"] == len(chk["frames"])
+    assert all(m["clip"] == "a" and m["kind"] in loop.KINDS for m in chk["frames"])
+    assert {m["part"] for m in chk["frames"]} <= {"train", "val"}
+    c = chk["scores"]["0.2"]
+    assert c["tp"] + c["tn"] + len(chk["frames"]) == 40  # every labeled frame is right or listed once
+
+    # Standalone check of any checkpoint, no training.
+    assert loop.main(_args(tmp_path, labels, cdir, mpath, "--check", str(base), "--device", "cpu")) == 0
+    assert (loop.loop_dir(wdir) / "check-pretrained.json").exists()
 
     assert loop.main(_args(tmp_path, labels, cdir, mpath, "--rollback")) == 0
     assert (wdir / "heatmap.pt").read_bytes() == (loop.loop_dir(wdir) / "base.pt").read_bytes()
