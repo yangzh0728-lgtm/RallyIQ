@@ -56,6 +56,13 @@ class TrackerConfig:
     # must grow by at least this many image diagonals per second. Hands at a handshake,
     # a mop, a caption barely move; a shuttle in flight, even far away, does.
     weak_min_travel_diag_per_s: float = 0.03
+    # A short weak-only tracklet must travel faster. On footage between rallies most
+    # false shuttles are short (0.1-0.3 s) and walking-paced: a shuttle held in a hand,
+    # carried in a bag, picked up from the floor, a white patch on clothing. A shuttle in
+    # play covers more ground than that even in a short glimpse, and longer weak flights
+    # (a slow far-court arc) are still judged by ``weak_min_travel_diag_per_s`` alone.
+    weak_short_s: float = 0.5
+    weak_short_min_travel_diag_per_s: float = 0.07
     min_len: int = 3
     # Fastest plausible image-space speed, in image diagonals per second. A smash
     # close to the camera crosses ~half the frame in 0.15 s.
@@ -319,7 +326,10 @@ class ShuttleTracker:
         ys = [p[1] for p in t.xy]
         extent = math.hypot(max(xs) - min(xs), max(ys) - min(ys))
         duration_s = max(t.end - t.start, 1) / self.fps
-        return extent / self.diag / duration_s < self.cfg.weak_min_travel_diag_per_s
+        need = self.cfg.weak_min_travel_diag_per_s
+        if duration_s < self.cfg.weak_short_s:
+            need = max(need, self.cfg.weak_short_min_travel_diag_per_s)
+        return extent / self.diag / duration_s < need
 
     # ------------------------------------------------------------------ spikes
 

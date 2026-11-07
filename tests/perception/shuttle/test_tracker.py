@@ -235,6 +235,17 @@ def test_idle_weak_tracklets_rejected_but_weak_flight_kept():
     assert sum(1 for f in far if f in got) / len(far) > 0.95
 
 
+def test_short_walking_pace_weak_tracklet_rejected_but_short_flight_kept():
+    # Between rallies: a shuttle in a player's hand walking off court, 8 frames at
+    # ~100 px/s (0.045 image diagonals per second). Slow enough to be idle when short.
+    cands = {f: [(600 + 3.3 * f, 500 + 0.5 * f, 0.3)] for f in range(0, 8)}
+    # A weak glimpse of a shuttle in play, also 8 frames, at ~600 px/s.
+    cands.update({f: [(1200 + 20 * (f - 60), 300 + 4 * (f - 60), 0.3)] for f in range(60, 68)})
+    got = by_frame(ShuttleTracker(30, W, H).track(cands, 80))
+    assert not any(f < 8 for f in got)
+    assert sum(1 for f in range(60, 68) if f in got) >= 7
+
+
 def test_idle_strong_tracklet_is_kept():
     # A shuttle lying on the floor after a rally is real (rally-end evidence).
     cands = {f: [(800.0, 900.0, 0.8)] for f in range(0, 30)}
