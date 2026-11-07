@@ -100,7 +100,13 @@ def test_corrections_layer_on_raw_events(client, sample_video):
 
     csv_text = client.get(f"/api/videos/{vid}/export", params={"format": "csv"}).text
     assert csv_text.splitlines()[0].startswith("shot_id,rally_id")
-    assert csv_text.splitlines()[0].endswith("shot_type,shot_type_confidence,shot_type_status,shot_type_source")
+    assert csv_text.splitlines()[0].endswith("shot_type,shot_type_confidence,shot_type_status,shot_type_source,"
+                                             "rally_no,shot_no,rally_shots,rally_winner")
+    import csv as _csv
+    rows = list(_csv.DictReader(csv_text.splitlines()))
+    in_rally = [r for r in rows if r["rally_id"]]
+    assert in_rally and all(r["rally_no"].isdigit() and r["shot_no"].isdigit() for r in in_rally)
+    assert min(int(r["rally_no"]) for r in in_rally) == 1
     exp = client.get(f"/api/videos/{vid}/export").json()
     assert len(exp["corrections"]) == 4 and exp["raw_events"]["shots"][0] == first
 

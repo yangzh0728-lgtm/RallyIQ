@@ -42,6 +42,10 @@ def test_self_contained_page(match):
     assert page.count('<figure class="court-card">') == 2
     assert page.count('<circle class="dot') == sum(1 for s in events.shots if s.hitter_court and s.hitter)
     assert "2026-11-07 00:00 UTC" in page
+    # score flow: one diverging bar per decided rally and the game tile
+    assert "score" in sections(page)
+    assert page.count('<rect class="sbar') == len(events.rallies)
+    assert "第 1 局" in page
 
 
 def test_text_is_escaped(match):
