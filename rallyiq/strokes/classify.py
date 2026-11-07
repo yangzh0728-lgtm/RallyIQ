@@ -1,8 +1,9 @@
 """Turn shots + perception into ``StrokesResult`` (one ``StrokeInfo`` per shot).
 
-The classifier backend is pluggable: ``rules`` (default, no weights), ``bst``
-(optional skeleton + shuttle transformer, see ``bst.py``) or ``sklearn`` (gradient
-boosting on the same evidence, see ``learned.py``). Whatever the backend,
+The classifier backend is pluggable: ``auto`` (default: the gradient-boosting model bundled in
+``models/strokes_v2.json``, see ``learned.py``; the rules if it is missing), ``rules`` (no weights),
+``bst`` (optional skeleton + shuttle transformer, see ``bst.py``) or ``sklearn`` (a model file you
+trained, ``.json`` or ``.joblib``). Whatever the backend,
 the review policy here is the same:
 
 * ``undeterminable`` with ``shot_type = null`` when too little evidence was measurable;
@@ -31,7 +32,7 @@ R_INSUFFICIENT = "insufficient_evidence"
 
 @dataclass(frozen=True)
 class StrokesConfig:
-    classifier: str = "rules"  # "rules" | "bst" | "sklearn"
+    classifier: str = "auto"  # "auto" (bundled learned model, else rules) | "rules" | "bst" | "sklearn"
     ok_threshold: float = 0.6
     ok_margin: float = 0.2
     min_evidence_ok: float = 0.8  # share of evidence groups measured for an "ok"
