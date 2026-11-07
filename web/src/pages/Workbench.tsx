@@ -311,6 +311,10 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
               {label}
             </label>
           ))}
+          <label title="隐藏原视频画面，只在深色背景上显示识别元素">
+            <input type="checkbox" checked={layers.abstract} disabled={!layers.ai} onChange={() => toggle("abstract")} />
+            纯抽象
+          </label>
           <label>
             透明度
             <input type="range" min={0.2} max={1} step={0.05} value={layers.opacity} onChange={(e) => setLayers((l) => ({ ...l, opacity: Number(e.target.value) }))} />

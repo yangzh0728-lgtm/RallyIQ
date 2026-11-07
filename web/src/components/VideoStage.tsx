@@ -24,6 +24,8 @@ export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCa
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [calib, setCalib] = useState<Point[]>([]);
   const [videoError, setVideoError] = useState<string | null>(null);
+  // Pure abstract view: the video keeps playing (it drives the clock) but is hidden behind a plain background.
+  const abstract = layers.ai && layers.abstract;
 
   // Fit the video's aspect ratio into the available area.
   useEffect(() => {
@@ -85,6 +87,7 @@ export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCa
         {videoUrl ? (
           <video
             ref={video}
+            style={abstract ? { visibility: "hidden" } : undefined}
             src={videoUrl}
             playsInline
             preload="auto"
@@ -93,6 +96,7 @@ export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCa
         ) : (
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(#1b2a1f, #0b130e)" }} />
         )}
+        {abstract && <div className="stage-abstract-bg" />}
         <canvas ref={canvas} onClick={onCanvasClick} />
       </div>
       {choosingCourt && !calibrating && <div className="stage-hint">点击虚线框中要分析的那块场地</div>}
