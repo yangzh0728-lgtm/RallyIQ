@@ -231,3 +231,32 @@ def test_singles_with_doubled_far_player_stays_singles():
                         PlayerTrackingConfig())
     assert res.match_format == "singles"
     assert all(len(r.players) <= 2 for r in res)
+
+
+def test_singles_side_memory_ignored_when_both_slots_remember_the_same_half():
+    # sx36_set2: before calibration settled, two people beyond the net seeded both singles slots on the
+    # far half. P2 keeps tracking the far player; P1's far "memory" must not keep it off the near player,
+    # who also looks nothing like the person P1 was seeded with.
+    def cands(*people):
+        out = build_candidates([person_at_court(*xy) for xy, _ in people], H_IMG_TO_COURT, IMAGE_SIZE)
+        for c, (_, colour) in zip(out, people):
+            c.appearance = colour
+        return out
+
+    tr = SinglesTracker(TrackerConfig())
+    for i in range(10):
+        tr.update(i, cands(((1.5, 10.0), RED), ((4.5, 12.0), RED)), calibrated=True)
+    for i in range(10, 80):  # one of them leaves; the other is the real far player
+        tr.update(i, cands(((4.5, 12.0), RED)), calibrated=True)
+    out = {p.side for p in tr.update(80, cands(((4.5, 12.0), RED), ((3.0, 2.5), BLUE)), calibrated=True)}
+    assert out == {"near", "far"}
+
+
+def test_side_memory_still_steers_reacquisition_after_a_cut():
+    tr = SinglesTracker(TrackerConfig())
+    for i in range(10):
+        tr.update(i, build_candidates([person_at_court(3.0, 2.5), person_at_court(3.0, 10.5)],
+                                      H_IMG_TO_COURT, IMAGE_SIZE), calibrated=True)
+    # Long cut; only one person comes back, on the far half: it goes to the slot last seen there.
+    out = tr.update(200, build_candidates([person_at_court(3.0, 11.0)], H_IMG_TO_COURT, IMAGE_SIZE), calibrated=True)
+    assert [(p.player_id, p.side) for p in out] == [("P2", "far")]

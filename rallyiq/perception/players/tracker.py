@@ -241,7 +241,12 @@ class PlayerTracker:
                 total = total + split * cfg.partner_split_penalty
         if not never_seen and cfg.side_memory_penalty:
             for i, slot in enumerate(self.slots):
-                if fresh[i] and slot.side is not None:
+                # In singles each half holds one player, so two slots remembering the same half means the
+                # memory came from a bad seeding (spectators, a wrong court before calibration settled).
+                # Following it would keep the other half's player untracked for the rest of the clip.
+                contradicted = not self.doubles and any(
+                    o.side == slot.side for j, o in enumerate(self.slots) if j != i and o.pos is not None)
+                if fresh[i] and slot.side is not None and not contradicted:
                     want = 0 if slot.side == "near" else 1
                     total = total + (known[:, i] & (S[:, i] != want)) * cfg.side_memory_penalty
         if never_seen:

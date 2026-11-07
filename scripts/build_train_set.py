@@ -36,7 +36,8 @@ from evaluation import schema  # noqa: E402
 from evaluation.public import shuttleset as SS  # noqa: E402
 from evaluation.tools.extract_clips import cut, probe  # noqa: E402
 
-OUT = Path.home() / "rallyiq-data" / "public" / "shuttleset_train"
+DATA = Path.home() / "rallyiq-data" / "public"
+OUT = DATA / "shuttleset_train"
 STAGE_ZH = {"probe": "读取视频", "calibration": "球场标定", "players": "球员姿态", "shuttle": "羽毛球检测",
             "events": "回合/击球", "overlay": "叠加层"}
 
@@ -80,10 +81,14 @@ def clip_summary(r: dict[str, Any], label: dict[str, Any], pred_path: Path) -> s
             f"击球 预测 {r.get('hits', '–')} / 标注 {len(label['hits'])}  击球F1 {f1}\n    耗时：{stages}")
 
 
-def plan(set_dir: Path, window: float) -> list[dict[str, Any]]:
-    """(clip id, match, set csv, window) for every set of every training match."""
+def plan(set_dir: Path, window: float, split: str = "train") -> list[dict[str, Any]]:
+    """(clip id, match, set csv, window) for every set of every training match, or with
+    ``split="test"`` of every held-out match (a larger test set than public_eval's one clip per match)."""
     items = []
-    for m in SS.train_matches(SS.load_matches(set_dir)):
+    matches = SS.load_matches(set_dir)
+    chosen = SS.train_matches(matches) if split == "train" else SS.eval_matches(matches)
+    prefix = "st" if split == "train" else "sx"
+    for m in chosen:
         for set_csv in sorted((set_dir / m["video"]).glob("set*.csv")):
             strokes = SS.load_strokes(set_csv)
             if not strokes:
@@ -93,7 +98,7 @@ def plan(set_dir: Path, window: float) -> list[dict[str, Any]]:
             # start a third of the way into the set: mid-game play, different scores per set
             first = rallies[len(rallies) // 3] if len(rallies) > 3 else rallies[0]
             win = SS.pick_window(strokes, fps, window, first_rally=first)
-            items.append({"id": f"st{int(m['id']):02d}_{set_csv.stem}", "match": m, "strokes": strokes,
+            items.append({"id": f"{prefix}{int(m['id']):02d}_{set_csv.stem}", "match": m, "strokes": strokes,
                           "fps": fps, "window": win})
     return items
 
@@ -110,19 +115,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--limit", type=int, default=0, help="only the first n clips")
     ap.add_argument("--only", nargs="*", help="clip ids")
     ap.add_argument("--no-run", action="store_true", help="download + label only")
+    ap.add_argument("--split", choices=("train", "test"), default="train",
+                    help="test: every set of the 6 held-out matches -> ~/rallyiq-data/public/shuttleset_test")
+    ap.add_argument("--out", type=Path, help="output folder (default shuttleset_train / shuttleset_test); "
+                    "point a new folder's clips/ at an old one to re-run the pipeline without downloading again")
     ap.add_argument("--quiet", action="store_true", help="no per-stage progress lines")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(message)s")
 
     set_dir = public_eval.shuttleset_dir(a.shuttleset)
-    clips, labels, preds = OUT / "clips", OUT / "labels", OUT / "preds"
+    out = a.out.expanduser() if a.out else (OUT if a.split == "train" else DATA / "shuttleset_test")
+    clips, labels, preds = out / "clips", out / "labels", out / "preds"
     for d in (clips, labels, preds):
         d.mkdir(parents=True, exist_ok=True)
-    idx_p = OUT / "index.json"
+    idx_p = out / "index.json"
     index: dict[str, Any] = json.loads(idx_p.read_text(encoding="utf-8")) if idx_p.exists() else {}
-    store = Store(OUT / "data")
+    store = Store(out / "data")
 
-    items = plan(set_dir, a.window)
+    items = plan(set_dir, a.window, a.split)
     if a.only:
         items = [i for i in items if i["id"] in a.only]
     if a.limit:
@@ -139,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
         if not clip.exists():
             try:
                 lo = max(0.0, win[0] - 2)
-                src = public_eval.download_720(m["youtube_id"], lo, win[1] + 2, OUT / "raw")
+                src = public_eval.download_720(m["youtube_id"], lo, win[1] + 2, out / "raw")
                 cut(src, win[0] - lo, win[1] - win[0], clip)
                 src.unlink(missing_ok=True)
             except subprocess.CalledProcessError as e:
@@ -152,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
             {"clip_id": cid, "video_id": m["youtube_id"], "start_ms": int(round(win[0] * 1000)),
              "duration_ms": int(round((win[1] - win[0]) * 1000)), **info}), encoding="utf-8")
         doc = SS.build_label(cid, m, it["strokes"], it["fps"], win, info["width"], info["height"])
-        doc["split"] = "train"
+        doc["split"] = a.split
         schema.save(doc, labels / f"{cid}.json")
         entry = {"match_id": m["id"], "video": m["video"], "window": [round(w, 3) for w in win],
                  "hits": len(doc["hits"]), "fps": info["fps"], "label_fps": it["fps"]}
@@ -168,7 +178,7 @@ def main(argv: list[str] | None = None) -> int:
             run_times.append(r["wall_s"])
             todo -= 1
             avg = sum(run_times) / len(run_times)
-            done = sum(1 for v in index.values() if v.get("state") == "succeeded") + (r["state"] == "succeeded")
+            done = sum(1 for v in index.values() if v.get("state") == "succeeded")
             print(f"    {cid}: {r['state']}{'（' + str(r['error']) + '）' if r['error'] else ''}  用时 {r['wall_s']:.0f}s", flush=True)
             if r["state"] == "succeeded":
                 print(clip_summary(r, doc, preds / f"{cid}.json"), flush=True)
