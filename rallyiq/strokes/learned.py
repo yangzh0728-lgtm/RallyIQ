@@ -115,12 +115,15 @@ def _sklearn():
 
 @dataclass(frozen=True)
 class TrainConfig:
-    learning_rate: float = 0.08
-    max_iter: int = 100  # more trees did not help on ShuttleSet and triple the bundled JSON
-    max_leaf_nodes: int = 15
-    min_samples_leaf: int = 10
+    # Chosen by 5-fold grouped CV over 40 settings on the 34 training matches (only then scored
+    # once on the held-out matches): 71.7% -> 73.1% CV. With 34 matches, more and larger trees pay
+    # off, and class weighting no longer helps accuracy.
+    learning_rate: float = 0.06
+    max_iter: int = 300
+    max_leaf_nodes: int = 31
+    min_samples_leaf: int = 40
     l2_regularization: float = 1.0
-    class_weight: str | None = "balanced"  # rare types (net kill, block) still count
+    class_weight: str | None = None
     folds: int = 5
     seed: int = 0
 

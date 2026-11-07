@@ -146,7 +146,8 @@ def test_json_export_matches_and_loads_without_pickle(trained, tmp_path: Path):
     assert blob["feature_set"] == "base" and blob["n"] == 1
     v = make_rallies(n_rallies=3, seed=42)
     X = L.feature_matrix(shot_features(v.events, v.shuttle, v.players, v.fps))
-    assert np.abs(blob["model"].predict_proba(X) - model.predict_proba(X)).max() < 1e-6
+    # leaf values are stored to 6 decimals (gbt.tree_to_json); over 150 trees that is ~1e-6 in p
+    assert np.abs(blob["model"].predict_proba(X) - model.predict_proba(X)).max() < 1e-5
     assert list(blob["model"].predict(X)) == list(model.predict(X))
 
 
