@@ -27,6 +27,27 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 - 胜负指标只用已标注胜者的回合（工作台修正面板里设置），没有标注时为“不可判定”。
 - **击球类型**：读取 `ShotEvent.shot_type`。击球分类模块接入后填这个字段即可，统计和报告自动出现分布（`SHOT_TYPE_LABELS` 里登记中文名），无需改报告代码。
 
+## 逐拍建议（`moments.py`，不调用模型）
+
+单打里每一拍已知击球者和击球类型的球，取击球那一刻双方在球场上的站位（球员跟踪，米制），
+再看对手接这一拍移动了多远（对手下一拍的击球位置）、怎么回的、这一分谁赢，用几条规则找出该换打法的球：
+
+| `issue` | 规则 | 建议 |
+| --- | --- | --- |
+| `clear_to_rear` | 高远球/挑球，而对手已在后场（且对手直接进攻、丢分或几乎不用移动） | 离对手最远的网前角：后场/中场打吊球，网前放网 |
+| `short_to_front` | 吊球/放网/勾对角/挡网，而对手已在网前 | 离对手最远的后场角：后场打高远球，中场推球，网前挑球 |
+| `lift_from_front` | 在网前挑球被对手杀/扑 | 放网到离对手最远的网前角 |
+| `attack_off_balance` | 在后场被动位置杀球/扑球/平抽，直接丢分 | 先打高远球到后场中路过渡 |
+| `to_opponent` | 对手移动不到 1 米就接到，然后进攻或得分 | 离对手最远的角，用从击球位置打得到的球 |
+
+结果存在 `MatchStats.moments`（`ShotMoment`：视频时间、第几回合第几拍、双方站位和区域、对手移动距离、
+回球、结果、规则建议），每人最多 12 拍（按严重程度挑），按时间排序。发球不评；双打暂不支持。
+区域名：击球者位置按本人视角，对手位置和目标区域按“从击球者这边看过去”的左右。
+
+教练报告（`CoachReport.shot_advice`）为每一拍写一条 `ShotAdvice`：时间、回合、拍数和站位永远取自
+`ShotMoment`，模型只写 `advice`/`why`；模型漏写或写了不符的时间时改用规则说明（`source = "rules"`）。
+在“人物”里指定了哪位是“我”（`PeopleAssignment.self_player`）时只列本人的球，并用“你”称呼。
+
 ## AI 教练（`coach/`）
 
 - Provider 协议：`generate(stats, knowledge=None) -> dict`（符合 `prompt.OUTPUT_SCHEMA`），失败抛 `CoachProviderError`。

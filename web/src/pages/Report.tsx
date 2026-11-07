@@ -200,6 +200,35 @@ function CoachView({ coach, idx, onJump }: { coach: CoachReport; idx: Map<string
           </div>
         ))}
       </div>
+      {(coach.shot_advice?.length ?? 0) > 0 && (
+        <>
+          <h3>逐拍建议</h3>
+          <div className="muted small">结合击球类型和双方站位找出的、可以换一种打法的击球。点时间可跳到那一拍回看。</div>
+          <ol className="training shot-advice">
+            {coach.shot_advice!.map((a) => (
+              <li key={a.moment_id}>
+                <div className="row">
+                  <a className="chip mono" href={`#/videos/${coach.video_id}?t=${a.t_ms}`} title="跳到这一拍">
+                    {a.timestamp}
+                  </a>
+                  <span className="small">{a.situation}</span>
+                  <span className="spacer" />
+                  <span className={`pill conf-${a.confidence}`}>{CONF_LABEL[a.confidence]}</span>
+                </div>
+                <div>
+                  <b>{a.advice}</b>
+                </div>
+                <div className="muted small">{a.why}</div>
+                {a.warnings.map((w) => (
+                  <div key={w} className="small" style={{ color: "var(--warn)" }}>
+                    ⚠ {w}
+                  </div>
+                ))}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
       {coach.training.length > 0 && (
         <>
           <h3>训练建议</h3>

@@ -53,6 +53,14 @@ def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: 
                 out.append(f"  依据：{', '.join(f'`{k}`' for k in i.evidence)}")
             for w in i.warnings:
                 out.append(f"  ⚠ {w}")
+        if coach.shot_advice:
+            out += ["", "### 逐拍建议", "", "_结合击球类型和双方站位找出的、可以换一种打法的击球（时间为视频时间）。_", ""]
+            for a in coach.shot_advice:
+                out.append(f"- **{a.timestamp}** {a.situation}（可信度：{CONF[a.confidence]}）  ")
+                out.append(f"  {a.advice}  ")
+                out.append(f"  {a.why}")
+                for w in a.warnings:
+                    out.append(f"  ⚠ {w}")
         if coach.training:
             out += ["", "### 训练建议", ""]
             for t in coach.training:

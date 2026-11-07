@@ -174,6 +174,267 @@
       "title": "PlayerStats",
       "type": "object"
     },
+    "ShotMoment": {
+      "additionalProperties": false,
+      "description": "One shot whose choice should change, found by rules from stroke type + both players' positions.\n\nPositions are in each player's own-half frame (``lateral`` from their own left sideline as they\nface the net, ``depth`` from their own baseline: 0 = baseline, 6.70 = net). Zone names for the\nopponent and the target are given from the hitter's point of view (the hitter's left/right).",
+      "properties": {
+        "moment_id": {
+          "title": "Moment Id",
+          "type": "string"
+        },
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "rally_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rally Id"
+        },
+        "rally_no": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "1-based rally number in the video",
+          "title": "Rally No"
+        },
+        "shot_no": {
+          "description": "1-based shot number in the rally",
+          "minimum": 1,
+          "title": "Shot No",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "shot_type": {
+          "enum": [
+            "short_serve",
+            "long_serve",
+            "clear",
+            "smash",
+            "drop",
+            "net_shot",
+            "cross_net",
+            "push",
+            "net_kill",
+            "drive",
+            "lift",
+            "block"
+          ],
+          "title": "Shot Type",
+          "type": "string"
+        },
+        "hitter_zone": {
+          "description": "where the hitter stood, e.g. '\u540e\u573a\u5de6\u4fa7' (own view)",
+          "title": "Hitter Zone",
+          "type": "string"
+        },
+        "hitter_pos": {
+          "description": "hitter (lateral, depth) m, own-half frame",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Hitter Pos",
+          "type": "array"
+        },
+        "opponent_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Opponent Id",
+          "type": "string"
+        },
+        "opponent_zone": {
+          "description": "where the opponent stood, from the hitter's view, e.g. '\u7f51\u524d\u53f3\u4fa7'",
+          "title": "Opponent Zone",
+          "type": "string"
+        },
+        "opponent_pos": {
+          "description": "opponent (lateral, depth) m, opponent's own-half frame",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Opponent Pos",
+          "type": "array"
+        },
+        "opponent_reach_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "how far the opponent moved to reach this shot",
+          "title": "Opponent Reach M"
+        },
+        "next_shot_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "short_serve",
+                "long_serve",
+                "clear",
+                "smash",
+                "drop",
+                "net_shot",
+                "cross_net",
+                "push",
+                "net_kill",
+                "drive",
+                "lift",
+                "block"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the opponent's reply",
+          "title": "Next Shot Type"
+        },
+        "outcome": {
+          "description": "won/lost = the hitter's side won/lost the rally within the next two shots",
+          "enum": [
+            "won",
+            "lost",
+            "continued",
+            "unknown"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "issue": {
+          "description": "rule code, e.g. 'to_opponent', 'clear_to_rear', 'short_to_front'",
+          "title": "Issue",
+          "type": "string"
+        },
+        "problem": {
+          "title": "Problem",
+          "type": "string"
+        },
+        "suggested_shot": {
+          "anyOf": [
+            {
+              "enum": [
+                "short_serve",
+                "long_serve",
+                "clear",
+                "smash",
+                "drop",
+                "net_shot",
+                "cross_net",
+                "push",
+                "net_kill",
+                "drive",
+                "lift",
+                "block"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suggested Shot"
+        },
+        "target_zone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "where to send it instead, from the hitter's view",
+          "title": "Target Zone"
+        },
+        "suggestion": {
+          "title": "Suggestion",
+          "type": "string"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        },
+        "severity": {
+          "minimum": 0,
+          "title": "Severity",
+          "type": "number"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "moment_id",
+        "shot_id",
+        "shot_no",
+        "t_ms",
+        "player_id",
+        "shot_type",
+        "hitter_zone",
+        "hitter_pos",
+        "opponent_id",
+        "opponent_zone",
+        "opponent_pos",
+        "outcome",
+        "issue",
+        "problem",
+        "suggestion",
+        "why",
+        "severity",
+        "confidence"
+      ],
+      "title": "ShotMoment",
+      "type": "object"
+    },
     "Status": {
       "enum": [
         "ok",
@@ -247,6 +508,14 @@
         "$ref": "#/$defs/PlayerStats"
       },
       "title": "Players",
+      "type": "array"
+    },
+    "moments": {
+      "description": "shots whose choice should change (singles, needs stroke types + tracks)",
+      "items": {
+        "$ref": "#/$defs/ShotMoment"
+      },
+      "title": "Moments",
       "type": "array"
     },
     "caveats": {

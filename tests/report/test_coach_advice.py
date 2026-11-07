@@ -109,7 +109,7 @@ def test_model_citations_are_grounded(stats):
 def test_prompt_carries_focus_and_note_cards(stats):
     k = knowledge_context(stats, NOTES)
     msg = user_message(stats, k)
-    payload = json.loads(msg.split("（knowledge，JSON）：\n\n", 1)[1])
+    payload = json.loads(msg.split("（knowledge，JSON）：\n\n", 1)[1].split("\n\n以下是需要改变", 1)[0])
     first = payload[0]
     assert first["focus_id"] and first["notes"][0]["note_id"]
     assert "url" not in first["notes"][0]  # links come from the files, not from the model
