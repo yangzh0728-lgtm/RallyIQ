@@ -14,7 +14,10 @@ the target; the old target moves to ``other_courts`` so its people keep being
 rejected. Manual calibrations are never changed.
 
 Only courts that calibration found can be chosen. When the right court is not
-among them nothing changes here; the input quality check flags it instead.
+among them but people are clearly playing while the calibrated court stays empty,
+the segment is marked ``undeterminable`` instead (players are then tracked
+without it, the shuttle court lock falls back to the players' span, and the UI
+asks for the 4 corners).
 """
 
 from __future__ import annotations
@@ -46,6 +49,12 @@ class CourtChoiceConfig:
     # of occupied halves (0..2), averaged over the sampled frames.
     min_score: float = 1.0
     min_gain: float = 0.5
+    # Contradiction check: when at least two standing people are visible in this share
+    # of the sampled frames but the chosen court is (almost) never occupied, the
+    # calibration is wrong whatever its line fit says.
+    people_frames_min: float = 0.5
+    min_people_frames: int = 4
+    empty_court_max: float = 0.25
 
 
 @dataclass
@@ -91,6 +100,40 @@ def _occupied_halves(H: np.ndarray, dets: Sequence[PersonDetection], cfg: CourtC
     return len(halves)
 
 
+def _standing_people(dets: Sequence[PersonDetection], cfg: CourtChoiceConfig) -> int:
+    n = 0
+    for d in dets:
+        if d.score < cfg.min_det_score:
+            continue
+        if (d.keypoints[:, 2] >= cfg.min_keypoint_conf).sum() < cfg.min_visible_keypoints:
+            continue
+        if is_seated(d, cfg.min_keypoint_conf):
+            continue
+        n += 1
+    return n
+
+
+def contradicted(seg: CalibrationSegment, frames: Sequence[Sequence[PersonDetection]],
+                 cfg: CourtChoiceConfig | None = None) -> CalibrationSegment | None:
+    """``seg`` marked undeterminable when people are clearly playing but none of them
+    stands on the calibrated court (sam's DJI_0009: a band of far-court lines was
+    fitted with status ok). None when the calibration is consistent with the people."""
+    cfg = cfg or CourtChoiceConfig()
+    if seg.homography is None or seg.method == "manual" or seg.status == "undeterminable" or not frames:
+        return None
+    busy = [dets for dets in frames if _standing_people(dets, cfg) >= 2]
+    if len(busy) < cfg.min_people_frames or len(busy) < cfg.people_frames_min * len(frames):
+        return None
+    H = np.asarray(seg.homography, dtype=np.float64)
+    occupied = float(np.mean([_occupied_halves(H, dets, cfg) for dets in busy]))
+    if occupied > cfg.empty_court_max:
+        return None
+    note = (f"calibration contradicted by the players: two or more people in {len(busy)}/{len(frames)} sampled "
+            f"frames, but the calibrated court is empty (occupied halves {occupied:.2f}); the court lines were "
+            f"probably fitted to the wrong lines. Pick the 4 corners by hand.")
+    return seg.model_copy(update={"status": "undeterminable", "confidence": 0.0, "notes": [*seg.notes, note]})
+
+
 def score_courts(seg: CalibrationSegment, frames: Sequence[Sequence[PersonDetection]],
                  cfg: CourtChoiceConfig | None = None) -> list[CourtScore]:
     cfg = cfg or CourtChoiceConfig()
@@ -130,7 +173,7 @@ def rechoose_segment(seg: CalibrationSegment, frames: Sequence[Sequence[PersonDe
 
 
 def rechoose(cal: CourtCalibration, detect_frames, cfg: CourtChoiceConfig | None = None) -> CourtCalibration | None:
-    """Apply :func:`rechoose_segment` to every segment that lists other courts.
+    """Apply :func:`rechoose_segment`, then :func:`contradicted`, to every automatic segment.
 
     ``detect_frames(frame_indices) -> list[list[PersonDetection]]`` runs the pose
     model on those frames. Returns the new calibration, or None if nothing changed.
@@ -140,10 +183,11 @@ def rechoose(cal: CourtCalibration, detect_frames, cfg: CourtChoiceConfig | None
     segs = []
     for seg in cal.segments:
         new = None
-        if seg.homography is not None and seg.other_courts and seg.method != "manual":
-            n = cfg.frames_per_segment
+        if seg.homography is not None and seg.method != "manual" and seg.status != "undeterminable":
+            n = min(cfg.frames_per_segment, seg.end_frame - seg.start_frame + 1)
             idx = sorted({int(round(f)) for f in np.linspace(seg.start_frame, seg.end_frame, n + 2)[1:-1]})
-            new = rechoose_segment(seg, detect_frames(idx), cfg)
+            frames = detect_frames(idx)
+            new = rechoose_segment(seg, frames, cfg) or contradicted(seg, frames, cfg)
         segs.append(new or seg)
         changed |= new is not None
     return cal.model_copy(update={"segments": segs}) if changed else None
