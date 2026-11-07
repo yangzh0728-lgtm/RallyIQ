@@ -5,7 +5,8 @@ calibration from the previous stage when it is available.
 
 Configuration (``ctx.config`` or environment):
 
-* ``pose_model`` / ``RALLYIQ_POSE_MODEL`` - path to the RTMO ONNX file.
+* ``pose_model`` / ``RALLYIQ_POSE_MODEL`` - path to the RTMO ONNX file (default: ``weights/pose.onnx``,
+  see ``pose.find_pose_model``).
   Without it the stage returns empty tracks so the rest of the pipeline still
   runs, and the ``model`` field stays ``None`` to show nothing was detected.
 * ``players_stride`` - run pose on every n-th frame (default 1).
@@ -143,9 +144,12 @@ def run(ctx: StageContext) -> PlayerTracks:
         fmt = match_format_setting(ctx)
         return demo_players(meta, cal, "doubles" if fmt == "doubles" else "singles")
 
-    model_path = ctx.config.get("pose_model") or os.environ.get("RALLYIQ_POSE_MODEL")
-    if not model_path or not os.path.exists(model_path):
-        log.warning("players: no pose model configured (RALLYIQ_POSE_MODEL); returning empty tracks")
+    from .pose import find_pose_model
+
+    model_path = find_pose_model(ctx.config.get("pose_model"))
+    if not model_path:
+        log.warning("players: no pose model found (scripts/fetch_weights.sh or RALLYIQ_POSE_MODEL); "
+                    "returning empty tracks")
         return PlayerTracks(video_id=meta.video_id, model=None, frames=[])
 
     from .pose import RTMOOnnx

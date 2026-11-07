@@ -157,6 +157,25 @@ def pick_session(model_path: str, input_size: tuple[int, int] = (640, 640)):
     return sess, sess.get_providers()[0]
 
 
+def find_pose_model(explicit: str | None = None) -> str | None:
+    """RTMO ONNX path: ``explicit`` -> ``$RALLYIQ_POSE_MODEL`` -> ``weights/pose.onnx`` or
+    ``weights/rtmo-*.onnx`` in the repo -> the same names under ``~/.cache/rallyiq/weights/``.
+    ``scripts/fetch_weights.sh`` downloads it to ``weights/pose.onnx``."""
+    from pathlib import Path
+
+    for cand in (explicit, os.environ.get("RALLYIQ_POSE_MODEL")):
+        if cand:
+            return cand if os.path.exists(cand) else None
+    roots = [Path(__file__).resolve().parents[3] / "weights", Path("~/.cache/rallyiq/weights").expanduser()]
+    for root in roots:
+        if (root / "pose.onnx").is_file():
+            return str(root / "pose.onnx")
+        found = sorted(root.glob("rtmo-*.onnx")) if root.is_dir() else []
+        if found:
+            return str(found[0])
+    return None
+
+
 class RTMOOnnx:
     """RTMO ONNX (end-to-end export: outputs ``dets`` [1,N,5] and ``keypoints`` [1,N,17,3]).
 
@@ -175,11 +194,11 @@ class RTMOOnnx:
     ):
         import onnxruntime as ort
 
-        model_path = model_path or os.environ.get("RALLYIQ_POSE_MODEL")
-        if not model_path or not os.path.exists(model_path):
+        model_path = find_pose_model(model_path)
+        if not model_path:
             raise FileNotFoundError(
-                "RTMO ONNX model not found. Set RALLYIQ_POSE_MODEL or pass model_path "
-                "(see rallyiq/perception/players/README.md)."
+                "RTMO ONNX model not found. Run scripts/fetch_weights.sh, set RALLYIQ_POSE_MODEL or pass "
+                "model_path (see rallyiq/perception/players/README.md)."
             )
         self.input_size = input_size  # (w, h)
         if providers is None:

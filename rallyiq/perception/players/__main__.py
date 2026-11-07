@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import time
 from pathlib import Path
 
 import numpy as np
 
-from .pose import RTMOOnnx
+from .pose import RTMOOnnx, find_pose_model
 from .runner import PlayerTrackingConfig, iter_video, track_players, video_fps
 from .stage import MODEL_NAME, build_tracks
 
@@ -25,7 +24,7 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video")
     ap.add_argument("--homography", help="JSON file with a 3x3 image->court homography")
-    ap.add_argument("--model", help="RTMO ONNX path (default: $RALLYIQ_POSE_MODEL)")
+    ap.add_argument("--model", help="RTMO ONNX path (default: $RALLYIQ_POSE_MODEL, then weights/pose.onnx)")
     ap.add_argument("--out", default="players.json")
     ap.add_argument("--stride", type=int, default=1)
     ap.add_argument("--format", choices=["auto", "singles", "doubles"], default="auto",
@@ -42,7 +41,7 @@ def main(argv: list[str] | None = None) -> None:
     cfg = PlayerTrackingConfig(stride=args.stride, match_format=args.format, far_boost=args.far_boost)
     cfg.tracker.fps = video_fps(args.video)
     est = RTMOOnnx(args.model)
-    est_path = args.model or os.environ.get("RALLYIQ_POSE_MODEL", "")
+    est_path = find_pose_model(args.model) or ""
     t0 = time.time()
     results = track_players(iter_video(args.video, args.stride), est, (lambda f: H) if H is not None else None, cfg)
     dt = time.time() - t0
