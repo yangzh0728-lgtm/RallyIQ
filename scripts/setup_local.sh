@@ -38,8 +38,9 @@ for b in ffmpeg ffprobe; do
 done
 echo "ffmpeg: $(ffmpeg -version | head -1)"
 if [ "${SKIP_WEB:-0}" != 1 ]; then
-  command -v node >/dev/null && node -e 'process.exit(+process.versions.node.split(".")[0] < 20)' \
-    || { hint node nodejs; die "需要 Node.js 20 或更高版本（只用来构建网页界面；可设 SKIP_WEB=1 跳过）"; }
+  command -v node >/dev/null && node -e 'process.exit(Number(process.versions.node.split(".")[0]) < 20 ? 1 : 0)' \
+    || { [ "$os" = Darwin ] && echo "  macOS:  brew install node" \
+           || echo "  Linux:  发行版自带的 nodejs 往往太旧，建议用 nvm：https://github.com/nvm-sh/nvm 然后 nvm install 22"; die "需要 Node.js 20 或更高版本（只用来构建网页界面；可设 SKIP_WEB=1 跳过）"; }
   echo "node: $(node --version)"
 fi
 
