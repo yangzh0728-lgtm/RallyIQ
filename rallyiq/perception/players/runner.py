@@ -10,10 +10,10 @@ import numpy as np
 from ..target_court import CourtRegion
 
 from .appearance import colour_histogram
-from .filtering import FilterConfig, build_candidates
+from .filtering import FilterConfig, build_candidates, is_seated
 from .geometry import far_court_roi, image_net_y
 from .match_format import FORMATS, FormatConfig, FormatDecision, decide_format
-from .models import PlayerFrameResult
+from .models import PersonDetection, PlayerFrameResult
 from .pose import PoseEstimator
 from .postprocess import drop_offcourt_runs, fill_short_gaps
 from .sides import SideConfig, stabilise_sides
@@ -39,6 +39,12 @@ class PlayerTrackingConfig:
     # small in the model input, "on" on every calibrated frame, "off" never.
     far_boost: str = "auto"
     far_boost_max_px: float = 110.0  # "auto": boost when the far player is shorter than this in the model input
+    # Without calibration (camera cut, or a calibration the players contradicted)
+    # the far half is located from the nearest standing player instead: a box above
+    # their head, sized for a far player ``far_ratio`` times their height. Runs only
+    # on frames where fewer players than the format needs were found.
+    far_ratio: float = 0.35
+    far_crop_per_player: float = 5.0  # box side in far-player heights
 
 
 class PlayerTrackingOutput(list):
@@ -143,6 +149,14 @@ def track_players(
                 need = estimator.far_player_px(img.shape, roi)  # far player height in the model input
                 roi = roi if need is not None and need < cfg.far_boost_max_px else None
         dets = estimator(img, far_roi=roi) if roi is not None else estimator(img)
+        if H is None and cfg.far_boost != "off" and hasattr(estimator, "detect_roi"):
+            want = 4 if (tracker is not None and out.match_format == "doubles") or cfg.match_format == "doubles" else 2
+            roi = far_roi_from_players(dets, (img.shape[1], img.shape[0]), want, cfg)
+            if roi is not None and cfg.far_boost == "auto":
+                need = estimator.far_player_px(img.shape, roi)
+                roi = roi if need is not None and need < cfg.far_boost_max_px else None
+            if roi is not None:
+                dets = estimator.detect_roi(img, roi, dets)
         region = region_for(frame_idx) if region_for else None
         cands = build_candidates(dets, H, (img.shape[1], img.shape[0]), cfg.filter, region)
         for c in cands:
@@ -158,6 +172,42 @@ def track_players(
     if gap > 0:
         fill_short_gaps(out, gap)
     return out
+
+
+def _standing(dets: list[PersonDetection], conf: float = 0.3, min_kps: int = 6) -> list[PersonDetection]:
+    return [d for d in dets if d.score >= conf and (d.keypoints[:, 2] >= conf).sum() >= min_kps
+            and not is_seated(d, conf)]
+
+
+def far_roi_from_players(dets: list[PersonDetection], image_size: tuple[int, int], want: int,
+                         cfg: PlayerTrackingConfig) -> tuple[int, int, int, int, float] | None:
+    """Box where the far player should be when there is no homography, in the
+    ``far_court_roi`` format ``(x1, y1, x2, y2, far_player_px)``.
+
+    The tallest standing person is taken as the near player. The box sits above
+    their head (its lower edge cuts through the head, so their body is dropped by
+    the crop's edge rule), centred on them horizontally, with sides of
+    ``far_crop_per_player`` expected far-player heights. None when enough players
+    were already found, nobody stands in view, or the box would not be smaller
+    than the frame (no upscaling to gain).
+    """
+    people = _standing(dets)
+    if not people or len(people) >= want:
+        return None
+    near = max(people, key=lambda d: d.height)
+    w, h = image_size
+    far_px = cfg.far_ratio * float(near.height)
+    side = cfg.far_crop_per_player * far_px
+    if far_px <= 0 or side >= 0.9 * min(w, h):
+        return None
+    y2 = min(float(near.bbox[1]) + 0.15 * float(near.height), h)
+    y1 = max(y2 - side, 0.0)
+    cx = 0.5 * float(near.bbox[0] + near.bbox[2])
+    x1 = min(max(cx - side / 2, 0.0), max(w - side, 0.0))
+    x2 = min(x1 + side, w)
+    if y2 - y1 < 2 * far_px or x2 - x1 < 16:
+        return None  # near player's head is at the top of the frame: no room for a far half
+    return int(x1), int(y1), int(np.ceil(x2)), int(np.ceil(y2)), far_px
 
 
 def _decided(d: FormatDecision) -> tuple[str, FormatDecision]:

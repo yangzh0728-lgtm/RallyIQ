@@ -260,3 +260,48 @@ def test_side_memory_still_steers_reacquisition_after_a_cut():
     # Long cut; only one person comes back, on the far half: it goes to the slot last seen there.
     out = tr.update(200, build_candidates([person_at_court(3.0, 11.0)], H_IMG_TO_COURT, IMAGE_SIZE), calibrated=True)
     assert [(p.player_id, p.side) for p in out] == [("P2", "far")]
+
+
+# -- far player without calibration ------------------------------------------------
+
+class UncalibratedEstimator(RoiEstimator):
+    """Full frame finds only the near player; the far pass finds the far one."""
+
+    def __init__(self, per_frame, px, far):
+        super().__init__(per_frame, px)
+        self.far = far
+        self.detect_rois = []
+
+    def detect_roi(self, img, roi, dets):
+        self.detect_rois.append(roi)
+        x1, y1, x2, y2 = roi[:4]
+        fx, fy = (self.far.bbox[0] + self.far.bbox[2]) / 2, self.far.bbox[3]
+        return dets + ([self.far] if x1 <= fx <= x2 and y1 <= fy <= y2 else [])
+
+
+def _run_uncalibrated(per_frame, boost="auto", px=40.0):
+    from rallyiq.perception.players.runner import PlayerTrackingConfig
+
+    far = person_at_court(3.0, 10.5)
+    est = UncalibratedEstimator(per_frame, px, far)
+    img = np.zeros((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), np.uint8)
+    out = track_players(((i, i * 33.3, img) for i in range(len(per_frame))), est, lambda f: None,
+                        PlayerTrackingConfig(match_format="singles", far_boost=boost))
+    return est, out
+
+
+def test_far_player_found_without_calibration():
+    near = person_at_court(3.0, 2.5)
+    est, out = _run_uncalibrated([[near]] * 5)
+    assert len(est.detect_rois) == 5
+    *_, y2, far_px = est.detect_rois[0]
+    assert y2 < near.bbox[3] and far_px < near.height
+    assert all(len(f.players) == 2 for f in out)
+
+
+def test_far_pass_without_calibration_skipped_when_not_needed():
+    near, far = person_at_court(3.0, 2.5), person_at_court(3.0, 10.5)
+    assert _run_uncalibrated([[near, far]] * 3)[0].detect_rois == []  # both already found
+    assert _run_uncalibrated([[near]] * 3, boost="off")[0].detect_rois == []
+    assert _run_uncalibrated([[near]] * 3, px=200.0)[0].detect_rois == []  # far player big enough
+    assert _run_uncalibrated([[]] * 3)[0].detect_rois == []  # nobody to anchor on
