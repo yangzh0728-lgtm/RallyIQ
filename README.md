@@ -89,8 +89,9 @@ source .venv/bin/activate
 python -m rallyiq.pipeline analyze ~/Movies/DJI_0009.MP4    # 打印各阶段状态和结果目录 data/videos/<video_id>/artifacts/
 ```
 
-- 视频会复制进数据目录（默认 `./data`，`--data 路径` 或 `RALLYIQ_DATA` 可改，比如放到外接硬盘），原文件不动。
-- `--from strokes` 这类参数可以只重跑某个阶段之后的部分（阶段依次为 probe、calibration、players、shuttle、events、strokes、overlay）。
+- 视频会复制进数据目录（默认 `./data`），原文件不动。想放到外接硬盘：`python -m rallyiq.pipeline --data /Volumes/T7/rallyiq analyze 视频.mp4`
+  （`--data` 写在 `analyze` 前面；网页用同一个目录时启动前设 `RALLYIQ_DATA=/Volumes/T7/rallyiq`）。
+- 缺模型权重时不会中断：对应阶段输出空结果，日志里写明缺哪个模型。
 
 分析过的视频也会出现在网页的视频列表里。结果是 JSON（球场标定、球员轨迹、羽毛球轨迹、回合与击球、击球类型、叠加层），
 格式见 `contracts/README.md`；网页上可以导出 JSON / CSV、赛后报告（Markdown）和回合片段（MP4）。
