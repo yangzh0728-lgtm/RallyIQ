@@ -121,14 +121,14 @@ ShuttleSet 结果（2026-11-07；训练 = 38 场里已跑完的 59 段、915 拍
 
 ### 默认模型（随仓库发布）
 
-`models/strokes_v2.json` 是用上面 59 段训练片段训练好的 v2 模型（100 棵树 × 12 类，约 0.9 MB），
+`models/strokes_v2.json` 是用 85 段训练片段（19 场、1270 拍）训练好的 v2 模型（100 棵树 × 12 类，约 1 MB），
 存成 JSON 树，用 numpy 计算：**不需要 scikit-learn，也不用 pickle**。`strokes` 阶段默认
 `classifier: "auto"` 就用它；文件缺失或损坏时退回规则。要用规则：`{"strokes": {"classifier": "rules"}}`。
 
 | 默认分类器 | 6 场留出比赛（184 拍） |
 | --- | --- |
 | 之前：规则 `rules_v1` | 45.7% |
-| 现在：`gbt_v2`（经过完整 `strokes` 阶段） | **63.0%**（模型本身 64.1%） |
+| 现在：`gbt_v2`（经过完整 `strokes` 阶段） | **63.0%**（模型本身 65.2%；按比赛交叉验证 68.0%） |
 
 重新训练并替换：`python scripts/learn_strokes.py --source shuttleset --data <训练文件夹...> --out rallyiq/strokes/models/strokes_v2.json`
 （`--out` 以 `.json` 结尾就写 JSON，否则写 joblib）。注意：只在 BWF 转播单打上训练和测试过，
