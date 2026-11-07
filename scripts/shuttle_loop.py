@@ -406,7 +406,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.check:
         docs = reviewed_docs(a.labels)
-        tr, _va, _missing = build_split(docs, clips_dir, a.val_frac, state.get("holdout", []))
+        tr, _va, _missing = build_split(docs, clips_dir, a.val_frac,
+                                         sorted(set(state.get("holdout", [])) | set(manifest_holdout(manifest))))
         clips, missing = labeled_clips(docs, clips_dir)
         if not clips:
             raise SystemExit("没有已复核且本地有视频的片段")
