@@ -1,0 +1,111 @@
+{
+  "id": "zhengsiwei-bili-BV1RaSRYVExE",
+  "coach": "郑思维 (Zheng Siwei)",
+  "platform": "bilibili",
+  "channel": "郑思维 (space.bilibili.com/383058245)",
+  "url": "https://www.bilibili.com/video/BV1RaSRYVExE/",
+  "title": "欢迎来到羽球思维第十五期🏸进攻的一致性教学",
+  "series": "羽球思维 第15期",
+  "published": "2024-11-01",
+  "duration_s": 93,
+  "language": "zh",
+  "transcript_source": "bilibili_ai_subtitles",
+  "level": "intermediate",
+  "topic": "后场进攻的一致性：固定架拍动作，让对手猜不透线路",
+  "strokes": [
+    "smash",
+    "drop",
+    "clear",
+    "slice"
+  ],
+  "aspects": [
+    "deception",
+    "technique"
+  ],
+  "summary": "后场进攻时动作的一致性非常重要，动作越一致对手越猜不透线路。关键是架拍：架拍越稳定，对手越难判断。如果吊球架拍小、杀球张得大、打高球又是另一个角度，对手一看架拍就知道你要打什么。应把架拍动作固定在一个范围内，细微变化对手在场上看不出来。示范同一架拍下吊、平高、杀直线、杀中路。",
+  "key_points": [
+    "后场进攻动作一致性非常重要。",
+    "让动作看起来一致，最重要的是架拍。",
+    "架拍越稳定，对手越猜不透线路。",
+    "不同球用不同架拍（吊小、杀大、高球另一个角度）会被对手一眼看穿。",
+    "把整个架拍动作固定在一个范围内，细微变化场上看不出来。",
+    "同一架拍可以打出吊球、平高球、杀直线、杀中路。"
+  ],
+  "common_mistakes": [
+    "吊球时架拍明显变小。",
+    "杀球时架拍张得特别开，提前暴露意图。"
+  ],
+  "drills": [
+    {
+      "name": "同一架拍四种球",
+      "how": "同伴挑后场，用完全相同的架拍随机打吊球、平高球、杀直线、杀中路，让同伴猜线路。"
+    }
+  ],
+  "coach_cues": [
+    "架拍固定",
+    "一样的起手"
+  ],
+  "related_metrics": [
+    "{pid}.shot_types",
+    "{pid}.win.own_last_shot_pct"
+  ],
+  "content_caveats": "示范部分字幕把“吊”识别为“P”“收”等，已按画面理解。",
+  "shots": [
+    {
+      "name_zh": "后场吊球（同一架拍）",
+      "stroke": "drop",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "-"
+    },
+    {
+      "name_zh": "后场平高球",
+      "stroke": "clear",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "-"
+    },
+    {
+      "name_zh": "后场杀直线",
+      "stroke": "smash",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "后场杀中路",
+      "stroke": "smash",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "-"
+    },
+    {
+      "name_zh": "后场滑拍吊",
+      "stroke": "slice",
+      "hand": "forehand",
+      "zone": "rear",
+      "direction": "cross"
+    }
+  ],
+  "footwork": [
+    "后退到位后侧身，以同样的身体姿态完成架拍"
+  ],
+  "technique_breakdown": {
+    "架拍": "每次起手姿势固定在同一范围",
+    "出手": "最后时刻才决定线路"
+  },
+  "when_to_use": [
+    "后场主动进攻时"
+  ],
+  "corrections": [],
+  "progression": [
+    "固定架拍练单一球种",
+    "同一架拍切换两种球",
+    "随机切换四种球"
+  ],
+  "self_check": [
+    "我吊球和杀球的架拍有没有差别？",
+    "同伴能否从架拍猜到我的线路？"
+  ],
+  "detailed_description": "这一期讲后场进攻时的“一致性”。郑思维说大家都知道后场进攻时一致性的动作非常重要，因为动作越一致，对方就越猜不透你的进攻线路。那么让动作看起来一致，最重要的是什么呢？是架拍。架拍越稳定，对方就越猜不透你要打哪条线路。如果你的动作是吊球时架拍小一点，杀球时又张得比较开，打高球又是另一个角度，那对方通过你的架拍一下就能知道你要打什么。所以在场上想把进攻打得比较一致、比较有威胁的时候，他们会把整个架拍动作固定好，大概就在一个范围里，不会有明显的改变；就算有一点点改变，对方在场上也看不太出来。只要你起来是这个样子，对方就不知道该怎么动了。视频后半段他用同一个架拍做示范，看对方能接到几个：可以吊，可以打平高球，可以杀直线，可以杀中路。教学上可以这样理解：架拍是后场所有球种的共同起点，只有起点一致，最后时刻的拍面和发力变化才能起到欺骗作用。对业余球友，建议在练习中让同伴专门去“猜”你的线路，如果同伴总能猜中，说明架拍暴露了意图。"
+}

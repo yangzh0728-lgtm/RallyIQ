@@ -1,0 +1,1651 @@
+{
+  "updated": "2026-11-06",
+  "coaches": [
+    {
+      "coach": "Viktor Axelsen",
+      "platform": "youtube",
+      "channel": "https://www.youtube.com/channel/UCkuVto4oGsgdEisvXlUaHvg",
+      "handle": "@viktoraxelsen7830",
+      "scope": "频道里所有教学类播放列表（Va-Academy、VACADEMY、Tips 23-24、VA 5 ADVICE、Trick Shot Tutorials）。Vlog、比赛回放、Q&A、直播等非教学列表未收录。",
+      "videos": [
+        {
+          "id": "J1JBAfxTaDA",
+          "title": "YOU'RE TOO EASY TO READ",
+          "url": "https://www.youtube.com/watch?v=J1JBAfxTaDA",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/J1JBAfxTaDA.json"
+        },
+        {
+          "id": "94HcV0FgsR0",
+          "title": "Master the Slice Like Viktor Axelsen 🏸 | Badminton Tutorial",
+          "url": "https://www.youtube.com/watch?v=94HcV0FgsR0",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/94HcV0FgsR0.json"
+        },
+        {
+          "id": "Y2BfBgk_rSc",
+          "title": "Straight Reverse Slice Tutorial | One of Badminton's Most Difficult Shots",
+          "url": "https://www.youtube.com/watch?v=Y2BfBgk_rSc",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/Y2BfBgk_rSc.json"
+        },
+        {
+          "id": "q6e73uS4NTg",
+          "title": "Can Viktor Axelsen Fix This Amateur's Cross-Court Slice?",
+          "url": "https://www.youtube.com/watch?v=q6e73uS4NTg",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/q6e73uS4NTg.json"
+        },
+        {
+          "id": "HqUWKm-t_fs",
+          "title": "👉 pro vs amateur ✅ - badminton reverse slice (Short)",
+          "url": "https://www.youtube.com/watch?v=HqUWKm-t_fs",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "skipped",
+          "reason": "36 秒短视频，没有口播和字幕"
+        },
+        {
+          "id": "qHS8HW94zkA",
+          "title": "Fix ❌ Your Backhand Clear in 10 Minutes ⏱️",
+          "url": "https://www.youtube.com/watch?v=qHS8HW94zkA",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/qHS8HW94zkA.json"
+        },
+        {
+          "id": "43rzNKxxnRQ",
+          "title": "Master Backhand Serve like a Pro",
+          "url": "https://www.youtube.com/watch?v=43rzNKxxnRQ",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/43rzNKxxnRQ.json"
+        },
+        {
+          "id": "SQ8cYP-0BrY",
+          "title": "Warm Up Like a Badminton Pro - Viktor Axelsen",
+          "url": "https://www.youtube.com/watch?v=SQ8cYP-0BrY",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/SQ8cYP-0BrY.json"
+        },
+        {
+          "id": "gA-Oy4xVr4I",
+          "title": "Master Net Shot Tutorial",
+          "url": "https://www.youtube.com/watch?v=gA-Oy4xVr4I",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/gA-Oy4xVr4I.json"
+        },
+        {
+          "id": "_Ib6sv7Q2LY",
+          "title": "Backhand Net Shot Tutorial with Viktor Axelsen",
+          "url": "https://www.youtube.com/watch?v=_Ib6sv7Q2LY",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/_Ib6sv7Q2LY.json"
+        },
+        {
+          "id": "ytvx-z5Tj8s",
+          "title": "Stop Moving Wrong! Split Step Tutorial for Beginners",
+          "url": "https://www.youtube.com/watch?v=ytvx-z5Tj8s",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/ytvx-z5Tj8s.json"
+        },
+        {
+          "id": "4C5_4Jn10V8",
+          "title": "Badminton Lift for Beginners: The Most Underrated Shot",
+          "url": "https://www.youtube.com/watch?v=4C5_4Jn10V8",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/4C5_4Jn10V8.json"
+        },
+        {
+          "id": "k9-vZWgVH-Q",
+          "title": "How to Start Badminton With Viktor Axelsen (Beginner Guide) - Va Academy",
+          "url": "https://www.youtube.com/watch?v=k9-vZWgVH-Q",
+          "playlist": "Va-Academy (PLSTNmnArDp0K2G07gdT9ntukmVPW99pzN)",
+          "status": "noted",
+          "note": "notes/axelsen/k9-vZWgVH-Q.json"
+        },
+        {
+          "id": "bk_PjOmSgzM",
+          "title": "How To Play A Powerful Backhand Smash - Axelsen Backhand Smash Tutorial - VACADEMY #1",
+          "url": "https://www.youtube.com/watch?v=bk_PjOmSgzM",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/bk_PjOmSgzM.json"
+        },
+        {
+          "id": "wSr3CuuTwyk",
+          "title": "Behind The Back Trick Shot  - Axelsen Trick Shot Tutorial -  - VACADEMY #2",
+          "url": "https://www.youtube.com/watch?v=wSr3CuuTwyk",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/wSr3CuuTwyk.json"
+        },
+        {
+          "id": "soN6tS5KI_w",
+          "title": "The Unexpected Cross Court Defence - VACADEMY #4",
+          "url": "https://www.youtube.com/watch?v=soN6tS5KI_w",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/soN6tS5KI_w.json"
+        },
+        {
+          "id": "14Fhs7LBJGk",
+          "title": "HOW TO GET A POWERFUL SMASH - VACADEMY #5",
+          "url": "https://www.youtube.com/watch?v=14Fhs7LBJGk",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/14Fhs7LBJGk.json"
+        },
+        {
+          "id": "YtcNwDno-Oc",
+          "title": "OUR TOP 3 FAVORITE STRETCHES - VACADEMY #6",
+          "url": "https://www.youtube.com/watch?v=YtcNwDno-Oc",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/YtcNwDno-Oc.json"
+        },
+        {
+          "id": "xfW3DHa07ug",
+          "title": "WHAT TO EAT POST WORKOUT? - VACADEMY #7",
+          "url": "https://www.youtube.com/watch?v=xfW3DHa07ug",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "营养类；字幕面板多次加载失败，且饮食建议不属于技术教练范围"
+        },
+        {
+          "id": "H2uafRddb7s",
+          "title": "I DO THESE EXERCISES EVERY DAY TO PREVENT INJURY - stability /w Sean Casey - VACADEMY #8",
+          "url": "https://www.youtube.com/watch?v=H2uafRddb7s",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/H2uafRddb7s.json"
+        },
+        {
+          "id": "bu4oyp-sgvA",
+          "title": "What is my favourite supplement? /w Sean Casey - VACADEMY #9",
+          "url": "https://www.youtube.com/watch?v=bu4oyp-sgvA",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "补剂推荐，不适合作为教练模型的建议来源"
+        },
+        {
+          "id": "tYXDYHzpfOU",
+          "title": "BADMINTON FOOTWORK EXERCISES TO DO AT HOME FOR BEGINNERS! - VACADEMY #11",
+          "url": "https://www.youtube.com/watch?v=tYXDYHzpfOU",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/tYXDYHzpfOU.json"
+        },
+        {
+          "id": "AVhcLi_6lME",
+          "title": "3 EXERCISES TO IMPROVE YOUR LEG STRENGHT AT HOME - VACADEMY #12",
+          "url": "https://www.youtube.com/watch?v=AVhcLi_6lME",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "视频没有任何字幕轨"
+        },
+        {
+          "id": "jZIO4ROnA0A",
+          "title": "HOW TO GET A PERFECT SMASH WHILE BEING STUCK AT HOME - VACADEMY #13",
+          "url": "https://www.youtube.com/watch?v=jZIO4ROnA0A",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "skipped",
+          "reason": "视频没有任何字幕轨"
+        },
+        {
+          "id": "pTj_l_29g7I",
+          "title": "HOW TO CORRECTLY DEFEND DROPS AND SMASHES! (SINGLES)",
+          "url": "https://www.youtube.com/watch?v=pTj_l_29g7I",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/pTj_l_29g7I.json"
+        },
+        {
+          "id": "rIwv1otT2Fg",
+          "title": "MY FAVORITE BACKHAND SHOT!",
+          "url": "https://www.youtube.com/watch?v=rIwv1otT2Fg",
+          "playlist": "VACADEMY (PLSTNmnArDp0K3vjaIQKfuZ2FylCpTZPp2)",
+          "status": "noted",
+          "note": "notes/axelsen/rIwv1otT2Fg.json"
+        },
+        {
+          "id": "PssG66dzkwg",
+          "title": "How To Grip Your Badminton Racket in 2024 by Viktor Axelsen",
+          "url": "https://www.youtube.com/watch?v=PssG66dzkwg",
+          "playlist": "Tips 23-24 (PLSTNmnArDp0InVClRi0gF6WWPl1ssDSyU)",
+          "status": "noted",
+          "note": "notes/axelsen/PssG66dzkwg.json"
+        },
+        {
+          "id": "f8lvBqeQz7A",
+          "title": "AXELSEN - 5 ADVICE - TO YOUNG BADMINTON PLAYERS",
+          "url": "https://www.youtube.com/watch?v=f8lvBqeQz7A",
+          "playlist": "VA 5 ADVICE (PLSTNmnArDp0JjS0sFTzmU29izuoNbRRp7)",
+          "status": "noted",
+          "note": "notes/axelsen/f8lvBqeQz7A.json"
+        },
+        {
+          "id": "PAvW9Yz7vgI",
+          "title": "AXELSEN – MY 5 ADVICE - PREPARE YOURSELF",
+          "url": "https://www.youtube.com/watch?v=PAvW9Yz7vgI",
+          "playlist": "VA 5 ADVICE (PLSTNmnArDp0JjS0sFTzmU29izuoNbRRp7)",
+          "status": "noted",
+          "note": "notes/axelsen/PAvW9Yz7vgI.json"
+        },
+        {
+          "id": "WXinfrK5G_s",
+          "title": "AXELSEN - MY 5 ADVICE - WHAT'S IN MY YONEX RACKETBAG?",
+          "url": "https://www.youtube.com/watch?v=WXinfrK5G_s",
+          "playlist": "VA 5 ADVICE (PLSTNmnArDp0JjS0sFTzmU29izuoNbRRp7)",
+          "status": "skipped",
+          "reason": "球包/器材展示，与技术指导无关"
+        },
+        {
+          "id": "eCnaG5fpYws",
+          "title": "VACEDEMY - TRICKSHOT 1",
+          "url": "https://www.youtube.com/watch?v=eCnaG5fpYws",
+          "playlist": "Trick Shot Tutorials with Axelsen (PLSTNmnArDp0Koo-Uc56r-_DFCefkRkhrH)",
+          "status": "skipped",
+          "reason": "约 1 分钟花式球展示，没有字幕"
+        },
+        {
+          "id": "wzXEnPKFaJk",
+          "title": "VACEDEMY - TRICKSHOT - 2",
+          "url": "https://www.youtube.com/watch?v=wzXEnPKFaJk",
+          "playlist": "Trick Shot Tutorials with Axelsen (PLSTNmnArDp0Koo-Uc56r-_DFCefkRkhrH)",
+          "status": "skipped",
+          "reason": "约 1 分钟花式球展示，几乎没有讲解"
+        },
+        {
+          "id": "rp0i6z3iLz0",
+          "title": "VACEDEMY TRICKSHOT - 3",
+          "url": "https://www.youtube.com/watch?v=rp0i6z3iLz0",
+          "playlist": "Trick Shot Tutorials with Axelsen (PLSTNmnArDp0Koo-Uc56r-_DFCefkRkhrH)",
+          "status": "skipped",
+          "reason": "约 1 分钟花式球展示，几乎没有讲解"
+        }
+      ]
+    },
+    {
+      "coach": "郑思维 (Zheng Siwei)",
+      "platform": "bilibili",
+      "channel": "https://space.bilibili.com/383058245",
+      "scope": "B 站 UP 主空间里《羽球思维》全部 132 期（含球路讲解、康复、热身等期）。空间里的 Vlog、广告、思维杯宣传、说系列点评等非教学视频列为 skipped。付费课程《羽球思维系统课》不在范围内。抖音发布的是同一系列，不重复收录。",
+      "status": "complete",
+      "videos": [
+        {
+          "id": "BV11o4ZePEPt",
+          "episode": 1,
+          "title": "欢迎进入羽球思维第一期🏸接发球教学",
+          "url": "https://www.bilibili.com/video/BV11o4ZePEPt/",
+          "date": "2024-09-13",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV11o4ZePEPt.json"
+        },
+        {
+          "id": "BV1SAtTewEbs",
+          "episode": 2,
+          "title": "欢迎来到羽球思维第二期🏸男生在左半场的几种接发球套路",
+          "url": "https://www.bilibili.com/video/BV1SAtTewEbs/",
+          "date": "2024-09-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1SAtTewEbs.json"
+        },
+        {
+          "id": "BV1J6bceiEag",
+          "episode": 3,
+          "title": "欢迎来到羽球思维第三期🏸防偷后场教学",
+          "url": "https://www.bilibili.com/video/BV1J6bceiEag/",
+          "date": "2024-09-20",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1J6bceiEag.json"
+        },
+        {
+          "id": "BV1RXtSeZEPj",
+          "episode": 4,
+          "title": "欢迎来到羽球思维第四期🏸二次偷后场",
+          "url": "https://www.bilibili.com/video/BV1RXtSeZEPj/",
+          "date": "2024-09-22",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1RXtSeZEPj.json"
+        },
+        {
+          "id": "BV16usZeJEwV",
+          "episode": 5,
+          "title": "欢迎来到羽球思维第五期🏸混双防守反击的一种方式",
+          "url": "https://www.bilibili.com/video/BV16usZeJEwV/",
+          "date": "2024-09-27",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV16usZeJEwV.json"
+        },
+        {
+          "id": "BV1TRxMebEzV",
+          "episode": 6,
+          "title": "欢迎来到羽球思维第六期🏸双打防守分球站位选择",
+          "url": "https://www.bilibili.com/video/BV1TRxMebEzV/",
+          "date": "2024-09-28",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1TRxMebEzV.json"
+        },
+        {
+          "id": "BV16p4cecE2M",
+          "episode": 7,
+          "title": "欢迎来到羽球思维第七期🏸滑拍切的慢动作讲解教学",
+          "url": "https://www.bilibili.com/video/BV16p4cecE2M/",
+          "date": "2024-10-04",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV16p4cecE2M.json"
+        },
+        {
+          "id": "BV1vE1dYME52",
+          "episode": 8,
+          "title": "欢迎来到羽球思维第八期🏸几种后场进攻方式",
+          "url": "https://www.bilibili.com/video/BV1vE1dYME52/",
+          "date": "2024-10-05",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1vE1dYME52.json"
+        },
+        {
+          "id": "BV1wv22YbEDF",
+          "episode": 9,
+          "title": "欢迎进入羽球思维第九期🏸适合业余球友的接发球方式",
+          "url": "https://www.bilibili.com/video/BV1wv22YbEDF/",
+          "date": "2024-10-11",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1wv22YbEDF.json"
+        },
+        {
+          "id": "BV1MQ2bY9ENU",
+          "episode": 10,
+          "title": "欢迎进入羽球思维第十期🏸混双队中训练防守的方法",
+          "url": "https://www.bilibili.com/video/BV1MQ2bY9ENU/",
+          "date": "2024-10-12",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1MQ2bY9ENU.json"
+        },
+        {
+          "id": "BV193y3YgECp",
+          "episode": 11,
+          "title": "欢迎来到羽球思维第十一期🏸逼迫对方起球的方式教学",
+          "url": "https://www.bilibili.com/video/BV193y3YgECp/",
+          "date": "2024-10-18",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV193y3YgECp.json"
+        },
+        {
+          "id": "BV1RBC9YZEC5",
+          "episode": 12,
+          "title": "欢迎来到羽球思维 第十二期 利用“甩大臂”的重杀教学",
+          "url": "https://www.bilibili.com/video/BV1RBC9YZEC5/",
+          "date": "2024-10-19",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1RBC9YZEC5.json"
+        },
+        {
+          "id": "BV1f3ySY9Es3",
+          "episode": 13,
+          "title": "欢迎来到羽球思维第十三期🏸如何破解吊球？",
+          "url": "https://www.bilibili.com/video/BV1f3ySY9Es3/",
+          "date": "2024-10-25",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1f3ySY9Es3.json"
+        },
+        {
+          "id": "BV152yXYtEpy",
+          "episode": 14,
+          "title": "欢迎来到羽球思维第十四期🏸如何破解对方推你反拍的球路教学",
+          "url": "https://www.bilibili.com/video/BV152yXYtEpy/",
+          "date": "2024-10-26",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV152yXYtEpy.json"
+        },
+        {
+          "id": "BV1RaSRYVExE",
+          "episode": 15,
+          "title": "欢迎来到羽球思维第十五期🏸进攻的一致性教学",
+          "url": "https://www.bilibili.com/video/BV1RaSRYVExE/",
+          "date": "2024-11-01",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1RaSRYVExE.json"
+        },
+        {
+          "id": "BV1yQSRY8EyU",
+          "episode": 16,
+          "title": "羽球思维第十六期🏸防守时的球路选择教学",
+          "url": "https://www.bilibili.com/video/BV1yQSRY8EyU/",
+          "date": "2024-11-02",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1yQSRY8EyU.json"
+        },
+        {
+          "id": "BV1DrSRYTEMu",
+          "episode": 17,
+          "title": "羽球思维第十七期🏸练习抓空档区的方式方法教学",
+          "url": "https://www.bilibili.com/video/BV1DrSRYTEMu/",
+          "date": "2024-11-08",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1DrSRYTEMu.json"
+        },
+        {
+          "id": "BV17eDYY4EnP",
+          "episode": 18,
+          "title": "欢迎来到羽球思维第十八期🏸滑拍吊与劈吊的区别与运用教学",
+          "url": "https://www.bilibili.com/video/BV17eDYY4EnP/",
+          "date": "2024-11-09",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV17eDYY4EnP.json"
+        },
+        {
+          "id": "BV1hxmoYuExw",
+          "episode": 19,
+          "title": "欢迎来到羽球思维第十九期🏸混双发球男女队员分工问题",
+          "url": "https://www.bilibili.com/video/BV1hxmoYuExw/",
+          "date": "2024-11-15",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1hxmoYuExw.json"
+        },
+        {
+          "id": "BV1GWUhYBEXY",
+          "episode": 20,
+          "title": "欢迎来到羽球思维第二十期🏸发球后男选手需要照顾的区域划分",
+          "url": "https://www.bilibili.com/video/BV1GWUhYBEXY/",
+          "date": "2024-11-16",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1GWUhYBEXY.json"
+        },
+        {
+          "id": "BV1mcBqYHE9z",
+          "episode": 21,
+          "title": "欢迎来到羽球思维第二十一期🏸封网时常出现的错误示范",
+          "url": "https://www.bilibili.com/video/BV1mcBqYHE9z/",
+          "date": "2024-11-22",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1mcBqYHE9z.json"
+        },
+        {
+          "id": "BV1rVBqYVEkH",
+          "episode": 22,
+          "title": "欢迎来到羽球思维第二十二期🏸男双发接发线路及跑位",
+          "url": "https://www.bilibili.com/video/BV1rVBqYVEkH/",
+          "date": "2024-11-23",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1rVBqYVEkH.json"
+        },
+        {
+          "id": "BV1MYzzYwEFm",
+          "episode": 23,
+          "title": "欢迎来到羽球思维第二十三期🏸纠正封网时的错误动作",
+          "url": "https://www.bilibili.com/video/BV1MYzzYwEFm/",
+          "date": "2024-11-29",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1MYzzYwEFm.json"
+        },
+        {
+          "id": "BV1V6zLYuEAk",
+          "episode": 24,
+          "title": "欢迎来到羽球思维第二十四期🏸防吊球时如何处理突然的平高球",
+          "url": "https://www.bilibili.com/video/BV1V6zLYuEAk/",
+          "date": "2024-11-30",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1V6zLYuEAk.json"
+        },
+        {
+          "id": "BV16wizYrEB2",
+          "episode": 25,
+          "title": "欢迎来到羽球思维第二十五期🏸平抽挡干货教学",
+          "url": "https://www.bilibili.com/video/BV16wizYrEB2/",
+          "date": "2024-12-06",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV16wizYrEB2.json"
+        },
+        {
+          "id": "BV1PJikYoExX",
+          "episode": 26,
+          "title": "欢迎来到羽球思维第二十六期🏸正确防守基础方式",
+          "url": "https://www.bilibili.com/video/BV1PJikYoExX/",
+          "date": "2024-12-07",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1PJikYoExX.json"
+        },
+        {
+          "id": "BV1WBBMYeE4m",
+          "episode": 27,
+          "title": "欢迎来到羽球思维第二十七期🏸正手区挑球的握拍和发力",
+          "url": "https://www.bilibili.com/video/BV1WBBMYeE4m/",
+          "date": "2024-12-13",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1WBBMYeE4m.json"
+        },
+        {
+          "id": "BV1H4B3YBE3M",
+          "episode": 28,
+          "title": "欢迎来到羽球思维第二十八期🏸反手挡网的握拍和发力",
+          "url": "https://www.bilibili.com/video/BV1H4B3YBE3M/",
+          "date": "2024-12-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1H4B3YBE3M.json"
+        },
+        {
+          "id": "BV1sekyYmETo",
+          "episode": 29,
+          "title": "羽球思维第二十九期🏸左场区被杀直线如何摆脱对角？",
+          "url": "https://www.bilibili.com/video/BV1sekyYmETo/",
+          "date": "2024-12-20",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1sekyYmETo.json"
+        },
+        {
+          "id": "BV1CqkyYyEEP",
+          "episode": 30,
+          "title": "羽球思维第三十期🏸右脚在前时左场区如何防守",
+          "url": "https://www.bilibili.com/video/BV1CqkyYyEEP/",
+          "date": "2024-12-21",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1CqkyYyEEP.json"
+        },
+        {
+          "id": "BV1yfCJYjEqj",
+          "episode": 31,
+          "title": "羽球思维第三十一期🏸发球后如何创造主动",
+          "url": "https://www.bilibili.com/video/BV1yfCJYjEqj/",
+          "date": "2024-12-27",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1yfCJYjEqj.json"
+        },
+        {
+          "id": "BV1iLCnYvEhw",
+          "episode": 32,
+          "title": "羽球思维第三十二期🏸正手区后场突击步伐",
+          "url": "https://www.bilibili.com/video/BV1iLCnYvEhw/",
+          "date": "2024-12-28",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1iLCnYvEhw.json"
+        },
+        {
+          "id": "BV1V4rHYFE5Y",
+          "episode": 33,
+          "title": "羽球思维第三十三期🏸正确的右场区防守分对角",
+          "url": "https://www.bilibili.com/video/BV1V4rHYFE5Y/",
+          "date": "2025-01-04",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1V4rHYFE5Y.json"
+        },
+        {
+          "id": "BV18McJeAEVh",
+          "episode": 34,
+          "title": "羽球思维第三十四期🏸握拍转换练习",
+          "url": "https://www.bilibili.com/video/BV18McJeAEVh/",
+          "date": "2025-01-10",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV18McJeAEVh.json"
+        },
+        {
+          "id": "BV1nxcJeDEZK",
+          "episode": 35,
+          "title": "羽球思维第三十五期🏸反手挑球技巧",
+          "url": "https://www.bilibili.com/video/BV1nxcJeDEZK/",
+          "date": "2025-01-11",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1nxcJeDEZK.json"
+        },
+        {
+          "id": "BV1hGcdeKEet",
+          "episode": 36,
+          "title": "羽球思维第三十六期🏸正手抽球如何更有力度",
+          "url": "https://www.bilibili.com/video/BV1hGcdeKEet/",
+          "date": "2025-01-17",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1hGcdeKEet.json"
+        },
+        {
+          "id": "BV1oWcfesEZ7",
+          "episode": 37,
+          "title": "羽球思维第三十七期🏸后场底线过渡如何握拍",
+          "url": "https://www.bilibili.com/video/BV1oWcfesEZ7/",
+          "date": "2025-01-18",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1oWcfesEZ7.json"
+        },
+        {
+          "id": "BV1aefHYKEFs",
+          "episode": 38,
+          "title": "羽球思维第三十八期🏸封网的节奏",
+          "url": "https://www.bilibili.com/video/BV1aefHYKEFs/",
+          "date": "2025-01-24",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1aefHYKEFs.json"
+        },
+        {
+          "id": "BV1aafHYqEAu",
+          "episode": 39,
+          "title": "羽球思维第三十九期🏸封网时正确的击球位置",
+          "url": "https://www.bilibili.com/video/BV1aafHYqEAu/",
+          "date": "2025-01-25",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1aafHYqEAu.json"
+        },
+        {
+          "id": "BV1bpN8eMEL5",
+          "episode": 40,
+          "title": "羽球思维第四十期🏸更简单学会贴网的吊球",
+          "url": "https://www.bilibili.com/video/BV1bpN8eMEL5/",
+          "date": "2025-02-07",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1bpN8eMEL5.json"
+        },
+        {
+          "id": "BV19JN3e4Eir",
+          "episode": 41,
+          "title": "羽球思维第四十一期🏸双打在右场区的防守站位",
+          "url": "https://www.bilibili.com/video/BV19JN3e4Eir/",
+          "date": "2025-02-08",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV19JN3e4Eir.json"
+        },
+        {
+          "id": "BV1wqKPedEyx",
+          "episode": 42,
+          "title": "羽球思维四十二期🏸双打为何不用平行站位",
+          "url": "https://www.bilibili.com/video/BV1wqKPedEyx/",
+          "date": "2025-02-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1wqKPedEyx.json"
+        },
+        {
+          "id": "BV1JcKPenEiW",
+          "episode": 43,
+          "title": "羽球思维四十三期🏸双打实用的接发球方法",
+          "url": "https://www.bilibili.com/video/BV1JcKPenEiW/",
+          "date": "2025-02-15",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1JcKPenEiW.json"
+        },
+        {
+          "id": "BV1s4Afe3ERo",
+          "episode": 44,
+          "title": "羽球思维第四十四期🏸杀球为什么跳不高",
+          "url": "https://www.bilibili.com/video/BV1s4Afe3ERo/",
+          "date": "2025-02-21",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1s4Afe3ERo.json"
+        },
+        {
+          "id": "BV1ANPTetExe",
+          "episode": 45,
+          "title": "羽球思维第四十五期🏸平快球怎么封",
+          "url": "https://www.bilibili.com/video/BV1ANPTetExe/",
+          "date": "2025-02-22",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ANPTetExe.json"
+        },
+        {
+          "id": "BV1Xg9GYAEZa",
+          "episode": 46,
+          "title": "羽球思维四十六期🏸如何泄力平快球",
+          "url": "https://www.bilibili.com/video/BV1Xg9GYAEZa/",
+          "date": "2025-02-28",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1Xg9GYAEZa.json"
+        },
+        {
+          "id": "BV1YeXDYTEcd",
+          "episode": 47,
+          "title": "羽球思维第四十七期🏸高质量的高远球怎么打",
+          "url": "https://www.bilibili.com/video/BV1YeXDYTEcd/",
+          "date": "2025-03-01",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1YeXDYTEcd.json"
+        },
+        {
+          "id": "BV1usRpYtE6n",
+          "episode": 48,
+          "title": "羽球思维第四十八期🏸如何做好接杀防守",
+          "url": "https://www.bilibili.com/video/BV1usRpYtE6n/",
+          "date": "2025-03-08",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1usRpYtE6n.json"
+        },
+        {
+          "id": "BV1LyR8YoEfr",
+          "episode": 49,
+          "title": "羽球思维第四十九期🏸如何改善反手抽球",
+          "url": "https://www.bilibili.com/video/BV1LyR8YoEfr/",
+          "date": "2025-03-09",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1LyR8YoEfr.json"
+        },
+        {
+          "id": "BV1s8Q3YCE5E",
+          "episode": 50,
+          "title": "羽球思维第五十期🏸如何打好反手过渡对角",
+          "url": "https://www.bilibili.com/video/BV1s8Q3YCE5E/",
+          "date": "2025-03-15",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1s8Q3YCE5E.json"
+        },
+        {
+          "id": "BV1BeXsY3Efd",
+          "episode": 51,
+          "title": "羽球思维第五十一期🏸如何防守分对角",
+          "url": "https://www.bilibili.com/video/BV1BeXsY3Efd/",
+          "date": "2025-03-22",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1BeXsY3Efd.json"
+        },
+        {
+          "id": "BV1FuZwYZEQ4",
+          "episode": 52,
+          "title": "羽球思维第五十二期🏸正手下手位分对角",
+          "url": "https://www.bilibili.com/video/BV1FuZwYZEQ4/",
+          "date": "2025-03-29",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1FuZwYZEQ4.json"
+        },
+        {
+          "id": "BV1YcZYYeENb",
+          "episode": 53,
+          "title": "羽球思维第五十三期🏸启动步怎么练？",
+          "url": "https://www.bilibili.com/video/BV1YcZYYeENb/",
+          "date": "2025-03-30",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1YcZYYeENb.json"
+        },
+        {
+          "id": "BV1auRDY3Ept",
+          "episode": 54,
+          "title": "羽球思维第五十四期🏸被压后场来不及退怎么办？",
+          "url": "https://www.bilibili.com/video/BV1auRDY3Ept/",
+          "date": "2025-04-05",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1auRDY3Ept.json"
+        },
+        {
+          "id": "BV1cuddY6EjU",
+          "episode": 55,
+          "title": "羽球思维第五十五期🏸如何提升杀球球速？",
+          "url": "https://www.bilibili.com/video/BV1cuddY6EjU/",
+          "date": "2025-04-12",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1cuddY6EjU.json"
+        },
+        {
+          "id": "BV1iA5EzPESh",
+          "episode": 56,
+          "title": "羽球思维第五十六期🏸反手网前推弹对角底线",
+          "url": "https://www.bilibili.com/video/BV1iA5EzPESh/",
+          "date": "2025-04-19",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1iA5EzPESh.json"
+        },
+        {
+          "id": "BV1AcL9zjE4Z",
+          "episode": 57,
+          "title": "羽球思维第五十七期🏸几种防守摆脱线路",
+          "url": "https://www.bilibili.com/video/BV1AcL9zjE4Z/",
+          "date": "2025-04-26",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1AcL9zjE4Z.json"
+        },
+        {
+          "id": "BV1EQVEzqEac",
+          "episode": 58,
+          "title": "羽球思维第五十八期🏸怎么打好网前扑抹球",
+          "url": "https://www.bilibili.com/video/BV1EQVEzqEac/",
+          "date": "2025-05-03",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1EQVEzqEac.json"
+        },
+        {
+          "id": "BV1uLVdzoEr2",
+          "episode": 59,
+          "title": "羽球思维第五十九期🏸双打接发后更有效快速的轮转",
+          "url": "https://www.bilibili.com/video/BV1uLVdzoEr2/",
+          "date": "2025-05-10",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1uLVdzoEr2.json"
+        },
+        {
+          "id": "BV115EtzHESJ",
+          "episode": 60,
+          "title": "羽球思维第60期 杀球 如何杀的更尖",
+          "url": "https://www.bilibili.com/video/BV115EtzHESJ/",
+          "date": "2025-05-17",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV115EtzHESJ.json"
+        },
+        {
+          "id": "BV1n8jbzVEXB",
+          "episode": 61,
+          "title": "羽球思维第六十一期 男生杀球 女生如何轮转",
+          "url": "https://www.bilibili.com/video/BV1n8jbzVEXB/",
+          "date": "2025-05-24",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1n8jbzVEXB.json"
+        },
+        {
+          "id": "BV1nv7Nz1EZX",
+          "episode": 62,
+          "title": "欢迎来到羽球思维 第62期基础课 混双 改善反手技术",
+          "url": "https://www.bilibili.com/video/BV1nv7Nz1EZX/",
+          "date": "2025-05-31",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1nv7Nz1EZX.json"
+        },
+        {
+          "id": "BV1BGTVzTEAR",
+          "episode": 63,
+          "title": "羽球思维第63期 如何打好反手勾球",
+          "url": "https://www.bilibili.com/video/BV1BGTVzTEAR/",
+          "date": "2025-06-07",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1BGTVzTEAR.json"
+        },
+        {
+          "id": "BV1yqM6zZEtc",
+          "episode": 64,
+          "title": "羽球思维第六十四期🏸正确的防守动作",
+          "url": "https://www.bilibili.com/video/BV1yqM6zZEtc/",
+          "date": "2025-06-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1yqM6zZEtc.json"
+        },
+        {
+          "id": "BV1EVN2zZEEo",
+          "episode": 65,
+          "title": "羽球思维第六十五期🏸右半区如何接发中腰球",
+          "url": "https://www.bilibili.com/video/BV1EVN2zZEEo/",
+          "date": "2025-06-21",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1EVN2zZEEo.json"
+        },
+        {
+          "id": "BV1t5gdz2EMD",
+          "episode": 66,
+          "title": "羽球思维第六十六期🏸混双反手腰位球如何处理",
+          "url": "https://www.bilibili.com/video/BV1t5gdz2EMD/",
+          "date": "2025-06-29",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1t5gdz2EMD.json"
+        },
+        {
+          "id": "BV1qn39zZEYH",
+          "episode": 67,
+          "title": "羽球思维第六十七期 男双右半场防守反击",
+          "url": "https://www.bilibili.com/video/BV1qn39zZEYH/",
+          "date": "2025-07-05",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1qn39zZEYH.json"
+        },
+        {
+          "id": "BV1bAu3zpEVQ",
+          "episode": 68,
+          "title": "羽球思维第68期 正手中半场抽底线",
+          "url": "https://www.bilibili.com/video/BV1bAu3zpEVQ/",
+          "date": "2025-07-12",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1bAu3zpEVQ.json"
+        },
+        {
+          "id": "BV1RQgtzmEeN",
+          "episode": 69,
+          "title": "羽球思维第69期 单打前后启动慢",
+          "url": "https://www.bilibili.com/video/BV1RQgtzmEeN/",
+          "date": "2025-07-20",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1RQgtzmEeN.json"
+        },
+        {
+          "id": "BV1uv8vz3EPt",
+          "episode": 70,
+          "title": "羽球思维第七十期 右场区接发推完直线后如何处理",
+          "url": "https://www.bilibili.com/video/BV1uv8vz3EPt/",
+          "date": "2025-07-27",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1uv8vz3EPt.json"
+        },
+        {
+          "id": "BV1TzhuziEzQ",
+          "episode": 71,
+          "title": "羽球思维第七十一期🏸被推压反手底线如何处理",
+          "url": "https://www.bilibili.com/video/BV1TzhuziEzQ/",
+          "date": "2025-08-03",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1TzhuziEzQ.json"
+        },
+        {
+          "id": "BV1kkbPz3EyK",
+          "episode": 72,
+          "title": "羽球思维第七十二期🏸平抽挡卸力反击",
+          "url": "https://www.bilibili.com/video/BV1kkbPz3EyK/",
+          "date": "2025-08-10",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1kkbPz3EyK.json"
+        },
+        {
+          "id": "BV1ZkbnzLEhR",
+          "episode": 73,
+          "title": "羽球思维第七十三期🏸后场进攻下一拍无法连贯？",
+          "url": "https://www.bilibili.com/video/BV1ZkbnzLEhR/",
+          "date": "2025-08-16",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ZkbnzLEhR.json"
+        },
+        {
+          "id": "BV1sxe6z4ETF",
+          "episode": 74,
+          "title": "羽球思维第七十四期 改善被推正手底线后的步伐与击球",
+          "url": "https://www.bilibili.com/video/BV1sxe6z4ETF/",
+          "date": "2025-08-24",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1sxe6z4ETF.json"
+        },
+        {
+          "id": "BV1UMhBzJEnp",
+          "episode": 75,
+          "title": "羽球思维第75期 防守如何顶到后场",
+          "url": "https://www.bilibili.com/video/BV1UMhBzJEnp/",
+          "date": "2025-08-31",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1UMhBzJEnp.json"
+        },
+        {
+          "id": "BV1jdYMzXEar",
+          "episode": 76,
+          "title": "羽球思维第七十六期 如何做好正手抹腰球",
+          "url": "https://www.bilibili.com/video/BV1jdYMzXEar/",
+          "date": "2025-09-07",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1jdYMzXEar.json"
+        },
+        {
+          "id": "BV1BQHfzMEfo",
+          "episode": 77,
+          "title": "羽球思维第七十七期 如何处理对方放网",
+          "url": "https://www.bilibili.com/video/BV1BQHfzMEfo/",
+          "date": "2025-09-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1BQHfzMEfo.json"
+        },
+        {
+          "id": "BV1PypdzgEuA",
+          "episode": 78,
+          "title": "羽球思维第七十八期 正手后半场被动球处理",
+          "url": "https://www.bilibili.com/video/BV1PypdzgEuA/",
+          "date": "2025-09-21",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1PypdzgEuA.json"
+        },
+        {
+          "id": "BV1pGnVz5E4k",
+          "episode": 79,
+          "title": "羽球思维第七十九期 对方防守很好 我们如何应对",
+          "url": "https://www.bilibili.com/video/BV1pGnVz5E4k/",
+          "date": "2025-09-27",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1pGnVz5E4k.json"
+        },
+        {
+          "id": "BV1mm4FzeEZg",
+          "episode": 80,
+          "title": "羽球思维第八十期 如何处理右场区2号位接发球",
+          "url": "https://www.bilibili.com/video/BV1mm4FzeEZg/",
+          "date": "2025-10-12",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1mm4FzeEZg.json"
+        },
+        {
+          "id": "BV1dkWJzZEJ6",
+          "episode": 81,
+          "title": "羽球思维第八十一期 双打发接发快推中路",
+          "url": "https://www.bilibili.com/video/BV1dkWJzZEJ6/",
+          "date": "2025-10-18",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1dkWJzZEJ6.json"
+        },
+        {
+          "id": "BV1BpxAzsEzv",
+          "episode": 82,
+          "title": "羽球思维第八十二期 被发接发快推中路怎么破",
+          "url": "https://www.bilibili.com/video/BV1BpxAzsEzv/",
+          "date": "2025-10-26",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1BpxAzsEzv.json"
+        },
+        {
+          "id": "BV1L5yZBNEWJ",
+          "episode": 83,
+          "title": "羽球思维第八十三期 左半区发球被推反拍",
+          "url": "https://www.bilibili.com/video/BV1L5yZBNEWJ/",
+          "date": "2025-11-02",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1L5yZBNEWJ.json"
+        },
+        {
+          "id": "BV1SY2MBREbF",
+          "episode": 84,
+          "title": "羽球思维第八十四期🏸如何做好反手抹球",
+          "url": "https://www.bilibili.com/video/BV1SY2MBREbF/",
+          "date": "2025-11-08",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1SY2MBREbF.json"
+        },
+        {
+          "id": "BV1X6CTBnEpm",
+          "episode": 85,
+          "title": "羽球思维第八十五期 左半区防守变线反击",
+          "url": "https://www.bilibili.com/video/BV1X6CTBnEpm/",
+          "date": "2025-11-15",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1X6CTBnEpm.json"
+        },
+        {
+          "id": "BV1x5U7B2Eny",
+          "episode": 86,
+          "title": "羽球思维第八十六期 如何提升抽挡能力",
+          "url": "https://www.bilibili.com/video/BV1x5U7B2Eny/",
+          "date": "2025-11-22",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1x5U7B2Eny.json"
+        },
+        {
+          "id": "BV1PcSiBAEEc",
+          "episode": 87,
+          "title": "羽球思维第八十七期 混双发接发技巧",
+          "url": "https://www.bilibili.com/video/BV1PcSiBAEEc/",
+          "date": "2025-11-30",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1PcSiBAEEc.json"
+        },
+        {
+          "id": "BV1oqmwBQEsP",
+          "episode": 88,
+          "title": "羽球思维第八十八期 混双发接发技巧二#羽毛球",
+          "url": "https://www.bilibili.com/video/BV1oqmwBQEsP/",
+          "date": "2025-12-07",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1oqmwBQEsP.json"
+        },
+        {
+          "id": "BV12XmRBHEXY",
+          "episode": 89,
+          "title": "羽球思维第八十九期 混双男生右半场放网后 快速形成后杀前封站位",
+          "url": "https://www.bilibili.com/video/BV12XmRBHEXY/",
+          "date": "2025-12-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV12XmRBHEXY.json"
+        },
+        {
+          "id": "BV1WTqDB3E6X",
+          "episode": 90,
+          "title": "羽球思维第九十期 如何提升头顶封网",
+          "url": "https://www.bilibili.com/video/BV1WTqDB3E6X/",
+          "date": "2025-12-21",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1WTqDB3E6X.json"
+        },
+        {
+          "id": "BV1uXvvBqEEZ",
+          "episode": 91,
+          "title": "羽球思维第九十一期  右半区接发真推底线",
+          "url": "https://www.bilibili.com/video/BV1uXvvBqEEZ/",
+          "date": "2025-12-28",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1uXvvBqEEZ.json"
+        },
+        {
+          "id": "BV1fxijBKEZc",
+          "episode": 92,
+          "title": "羽球思维第九十二期 反手底线低手位过渡对角",
+          "url": "https://www.bilibili.com/video/BV1fxijBKEZc/",
+          "date": "2026-01-04",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1fxijBKEZc.json"
+        },
+        {
+          "id": "BV1qcrgBoEcE",
+          "episode": 93,
+          "title": "羽球思维第九十三期 如何打好正手勾球",
+          "url": "https://www.bilibili.com/video/BV1qcrgBoEcE/",
+          "date": "2026-01-10",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1qcrgBoEcE.json"
+        },
+        {
+          "id": "BV1BorrBSEc5",
+          "episode": 94,
+          "title": "羽球思维第九十四期 如何打好停顿平高球",
+          "url": "https://www.bilibili.com/video/BV1BorrBSEc5/",
+          "date": "2026-01-17",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1BorrBSEc5.json"
+        },
+        {
+          "id": "BV1a8zMBGEBS",
+          "episode": 95,
+          "title": "羽球思维第九十五期 如何做好借力打对角",
+          "url": "https://www.bilibili.com/video/BV1a8zMBGEBS/",
+          "date": "2026-01-24",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1a8zMBGEBS.json"
+        },
+        {
+          "id": "BV1Z56vBcE9u",
+          "episode": 96,
+          "title": "羽球思维第九十六期 如何打好网前反手搓球",
+          "url": "https://www.bilibili.com/video/BV1Z56vBcE9u/",
+          "date": "2026-01-31",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1Z56vBcE9u.json"
+        },
+        {
+          "id": "BV1U26rBYE7p",
+          "episode": 97,
+          "title": "羽球思维第九十七期 正确的反手抽球发力",
+          "url": "https://www.bilibili.com/video/BV1U26rBYE7p/",
+          "date": "2026-02-07",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1U26rBYE7p.json"
+        },
+        {
+          "id": "BV1uPZEB1END",
+          "episode": 98,
+          "title": "羽球思维第九十八期 如何提升中半场挡网质量",
+          "url": "https://www.bilibili.com/video/BV1uPZEB1END/",
+          "date": "2026-02-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1uPZEB1END.json"
+        },
+        {
+          "id": "BV1yLAbz1EE8",
+          "episode": 99,
+          "title": "羽球思维第九十九期 如何提升正手中半场抽球力度",
+          "url": "https://www.bilibili.com/video/BV1yLAbz1EE8/",
+          "date": "2026-02-28",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1yLAbz1EE8.json"
+        },
+        {
+          "id": "BV1prPszKEHi",
+          "episode": 100,
+          "title": "郑思维邀请蔡侑玎参加比赛？思维的教学日记第100期Q&A!",
+          "url": "https://www.bilibili.com/video/BV1prPszKEHi/",
+          "date": "2026-03-07",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1prPszKEHi.json"
+        },
+        {
+          "id": "BV1a6cUzVEnX",
+          "episode": 101,
+          "title": "羽球思维第101期 如何打好网前扑球",
+          "url": "https://www.bilibili.com/video/BV1a6cUzVEnX/",
+          "date": "2026-03-14",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1a6cUzVEnX.json"
+        },
+        {
+          "id": "BV1DkA7zbEs3",
+          "episode": 102,
+          "title": "羽球思维第102期球路讲解-2023丹麦世锦赛",
+          "url": "https://www.bilibili.com/video/BV1DkA7zbEs3/",
+          "date": "2026-03-21",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1DkA7zbEs3.json"
+        },
+        {
+          "id": "BV1dbXbB6ETN",
+          "episode": 103,
+          "title": "羽球思维第103期 膝盖疼的讲解与康复",
+          "url": "https://www.bilibili.com/video/BV1dbXbB6ETN/",
+          "date": "2026-03-28",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1dbXbB6ETN.json"
+        },
+        {
+          "id": "BV1ct9TBdEbU",
+          "episode": 104,
+          "title": "羽球思维第104期 球路讲解-2022东京世锦赛",
+          "url": "https://www.bilibili.com/video/BV1ct9TBdEbU/",
+          "date": "2026-04-04",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ct9TBdEbU.json"
+        },
+        {
+          "id": "BV1eYQFBHEFY",
+          "episode": 105,
+          "title": "羽球思维第105期 如何在防守时应对平高球",
+          "url": "https://www.bilibili.com/video/BV1eYQFBHEFY/",
+          "date": "2026-04-11",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1eYQFBHEFY.json"
+        },
+        {
+          "id": "BV1MXdhBCEiG",
+          "episode": 106,
+          "title": "羽球思维第106期 混双中男生起球后女生如何应对",
+          "url": "https://www.bilibili.com/video/BV1MXdhBCEiG/",
+          "date": "2026-04-18",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1MXdhBCEiG.json"
+        },
+        {
+          "id": "BV1X6o5B6EQZ",
+          "episode": 107,
+          "title": "羽球思维107期 球路讲解-2024宁波亚锦赛",
+          "url": "https://www.bilibili.com/video/BV1X6o5B6EQZ/",
+          "date": "2026-04-25",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1X6o5B6EQZ.json"
+        },
+        {
+          "id": "BV1dz98B1ESN",
+          "episode": 108,
+          "title": "羽球思维第108期 打球时 腰疼的康复与预防",
+          "url": "https://www.bilibili.com/video/BV1dz98B1ESN/",
+          "date": "2026-05-02",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1dz98B1ESN.json"
+        },
+        {
+          "id": "BV1puRDBDEBm",
+          "episode": 109,
+          "title": "羽球思维第109期 双打卸力挡网反击",
+          "url": "https://www.bilibili.com/video/BV1puRDBDEBm/",
+          "date": "2026-05-09",
+          "status": "skipped",
+          "reason": "B 站没有这一期的 AI 字幕（播放器接口只返回了另一个不相关视频的字幕），无法按“只用字幕”的规则整理。"
+        },
+        {
+          "id": "BV1AH5Y6ME92",
+          "episode": 110,
+          "title": "羽球思维110期 球路讲解-2024巴黎奥运会",
+          "url": "https://www.bilibili.com/video/BV1AH5Y6ME92/",
+          "date": "2026-05-16",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1AH5Y6ME92.json"
+        },
+        {
+          "id": "BV1aBGt6PEdB",
+          "episode": 111,
+          "title": "羽球思维111期 正确的正手中半场抽球发力模式",
+          "url": "https://www.bilibili.com/video/BV1aBGt6PEdB/",
+          "date": "2026-05-23",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1aBGt6PEdB.json"
+        },
+        {
+          "id": "BV1T3V46oEyT",
+          "episode": 112,
+          "title": "羽球思维第112期 球路讲解-2026泰国公开赛",
+          "url": "https://www.bilibili.com/video/BV1T3V46oEyT/",
+          "date": "2026-05-30",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1T3V46oEyT.json"
+        },
+        {
+          "id": "BV1Cr7r6TESH",
+          "episode": 113,
+          "title": "羽球思维第113期 双打反手搓球的正确方式",
+          "url": "https://www.bilibili.com/video/BV1Cr7r6TESH/",
+          "date": "2026-06-06",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1Cr7r6TESH.json"
+        },
+        {
+          "id": "BV18nEC6WExZ",
+          "episode": 114,
+          "title": "羽球思维第114期 在办公椅上 进行的运动热身方式",
+          "url": "https://www.bilibili.com/video/BV18nEC6WExZ/",
+          "date": "2026-06-13",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV18nEC6WExZ.json"
+        },
+        {
+          "id": "BV1rrLf6VEM7",
+          "episode": 115,
+          "title": "羽球思维第115期 球路讲解2018南京世锦赛 第一局16：13处",
+          "url": "https://www.bilibili.com/video/BV1rrLf6VEM7/",
+          "date": "2026-06-20",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1rrLf6VEM7.json"
+        },
+        {
+          "id": "BV1ra7G6DEja",
+          "episode": 116,
+          "title": "羽球思维第116期  接发球后如回连贯扑压",
+          "url": "https://www.bilibili.com/video/BV1ra7G6DEja/",
+          "date": "2026-06-27",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ra7G6DEja.json"
+        },
+        {
+          "id": "BV18iTs6gExU",
+          "episode": 117,
+          "title": "羽球思维第117期  打球前的高效运动热身方式",
+          "url": "https://www.bilibili.com/video/BV18iTs6gExU/",
+          "date": "2026-07-04",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV18iTs6gExU.json"
+        },
+        {
+          "id": "BV1YrNE6REpc",
+          "episode": 118,
+          "title": "羽球思维第118期 如何做好正手中半场勾对角",
+          "url": "https://www.bilibili.com/video/BV1YrNE6REpc/",
+          "date": "2026-07-11",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1YrNE6REpc.json"
+        },
+        {
+          "id": "BV1kbgY6ZEei",
+          "episode": 119,
+          "title": "羽球思维第119期 球路讲解 2023全英公开赛 第三局08：05处",
+          "url": "https://www.bilibili.com/video/BV1kbgY6ZEei/",
+          "date": "2026-07-25",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1kbgY6ZEei.json"
+        },
+        {
+          "id": "BV11PGA6nEdo",
+          "episode": 120,
+          "title": "羽球思维第120期 简单全面高效体能锻炼方式",
+          "url": "https://www.bilibili.com/video/BV11PGA6nEdo/",
+          "date": "2026-08-01",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV11PGA6nEdo.json"
+        },
+        {
+          "id": "BV1oFu468EaD",
+          "episode": 121,
+          "title": "羽球思维第121期 对方接发球放网如何利用快切占据主动",
+          "url": "https://www.bilibili.com/video/BV1oFu468EaD/",
+          "date": "2026-08-08",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1oFu468EaD.json"
+        },
+        {
+          "id": "BV19jgN6AEPQ",
+          "episode": 122,
+          "title": "羽球思维第122期 歲脚后的处理与康复",
+          "url": "https://www.bilibili.com/video/BV19jgN6AEPQ/",
+          "date": "2026-08-15",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV19jgN6AEPQ.json"
+        },
+        {
+          "id": "BV1do866nEcF",
+          "episode": 123,
+          "title": "羽球思维第123期  球路讲解 2019法国公开赛",
+          "url": "https://www.bilibili.com/video/BV1do866nEcF/",
+          "date": "2026-08-22",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1do866nEcF.json"
+        },
+        {
+          "id": "BV1Q5tc6fEKq",
+          "episode": 124,
+          "title": "羽球思维第124期 球路讲解2026印度世锦赛 男双决赛",
+          "url": "https://www.bilibili.com/video/BV1Q5tc6fEKq/",
+          "date": "2026-08-29",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1Q5tc6fEKq.json"
+        },
+        {
+          "id": "BV1pZti67Ecz",
+          "episode": 125,
+          "title": "羽球思维第125期 如何打好接发球抢网拿回头球",
+          "url": "https://www.bilibili.com/video/BV1pZti67Ecz/",
+          "date": "2026-09-05",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1pZti67Ecz.json"
+        },
+        {
+          "id": "BV1d6e16GEPn",
+          "episode": 126,
+          "title": "羽球思维第126期 如何打好正确的正手推球",
+          "url": "https://www.bilibili.com/video/BV1d6e16GEPn/",
+          "date": "2026-09-19",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1d6e16GEPn.json"
+        },
+        {
+          "id": "BV1sMaP6KEVc",
+          "episode": 127,
+          "title": "羽球思维第127期 球路讲解2024杭州总决赛 第三局7：6处",
+          "url": "https://www.bilibili.com/video/BV1sMaP6KEVc/",
+          "date": "2026-09-26",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1sMaP6KEVc.json"
+        },
+        {
+          "id": "BV1ExHh6GEu9",
+          "episode": 128,
+          "title": "羽球思维第128期 前交叉韧带的保护与预防",
+          "url": "https://www.bilibili.com/video/BV1ExHh6GEu9/",
+          "date": "2026-10-03",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1ExHh6GEu9.json"
+        },
+        {
+          "id": "BV1CEpt6VEVh",
+          "episode": 129,
+          "title": "羽球思维第129期 招财猫吊球基础知识复习与进阶",
+          "url": "https://www.bilibili.com/video/BV1CEpt6VEVh/",
+          "date": "2026-10-10",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1CEpt6VEVh.json"
+        },
+        {
+          "id": "BV1MhJ96nEvg",
+          "episode": 130,
+          "title": "羽球思维第130期 2024全英公开赛 第三局10：6处",
+          "url": "https://www.bilibili.com/video/BV1MhJ96nEvg/",
+          "date": "2026-10-17",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1MhJ96nEvg.json"
+        },
+        {
+          "id": "BV13Unb6REAJ",
+          "episode": 131,
+          "title": "羽球思维第131期 接对手中腰球的接球思路",
+          "url": "https://www.bilibili.com/video/BV13Unb6REAJ/",
+          "date": "2026-10-24",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV13Unb6REAJ.json"
+        },
+        {
+          "id": "BV1hJxe6mEJS",
+          "episode": 132,
+          "title": "羽球思维第132期 2026丹麦公开赛 第一局4：4处",
+          "url": "https://www.bilibili.com/video/BV1hJxe6mEJS/",
+          "date": "2026-10-31",
+          "status": "noted",
+          "note": "notes/zhengsiwei/BV1hJxe6mEJS.json"
+        },
+        {
+          "id": "BV13xWA6xEUm",
+          "title": "🔥思维杯｜正式官宣！ 2026'思维杯'混团双打羽毛球赛重磅启幕",
+          "url": "https://www.bilibili.com/video/BV13xWA6xEUm/",
+          "date": "2026-10-13",
+          "status": "skipped",
+          "reason": "思维杯赛事宣传，不是教学。"
+        },
+        {
+          "id": "BV1qY3v6oE3L",
+          "title": "我的专属系列2.0抢鲜登场，和我一起共赴羽球热爱！🏸",
+          "url": "https://www.bilibili.com/video/BV1qY3v6oE3L/",
+          "date": "2026-07-28",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1wxojBfEDR",
+          "title": "周天成蔡侑玎vs郑思维李佳馨🏸这谁组的局?",
+          "url": "https://www.bilibili.com/video/BV1wxojBfEDR/",
+          "date": "2026-04-24",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1CJhV6RENU",
+          "title": "不能上场？开启羽球人的装备升级副本！",
+          "url": "https://www.bilibili.com/video/BV1CJhV6RENU/",
+          "date": "2026-08-25",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1KucieqEgf",
+          "title": "郑思维：世界冠军变身“浙商”，向往事业家庭双丰收。|【热点面孔】",
+          "url": "https://www.bilibili.com/video/BV1KucieqEgf/",
+          "date": "2025-01-16",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1TtCzYgEVz",
+          "title": "郑思维（创业版）已上线💪请期待我的新动作吧~开心果酱吃了会变开心？看Aiden的反应我应该没说错吧…",
+          "url": "https://www.bilibili.com/video/BV1TtCzYgEVz/",
+          "date": "2024-12-26",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1kFVtzPEt1",
+          "title": "羽球思维说系列🎬2025苏杯点评",
+          "url": "https://www.bilibili.com/video/BV1kFVtzPEt1/",
+          "date": "2025-05-07",
+          "status": "skipped",
+          "reason": "解说/点评类短片，不是技术教学。"
+        },
+        {
+          "id": "BV1QfzvYoENU",
+          "title": "我从来都不希望我的一生仅仅只被定义为“世界冠军或奥运冠军郑思维”",
+          "url": "https://www.bilibili.com/video/BV1QfzvYoENU/",
+          "date": "2024-11-29",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1abpGzhE3m",
+          "title": "差价60倍！作客奥运冠军郑思维羽毛球馆，一起盲测咖啡和球拍！",
+          "url": "https://www.bilibili.com/video/BV1abpGzhE3m/",
+          "date": "2025-09-13",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1HhdoY5EVA",
+          "title": "羽球思维说系列🎬亚锦赛评价&苏杯预测",
+          "url": "https://www.bilibili.com/video/BV1HhdoY5EVA/",
+          "date": "2025-04-15",
+          "status": "skipped",
+          "reason": "解说/点评类短片，不是技术教学。"
+        },
+        {
+          "id": "BV1FLZxBHE4f",
+          "title": "for羽球人的春节祝福🧨接住的不止是球还有马上迎来的好win",
+          "url": "https://www.bilibili.com/video/BV1FLZxBHE4f/",
+          "date": "2026-02-15",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1Y1421Z7Bd",
+          "title": "来看看我和雅琼的轮转训练吧！",
+          "url": "https://www.bilibili.com/video/BV1Y1421Z7Bd/",
+          "date": "2024-02-24",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1Lm411o7aG",
+          "title": "【郑思维vlog.001】10min沉浸式体验我的全英夺冠之旅！",
+          "url": "https://www.bilibili.com/video/BV1Lm411o7aG/",
+          "date": "2024-03-18",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1Jw4m1U7fw",
+          "title": "【郑思维vlog.005】在海南带Aiden去猴岛亲子游🐒最后aiden好像有点不开心？🤔",
+          "url": "https://www.bilibili.com/video/BV1Jw4m1U7fw/",
+          "date": "2024-04-18",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1cD421j7sd",
+          "title": "【郑思维vlog.003】巴黎探店日记🥐我好像吃到了可颂天花板？在巴黎跟风最成功的一次",
+          "url": "https://www.bilibili.com/video/BV1cD421j7sd/",
+          "date": "2024-03-28",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1Ft42137QU",
+          "title": "【郑思维vlog.002】巴黎特种兵溜达日记🇫🇷来打卡圣心大教堂噜！",
+          "url": "https://www.bilibili.com/video/BV1Ft42137QU/",
+          "date": "2024-03-26",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1qJ4m1j7JE",
+          "title": "【郑思维vlog.004】游客思维上线🗼来巴黎citywalk了！打卡埃菲尔铁塔拍照机位",
+          "url": "https://www.bilibili.com/video/BV1qJ4m1j7JE/",
+          "date": "2024-04-01",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1cz421o7WF",
+          "title": "【郑思维】新人up报道 球迷朋友们我“杀”来B站啦",
+          "url": "https://www.bilibili.com/video/BV1cz421o7WF/",
+          "date": "2024-02-23",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1Qf421v7ve",
+          "title": "今天不打球，和王昶拍个《告白羽球》MV送给各位！",
+          "url": "https://www.bilibili.com/video/BV1Qf421v7ve/",
+          "date": "2024-08-09",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1KZ421H7ib",
+          "title": "【郑思维vlog.007】打球累还是带娃累？95后运动员奶爸带娃的正确打开方式！",
+          "url": "https://www.bilibili.com/video/BV1KZ421H7ib/",
+          "date": "2024-04-25",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1X7421R76V",
+          "title": "【郑思维】倒计时40天！备战奥运中：沉浸式感受雅思训练日常吧！",
+          "url": "https://www.bilibili.com/video/BV1X7421R76V/",
+          "date": "2024-06-16",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        },
+        {
+          "id": "BV1wE421T7Gg",
+          "title": "【郑思维vlog.006】海南逛吃vlog！看来我的榴莲dna已经遗传给aiden了",
+          "url": "https://www.bilibili.com/video/BV1wE421T7Gg/",
+          "date": "2024-04-23",
+          "status": "skipped",
+          "reason": "非教学内容（Vlog、广告、活动或宣传等）。"
+        }
+      ]
+    }
+  ]
+}

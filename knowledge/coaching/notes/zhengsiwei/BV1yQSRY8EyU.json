@@ -1,0 +1,92 @@
+{
+  "id": "zhengsiwei-bili-BV1yQSRY8EyU",
+  "coach": "郑思维 (Zheng Siwei)",
+  "platform": "bilibili",
+  "channel": "郑思维 (space.bilibili.com/383058245)",
+  "url": "https://www.bilibili.com/video/BV1yQSRY8EyU/",
+  "title": "羽球思维第十六期🏸防守时的球路选择教学",
+  "series": "羽球思维 第16期",
+  "published": "2024-11-02",
+  "duration_s": 58,
+  "language": "zh",
+  "transcript_source": "bilibili_ai_subtitles",
+  "level": "intermediate",
+  "topic": "防守时不只硬顶直线：抽直线、滑拍抽直线、分对角、摆对角、挡网、背后分对角",
+  "strokes": [
+    "defense",
+    "drive",
+    "net_shot"
+  ],
+  "aspects": [
+    "tactics",
+    "technique"
+  ],
+  "summary": "很多业余球友防守只有一种线路：一直硬顶直线。本期为展示短片，郑思维示范多种防守回球：抽直线、滑拍抽直线、分对角、摆对角、挡网、背后分对角，邀请观众选择想学的，后续期数再展开。",
+  "key_points": [
+    "防守不要只会一直硬顶直线。",
+    "防守回球可选：抽直线、滑拍抽直线、分对角、摆对角、挡网、背后分对角。",
+    "本期只展示，具体技术见后续防守专题。"
+  ],
+  "common_mistakes": [
+    "防守线路单一，只会硬顶直线，被对方预判。"
+  ],
+  "drills": [],
+  "coach_cues": [
+    "防守也要变线"
+  ],
+  "related_metrics": [
+    "{pid}.shot_types",
+    "{pid}.hit.zones"
+  ],
+  "content_caveats": "本期为展示短片，几乎无讲解；正文补充部分已标明为整理者说明。",
+  "shots": [
+    {
+      "name_zh": "防守抽直线",
+      "stroke": "drive",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "防守滑拍抽直线",
+      "stroke": "drive",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "straight"
+    },
+    {
+      "name_zh": "防守分对角",
+      "stroke": "defense",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "cross"
+    },
+    {
+      "name_zh": "防守挡网",
+      "stroke": "net_shot",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "-"
+    },
+    {
+      "name_zh": "背后分对角",
+      "stroke": "defense",
+      "hand": "backhand",
+      "zone": "mid",
+      "direction": "cross"
+    }
+  ],
+  "footwork": [],
+  "technique_breakdown": {},
+  "when_to_use": [
+    "双打被杀防守时"
+  ],
+  "corrections": [],
+  "progression": [
+    "本期为导览，按后续防守专题逐个学习"
+  ],
+  "self_check": [
+    "我防守时会几种回球线路？"
+  ],
+  "detailed_description": "这一期很短，约一分钟，是一期防守方式的展示合集。郑思维开头说，看到很多业余球友防守时的线路和方式大概只有一种，就是一直硬顶、硬顶，挑直线，所以今天来分享几种其他的防守方式，大家想学哪个可以告诉他。接下来画面中依次示范并用字幕标出名称：抽直线、滑拍抽直线、分对角、摆对角、挡网、背后分对角。整段配有背景音乐，没有更多讲解。这些防守方式在后续期数中陆续展开，例如第二十六期正确防守基础方式、第二十九期左场区被杀直线如何摆脱对角、第三十三期右场区防守分对角、第五十一期如何防守分对角、第五十七期几种防守摆脱线路等。（以下补充说明不是视频原话，是整理者为便于教学模型理解而加的通用解释。）抽直线是在身前用平抽把球直线打回，节奏快；滑拍抽直线是在抽的时候拍面带一点侧切，让球更低、更快下沉；分对角是把杀过来的球引向对角中场，调动对方；摆对角一般指借力把球轻轻摆到对角网前或中场；挡网是把杀球轻挡到网前，迫使对方上网起球；背后分对角是在身体反手侧、球在身后时仍把球分到对角。教学时，这一期适合用来提醒用户“防守也可以有线路选择”，具体动作应引用对应的专题期数。"
+}

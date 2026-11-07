@@ -1,0 +1,79 @@
+{
+  "id": "axelsen-yt-rIwv1otT2Fg",
+  "coach": "Viktor Axelsen",
+  "platform": "youtube",
+  "channel": "ViktorAxelsen (@viktoraxelsen7830)",
+  "url": "https://www.youtube.com/watch?v=rIwv1otT2Fg",
+  "title": "MY FAVORITE BACKHAND SHOT!",
+  "series": "VACADEMY",
+  "published": "2020-10-06",
+  "duration_s": 192,
+  "language": "en",
+  "transcript_source": "youtube_uploaded_captions",
+  "level": "advanced",
+  "topic": "反手后场反切（反手切吊）",
+  "strokes": [
+    "backhand_slice",
+    "drop"
+  ],
+  "aspects": [
+    "technique",
+    "deception"
+  ],
+  "summary": "反手后场反切，安赛龙最喜欢的反手球之一，但难度很高。和其他反手后场球一样：快速到位、手臂伸直举高、肘部向前驱动，触球后把拍子向对侧肩方向带过去，做出切削。不能在低点打，必须在高点触球后再切。最好的学习方法是反复看慢动作找时机。",
+  "key_points": [
+    "与其他反手后场球同样的准备：快速到位，手臂向上伸直。",
+    "肘部向前驱动，高点触球。",
+    "触球后拍子向对侧肩膀方向带，产生反切效果。",
+    "不能在低点打；必须到位后在高点出手。",
+    "这只是适合他的一种做法，方法不唯一；关键是找到时机。"
+  ],
+  "common_mistakes": [
+    "到位慢，只能在低点击球。",
+    "手臂没有伸直。"
+  ],
+  "drills": [
+    {
+      "name": "反手后场反切多球",
+      "how": "反复观看慢动作，再由同伴喂反手后场高球，专注高点触球和向对侧肩随挥。"
+    }
+  ],
+  "coach_cues": [
+    "快到位",
+    "伸直",
+    "肘向前",
+    "带向对侧肩"
+  ],
+  "related_metrics": [
+    "{pid}.hit.zones",
+    "{pid}.pos.lateral_zones"
+  ],
+  "content_caveats": "字幕为上传的人工字幕；动作要点主要靠慢动作画面。",
+  "shots": [
+    {
+      "name_zh": "反手后场反切（反手切吊）",
+      "stroke": "backhand_slice",
+      "hand": "backhand",
+      "zone": "rear",
+      "direction": "straight"
+    }
+  ],
+  "footwork": [
+    "快速转身退到反手后场到位"
+  ],
+  "technique_breakdown": {
+    "准备": "手臂向上伸直举高",
+    "击球": "肘向前驱动，高点触球",
+    "随挥": "触球后把拍子带向对侧肩，产生切削"
+  },
+  "when_to_use": [
+    "反手后场有高点击球机会时的突袭"
+  ],
+  "self_check": [
+    "是否在高点触球？",
+    "随挥方向是否朝对侧肩？"
+  ],
+  "corrections": [],
+  "progression": [],
+  "detailed_description": "这期讲安赛龙最喜欢的反手击球之一——反手后场的反切，也就是反手切吊。他提到几周前在 Instagram 上发过这一拍的片段，并说这一拍非常好玩但也非常难，他会尽量讲清楚。核心原则和其他反手后场球一样：先做好手臂的准备，把手臂向上伸直举高；肘部向前驱动，在最高点接触球；触球的一刻，把拍子向对侧肩膀的方向带过去，形成切削效果。用慢动作来看就是：举高、伸直肘部、向前驱动、触球、带向对侧肩。他强调这只是适合他自己的做法，这一拍有很多种打法。中途他用中文提醒“有点儿短”。他给出的最好建议是反复观看这段慢动作，多看几遍再去练，因为这一拍很难，需要找到时机，一旦找到正确的感觉，就可以在此基础上继续打磨。他还强调两点前提：像其他反手球一样必须非常快地到位；必须把手臂伸直举高，在高点接触球后才能切，不能从低处打。对教练模型来说，这期适合给已经能稳定打反手高远球、想在反手后场增加进攻变化的进阶球员；对于反手后场还经常被动、到位慢的球员，应优先推荐反手高远球那一期（qHS8HW94zkA）先打好基础，再考虑这一拍。"
+}
