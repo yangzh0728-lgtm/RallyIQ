@@ -73,3 +73,24 @@ def test_never_overrides_manual_or_switches_on_weak_evidence():
     sparse = [[person_at_court(DX + 3, 3)] if i % 2 else [] for i in range(12)]
     assert rechoose_segment(seg, sparse) is None
     assert rechoose_segment(seg, []) is None
+
+
+def test_empty_calibrated_court_with_people_playing_is_undeterminable():
+    # Calibration fitted some other lines (a court 20 m away); nobody listed elsewhere.
+    seg = _cal().segments[0].model_copy(update={"other_courts": []})
+    from rallyiq.contracts.geometry import fit_homography, COURT_CORNERS_M
+
+    wrong = fit_homography(_corners(20.0), COURT_CORNERS_M)
+    seg = seg.model_copy(update={"homography": wrong, "image_corners": _corners(20.0)})
+    new = rechoose(CourtCalibration(video_id="v", segments=[seg]), lambda idx: _frames(0.0, len(idx)))
+    assert new is not None
+    s = new.segments[0]
+    assert s.status == "undeterminable" and s.notes[-1].startswith("calibration contradicted")
+
+
+def test_consistent_or_quiet_scenes_are_not_flagged():
+    seg = _cal().segments[0].model_copy(update={"other_courts": []})
+    cal = CourtCalibration(video_id="v", segments=[seg])
+    assert rechoose(cal, lambda idx: _frames(0.0, len(idx))) is None  # players on the court
+    assert rechoose(cal, lambda idx: [[] for _ in idx]) is None  # nobody there (warm-up, break)
+    assert rechoose(_cal(method="manual"), lambda idx: [[] for _ in idx]) is None

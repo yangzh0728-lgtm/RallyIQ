@@ -128,7 +128,7 @@ def _rechoose_court(ctx: StageContext, cal, est):
     if new is None:
         return cal
     for seg in new.segments:
-        if seg.notes and seg.notes[-1].startswith("target court re-chosen"):
+        if seg.notes and seg.notes[-1].startswith(("target court re-chosen", "calibration contradicted")):
             log.warning("players: %s (frames %d-%d)", seg.notes[-1], seg.start_frame, seg.end_frame)
     ctx.store.save_artifact(ctx.video_id, "calibration", new)
     return new
@@ -160,7 +160,9 @@ def run(ctx: StageContext) -> PlayerTracks:
         cal = _rechoose_court(ctx, cal, est)
 
     def homography_for(frame: int):
-        h = cal.homography_for(frame) if cal is not None else None
+        seg = cal.segment_for(frame) if cal is not None else None
+        # An undeterminable court is not used to filter people (it may be the wrong lines).
+        h = seg.homography if seg is not None and seg.status != "undeterminable" else None
         return np.asarray(h, dtype=np.float64) if h is not None else None
 
     total = max(meta.frame_count, 1)
