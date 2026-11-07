@@ -19,11 +19,15 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 | 击球 | `Pn.shots`、`Pn.shot_share`、`Pn.hit.zones`（击球位置）、`Pn.shot_types`（击球类型） |
 | 移动 | `Pn.move.distance_m`、`Pn.move.per_rally_m`、`Pn.move.per_min_m`、`Pn.move.tracked_pct` |
 | 覆盖与站位 | `Pn.cover.area_m2`、`Pn.cover.ratio_pct`、`Pn.pos.depth_mean_m`、`Pn.pos.depth_zones`、`Pn.pos.lateral_zones` |
+| 节奏 | `match.tempo.interval_mean_s`、`interval_first_half_s/second_half_s`、`match.rally_len.first_half_mean/second_half_mean`；`Pn.tempo.prep_s`（回球准备时间）、`Pn.tempo.given_s`（留给对手的时间） |
+| 比分走势 | `match.score.games`、`match.score.lead_changes`；`Pn.win.longest_run`、`Pn.win.biggest_lead`；`MatchStats.rallies`（逐回合）、`MatchStats.games`（每局比分） |
 | 得失分 | `Pn.win.won/rate_pct`、`short_rate_pct`、`long_rate_pct`、`serve_rate_pct`、`receive_rate_pct`、`own_last_shot_pct`、`lost_own_last_shot_pct`；`Pn.lost.last_shot_types`（失分回合中本人最后一拍的击球类型） |
 
 - 移动只统计回合内、非插值的足点；5 帧滑动中值去抖，速度 > 8 m/s 的跳变视为跟踪错误剔除，间隔 > 0.5 s 不连线。
 - 站位按“本方半场”换算：深度 = 离自己底线的距离，左右按本人面向球网的视角，换边后仍可比较。
 - 球场标定不是 `ok` 时，米制指标降为“待复核”。
+- 比分走势和节奏在 `flow.py`：比分按已标注的回合胜负推算（21 分制、领先 2 分获胜、30 分封顶，未标注的回合不计分）；
+  拍间间隔只算相邻两拍由双方击出、间隔 0.15–3 秒的情况，过滤重复检测和漏检。
 - 胜负指标只用已标注胜者的回合（工作台修正面板里设置），没有标注时为“不可判定”。
 - **击球类型**：读取 `ShotEvent.shot_type`。击球分类模块接入后填这个字段即可，统计和报告自动出现分布（`SHOT_TYPE_LABELS` 里登记中文名），无需改报告代码。
 
@@ -82,3 +86,27 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 - `POST /api/videos/{id}/report/coach`（body `{"provider": null}`）→ `CoachReport`，同步生成并缓存
 - `GET /api/videos/{id}/report/export?format=md|json`
 - `GET /api/coach/providers`
+
+## 网页版报告（`html.py`，可分享）
+
+`render_html(report, events, players)` 把一场比赛整理成**一个独立的 HTML 文件**：样式和图表（SVG）都写在文件里，
+没有脚本，不从网络加载任何东西，也不含视频。离线打开、发给教练或球友、手机上看、浏览器里打印成 PDF 都可以。
+
+| 部分 | 数据来源 | 没有数据时 |
+| --- | --- | --- |
+| 概览（回合数、拍数、回合长度、比分） | `MatchStats` 全场指标 | — |
+| AI 教练点评、训练建议 | `CoachReport` | 不显示 |
+| 回合（每回合拍数柱状图，按得分方着色；回合明细表） | `EventsResult.rallies` | 不显示 |
+| 击球类型（每人分布、失分时最后一拍） | `Pn.shot_types`、`Pn.lost.last_shot_types` | 不显示 |
+| 击球的多层描述（正反手、线路、击球点、出球速度、攻防、意图） | `ShotEvent.stroke.detail` | 不显示 |
+| 打法风格（原型匹配分数、攻防选择、战术套路、回球习惯、建议） | `MatchStats.styles` | 不显示 |
+| 脚步（启动步、起动、回位、步数、弓步、起跳、步法使用） | `Pn.footwork.*` 指标 | 不显示 |
+| 场地热区（站位热区 + 击球点） | `PlayerTracks` 脚的位置、`ShotEvent.hitter_court` | 不显示 |
+| 逐拍建议 | `CoachReport.shot_advice`（没有时用 `MatchStats.moments`） | 不显示 |
+
+输入按 dict 读取、每个字段都用 `.get`，所以新分析（风格、脚步、多层击球描述）合并后自动出现在报告里，不用改这里。
+
+- 网页：报告页「导出网页报告」（`GET /api/videos/{id}/report/export?format=html`）。
+- 命令行：`python scripts/match_report_html.py <video_id | 结果目录> -o report.html`；
+  结果目录里有 `coach.json` 就用它，没有就用离线规则教练（`--no-coach` 不要点评）。
+- 示例：`python scripts/match_report_html.py --sample` 重新生成 `docs/sample-report/match_report.html`（合成数据）。

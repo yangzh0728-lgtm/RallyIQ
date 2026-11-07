@@ -116,6 +116,76 @@
         "status": "ok",
         "confidence": "high",
         "note": null
+      },
+      {
+        "key": "match.tempo.interval_mean_s",
+        "label": "\u5e73\u5747\u62cd\u95f4\u95f4\u9694",
+        "value": 1.05,
+        "unit": "s",
+        "n": 7,
+        "status": "needs_review",
+        "confidence": "low",
+        "note": "\u76f8\u90bb\u4e24\u62cd\u7531\u53cc\u65b9\u51fb\u51fa\u3001\u95f4\u9694\u5728 0.15\u20133.0 \u79d2\u4e4b\u95f4\u7684\u624d\u8ba1\u5165"
+      },
+      {
+        "key": "match.tempo.interval_first_half_s",
+        "label": "\u524d\u534a\u6bb5\u5e73\u5747\u62cd\u95f4\u95f4\u9694",
+        "value": 1.08,
+        "unit": "s",
+        "n": 4,
+        "status": "needs_review",
+        "confidence": "low",
+        "note": "\u6309\u56de\u5408\u987a\u5e8f\u5206\u6210\u524d\u540e\u4e24\u534a"
+      },
+      {
+        "key": "match.tempo.interval_second_half_s",
+        "label": "\u540e\u534a\u6bb5\u5e73\u5747\u62cd\u95f4\u95f4\u9694",
+        "value": 1.0,
+        "unit": "s",
+        "n": 3,
+        "status": "needs_review",
+        "confidence": "low",
+        "note": "\u6bd4\u524d\u534a\u6bb5\u660e\u663e\u53d8\u957f\uff0c\u901a\u5e38\u662f\u8282\u594f\u653e\u6162\u6216\u4f53\u80fd\u4e0b\u964d"
+      },
+      {
+        "key": "match.rally_len.first_half_mean",
+        "label": "\u524d\u534a\u6bb5\u5e73\u5747\u6bcf\u56de\u5408\u62cd\u6570",
+        "value": 7.0,
+        "unit": "\u62cd",
+        "n": 1,
+        "status": "needs_review",
+        "confidence": "low",
+        "note": null
+      },
+      {
+        "key": "match.rally_len.second_half_mean",
+        "label": "\u540e\u534a\u6bb5\u5e73\u5747\u6bcf\u56de\u5408\u62cd\u6570",
+        "value": 4.0,
+        "unit": "\u62cd",
+        "n": 1,
+        "status": "needs_review",
+        "confidence": "low",
+        "note": null
+      },
+      {
+        "key": "match.score.games",
+        "label": "\u5c40\u6570\uff08\u6309\u5df2\u6807\u6ce8\u80dc\u8d1f\u63a8\u7b97\uff09",
+        "value": 1.0,
+        "unit": "\u5c40",
+        "n": 2,
+        "status": "needs_review",
+        "confidence": "low",
+        "note": "21 \u5206\u5236\u3001\u9886\u5148 2 \u5206\u83b7\u80dc\u300130 \u5206\u5c01\u9876\uff1b\u6709\u56de\u5408\u672a\u6807\u6ce8\u80dc\u8d1f\u65f6\u6bd4\u5206\u4f1a\u504f\u4f4e"
+      },
+      {
+        "key": "match.score.lead_changes",
+        "label": "\u9886\u5148\u6613\u624b\u6b21\u6570",
+        "value": 0.0,
+        "unit": "\u6b21",
+        "n": 2,
+        "status": "needs_review",
+        "confidence": "low",
+        "note": null
       }
     ],
     "distributions": [
@@ -307,6 +377,46 @@
             "status": "needs_review",
             "confidence": "low",
             "note": "\u9ad8\u901a\u5e38\u610f\u5473\u7740\u672c\u4eba\u5931\u8bef\uff08\u4e0b\u7f51/\u51fa\u754c\uff09\u8f83\u591a\uff1b\u8fd1\u4f3c\u5224\u65ad"
+          },
+          {
+            "key": "P1.tempo.prep_s",
+            "label": "\u56de\u7403\u51c6\u5907\u65f6\u95f4\uff08\u5bf9\u624b\u51fa\u7403\u5230\u672c\u4eba\u51fb\u7403\uff09",
+            "value": 1.0,
+            "unit": "s",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": "\u8d8a\u77ed\u8bf4\u660e\u8d8a\u5e38\u88ab\u5bf9\u624b\u538b\u7740\u6253\uff1b\u76f8\u90bb\u4e24\u62cd\u7531\u53cc\u65b9\u51fb\u51fa\u3001\u95f4\u9694\u5728 0.15\u20133.0 \u79d2\u4e4b\u95f4\u7684\u624d\u8ba1\u5165"
+          },
+          {
+            "key": "P1.tempo.given_s",
+            "label": "\u7559\u7ed9\u5bf9\u624b\u7684\u65f6\u95f4\uff08\u672c\u4eba\u51fa\u7403\u5230\u5bf9\u624b\u51fb\u7403\uff09",
+            "value": 1.08,
+            "unit": "s",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": "\u8d8a\u77ed\u8bf4\u660e\u672c\u4eba\u7684\u7403\u8d8a\u5feb\u3001\u8d8a\u6709\u538b\u8feb\u6027"
+          },
+          {
+            "key": "P1.win.longest_run",
+            "label": "\u6700\u957f\u8fde\u7eed\u5f97\u5206",
+            "value": 1.0,
+            "unit": "\u5206",
+            "n": 2,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.win.biggest_lead",
+            "label": "\u5355\u5c40\u6700\u5927\u9886\u5148",
+            "value": 0.0,
+            "unit": "\u5206",
+            "n": 2,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
           }
         ],
         "distributions": [
@@ -549,6 +659,46 @@
             "status": "needs_review",
             "confidence": "low",
             "note": "\u9ad8\u901a\u5e38\u610f\u5473\u7740\u672c\u4eba\u5931\u8bef\uff08\u4e0b\u7f51/\u51fa\u754c\uff09\u8f83\u591a\uff1b\u8fd1\u4f3c\u5224\u65ad"
+          },
+          {
+            "key": "P2.tempo.prep_s",
+            "label": "\u56de\u7403\u51c6\u5907\u65f6\u95f4\uff08\u5bf9\u624b\u51fa\u7403\u5230\u672c\u4eba\u51fb\u7403\uff09",
+            "value": 1.08,
+            "unit": "s",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": "\u8d8a\u77ed\u8bf4\u660e\u8d8a\u5e38\u88ab\u5bf9\u624b\u538b\u7740\u6253\uff1b\u76f8\u90bb\u4e24\u62cd\u7531\u53cc\u65b9\u51fb\u51fa\u3001\u95f4\u9694\u5728 0.15\u20133.0 \u79d2\u4e4b\u95f4\u7684\u624d\u8ba1\u5165"
+          },
+          {
+            "key": "P2.tempo.given_s",
+            "label": "\u7559\u7ed9\u5bf9\u624b\u7684\u65f6\u95f4\uff08\u672c\u4eba\u51fa\u7403\u5230\u5bf9\u624b\u51fb\u7403\uff09",
+            "value": 1.0,
+            "unit": "s",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": "\u8d8a\u77ed\u8bf4\u660e\u672c\u4eba\u7684\u7403\u8d8a\u5feb\u3001\u8d8a\u6709\u538b\u8feb\u6027"
+          },
+          {
+            "key": "P2.win.longest_run",
+            "label": "\u6700\u957f\u8fde\u7eed\u5f97\u5206",
+            "value": 1.0,
+            "unit": "\u5206",
+            "n": 2,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.win.biggest_lead",
+            "label": "\u5355\u5c40\u6700\u5927\u9886\u5148",
+            "value": 1.0,
+            "unit": "\u5206",
+            "n": 2,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
           }
         ],
         "distributions": [
@@ -626,6 +776,8 @@
         "t_ms": 6000,
         "player_id": "P2",
         "shot_type": "lift",
+        "shot_label_zh": null,
+        "shot_detail_zh": null,
         "hitter_zone": "\u4e2d\u573a\u5de6\u4fa7",
         "hitter_pos": [
           1.5,
@@ -658,6 +810,8 @@
         "t_ms": 7000,
         "player_id": "P1",
         "shot_type": "lift",
+        "shot_label_zh": null,
+        "shot_detail_zh": null,
         "hitter_zone": "\u4e2d\u573a\u4e2d\u8def",
         "hitter_pos": [
           3.56,
@@ -680,6 +834,57 @@
         "why": "\u5bf9\u624b\u672c\u6765\u5c31\u5728\u540e\u573a\uff0c\u8fd9\u62cd\u4e0d\u7528\u79fb\u52a8\u5c31\u80fd\u8212\u670d\u5730\u51fa\u624b\uff1b\u5bf9\u624b\u79bb\u7f51\u524d\u6700\u8fdc\uff0c\u628a\u7403\u653e\u5230\u7f51\u524d\u5de6\u4fa7\u80fd\u903c\u5bf9\u624b\u4e0a\u7f51\uff0c\u63a5\u5f97\u6700\u52c9\u5f3a\u3002",
         "severity": 2.5,
         "confidence": "low"
+      }
+    ],
+    "rallies": [
+      {
+        "rally_no": 1,
+        "rally_id": "r001",
+        "start_ms": 500,
+        "end_ms": 8000,
+        "shots": 7,
+        "duration_s": 7.5,
+        "server": "P1",
+        "winner": "P2",
+        "last_hitter": "P1",
+        "last_shot_type": "\u6311\u7403",
+        "mean_interval_s": 1.08,
+        "game_no": 1,
+        "score": {
+          "P1": 0,
+          "P2": 1
+        },
+        "status": "needs_review"
+      },
+      {
+        "rally_no": 2,
+        "rally_id": "r002",
+        "start_ms": 10500,
+        "end_ms": 14967,
+        "shots": 4,
+        "duration_s": 4.47,
+        "server": "P1",
+        "winner": "P1",
+        "last_hitter": "P2",
+        "last_shot_type": "\u6311\u7403",
+        "mean_interval_s": 1.0,
+        "game_no": 1,
+        "score": {
+          "P1": 1,
+          "P2": 1
+        },
+        "status": "needs_review"
+      }
+    ],
+    "games": [
+      {
+        "game_no": 1,
+        "score": {
+          "P1": 1,
+          "P2": 1
+        },
+        "winner": null,
+        "rallies": 2
       }
     ],
     "caveats": [

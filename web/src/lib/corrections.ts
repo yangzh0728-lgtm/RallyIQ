@@ -1,9 +1,9 @@
-import { typeLabel } from "./strokes";
+import { retypeDetail, typeLabel } from "./strokes";
 import { TEAM_OF, type Correction, type EventsResult, type PlayerId, type Rally, type ShotEvent, type ShotType, type StrokeInfo, type TeamId } from "./types";
 
 const humanStroke = (t: ShotType | null): StrokeInfo => ({
   shot_type: t, confidence: 1, status: t ? "ok" : "undeterminable", source: "human",
-  classifier: null, candidates: [], reasons: [], evidence: {},
+  classifier: null, candidates: [], reasons: [], evidence: {}, detail: null,
 });
 
 /** Id mapping for swap_player_ids (same rules as rallyiq/api/corrections.py). */
@@ -47,8 +47,10 @@ export function applyCorrections(raw: EventsResult, corrections: Correction[], f
           break;
         }
         // Only the stroke label changes: the hit keeps its own status/source.
+        // Hand / direction / contact stay; the rest of the description follows the new type.
+        const old = s.stroke?.detail ?? null;
         s.shot_type = c.payload.shot_type;
-        s.stroke = humanStroke(c.payload.shot_type);
+        s.stroke = { ...humanStroke(c.payload.shot_type), detail: retypeDetail(old, c.payload.shot_type) };
         break;
       }
       case "delete_shot":

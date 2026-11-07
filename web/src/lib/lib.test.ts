@@ -4,10 +4,12 @@ import { describe, expect, it } from "vitest";
 import { applyCorrections } from "./corrections";
 import { applyH, CORNERS_M, homographyFrom4, invertH } from "./court";
 import { CSV_HEADER, exportCsv } from "./export";
+import { isVideoFile } from "./files";
 import { computeHeat } from "./heatmap";
 import { generateMock } from "./mock";
 import { frameIndexAt } from "./overlay";
 import { jobProgress } from "./players";
+import { retypeDetail } from "./strokes";
 import { mergeStrokes, strokeStats } from "./strokes";
 import type { Correction, CorrectionOp, EventsResult } from "./types";
 
@@ -114,12 +116,15 @@ describe("export", () => {
     const lines = csv.trim().split("\r\n");
     expect(lines).toHaveLength(5);
     expect(lines[0]).toBe(CSV_HEADER.join(","));
-    expect(lines[4]).toBe("h0001,,600,20000,00:20.000,,,1.000,ok,human,,,,,,,,");
+    expect(lines[4]).toBe("h0001,,600,20000,00:20.000,,,1.000,ok,human,,,,,,,,,,,,");
+    // shots inside a rally carry its number, their position in it and the rally size
+    const first = lines[1].split(",");
+    expect(first.slice(-4, -1)).toEqual(["1", "1", String(base.rallies[0].shot_ids.length)]);
   });
   it("adds stroke-type columns", () => {
     seq = 0;
     const csv = exportCsv(applyCorrections(base, [corr({ op: "set_shot_type", payload: { shot_id: "s1", shot_type: "smash" } })], FPS));
-    expect(csv.split("\r\n")[1].endsWith(",smash,1.000,ok,human")).toBe(true);
+    expect(csv.split("\r\n")[1].includes(",smash,1.000,ok,human,")).toBe(true);
   });
 });
 
@@ -247,5 +252,32 @@ describe("switching the analysed court", () => {
     const after = courtsAfterSwitch(cal, other);
     expect(after).toEqual([cal.image_corners]);
     expect(pointInPolygon(cal.image_corners!, [640, 500])).toBe(true);
+  });
+});
+
+describe("retypeDetail", () => {
+  // expected texts produced by rallyiq.strokes.detail.retype on the same input
+  const d = {
+    family: "drop", subtype: null, source: "attrs_v1", description_zh: "x", role: null, intent: null,
+    hand: { value: "backhand", p: 0.7, source: "model" as const },
+    direction: { value: "straight", p: 0.9, source: "model" as const },
+    contact: { value: "high", p: 0.8, source: "model" as const },
+    pace: { value: "slow", p: null, source: "measured" as const },
+  };
+  it("matches the backend wording", () => {
+    expect(retypeDetail(d, "smash")?.description_zh).toBe("反手直线杀球，击球点较高，属于主动进攻，意图是直接施压，逼对手被动或失误。");
+    expect(retypeDetail(d, "cross_net")?.description_zh).toBe("反手勾对角，击球点较高，属于相持，意图是控制网前，逼对手起球，为下一拍进攻创造机会。");
+    expect(retypeDetail(d, "long_serve")).toMatchObject({ family: "serve", subtype: "long_serve", hand: null, direction: null, pace: null });
+    expect(retypeDetail(d, "drop")?.pace).toEqual(d.pace);
+    expect(retypeDetail(null, "smash")).toBeNull();
+  });
+});
+
+describe("upload file check", () => {
+  it("accepts every extension the backend accepts and nothing else", () => {
+    for (const name of ["a.mp4", "b.MOV", "c.m4v", "d.mkv", "e.avi", "f.webm"]) expect(isVideoFile({ name, type: "" })).toBe(true);
+    expect(isVideoFile({ name: "clip", type: "video/mp4" })).toBe(true);
+    expect(isVideoFile({ name: "x.3gp", type: "video/3gpp" })).toBe(false);
+    expect(isVideoFile({ name: "notes.txt", type: "text/plain" })).toBe(false);
   });
 });

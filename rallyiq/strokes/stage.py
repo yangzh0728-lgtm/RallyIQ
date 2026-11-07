@@ -8,6 +8,8 @@ Contract: ``run(ctx) -> StrokesResult`` using ``ctx.events``, ``ctx.shuttle`` an
   model backend that cannot load falls back to the rules with a warning unless ``require_model: true``;
 * ``sklearn``: ``{"model": "/path/to/strokes.json"}`` (or ``.joblib``; trained by ``scripts/learn_strokes.py``);
 * ``bst``: BST settings (``repo``, ``weights``, ``model_name``, ``pose_style``, ``seq_len``);
+* ``detail``: ``true`` (default) adds hand / direction / contact / pace / role / intent to every
+  classified shot (``detail.py``, bundled ``models/stroke_attrs.json``; rules-only layers if missing);
 * any field of :class:`~rallyiq.strokes.classify.StrokesConfig` (thresholds).
 """
 
@@ -76,6 +78,15 @@ def run(ctx: StageContext) -> StrokesResult:
     elif cfg.classifier != "rules":
         raise ValueError(f"unknown strokes classifier {cfg.classifier!r}")
 
-    result = classify(events, ctx.shuttle, ctx.players, meta.fps, cfg, model=model, model_name=name)
+    detail, attrs = bool(opts.get("detail", True)), None
+    if detail:
+        from .detail import get_model as get_attrs
+
+        try:
+            attrs = get_attrs()
+        except (ValueError, KeyError) as e:
+            log.warning("bundled stroke attribute model unusable (%s); rules-only detail", e)
+    result = classify(events, ctx.shuttle, ctx.players, meta.fps, cfg, model=model, model_name=name,
+                      detail=detail, attrs=attrs)
     ctx.report(0.95)
     return result

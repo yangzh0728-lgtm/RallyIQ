@@ -32,6 +32,30 @@ def _dist_line(d: Distribution) -> str:
     return f"- {d.label}：{parts}（n={d.n}，{STATUS[d.status]}{tail}）"
 
 
+def _flow_lines(stats: MatchStats) -> list[str]:
+    """Games from the entered winners, then the rally log (one row per rally)."""
+    out: list[str] = []
+    if stats.games:
+        out += ["## 比分", ""]
+        for g in stats.games:
+            score = " : ".join(f"{k} {v}" for k, v in g.score.items())
+            tail = f"，{g.winner} 胜" if g.winner else "（未完成或胜负未标全）"
+            out.append(f"- 第 {g.game_no} 局：{score}{tail}")
+        out.append("")
+    if stats.rallies:
+        out += ["## 逐回合", "", "| # | 开始 | 拍数 | 时长 | 发球方 | 得分方 | 比分 | 最后一拍 | 拍间间隔 |",
+                "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+        for r in stats.rallies:
+            secs = r.start_ms // 1000
+            score = "-".join(str(v) for v in r.score.values()) if r.score else "—"
+            last = f"{r.last_hitter or '?'} {r.last_shot_type or ''}".strip() if r.last_hitter or r.last_shot_type else "—"
+            iv = f"{r.mean_interval_s:.2f} s" if r.mean_interval_s is not None else "—"
+            out.append(f"| {r.rally_no} | {secs // 60:02d}:{secs % 60:02d} | {r.shots} | {r.duration_s:.1f} s | "
+                       f"{r.server or '—'} | {r.winner or '—'} | {score} | {last} | {iv} |")
+        out.append("")
+    return out
+
+
 def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: str | None = None,
                     coach_stale: bool = False) -> str:
     out = [f"# {title or '赛后报告'}", ""]
@@ -83,6 +107,7 @@ def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: 
 
     out += ["## 全场统计", ""] + _metric_rows(stats.metrics) + [""]
     out += [_dist_line(d) for d in stats.distributions] + [""]
+    out += _flow_lines(stats)
     for p in stats.players:
         out += [f"## {p.player_id}", ""] + _metric_rows(p.metrics) + [""]
         out += [_dist_line(d) for d in p.distributions] + [""]

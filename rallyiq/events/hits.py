@@ -43,6 +43,7 @@ R_TEAMMATE_AMBIGUOUS = "teammate_ambiguous"  # doubles: both partners equally cl
 R_HITTER_FROM_ALTERNATION = "hitter_from_alternation"  # nearest player broke alternation; next-nearest used
 R_INFERRED_SERVE = "inferred_from_rally_start"
 R_HITTER_FROM_TRAJECTORY = "hitter_from_trajectory"  # learned side model overruled the nearest player
+R_HITTER_FROM_SEQUENCE = "hitter_from_sequence"  # no player near the shuttle: hitter taken from alternation
 
 WEIGHTS = {"change": 0.35, "proximity": 0.35, "sharpness": 0.15, "track_quality": 0.15}
 
@@ -58,6 +59,10 @@ class Candidate:
     prox: list[Proximity] = field(default_factory=list)
     reasons: list[str] = field(default_factory=list)
     confidence: float = 0.0
+    t_ms: float = 0.0  # time of the track point (sequence rules need the gap between hits)
+    # Players around the hit from a wider pose search, for a hit without a usable pose at the contact frame
+    # (``cfg.hitter_pose_fallback_frames``). Only the hitter fill (``_fill_hitters``) uses it.
+    prox_wide: list[Proximity] = field(default_factory=list)
 
     @property
     def best(self) -> Optional[Proximity]:
@@ -66,7 +71,9 @@ class Candidate:
     @property
     def hitter_known(self) -> bool:
         b = self.best
-        return b is not None and (b.score > 0 or R_HITTER_FROM_TRAJECTORY in self.reasons)
+        return b is not None and (
+            b.score > 0 or R_HITTER_FROM_TRAJECTORY in self.reasons or R_HITTER_FROM_SEQUENCE in self.reasons
+        )
 
 
 def apply_side_model(c: "Candidate", p_near: float, threshold: float) -> None:
@@ -137,7 +144,7 @@ def _score_point(
     q = track.quality(i, cfg.window_ms, fps_ms)
     # Impulse |v_out - v_in| (in player heights / s) localises the contact
     # frame: it peaks where the racket changes the shuttle's velocity.
-    return Candidate(i, ang, max(turn, speed), sharp, q, impulse=full[2] / scale_px)
+    return Candidate(i, ang, max(turn, speed), sharp, q, impulse=full[2] / scale_px, t_ms=pt.t_ms)
 
 
 def detect_hits(
@@ -160,6 +167,8 @@ def detect_hits(
         if c is None:
             continue
         c.prox = poses.proximities(pts[i].frame, pts[i].xy)
+        if cfg.hitter_fill and not c.prox and cfg.hitter_pose_fallback_frames > cfg.pose_search_frames:
+            c.prox_wide = poses.proximities(pts[i].frame, pts[i].xy, cfg.hitter_pose_fallback_frames)
         raw.append(c)
 
     # Non-maximum suppression: keep the most hit-like point, drop its
@@ -208,8 +217,16 @@ def detect_hits(
         if needed and (scorer is None or serve.confidence >= cfg.min_candidate_conf):
             out.insert(0, serve)
 
-    out = _alternating_subset(out, cfg)
+    return resolve_sequence(out, cfg)
+
+
+def resolve_sequence(cands: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Rally-level rules on the time-ordered candidates: alternation, quick repeats, re-attribution."""
+    out = _alternating_subset(cands, cfg)
+    out = _resolve_quick_repeats(out, cfg)
     _reattribute(out, cfg)
+    if cfg.hitter_fill:
+        _fill_hitters(out)
     _check_alternation(out)
     return out
 
@@ -279,7 +296,7 @@ def _inferred_serve(
     if not prox or prox[0].score <= 0.3:
         return None
     q = track.quality(i, cfg.window_ms, fps_ms, before=False)
-    c = Candidate(i, 0.0, 0.0, 0.0, q, prox=prox, reasons=[R_INFERRED_SERVE])
+    c = Candidate(i, 0.0, 0.0, 0.0, q, prox=prox, reasons=[R_INFERRED_SERVE], t_ms=pt.t_ms)
     # Proximity is the only evidence, so this always goes to review.
     c.confidence = round(0.5 * prox[0].score + 0.1 * q, 3)
     return c
@@ -331,6 +348,58 @@ def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candi
     ]
 
 
+def _other_side_alt(c: Candidate, key: str) -> Optional[int]:
+    """Index in ``c.prox`` of the closest player of a side other than ``key`` who is near the shuttle at all."""
+    for k, alt in enumerate(c.prox[1:], start=1):
+        if alt.score > 0 and alt.pose.team_key != key:
+            return k
+    return None
+
+
+def _hand_over(c: Candidate, k: int) -> None:
+    c.prox.insert(0, c.prox.pop(k))
+    c.reasons = [r for r in c.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
+    c.reasons.append(R_HITTER_FROM_ALTERNATION)
+
+
+def _resolve_quick_repeats(hits: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Two hits by the same side closer than ``same_side_min_gap_ms`` cannot both be right: a missed
+    opponent hit between them would need the shuttle to cross the net twice in that time. Either one of
+    them was the opponent's (a small far player loses the proximity contest to a large near player), or
+    one is not a hit at all (a wobble of the track around a single contact).
+
+    The pair is fixed by handing one hit to a player of the other side who is near the shuttle at all,
+    preferring the hand-over that does not clash with the neighbouring hits; with nobody there, the
+    weaker hit is dropped.
+    """
+    gap = cfg.same_side_min_gap_ms
+    if gap <= 0 or len(hits) < 2:
+        return hits
+    out = list(hits)
+    i = 0
+    while i + 1 < len(out):
+        a, b = out[i], out[i + 1]
+        key = _side_key(a)
+        if key is None or key != _side_key(b) or b.t_ms - a.t_ms >= gap:
+            i += 1
+            continue
+        options = []
+        for c, nb in ((a, out[i - 1] if i > 0 else None), (b, out[i + 2] if i + 2 < len(out) else None)):
+            k = _other_side_alt(c, key)
+            if k is None:
+                continue
+            clash = nb is not None and _side_key(nb) == c.prox[k].pose.team_key
+            options.append((not clash, c.prox[k].score, k, c))
+        if options:
+            _, _, k, c = max(options, key=lambda o: (o[0], o[1]))
+            _hand_over(c, k)
+            i += 1
+            continue
+        out.remove(a if a.confidence < b.confidence else b)
+        i = max(i - 1, 0)
+    return out
+
+
 def _reattribute(hits: list[Candidate], cfg: EventsConfig) -> None:
     """Fix a hitter that breaks alternation when another player of the right side is nearly as close.
 
@@ -343,13 +412,43 @@ def _reattribute(hits: list[Candidate], cfg: EventsConfig) -> None:
         ka, kb = _side_key(a), _side_key(b)
         if ka is None or kb is None or ka != kb:
             continue
-        best = b.best
-        for k, alt in enumerate(b.prox[1:], start=1):
-            if alt.score > 0 and alt.pose.team_key != ka and best.score - alt.score < 2 * cfg.hitter_margin:
-                b.prox.insert(0, b.prox.pop(k))
-                b.reasons = [r for r in b.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
-                b.reasons.append(R_HITTER_FROM_ALTERNATION)
-                break
+        k = _other_side_alt(b, ka)
+        if k is not None and b.best.score - b.prox[k].score < 2 * cfg.hitter_margin:
+            _hand_over(b, k)
+
+
+def _fill_hitters(hits: list[Candidate]) -> None:
+    """Give a hit whose hitter is unknown (no player near the shuttle, or no pose at the contact frame) the
+    player the alternation calls for: someone of a side other than the previous known hit's (and the next
+    one's), the closest such player at the contact frame or, without a pose there, a few frames around it.
+
+    On ShuttleSet about 7% of correctly timed hits had no hitter at all, mostly at the start of a rally
+    when pose frames are empty for 5-20 frames; alternation names the right end for nearly all of them.
+    The hit keeps ``hitter_from_sequence`` and goes to review.
+    """
+    known = [i for i, c in enumerate(hits) if c.hitter_known]
+    if not known:
+        return
+    for i, c in enumerate(hits):
+        if c.hitter_known:
+            continue
+        pool = c.prox or c.prox_wide
+        if not pool:
+            continue
+        prev = next((hits[j] for j in reversed(known) if j < i), None)
+        nxt = next((hits[j] for j in known if j > i), None)
+        avoid = {_side_key(h) for h in (prev, nxt) if h is not None}
+        options = [k for k, p in enumerate(pool) if p.pose.team_key not in avoid]
+        if not options:
+            # previous and next known hits are by different sides (a missed hit somewhere): follow the previous
+            avoid = {_side_key(prev or nxt)}
+            options = [k for k, p in enumerate(pool) if p.pose.team_key not in avoid]
+        if not options:
+            continue
+        k = min(options, key=lambda k: pool[k].distance_rel)
+        c.prox = [pool[k]] + [p for j, p in enumerate(pool) if j != k]
+        c.reasons = [r for r in c.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)]
+        c.reasons.append(R_HITTER_FROM_SEQUENCE)
 
 
 def _check_alternation(hits: list[Candidate]) -> None:

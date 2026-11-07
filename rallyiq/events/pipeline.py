@@ -29,15 +29,37 @@ def _fps_ms(shuttle: Sequence[ShuttleObs]) -> float:
     return statistics.median(steps) if steps else 1000.0 / 30.0
 
 
+def off_court_views(segments: Sequence[tuple[int, int, bool]], min_share: float) -> list[tuple[int, int]]:
+    """Frame ranges of camera segments without a usable calibration, given (start, end, calibrated) per segment,
+    when the calibrated ones cover at least ``min_share`` of the frames (else none: the video is not a
+    calibrated court view at all, and masking would remove everything)."""
+    total = sum(e - s + 1 for s, e, _ in segments)
+    ok = sum(e - s + 1 for s, e, c in segments if c)
+    if total <= 0 or ok < min_share * total:
+        return []
+    return [(s, e) for s, e, c in segments if not c]
+
+
+def _inside(frame: int, spans: Sequence[tuple[int, int]]) -> bool:
+    return any(s <= frame <= e for s, e in spans)
+
+
 def segment_events(
     shuttle: Sequence[ShuttleObs],
     poses: Sequence[PoseFrame],
     cfg: Optional[EventsConfig] = None,
     video_end_ms: Optional[float] = None,
     collect: Optional[list] = None,
+    off_court: Sequence[tuple[int, int]] = (),
 ) -> list[RallySegment]:
-    """``collect``: see ``hits.detect_hits``; entries become (rally_id, features, candidate, track point)."""
+    """``collect``: see ``hits.detect_hits``; entries become (rally_id, features, candidate, track point).
+
+    ``off_court``: inclusive frame ranges where the camera does not show the court (``off_court_views``);
+    used only with ``cfg.mask_off_court_views``.
+    """
     cfg = with_scorer_thresholds(cfg or EventsConfig())
+    if cfg.mask_off_court_views and off_court:
+        shuttle = [ShuttleObs(o.frame, o.t_ms) if _inside(o.frame, off_court) else o for o in shuttle]
     pose_index = PoseIndex(poses, cfg)
     scale = pose_index.global_height
     track = Track(usable_points(shuttle, cfg, scale))

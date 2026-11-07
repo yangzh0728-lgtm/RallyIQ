@@ -37,6 +37,8 @@ export interface Api {
   getVideo(id: string): Promise<Video>;
   uploadVideo(file: File, onProgress?: (fraction: number) => void): Promise<Video>;
   getJob(id: string): Promise<Job>;
+  /** Start (or retry) the full analysis of a video. */
+  startAnalysis(videoId: string): Promise<Job>;
   getOverlay(videoId: string): Promise<OverlayData>;
   /** Effective events (raw prediction + corrections). */
   getEvents(videoId: string): Promise<EventsResult>;
@@ -59,7 +61,7 @@ export interface Api {
   /** (Re)generate the AI coach comments; provider null = server default. Can take a minute. */
   generateCoach(videoId: string, provider?: string | null): Promise<CoachReport>;
   /** Report download URL, or null if the client renders it (mock). */
-  reportExportUrl(videoId: string, format: "md" | "json"): string | null;
+  reportExportUrl(videoId: string, format: "md" | "json" | "html"): string | null;
   /** Input assessment: camera view, picture, visibility and how far each output can be trusted. */
   getQuality(videoId: string): Promise<VideoQuality>;
   /** MP4 clip of one rally (padded 1 s), or null when there is no source file (mock). */
@@ -181,6 +183,7 @@ export const liveApi: Api = {
     return JSON.parse(await xhrSend("POST", `${BASE}/videos`, fd, {}, onProgress)) as Video;
   },
   getJob: (id) => http<Job>(`/jobs/${enc(id)}`),
+  startAnalysis: (id) => http<Job>(`/videos/${enc(id)}/jobs`, { method: "POST", body: JSON.stringify({ from_stage: "probe" }) }),
   getOverlay: (id) => http<OverlayData>(`/videos/${enc(id)}/overlay`),
   getEvents: (id) => http<EventsResult>(`/videos/${enc(id)}/events`),
   getRawEvents: (id) => http<EventsResult>(`/videos/${enc(id)}/events?raw=true`),
@@ -356,6 +359,12 @@ export function createMockApi(): Api {
     async getJob(jobId) {
       const mv = [...videos.values()].find((v) => v.job.id === jobId);
       if (!mv) throw new Error("404 job not found");
+      return delay(jobOf(mv));
+    },
+    async startAnalysis(id) {
+      const mv = must(id);
+      const n = Number(mv.job.id.split("_").pop()) + 1;
+      mv.job = { id: `job_${id}_${n}`, startedAt: Date.now(), from: 0 };
       return delay(jobOf(mv));
     },
     getOverlay: async (id) => (must(id), delay(analysis(id).overlay, 200)),
