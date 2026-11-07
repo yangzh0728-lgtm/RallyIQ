@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PlayerCompare, RallyTable, ScoreFlow } from "../components/MatchFlow";
 import { MemoryCommit } from "../components/MemoryCommit";
 import { api } from "../lib/api";
 import { download } from "../lib/export";
@@ -143,6 +144,10 @@ export function Report({ videoId }: { videoId: string }) {
           <DistBars key={d.key} d={d} focus={focus} />
         ))}
       </section>
+
+      <ScoreFlow stats={stats} />
+      <PlayerCompare stats={stats} />
+      <RallyTable stats={stats} videoId={videoId} />
 
       <div className="report-players">
         {stats.players.map((p) => (

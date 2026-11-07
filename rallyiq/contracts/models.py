@@ -604,6 +604,36 @@ class ShotMoment(Contract):
     confidence: MetricConfidence
 
 
+class RallyLine(Contract):
+    """One rally of the match as the report lists it (rally log, score flow, tempo)."""
+
+    rally_no: int = Field(ge=1, description="1-based, in time order")
+    rally_id: str
+    start_ms: int = Field(ge=0)
+    end_ms: int = Field(ge=0)
+    shots: int = Field(ge=0)
+    duration_s: float
+    server: PlayerId | TeamId | None = Field(default=None, description="side of the first shot's hitter (team in doubles)")
+    winner: PlayerId | TeamId | None = None
+    last_hitter: PlayerId | None = None
+    last_shot_type: str | None = Field(default=None, description="Chinese label of the last shot's stroke type")
+    mean_interval_s: float | None = Field(default=None, description="mean time between consecutive hits, s")
+    game_no: int | None = Field(default=None, description="game (局) this rally belongs to, from the running score")
+    score: dict[str, int] | None = Field(
+        default=None, description="game score after this rally, by side; null when the winner is not entered"
+    )
+    status: Status = Status.needs_review
+
+
+class GameScore(Contract):
+    """One game (局) reconstructed from the entered rally winners (21 points, win by 2, cap 30)."""
+
+    game_no: int = Field(ge=1)
+    score: dict[str, int]
+    winner: PlayerId | TeamId | None = Field(default=None, description="null while the game is unfinished")
+    rallies: int = Field(ge=0, description="rallies with a known winner in this game")
+
+
 class MatchStats(Contract):
     """Post-match statistics computed from effective events + player tracks.
 
@@ -623,6 +653,8 @@ class MatchStats(Contract):
     moments: list[ShotMoment] = Field(
         default_factory=list, description="shots whose choice should change (singles, needs stroke types + tracks)"
     )
+    rallies: list[RallyLine] = Field(default_factory=list, description="rally log in time order")
+    games: list[GameScore] = Field(default_factory=list, description="games reconstructed from entered winners")
     caveats: list[str] = Field(default_factory=list)
 
 

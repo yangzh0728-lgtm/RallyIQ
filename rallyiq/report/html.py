@@ -222,6 +222,61 @@ def _rallies(stats: dict, rallies: list[dict], shots_by_id: dict[str, dict]) -> 
     return _section("rallies", "回合", f'<div class="grid2">{_rally_chart(rallies, shots_by_id)}{bucket_html}</div>{table}')
 
 
+def _score_flow(stats: dict) -> str:
+    """Games and a diverging bar per decided rally: how far ahead the leader was after it."""
+    games = stats.get("games") or []
+    lines = [r for r in stats.get("rallies") or [] if r.get("score")]
+    if not games or not lines:
+        return ""
+    sides = list(lines[0]["score"])
+    a, b = sides[0], sides[1]
+    tiles = "".join(
+        f'<div class="tile"><div class="tile-v">{g["score"].get(a, 0)} : {g["score"].get(b, 0)}</div>'
+        f'<div class="tile-k">第 {g["game_no"]} 局 · '
+        + (f'<span class="who {_player_cls(g.get("winner"))}">{_e(g.get("winner"))}</span> 胜' if g.get("winner")
+           else "未完成") + "</div></div>" for g in games)
+    diffs = [r["score"].get(a, 0) - r["score"].get(b, 0) for r in lines]
+    top = max(3, *(abs(d) for d in diffs))
+    w, h, pad_l, pad_t, pad_b = 720, 180, 30, 10, 18
+    mid = pad_t + (h - pad_t - pad_b) / 2
+    half_h = (h - pad_t - pad_b) / 2
+    bw = (w - pad_l) / len(lines)
+    gap = min(2.0, bw * 0.25)
+    out = [f'<line class="grid" x1="{pad_l}" x2="{w}" y1="{mid:.1f}" y2="{mid:.1f}"/>',
+           f'<text class="axis" x="{pad_l - 6}" y="{pad_t + 8}" text-anchor="end">+{top}</text>',
+           f'<text class="axis" x="{pad_l - 6}" y="{mid + 4:.1f}" text-anchor="end">0</text>',
+           f'<text class="axis" x="{pad_l - 6}" y="{h - pad_b}" text-anchor="end">-{top}</text>']
+    prev_game = lines[0].get("game_no")
+    for i, (r, d) in enumerate(zip(lines, diffs)):
+        x = pad_l + i * bw
+        if r.get("game_no") != prev_game:
+            out.append(f'<line class="grid" x1="{x:.1f}" x2="{x:.1f}" y1="{pad_t}" y2="{h - pad_b}" stroke-dasharray="3 3"/>')
+            prev_game = r.get("game_no")
+        bh = max(half_h * abs(d) / top, 1.0)
+        y = mid - bh if d > 0 else mid
+        cls = _player_cls(a if d > 0 else b if d < 0 else None)
+        sc = f'{r["score"].get(a, 0)}-{r["score"].get(b, 0)}'
+        tip = f'第{r["rally_no"]}回合 · {_ms(r.get("start_ms"))} · {r.get("winner")} 得分 · 比分 {sc}'
+        out.append(f'<rect class="sbar {cls}" x="{x + gap / 2:.1f}" y="{y:.1f}" width="{max(bw - gap, 1):.1f}" '
+                   f'height="{bh:.1f}"><title>{_e(tip)}</title></rect>')
+    chart = (f'<div class="chart"><div class="chart-head"><h3>领先分差（每个已标注胜负的回合之后）</h3>'
+             f'<div class="legend">{_legend([a, b])}</div></div>'
+             f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="比分走势">{"".join(out)}</svg>'
+             '<p class="small muted">向上是 ' + _e(a) + ' 领先，向下是 ' + _e(b) + ' 领先；虚线是换局。</p></div>')
+    m = _metrics(stats)
+    facts = []
+    lc = m.get("match.score.lead_changes")
+    if lc and lc.get("value") is not None:
+        facts.append(f"领先易手 {_num(lc['value'])} 次")
+    for p in stats.get("players", []):
+        pm = _metrics(p)
+        run = pm.get(f"{p['player_id']}.win.longest_run")
+        if run and run.get("value"):
+            facts.append(f"{p['player_id']} 最长连续得分 {_num(run['value'])} 分")
+    lead = "按已标注的回合胜负推算（21 分制，领先 2 分获胜，30 分封顶）。" + ("；".join(facts) + "。" if facts else "")
+    return _section("score", "比分走势", f'<div class="tiles">{tiles}</div>{chart}', lead)
+
+
 def _shot_types(stats: dict, shots: list[dict]) -> str:
     cards = []
     for p in stats.get("players", []) if stats.get("shot_types_available") else []:
@@ -562,6 +617,7 @@ def render_html(report: dict | Any, events: dict | Any | None = None, players: d
         _nav(),
         _overview(stats, rallies),
         _coach(coach, bool(report.get("coach_stale"))),
+        _score_flow(stats),
         _rallies(stats, rallies, shots_by_id),
         _shot_types(stats, shots),
         _styles(stats),
@@ -579,7 +635,7 @@ def render_html(report: dict | Any, events: dict | Any | None = None, players: d
 
 
 def _nav() -> str:
-    links = [("overview", "概览"), ("coach", "教练点评"), ("rallies", "回合"), ("shots", "击球"), ("style", "风格"),
+    links = [("overview", "概览"), ("coach", "教练点评"), ("score", "比分"), ("rallies", "回合"), ("shots", "击球"), ("style", "风格"),
              ("footwork", "脚步"), ("heatmap", "热区"), ("moments", "逐拍"), ("details", "数据")]
     return '<nav>' + "".join(f'<a href="#{a}">{b}</a>' for a, b in links) + "</nav>"
 
@@ -627,7 +683,7 @@ p{margin:6px 0}
 .chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .chart svg{width:100%;height:auto;display:block}
 .grid{stroke:var(--grid);stroke-width:1}.axis{fill:var(--muted);font-size:11px}
-.bar.p1{fill:var(--p1)}.bar.p2{fill:var(--p2)}.bar.pn{fill:var(--pn)}
+.bar.p1,.sbar.p1{fill:var(--p1)}.bar.p2,.sbar.p2{fill:var(--p2)}.bar.pn,.sbar.pn{fill:var(--pn)}
 .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text2)}
 .key{display:inline-flex;align-items:center;gap:4px}
 .sw{display:inline-block;width:10px;height:10px;border-radius:3px}

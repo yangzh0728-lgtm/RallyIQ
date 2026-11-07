@@ -19,11 +19,15 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 | 击球 | `Pn.shots`、`Pn.shot_share`、`Pn.hit.zones`（击球位置）、`Pn.shot_types`（击球类型） |
 | 移动 | `Pn.move.distance_m`、`Pn.move.per_rally_m`、`Pn.move.per_min_m`、`Pn.move.tracked_pct` |
 | 覆盖与站位 | `Pn.cover.area_m2`、`Pn.cover.ratio_pct`、`Pn.pos.depth_mean_m`、`Pn.pos.depth_zones`、`Pn.pos.lateral_zones` |
+| 节奏 | `match.tempo.interval_mean_s`、`interval_first_half_s/second_half_s`、`match.rally_len.first_half_mean/second_half_mean`；`Pn.tempo.prep_s`（回球准备时间）、`Pn.tempo.given_s`（留给对手的时间） |
+| 比分走势 | `match.score.games`、`match.score.lead_changes`；`Pn.win.longest_run`、`Pn.win.biggest_lead`；`MatchStats.rallies`（逐回合）、`MatchStats.games`（每局比分） |
 | 得失分 | `Pn.win.won/rate_pct`、`short_rate_pct`、`long_rate_pct`、`serve_rate_pct`、`receive_rate_pct`、`own_last_shot_pct`、`lost_own_last_shot_pct`；`Pn.lost.last_shot_types`（失分回合中本人最后一拍的击球类型） |
 
 - 移动只统计回合内、非插值的足点；5 帧滑动中值去抖，速度 > 8 m/s 的跳变视为跟踪错误剔除，间隔 > 0.5 s 不连线。
 - 站位按“本方半场”换算：深度 = 离自己底线的距离，左右按本人面向球网的视角，换边后仍可比较。
 - 球场标定不是 `ok` 时，米制指标降为“待复核”。
+- 比分走势和节奏在 `flow.py`：比分按已标注的回合胜负推算（21 分制、领先 2 分获胜、30 分封顶，未标注的回合不计分）；
+  拍间间隔只算相邻两拍由双方击出、间隔 0.15–3 秒的情况，过滤重复检测和漏检。
 - 胜负指标只用已标注胜者的回合（工作台修正面板里设置），没有标注时为“不可判定”。
 - **击球类型**：读取 `ShotEvent.shot_type`。击球分类模块接入后填这个字段即可，统计和报告自动出现分布（`SHOT_TYPE_LABELS` 里登记中文名），无需改报告代码。
 

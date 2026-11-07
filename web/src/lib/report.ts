@@ -1,3 +1,5 @@
+import { rallyLog } from "./flow";
+import { typeLabel } from "./strokes";
 import type {
   CoachInsight,
   CoachReport,
@@ -213,6 +215,7 @@ export function mockStats(ev: EventsResult, overlay: OverlayData): MatchStats {
     ],
     distributions: [dist("match.rally_len.buckets", "回合长度分布（回合数）", buckets, 10, 3)],
     players,
+    ...rallyLog(ev, (t) => typeLabel(t as never)),
     caveats,
   };
 }
