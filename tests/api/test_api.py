@@ -95,6 +95,8 @@ def test_corrections_layer_on_raw_events(client, sample_video):
     assert client.post(f"/api/videos/{vid}/corrections", json={"op": "set_shot_type", "payload": {"shot_id": second["shot_id"], "shot_type": "tweener"}}).status_code == 422
     s2 = {s["shot_id"]: s for s in client.get(f"/api/videos/{vid}/events").json()["shots"]}[second["shot_id"]]
     assert s2["shot_type"] == "smash" and s2["stroke"]["source"] == "human"
+    # the layered description follows the corrected type (hand / direction / contact are kept)
+    assert s2["stroke"]["detail"] is None or s2["stroke"]["detail"]["family"] == "smash"
 
     csv_text = client.get(f"/api/videos/{vid}/export", params={"format": "csv"}).text
     assert csv_text.splitlines()[0].startswith("shot_id,rally_id")

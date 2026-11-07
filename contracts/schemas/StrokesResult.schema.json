@@ -76,6 +76,171 @@
       "title": "Status",
       "type": "string"
     },
+    "StrokeAttr": {
+      "additionalProperties": false,
+      "description": "One layer of a shot's description, and where it comes from.",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "p": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "model probability; null when measured or a rule",
+          "title": "P"
+        },
+        "source": {
+          "description": "model = learned from ShuttleSet labels; measured = from tracked positions; rule = a coach's reading of the other layers (no labels exist to learn it)",
+          "enum": [
+            "model",
+            "measured",
+            "rule"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "source"
+      ],
+      "title": "StrokeAttr",
+      "type": "object"
+    },
+    "StrokeDetail": {
+      "additionalProperties": false,
+      "description": "Layered description of a shot on top of its stroke type (see ``rallyiq.strokes.detail``).",
+      "properties": {
+        "family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "clear smash drop drive block push lift net_shot net_kill serve",
+          "title": "Family"
+        },
+        "subtype": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "cross_court_net_shot, short_serve or long_serve; else null",
+          "title": "Subtype"
+        },
+        "hand": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrokeAttr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "forehand, backhand or around_head"
+        },
+        "contact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrokeAttr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "high (above the net) or low"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrokeAttr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "straight or cross"
+        },
+        "pace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrokeAttr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "fast, medium or slow for this family"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrokeAttr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "attacking, neutral or defensive"
+        },
+        "intent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrokeAttr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "attack, move, control, defend or transition"
+        },
+        "description_zh": {
+          "default": "",
+          "title": "Description Zh",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "attribute model name, e.g. attrs_v1",
+          "title": "Source"
+        }
+      },
+      "title": "StrokeDetail",
+      "type": "object"
+    },
     "StrokeInfo": {
       "additionalProperties": false,
       "description": "Stroke-type prediction (or human label) for one shot.",
@@ -163,6 +328,18 @@
           "description": "measured features behind the prediction (null = not measurable)",
           "title": "Evidence",
           "type": "object"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StrokeDetail"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "hand, direction, contact, pace, role, intent"
         }
       },
       "required": [

@@ -1,4 +1,4 @@
-import type { EventsResult, PlayerId, ShotEvent, ShotType, StrokeInfo, StrokesResult } from "./types";
+import type { EventsResult, PlayerId, ShotEvent, ShotType, StrokeAttr, StrokeDetail, StrokeInfo, StrokesResult } from "./types";
 
 // Display names for stroke types. Mirrors rallyiq/strokes/taxonomy.py.
 
@@ -117,4 +117,111 @@ export function strokeStats(shots: ShotEvent[], players: PlayerId[]): StrokeStat
     const list = [...counts.entries()].map(([type, c]) => ({ type, ...c })).sort((a, b) => b.n - a.n || SHOT_TYPES.indexOf(a.type) - SHOT_TYPES.indexOf(b.type));
     return { player, total: own.length, typed: list.reduce((a, c) => a + c.n, 0), review, counts: list };
   });
+}
+
+/** Display names for the layers of StrokeDetail. Mirrors rallyiq/strokes/detail.py. */
+export const DETAIL_ZH: Record<string, string> = {
+  forehand: "正手",
+  backhand: "反手",
+  around_head: "头顶",
+  straight: "直线",
+  cross: "斜线",
+  high: "击球点高",
+  low: "击球点低",
+  fast: "快",
+  medium: "中速",
+  slow: "慢",
+  attacking: "主动进攻",
+  neutral: "相持",
+  defensive: "被动防守",
+  attack: "进攻",
+  move: "调动",
+  control: "控制",
+  defend: "防守",
+  transition: "过渡",
+};
+
+export const DETAIL_SOURCE_ZH: Record<StrokeAttr["source"], string> = {
+  model: "模型识别",
+  measured: "按轨迹测量",
+  rule: "按规则推断，仅供参考",
+};
+
+/** The attribute chips of a stroke, in display order (empty when the stroke has no detail). */
+export function detailChips(stroke: StrokeInfo | null | undefined): { key: string; label: string; title: string; inferred: boolean }[] {
+  const d = stroke?.detail;
+  if (!d) return [];
+  const order: [string, StrokeAttr | null | undefined][] = [
+    ["hand", d.hand], ["direction", d.direction], ["contact", d.contact], ["pace", d.pace], ["role", d.role], ["intent", d.intent],
+  ];
+  return order
+    .filter(([, a]) => a && DETAIL_ZH[a.value])
+    .map(([key, a]) => ({
+      key,
+      label: DETAIL_ZH[a!.value],
+      title: `${DETAIL_SOURCE_ZH[a!.source]}${a!.p != null ? `（把握 ${Math.round(a!.p * 100)}%）` : ""}`,
+      inferred: a!.source === "rule",
+    }));
+}
+
+// ---- mirror of rallyiq/strokes/detail.py retype(): a corrected stroke type re-derives the rule layers.
+const FAMILY: Partial<Record<ShotType, string>> = { short_serve: "serve", long_serve: "serve", cross_net: "net_shot" };
+const SUBTYPE: Partial<Record<ShotType, string>> = { cross_net: "cross_court_net_shot", short_serve: "short_serve", long_serve: "long_serve" };
+const DESC_ZH: Record<string, string> = {
+  forehand: "正手", backhand: "反手", around_head: "头顶", straight: "直线", cross: "斜线",
+  high: "击球点较高", low: "击球点较低", fast: "出球快", medium: "", slow: "出球慢",
+  attacking: "主动进攻", neutral: "相持", defensive: "被动防守",
+};
+const INTENT_ZH: Record<string, string> = {
+  attack: "直接施压，逼对手被动或失误",
+  move: "调动对手前后跑动，拉开空当",
+  control: "控制网前，逼对手起球，为下一拍进攻创造机会",
+  defend: "化解对手进攻，先保证回球质量",
+  transition: "争取时间回位，由被动转入相持",
+};
+
+function roleOf(t: ShotType, contact: string | null): string {
+  const fam = FAMILY[t] ?? t;
+  if (fam === "smash" || fam === "net_kill") return "attacking";
+  if (fam === "push" || fam === "drive" || fam === "drop") return contact === "high" ? "attacking" : "neutral";
+  if (fam === "clear") return contact === "low" ? "defensive" : "neutral";
+  if (fam === "block" || fam === "lift") return contact === "low" ? "defensive" : "neutral";
+  return "neutral";
+}
+
+function intentOf(t: ShotType, role: string): string {
+  const fam = FAMILY[t] ?? t;
+  if (fam === "smash" || fam === "net_kill" || ((fam === "push" || fam === "drive") && role === "attacking")) return "attack";
+  if (((fam === "drop" || fam === "clear") && role !== "defensive") || t === "long_serve") return "move";
+  if (fam === "net_shot" || fam === "serve" || fam === "push" || fam === "drive") return "control";
+  if (fam === "block" || (fam === "lift" && role === "defensive")) return "defend";
+  return "transition";
+}
+
+function describe(t: ShotType, d: StrokeDetail): string {
+  const hand = d.hand && FAMILY[t] !== "serve" ? DESC_ZH[d.hand.value] : "";
+  const dir = d.direction && t !== "cross_net" && FAMILY[t] !== "serve" ? DESC_ZH[d.direction.value] : "";
+  const parts = [hand + dir + SHOT_TYPE_ZH[t]];
+  if (d.contact) parts.push(DESC_ZH[d.contact.value]);
+  if (d.pace && DESC_ZH[d.pace.value]) parts.push(DESC_ZH[d.pace.value]);
+  if (d.role) parts.push("属于" + DESC_ZH[d.role.value]);
+  if (d.intent) parts.push("意图是" + INTENT_ZH[d.intent.value]);
+  return parts.join("，") + "。";
+}
+
+export function retypeDetail(d: StrokeDetail | null | undefined, t: ShotType | null): StrokeDetail | null {
+  if (!d || !t) return null;
+  const fam = FAMILY[t] ?? t;
+  const role = roleOf(t, d.contact?.value ?? null);
+  const out: StrokeDetail = {
+    ...d,
+    family: fam,
+    subtype: SUBTYPE[t] ?? null,
+    hand: fam === "serve" ? null : d.hand ?? null,
+    direction: fam === "serve" ? null : d.direction ?? null,
+    pace: fam === d.family ? d.pace ?? null : null,
+    role: { value: role, p: null, source: "rule" },
+    intent: { value: intentOf(t, role), p: null, source: "rule" },
+  };
+  return { ...out, description_zh: describe(t, out) };
 }

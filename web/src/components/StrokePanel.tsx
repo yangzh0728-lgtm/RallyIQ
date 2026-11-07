@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { PlaybackClock } from "../lib/clock";
 import { formatMs } from "../lib/corrections";
 import { colorOf, labelOf } from "../lib/players";
-import { SHOT_TYPE_COLOR, SHOT_TYPE_ZH, strokeStats } from "../lib/strokes";
+import { SHOT_TYPE_COLOR, SHOT_TYPE_ZH, detailChips, strokeStats } from "../lib/strokes";
 import { useClockMs } from "../lib/useClock";
 import { PLAYER_IDS, type Rally, type ShotEvent } from "../lib/types";
 import { TypeChip } from "./CorrectionPanel";
@@ -52,6 +52,19 @@ export function StrokePanel({ shots, rally, rallyNo, clock }: Props) {
               <span className="muted">—</span>
             )}
           </div>
+          {latest?.stroke?.detail && (
+            <div className="stroke-detail">
+              <div className="chips">
+                {detailChips(latest.stroke).map((c) => (
+                  <span key={c.key} className={`chip${c.inferred ? " inferred" : ""}`} title={c.title}>
+                    {c.label}
+                  </span>
+                ))}
+              </div>
+              {latest.stroke.detail.description_zh && <div>{latest.stroke.detail.description_zh}</div>}
+              <div className="muted">实线标签 = 模型识别或测量；虚线标签 = 按规则推断，仅供参考。鼠标悬停看来源。</div>
+            </div>
+          )}
           {stats.map((st) => {
             const max = Math.max(1, ...st.counts.map((c) => c.n));
             return (

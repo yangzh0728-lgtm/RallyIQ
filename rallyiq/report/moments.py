@@ -37,6 +37,7 @@ from ..contracts import (
     ShotMoment,
 )
 from ..contracts.geometry import SINGLES_INSET
+from ..strokes.detail import short_label
 
 ZH = {
     "short_serve": "发短球", "long_serve": "发高远球", "clear": "高远球", "smash": "杀球", "drop": "吊球",
@@ -225,10 +226,13 @@ def shot_moments(events: EventsResult, players: PlayerTracks | None, fps: float 
                 continue
             issue, problem, target, why, severity = m
             hz, oz = zone(h_lat, h_dep), zone(o_view_lat, o_dep)
+            det = s.stroke.detail if s.stroke else None
             sugg = (f"改打{ZH[target.shot]}到对方{target.zone}" if target else "先打高远球到对方后场中路，争取回位时间")
             found.append(ShotMoment(
                 moment_id="", shot_id=s.shot_id, rally_id=rally.rally_id, rally_no=rno, shot_no=i + 1, t_ms=s.t_ms,
-                player_id=s.hitter, shot_type=s.shot_type, hitter_zone=hz, hitter_pos=[round(h_lat, 2), round(h_dep, 2)],
+                player_id=s.hitter, shot_type=s.shot_type, hitter_zone=hz,
+                shot_label_zh=short_label(s.shot_type, det) if det else None,
+                shot_detail_zh=(det.description_zh or None) if det else None, hitter_pos=[round(h_lat, 2), round(h_dep, 2)],
                 opponent_id=opp, opponent_zone=oz, opponent_pos=[round(o_lat, 2), round(o_dep, 2)],
                 opponent_reach_m=None if reach is None else round(reach, 1), next_shot_type=next_type,
                 outcome=outcome, issue=issue, problem=problem,

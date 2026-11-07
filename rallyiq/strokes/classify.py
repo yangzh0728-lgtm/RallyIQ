@@ -56,7 +56,10 @@ def classify(
     cfg: StrokesConfig | None = None,
     model: ModelFn | None = None,
     model_name: str | None = None,
+    detail: bool = False,
+    attrs=None,
 ) -> StrokesResult:
+    """``detail``: add ``StrokeInfo.detail`` (``attrs``: the ``detail.AttrModel``; None = rules-only layers)."""
     cfg = cfg or StrokesConfig()
     feats = shot_features(events, shuttle, players, fps, cfg.features)
     shots = {s.shot_id: s for s in events.shots}
@@ -111,6 +114,12 @@ def classify(
                 evidence=f.evidence(),
             ),
         ))
+    if detail:
+        from .detail import details
+
+        dets = details(events, shuttle, players, feats, fps, {s.shot_id: s.stroke.shot_type for s in out}, attrs)
+        out = [s.model_copy(update={"stroke": s.stroke.model_copy(update={"detail": dets.get(s.shot_id)})})
+               if s.stroke.shot_type else s for s in out]
     return StrokesResult(video_id=events.video_id, classifier=name, shots=out)
 
 
