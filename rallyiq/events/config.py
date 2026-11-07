@@ -31,6 +31,10 @@ class EventsConfig:
     speed_jump_ratio: float = 1.8
     min_hit_gap_ms: float = 280.0  # two hits closer than this are one hit
     max_hitter_dist_rel: float = 0.9  # shuttle further than this (in H) from a racket proxy: no hitter
+    # What H is in max_hitter_dist_rel. "player": that player's own height, so a large near player reaches far
+    # into the image and wins hits of a small far player. "mixed": geometric mean of the player's height and the
+    # height of the player nearest the shuttle, so reach shrinks where the shuttle is among small players.
+    hitter_scale: str = "player"
     racket_extension: float = 0.7  # racket head ~ wrist + k * (wrist - elbow)
     min_kp_conf: float = 0.3
     pose_search_frames: int = 3  # look this many frames around a hit for a pose
@@ -40,10 +44,10 @@ class EventsConfig:
     # "auto": bundled model (models/hit_scorer.json) if present; "off": hand-weighted rules; or a JSON path.
     # The model's own thresholds (keep / ok / min_candidate) replace the three below unless overridden.
     hit_scorer: str = "auto"
-    side_threshold: float = 0.8
+    side_threshold: float = 0.8  # learned side model: confidence needed to overrule the nearest player
     # Frames added to the reported contact frame. The velocity-impulse peak tends to sit a frame or two
     # before the labelled contact; learn_hits.py estimates this from labels and ships it with the model.
-    hit_frame_offset: int = 0  # learned side model: confidence needed to overrule the nearest player
+    hit_frame_offset: int = 0
 
     # --- pose-sequence hit recovery (pose_hits.py) ---
     # "off" (default), "auto" (bundled models/pose_hits.json) or a JSON path. Adds the serve and the
@@ -56,6 +60,10 @@ class EventsConfig:
     low_track_quality: float = 0.35
     ok_threshold: float = 0.6
     hitter_margin: float = 0.15  # proximity gap below which the hitter is ambiguous
+    # Two hits by the same side closer than this cannot both be right (the opponent's hit in between would need
+    # two net crossings): one is handed to the other side if a player there is near the shuttle, else the weaker
+    # is dropped. 0 disables.
+    same_side_min_gap_ms: float = 0.0
     occlusion_gap_ms: float = 150.0  # no observation this close around a hit -> occluded
     long_exchange_ms: float = 2600.0  # no hit for this long inside a rally -> maybe missed one
     default_player_height_px: float = 200.0
