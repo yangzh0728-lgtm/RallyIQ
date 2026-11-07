@@ -3,6 +3,8 @@
     pip install opencv-python numpy pyyaml
     python -m evaluation.tools.label_tool ae26_ms_f
     python -m evaluation.tools.label_tool ae26_ms_f --prefill preds/ae26_ms_f.json   # 用模型预测打底，人工修正
+    python -m evaluation.tools.label_tool ko26_court3 --check weights/shuttle/loop/round-002-check.json
+        # 只看模型和标注对不上的帧（scripts/shuttle_loop.py 生成），g 在这些帧之间跳
 
 读取 ~/rallyiq-data/bwf/clips/<clip_id>.mp4，写入 evaluation/labels/<clip_id>.json。
 标注文件里所有时间都是原视频毫秒时间，坐标是源视频像素。
@@ -18,6 +20,8 @@
          n 当前帧球不可见并跳到下一帧   x 删除当前帧的球标注
          g / G 跳到下一个 / 上一个"可疑帧"（需要 --prefill）：低分检测、短缺口、缺口两端。
                微调只需要把这些帧修对，其余预标注一般不用逐帧看
+         --check 模式：紫色圈是模型找到的球，绿色圈是现有标注。标注对就按 g 跳过；
+               y 采用模型的点；左键点在球上；n 看不见。这三种操作后都会直接跳到下一个要检查的帧
   事件   h 近端球员击球   j 远端球员击球   [ 回合开始   ] 回合结束
          u 删除离当前帧最近（±5 帧内）的击球
 """
@@ -51,6 +55,8 @@ class Session:
         self.open_rally: int | None = None
         self.dirty = False
         self.uncertain: list[int] = []  # frames to check first (from the prefill)
+        self.suggest: dict[int, dict] = {}  # --check: the model's opinion per frame
+        self.check_name: str | None = None  # --check: progress is kept per check file
 
     # 帧号 ↔ 原视频毫秒
     def t(self, frame: int | None = None) -> int:
@@ -102,13 +108,27 @@ class Session:
         return prev[-1] if prev else None
 
     # ---------------- 羽毛球
+    def _advance(self) -> None:
+        if self.check_name is not None:  # checking a list of frames: go to the next one
+            self.jump_uncertain()
+        else:
+            self.seek(self.frame + self.stride)
+
     def shuttle_click(self, x: float, y: float) -> None:
         self._set("shuttle", {"t_ms": self.t(), "visible": True, "xy": [round(x, 1), round(y, 1)]})
-        self.seek(self.frame + self.stride)
+        self._advance()
 
     def shuttle_hidden(self) -> None:
         self._set("shuttle", {"t_ms": self.t(), "visible": False, "xy": None})
-        self.seek(self.frame + self.stride)
+        self._advance()
+
+    def accept_suggestion(self) -> bool:
+        """--check: take the model's point for this frame as the label."""
+        sug = self.suggest.get(self.frame)
+        if not sug or not sug.get("xy"):
+            return False
+        self.shuttle_click(*sug["xy"])
+        return True
 
     def shuttle_delete(self) -> None:
         old = self._at("shuttle")
@@ -126,10 +146,30 @@ class Session:
         if not cand:
             return False
         self.seek(cand[0] if forward else cand[-1])
-        if forward and self.frame > int(self.doc.get("review_frame", -1)):
-            self.doc["review_frame"] = self.frame  # where to resume next time
-            self.dirty = True
+        if forward and self.frame > self.progress():
+            self._set_progress(self.frame)  # where to resume next time
         return True
+
+    def progress(self) -> int:
+        if self.check_name is None:
+            return int(self.doc.get("review_frame", -1))
+        cp = self.doc.get("check_progress") or {}
+        return int(cp.get("frame", -1)) if cp.get("file") == self.check_name else -1
+
+    def _set_progress(self, f: int) -> None:
+        if self.check_name is None:
+            self.doc["review_frame"] = f
+        else:
+            self.doc["check_progress"] = {"file": self.check_name, "frame": f}
+        self.dirty = True
+
+    def load_check(self, check: dict, clip_id: str, name: str) -> int:
+        """Use the frames of a shuttle_loop check file as the list to review; returns the frame to start at."""
+        self.check_name = name
+        self.suggest = {int(m["frame"]): m for m in check.get("frames", []) if m.get("clip") == clip_id}
+        self.uncertain = sorted(f for f in self.suggest if 0 <= f < self.n)
+        done = self.progress()
+        return done if done >= 0 else (self.uncertain[0] if self.uncertain else 0)
 
     def uncertain_done(self) -> int:
         """How many uncertain frames are at or before the current frame."""
@@ -252,7 +292,8 @@ class FrameReader:
         return fr
 
 
-def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | None, stride: int) -> int:
+def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | None, stride: int,
+            check: Path | None = None) -> int:
     import cv2  # 只有界面需要 OpenCV
 
     video = clips_dir / f"{clip_id}.mp4"
@@ -265,7 +306,17 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
         sys.exit("视频读取失败")
     doc = load_or_create(clip_id, meta, labels_dir, prefill)
     s = Session(doc, meta["start_ms"], reader.n, stride)
-    if prefill:
+    if check:
+        if not (labels_dir / f"{clip_id}.json").exists():
+            sys.exit(f"--check 需要已有的标注文件 {labels_dir / f'{clip_id}.json'}")
+        start = s.load_check(json.loads(check.read_text(encoding="utf-8")), clip_id, check.name)
+        if not s.uncertain:
+            sys.exit(f"{check} 里没有 {clip_id} 的帧")
+        s.seek(start)
+        s.mode = "shuttle"
+        print(f"{len(s.uncertain)} 个要检查的帧，从第 {s.frame} 帧开始（已过 {s.uncertain_done()} 个）。"
+              "紫圈=模型，绿圈=标注。标注对就按 g；y 采用模型的点；点击=球在这里；n=看不见")
+    elif prefill:
         pre = schema.load(prefill)
         s.uncertain = uncertain_frames(pre, meta["start_ms"])
         print(f"{len(s.uncertain)} 个可疑帧（羽毛球模式按 g / G 跳转），共 {reader.n} 帧")
@@ -302,12 +353,20 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
             cv2.circle(img, (int(p[0]), int(p[1])), 4, (0, 0, 255), -1)
         sh = s.shuttle_here()
         if sh and sh["visible"]:
-            cv2.circle(img, (int(sh["xy"][0]), int(sh["xy"][1])), 8, (0, 255, 255), 1, cv2.LINE_AA)
+            cv2.circle(img, (int(sh["xy"][0]), int(sh["xy"][1])), 8,
+                       (0, 255, 0) if s.check_name else (0, 255, 255), 1, cv2.LINE_AA)
+        sug = s.suggest.get(s.frame) if s.mode == "shuttle" else None
+        if sug and sug.get("xy"):
+            sx, sy = int(sug["xy"][0]), int(sug["xy"][1])
+            cv2.circle(img, (sx, sy), 14, (255, 0, 255), 1, cv2.LINE_AA)
+            cv2.putText(img, f"model {sug.get('score') or 0:.2f}", (sx + 16, sy - 6),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 0, 255), 1, cv2.LINE_AA)
         near_hits = [h for h in doc["hits"] if abs(h["t_ms"] - s.t()) <= 3000 / s.fps]
         in_rally = any(r["start_ms"] <= s.t() <= r["end_ms"] for r in doc["rallies"]) or s.open_rally is not None
         unsure = ""
         if s.uncertain and s.mode == "shuttle":
-            unsure = f"  {'?CHECK ' if s.frame in uncertain_set else ''}{s.uncertain_done()}/{len(s.uncertain)}"
+            kind = f"{sug['kind']} " if sug else ""
+            unsure = f"  {'?CHECK ' + kind if s.frame in uncertain_set else ''}{s.uncertain_done()}/{len(s.uncertain)}"
         bar = (f"[{s.mode}] frame {s.frame}/{s.n - 1}{unsure}  t={s.t()}ms  {doc['status']}  "
                f"hits={len(doc['hits'])} rallies={len(doc['rallies'])} shuttle={len(doc['shuttle'])}"
                f"{'  IN-RALLY' if in_rally else ''}{'  HIT ' + near_hits[0]['side'] if near_hits else ''}  {msg}")
@@ -351,6 +410,8 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
                 s.shuttle_delete()
             elif ch in "gG":
                 msg = "" if s.jump_uncertain(ch == "g") else "no more uncertain frames"
+            elif ch == "y":
+                msg = "accepted" if s.accept_suggestion() else "no model point here"
         elif s.mode == "events":
             if ch == "h":
                 s.hit("near")
@@ -373,8 +434,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--labels", type=Path, default=HERE / "labels")
     ap.add_argument("--prefill", type=Path, help="用模型预测文件打底")
     ap.add_argument("--shuttle-stride", type=int, default=1, help="羽毛球模式下每次前进的帧数")
+    ap.add_argument("--check", type=Path, help="scripts/shuttle_loop.py 生成的 *-check.json：只看模型和标注对不上的帧")
     a = ap.parse_args(argv)
-    return run_gui(a.clip_id, a.clips.expanduser(), a.labels, a.prefill, a.shuttle_stride)
+    return run_gui(a.clip_id, a.clips.expanduser(), a.labels, a.prefill, a.shuttle_stride,
+                   a.check.expanduser() if a.check else None)
 
 
 if __name__ == "__main__":
