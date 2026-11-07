@@ -94,7 +94,9 @@ python -m rallyiq.pipeline analyze ~/Movies/DJI_0009.MP4    # 打印各阶段状
 - 缺模型权重时不会中断：对应阶段输出空结果，日志里写明缺哪个模型。
 
 分析过的视频也会出现在网页的视频列表里。结果是 JSON（球场标定、球员轨迹、羽毛球轨迹、回合与击球、击球类型、叠加层），
-格式见 `contracts/README.md`；网页上可以导出 JSON / CSV、赛后报告（Markdown）和回合片段（MP4）。
+格式见 `contracts/README.md`；网页上可以导出 JSON / CSV、赛后报告（Markdown 或可分享的网页版 HTML）和回合片段（MP4）。
+网页版报告也可以在命令行生成：`python scripts/match_report_html.py <video_id 或结果目录> -o report.html`，
+示例见 [`docs/sample-report/match_report.html`](docs/sample-report/match_report.html)。
 
 ### 可选：本地 AI 教练点评（Ollama + Qwen）
 

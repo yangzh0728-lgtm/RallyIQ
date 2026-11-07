@@ -218,6 +218,9 @@ def test_match_report_and_coach(client, sample_video, monkeypatch):
     assert "赛后报告" in md.text and "已过时" in md.text
     js = client.get(f"/api/videos/{vid}/report/export", params={"format": "json"}).json()
     assert js["coach"]["provider"] == "offline"
+    page = client.get(f"/api/videos/{vid}/report/export", params={"format": "html"})
+    assert page.status_code == 200 and page.headers["content-type"].startswith("text/html")
+    assert page.text.startswith("<!doctype html>") and 'id="rallies"' in page.text and "<script" not in page.text
 
     assert client.post(f"/api/videos/{vid}/report/coach", json={"provider": "nope"}).status_code == 503
     providers = client.get("/api/coach/providers").json()

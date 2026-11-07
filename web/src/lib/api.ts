@@ -59,7 +59,7 @@ export interface Api {
   /** (Re)generate the AI coach comments; provider null = server default. Can take a minute. */
   generateCoach(videoId: string, provider?: string | null): Promise<CoachReport>;
   /** Report download URL, or null if the client renders it (mock). */
-  reportExportUrl(videoId: string, format: "md" | "json"): string | null;
+  reportExportUrl(videoId: string, format: "md" | "json" | "html"): string | null;
   /** Input assessment: camera view, picture, visibility and how far each output can be trusted. */
   getQuality(videoId: string): Promise<VideoQuality>;
   /** MP4 clip of one rally (padded 1 s), or null when there is no source file (mock). */
