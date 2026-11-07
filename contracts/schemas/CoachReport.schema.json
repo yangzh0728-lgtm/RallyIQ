@@ -138,6 +138,154 @@
       "title": "NoteRef",
       "type": "object"
     },
+    "ShotAdvice": {
+      "additionalProperties": false,
+      "description": "Coach advice on one ``ShotMoment``: time, positions and target come from the moment, never the model.",
+      "properties": {
+        "moment_id": {
+          "title": "Moment Id",
+          "type": "string"
+        },
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "rally_no": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rally No"
+        },
+        "shot_no": {
+          "title": "Shot No",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "timestamp": {
+          "description": "mm:ss (h:mm:ss over an hour) into the video",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "shot_type": {
+          "enum": [
+            "short_serve",
+            "long_serve",
+            "clear",
+            "smash",
+            "drop",
+            "net_shot",
+            "cross_net",
+            "push",
+            "net_kill",
+            "drive",
+            "lift",
+            "block"
+          ],
+          "title": "Shot Type",
+          "type": "string"
+        },
+        "suggested_shot": {
+          "anyOf": [
+            {
+              "enum": [
+                "short_serve",
+                "long_serve",
+                "clear",
+                "smash",
+                "drop",
+                "net_shot",
+                "cross_net",
+                "push",
+                "net_kill",
+                "drive",
+                "lift",
+                "block"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suggested Shot"
+        },
+        "situation": {
+          "description": "what happened: shot, both players' zones (from the moment)",
+          "title": "Situation",
+          "type": "string"
+        },
+        "advice": {
+          "title": "Advice",
+          "type": "string"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "source": {
+          "description": "model = written by the coach provider; rules = rule text",
+          "enum": [
+            "model",
+            "rules"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "moment_id",
+        "shot_id",
+        "player_id",
+        "shot_no",
+        "t_ms",
+        "timestamp",
+        "shot_type",
+        "situation",
+        "advice",
+        "why",
+        "confidence",
+        "source"
+      ],
+      "title": "ShotAdvice",
+      "type": "object"
+    },
     "TrainingItem": {
       "additionalProperties": false,
       "properties": {
@@ -292,6 +440,33 @@
       },
       "title": "Training",
       "type": "array"
+    },
+    "shot_advice": {
+      "description": "shot-by-shot changes, in video order",
+      "items": {
+        "$ref": "#/$defs/ShotAdvice"
+      },
+      "title": "Shot Advice",
+      "type": "array"
+    },
+    "self_player": {
+      "anyOf": [
+        {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "the user (\u6211), when known; advice is about them",
+      "title": "Self Player"
     },
     "caveats": {
       "items": {

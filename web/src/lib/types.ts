@@ -318,6 +318,24 @@ export interface TrainingItem {
   warnings?: string[];
 }
 
+export interface ShotAdvice {
+  moment_id: string;
+  shot_id: string;
+  player_id: PlayerId;
+  rally_no: number | null;
+  shot_no: number;
+  t_ms: number;
+  timestamp: string;
+  shot_type: string;
+  suggested_shot: string | null;
+  situation: string;
+  advice: string;
+  why: string;
+  confidence: MetricConfidence;
+  source: "model" | "rules";
+  warnings: string[];
+}
+
 export interface CoachReport {
   schema_version: string;
   video_id: string;
@@ -329,6 +347,8 @@ export interface CoachReport {
   summary: string;
   insights: CoachInsight[];
   training: TrainingItem[];
+  shot_advice?: ShotAdvice[];
+  self_player?: PlayerId | null;
   caveats: string[];
   fallback_reason: string | null;
   dropped: number;

@@ -39,6 +39,7 @@ from ..contracts import (
     team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
+from .moments import shot_moments
 
 PLAYERS = ("P1", "P2")
 DOUBLES_PLAYERS = ("P1", "P3", "P2", "P4")
@@ -408,13 +409,16 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
     if not shot_types_available:
         caveats.append("击球类型分类尚未接入，暂不评价具体技术动作或球路选择。")
 
+    moments = shot_moments(events, players, fps, metric_ok) if shot_types_available else []
+    if shot_types_available and players is not None and events.match_format == "doubles":
+        caveats.append("逐拍击球建议暂只支持单打。")
     player_stats = [_player_stats(pid, events, rallies_by_id, players, spans, fps, metric_ok, rally_minutes)
                     for pid in (DOUBLES_PLAYERS if events.match_format == "doubles" else PLAYERS)]
     return MatchStats(
         video_id=events.video_id, fingerprint=fingerprint(events, players, calibration),
         duration_ms=meta.duration_ms if meta else None, calibration_status=cal_status,
         shot_types_available=shot_types_available, metrics=metrics, distributions=distributions,
-        players=player_stats, caveats=caveats,
+        players=player_stats, moments=moments, caveats=caveats,
     )
 
 

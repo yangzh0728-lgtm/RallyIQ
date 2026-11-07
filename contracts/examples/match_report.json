@@ -616,6 +616,72 @@
         ]
       }
     ],
+    "moments": [
+      {
+        "moment_id": "m1",
+        "shot_id": "s0006",
+        "rally_id": "r001",
+        "rally_no": 1,
+        "shot_no": 6,
+        "t_ms": 6000,
+        "player_id": "P2",
+        "shot_type": "lift",
+        "hitter_zone": "\u4e2d\u573a\u5de6\u4fa7",
+        "hitter_pos": [
+          1.5,
+          2.7
+        ],
+        "opponent_id": "P1",
+        "opponent_zone": "\u540e\u573a\u5de6\u4fa7",
+        "opponent_pos": [
+          4.63,
+          1.67
+        ],
+        "opponent_reach_m": 1.4,
+        "next_shot_type": "lift",
+        "outcome": "won",
+        "issue": "clear_to_rear",
+        "problem": "\u5bf9\u624b\u5df2\u7ecf\u5728\u540e\u573a\u5de6\u4fa7\uff0c\u4f60\u8fd8\u6253\u4e86\u4e00\u62cd\u6311\u7403\u5230\u540e\u573a\uff0c\u5bf9\u624b\u56de\u4e86\u6311\u7403",
+        "suggested_shot": "drop",
+        "target_zone": "\u7f51\u524d\u53f3\u4fa7",
+        "suggestion": "\u6539\u6253\u540a\u7403\u5230\u5bf9\u65b9\u7f51\u524d\u53f3\u4fa7",
+        "why": "\u5bf9\u624b\u672c\u6765\u5c31\u5728\u540e\u573a\uff0c\u8fd9\u62cd\u4e0d\u7528\u79fb\u52a8\u5c31\u80fd\u8212\u670d\u5730\u51fa\u624b\uff1b\u5bf9\u624b\u79bb\u7f51\u524d\u6700\u8fdc\uff0c\u628a\u7403\u653e\u5230\u7f51\u524d\u53f3\u4fa7\u80fd\u903c\u5bf9\u624b\u4e0a\u7f51\uff0c\u63a5\u5f97\u6700\u52c9\u5f3a\u3002",
+        "severity": 1.5,
+        "confidence": "medium"
+      },
+      {
+        "moment_id": "m2",
+        "shot_id": "s0007",
+        "rally_id": "r001",
+        "rally_no": 1,
+        "shot_no": 7,
+        "t_ms": 7000,
+        "player_id": "P1",
+        "shot_type": "lift",
+        "hitter_zone": "\u4e2d\u573a\u4e2d\u8def",
+        "hitter_pos": [
+          3.56,
+          2.62
+        ],
+        "opponent_id": "P2",
+        "opponent_zone": "\u540e\u573a\u53f3\u4fa7",
+        "opponent_pos": [
+          1.99,
+          1.91
+        ],
+        "opponent_reach_m": null,
+        "next_shot_type": null,
+        "outcome": "lost",
+        "issue": "clear_to_rear",
+        "problem": "\u5bf9\u624b\u5df2\u7ecf\u5728\u540e\u573a\u53f3\u4fa7\uff0c\u4f60\u8fd8\u6253\u4e86\u4e00\u62cd\u6311\u7403\u5230\u540e\u573a\uff0c\u8fd9\u4e00\u5206\u4e22\u4e86",
+        "suggested_shot": "drop",
+        "target_zone": "\u7f51\u524d\u5de6\u4fa7",
+        "suggestion": "\u6539\u6253\u540a\u7403\u5230\u5bf9\u65b9\u7f51\u524d\u5de6\u4fa7",
+        "why": "\u5bf9\u624b\u672c\u6765\u5c31\u5728\u540e\u573a\uff0c\u8fd9\u62cd\u4e0d\u7528\u79fb\u52a8\u5c31\u80fd\u8212\u670d\u5730\u51fa\u624b\uff1b\u5bf9\u624b\u79bb\u7f51\u524d\u6700\u8fdc\uff0c\u628a\u7403\u653e\u5230\u7f51\u524d\u5de6\u4fa7\u80fd\u903c\u5bf9\u624b\u4e0a\u7f51\uff0c\u63a5\u5f97\u6700\u52c9\u5f3a\u3002",
+        "severity": 2.5,
+        "confidence": "low"
+      }
+    ],
     "caveats": [
       "\u53ea\u6709 2/11 \u62cd\u7ecf\u8fc7\u4eba\u5de5\u786e\u8ba4\uff0c\u7edf\u8ba1\u57fa\u4e8e\u81ea\u52a8\u8bc6\u522b\u7ed3\u679c\uff0c\u53ef\u80fd\u6709\u6f0f\u68c0\u6216\u8bef\u68c0\u3002"
     ]
@@ -718,6 +784,43 @@
       }
     ],
     "training": [],
+    "shot_advice": [
+      {
+        "moment_id": "m1",
+        "shot_id": "s0006",
+        "player_id": "P2",
+        "rally_no": 1,
+        "shot_no": 6,
+        "t_ms": 6000,
+        "timestamp": "00:06",
+        "shot_type": "lift",
+        "suggested_shot": "drop",
+        "situation": "\u7b2c1\u56de\u5408\u7b2c6\u62cd\uff1aP2\u5728\u4e2d\u573a\u5de6\u4fa7\u6253\u6311\u7403\uff0c\u5bf9\u624b\u5728\u540e\u573a\u5de6\u4fa7\uff0c\u5bf9\u624b\u56de\u6311\u7403\uff0c\u5f97\u5206",
+        "advice": "\u5bf9\u624b\u5df2\u7ecf\u5728\u540e\u573a\u5de6\u4fa7\uff0c\u4f60\u8fd8\u6253\u4e86\u4e00\u62cd\u6311\u7403\u5230\u540e\u573a\uff0c\u5bf9\u624b\u56de\u4e86\u6311\u7403\u3002\u5efa\u8bae\uff1a\u6539\u6253\u540a\u7403\u5230\u5bf9\u65b9\u7f51\u524d\u53f3\u4fa7\u3002",
+        "why": "\u5bf9\u624b\u672c\u6765\u5c31\u5728\u540e\u573a\uff0c\u8fd9\u62cd\u4e0d\u7528\u79fb\u52a8\u5c31\u80fd\u8212\u670d\u5730\u51fa\u624b\uff1b\u5bf9\u624b\u79bb\u7f51\u524d\u6700\u8fdc\uff0c\u628a\u7403\u653e\u5230\u7f51\u524d\u53f3\u4fa7\u80fd\u903c\u5bf9\u624b\u4e0a\u7f51\uff0c\u63a5\u5f97\u6700\u52c9\u5f3a\u3002",
+        "confidence": "medium",
+        "source": "rules",
+        "warnings": []
+      },
+      {
+        "moment_id": "m2",
+        "shot_id": "s0007",
+        "player_id": "P1",
+        "rally_no": 1,
+        "shot_no": 7,
+        "t_ms": 7000,
+        "timestamp": "00:07",
+        "shot_type": "lift",
+        "suggested_shot": "drop",
+        "situation": "\u7b2c1\u56de\u5408\u7b2c7\u62cd\uff1aP1\u5728\u4e2d\u573a\u4e2d\u8def\u6253\u6311\u7403\uff0c\u5bf9\u624b\u5728\u540e\u573a\u53f3\u4fa7\uff0c\u4e22\u5206",
+        "advice": "\u5bf9\u624b\u5df2\u7ecf\u5728\u540e\u573a\u53f3\u4fa7\uff0c\u4f60\u8fd8\u6253\u4e86\u4e00\u62cd\u6311\u7403\u5230\u540e\u573a\uff0c\u8fd9\u4e00\u5206\u4e22\u4e86\u3002\u5efa\u8bae\uff1a\u6539\u6253\u540a\u7403\u5230\u5bf9\u65b9\u7f51\u524d\u5de6\u4fa7\u3002",
+        "why": "\u5bf9\u624b\u672c\u6765\u5c31\u5728\u540e\u573a\uff0c\u8fd9\u62cd\u4e0d\u7528\u79fb\u52a8\u5c31\u80fd\u8212\u670d\u5730\u51fa\u624b\uff1b\u5bf9\u624b\u79bb\u7f51\u524d\u6700\u8fdc\uff0c\u628a\u7403\u653e\u5230\u7f51\u524d\u5de6\u4fa7\u80fd\u903c\u5bf9\u624b\u4e0a\u7f51\uff0c\u63a5\u5f97\u6700\u52c9\u5f3a\u3002",
+        "confidence": "low",
+        "source": "rules",
+        "warnings": []
+      }
+    ],
+    "self_player": null,
     "caveats": [
       "\u53ea\u6709 2/11 \u62cd\u7ecf\u8fc7\u4eba\u5de5\u786e\u8ba4\uff0c\u7edf\u8ba1\u57fa\u4e8e\u81ea\u52a8\u8bc6\u522b\u7ed3\u679c\uff0c\u53ef\u80fd\u6709\u6f0f\u68c0\u6216\u8bef\u68c0\u3002"
     ],

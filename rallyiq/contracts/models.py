@@ -539,6 +539,42 @@ class PlayerStats(Contract):
     distributions: list[Distribution] = Field(default_factory=list)
 
 
+class ShotMoment(Contract):
+    """One shot whose choice should change, found by rules from stroke type + both players' positions.
+
+    Positions are in each player's own-half frame (``lateral`` from their own left sideline as they
+    face the net, ``depth`` from their own baseline: 0 = baseline, 6.70 = net). Zone names for the
+    opponent and the target are given from the hitter's point of view (the hitter's left/right).
+    """
+
+    moment_id: str
+    shot_id: str
+    rally_id: str | None = None
+    rally_no: int | None = Field(default=None, description="1-based rally number in the video")
+    shot_no: int = Field(ge=1, description="1-based shot number in the rally")
+    t_ms: int = Field(ge=0)
+    player_id: PlayerId
+    shot_type: ShotType
+    hitter_zone: str = Field(description="where the hitter stood, e.g. '后场左侧' (own view)")
+    hitter_pos: Point2 = Field(description="hitter (lateral, depth) m, own-half frame")
+    opponent_id: PlayerId
+    opponent_zone: str = Field(description="where the opponent stood, from the hitter's view, e.g. '网前右侧'")
+    opponent_pos: Point2 = Field(description="opponent (lateral, depth) m, opponent's own-half frame")
+    opponent_reach_m: float | None = Field(default=None, description="how far the opponent moved to reach this shot")
+    next_shot_type: ShotType | None = Field(default=None, description="the opponent's reply")
+    outcome: Literal["won", "lost", "continued", "unknown"] = Field(
+        description="won/lost = the hitter's side won/lost the rally within the next two shots"
+    )
+    issue: str = Field(description="rule code, e.g. 'to_opponent', 'clear_to_rear', 'short_to_front'")
+    problem: str
+    suggested_shot: ShotType | None = None
+    target_zone: str | None = Field(default=None, description="where to send it instead, from the hitter's view")
+    suggestion: str
+    why: str
+    severity: float = Field(ge=0)
+    confidence: MetricConfidence
+
+
 class MatchStats(Contract):
     """Post-match statistics computed from effective events + player tracks.
 
@@ -555,6 +591,9 @@ class MatchStats(Contract):
     metrics: list[Metric]
     distributions: list[Distribution] = Field(default_factory=list)
     players: list[PlayerStats]
+    moments: list[ShotMoment] = Field(
+        default_factory=list, description="shots whose choice should change (singles, needs stroke types + tracks)"
+    )
     caveats: list[str] = Field(default_factory=list)
 
 
@@ -596,6 +635,26 @@ class TrainingItem(Contract):
     warnings: list[str] = Field(default_factory=list)
 
 
+class ShotAdvice(Contract):
+    """Coach advice on one ``ShotMoment``: time, positions and target come from the moment, never the model."""
+
+    moment_id: str
+    shot_id: str
+    player_id: PlayerId
+    rally_no: int | None = None
+    shot_no: int
+    t_ms: int = Field(ge=0)
+    timestamp: str = Field(description="mm:ss (h:mm:ss over an hour) into the video")
+    shot_type: ShotType
+    suggested_shot: ShotType | None = None
+    situation: str = Field(description="what happened: shot, both players' zones (from the moment)")
+    advice: str
+    why: str
+    confidence: MetricConfidence
+    source: Literal["model", "rules"] = Field(description="model = written by the coach provider; rules = rule text")
+    warnings: list[str] = Field(default_factory=list)
+
+
 class CoachReport(Contract):
     """LLM (or rule-based) coaching comments. Never a source of truth: every claim
     cites ``MatchStats`` keys and is validated against them."""
@@ -610,6 +669,8 @@ class CoachReport(Contract):
     summary: str
     insights: list[CoachInsight]
     training: list[TrainingItem] = Field(default_factory=list)
+    shot_advice: list[ShotAdvice] = Field(default_factory=list, description="shot-by-shot changes, in video order")
+    self_player: PlayerId | None = Field(default=None, description="the user (我), when known; advice is about them")
     caveats: list[str] = Field(default_factory=list)
     fallback_reason: str | None = Field(default=None, description="why the requested provider was not used")
     dropped: int = Field(default=0, description="insights removed because they cited no valid evidence")

@@ -665,7 +665,9 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
         video_or_404(video_id, user)
         stats = match_stats(video_id)
         try:
-            coach = generate_coach_report(stats, req.provider if req else None)
+            people = store.load_artifact(video_id, PEOPLE_ARTIFACT, PeopleAssignment)
+            coach = generate_coach_report(stats, req.provider if req else None,
+                                          self_player=people.self_player if people else None)
         except CoachUnavailable as e:
             raise HTTPException(503, str(e)) from e
         store.save_artifact(video_id, COACH_ARTIFACT, coach)

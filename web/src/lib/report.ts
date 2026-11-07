@@ -74,6 +74,12 @@ export function reportMarkdown(title: string, stats: MatchStats, coach: CoachRep
     coach.insights.forEach((i) => {
       out.push(`- **[${KIND_LABEL[i.kind]}] ${i.title}**（${CONF_LABEL[i.confidence]}${i.grounded ? "" : "，含未核实数字"}）  `, `  ${i.detail}`);
     });
+    if (coach.shot_advice?.length) {
+      out.push("", "### 逐拍建议", "");
+      coach.shot_advice.forEach((a) => {
+        out.push(`- **${a.timestamp}** ${a.situation}（${CONF_LABEL[a.confidence]}）  `, `  ${a.advice}  `, `  ${a.why}`);
+      });
+    }
     if (coach.training.length) {
       out.push("", "### 训练建议", "");
       coach.training.forEach((t) => {

@@ -14,7 +14,7 @@ import os
 from datetime import UTC, datetime
 
 from ...contracts import CoachReport, MatchStats
-from .advice import Knowledge, knowledge_context
+from .advice import Knowledge, knowledge_context, select_moments
 from .anthropic_provider import AnthropicProvider
 from .base import (
     CoachProvider,
@@ -23,7 +23,7 @@ from .base import (
     make_provider,
     register_provider,
 )
-from .grounding import ground_insights, ground_training
+from .grounding import ground_insights, ground_shot_advice, ground_training
 from .offline import OfflineProvider
 from .ollama_provider import OllamaProvider
 
@@ -54,6 +54,9 @@ def default_provider_name() -> str:
 def build_report(raw: dict, stats: MatchStats, provider: CoachProvider, fallback_reason: str | None = None,
                  knowledge: Knowledge | None = None) -> CoachReport:
     insights, dropped = ground_insights(list(raw.get("insights") or []), stats)
+    me = knowledge.self_player if knowledge is not None else None
+    moments = knowledge.moments if knowledge is not None else select_moments(stats)
+    shot_advice = ground_shot_advice(list(raw.get("shot_advice") or []), moments, me)
     caveats = [str(c) for c in raw.get("caveats") or [] if str(c).strip()]
     for c in stats.caveats:  # data caveats are always shown, whatever the model wrote
         if c not in caveats:
@@ -64,7 +67,8 @@ def build_report(raw: dict, stats: MatchStats, provider: CoachProvider, fallback
         video_id=stats.video_id, stats_fingerprint=stats.fingerprint, provider=provider.name,
         model=getattr(provider, "model", None), created_at=datetime.now(UTC),
         summary=str(raw.get("summary", "")).strip(), insights=insights,
-        training=ground_training(list(raw.get("training") or []), stats, knowledge)[:5], caveats=caveats,
+        training=ground_training(list(raw.get("training") or []), stats, knowledge)[:5], shot_advice=shot_advice,
+        self_player=me if me in ("P1", "P2", "P3", "P4") else None, caveats=caveats,
         fallback_reason=fallback_reason, dropped=dropped,
     )
 
@@ -78,13 +82,14 @@ def _generate(p: CoachProvider, stats: MatchStats, knowledge: Knowledge | None) 
 
 
 def generate_coach_report(stats: MatchStats, provider: str | None = None,
-                          knowledge: Knowledge | None = None) -> CoachReport:
-    """``knowledge`` defaults to the weaknesses found in ``stats`` plus the coaching notes
-    retrieved for them (``advice.knowledge_context``)."""
+                          knowledge: Knowledge | None = None, self_player: str | None = None) -> CoachReport:
+    """``knowledge`` defaults to the weaknesses found in ``stats``, the coaching notes retrieved
+    for them and the shots to change (``stats.moments``, only ``self_player``'s when given;
+    see ``advice.knowledge_context``)."""
     explicit = provider is not None
     name = provider or default_provider_name()
     if knowledge is None:
-        knowledge = knowledge_context(stats)
+        knowledge = knowledge_context(stats, self_player=self_player)
     chain = auto_chain() if name == "auto" else [name]
     errors: list[str] = []
     for n in chain:

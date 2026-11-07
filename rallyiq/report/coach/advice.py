@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
-from ...contracts import Distribution, MatchStats, Metric, NoteRef
+from ...contracts import Distribution, MatchStats, Metric, NoteRef, ShotMoment
 from ..stats import SHOT_TYPE_LABELS, UNCLASSIFIED, index
 
 DEFAULT_KNOWLEDGE_DIR = Path(__file__).resolve().parents[3] / "knowledge" / "coaching"
@@ -264,14 +264,25 @@ class Knowledge:
     focus: list[Focus]
     notes: dict[str, dict]  # note id -> note, every note retrieved for any focus
     by_focus: dict[str, list[str]]  # focus id -> note ids, best first
+    moments: list[ShotMoment] = field(default_factory=list)  # shots to change (the user's when known)
+    self_player: str | None = None  # the user (我), when known
 
     def prompt_payload(self) -> list[dict]:
         return [dict(f.as_dict(), notes=[note_card(self.notes[i]) for i in self.by_focus.get(f.id, [])])
                 for f in self.focus]
 
 
+def select_moments(stats: MatchStats, self_player: str | None = None) -> list[ShotMoment]:
+    """The user's shots to change when we know who the user is, else everyone's."""
+    if self_player and any(m.player_id == self_player for m in stats.moments):
+        return [m for m in stats.moments if m.player_id == self_player]
+    if self_player and stats.moments and self_player in {p.player_id for p in stats.players}:
+        return []  # the user has no flagged shot: do not advise on the opponent's
+    return list(stats.moments)
+
+
 def knowledge_context(stats: MatchStats, notes: tuple[dict, ...] | list[dict] | None = None, k: int = 3,
-                      max_focus: int = 6, level: str | None = None) -> Knowledge:
+                      max_focus: int = 6, level: str | None = None, self_player: str | None = None) -> Knowledge:
     notes = load_notes() if notes is None else notes
     level = level or os.environ.get("RALLYIQ_PLAYER_LEVEL") or None
     if level not in _LEVELS:
@@ -283,7 +294,8 @@ def knowledge_context(stats: MatchStats, notes: tuple[dict, ...] | list[dict] | 
         got = retrieve(f, notes, k=k, level=level)
         by_focus[f.id] = [n["id"] for n in got]
         found.update({n["id"]: n for n in got})
-    return Knowledge(focus=focus, notes=found, by_focus=by_focus)
+    return Knowledge(focus=focus, notes=found, by_focus=by_focus, moments=select_moments(stats, self_player),
+                     self_player=self_player)
 
 
 # --------------------------------------------------------------------------- citations
