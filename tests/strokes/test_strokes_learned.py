@@ -153,7 +153,7 @@ def test_json_export_matches_and_loads_without_pickle(trained, tmp_path: Path):
 def test_bundled_model_is_the_default(tmp_path: Path):
     assert L.BUNDLED.is_file()
     blob = L.load(L.BUNDLED)
-    assert blob["feature_set"] == "v2" and set(blob["model"].classes) <= set(SHOT_TYPES)
+    assert blob["feature_set"] == "v3" and set(blob["model"].classes) <= set(SHOT_TYPES)
     v = make_rallies(n_rallies=1, seed=6)
     store = Store(tmp_path / "store")
     vid, dest = store.create_video("x.mp4", ".mp4")
@@ -170,3 +170,21 @@ def test_bundled_model_is_the_default(tmp_path: Path):
     assert res.classifier == L.GBT_NAME and len(res.shots) == len(v.events.shots)
     ctx.config["strokes"] = {"classifier": "rules"}
     assert run(ctx).classifier == "rules_v1"
+
+
+def test_trajectory_features_shape_and_v3_matrix():
+    from rallyiq.strokes.trajectory import TRAJ_FEATURES, traj_features
+
+    v = make_rallies(n_rallies=2, seed=7)
+    feats = shot_features(v.events, v.shuttle, v.players, v.fps)
+    T = traj_features(v.events, v.shuttle, v.players, feats, v.fps)
+    assert T.shape == (len(feats), len(TRAJ_FEATURES))
+    cov = T[:, TRAJ_FEATURES.index("coverage")]
+    assert np.nanmin(cov) >= 0.0 and np.nanmax(cov) <= 1.0
+    assert np.isfinite(T[:, TRAJ_FEATURES.index("arc")]).any()  # the synthetic flights are seen
+    T2 = traj_features(v.events, v.shuttle, v.players, feats)  # fps estimated from the track
+    shape = [i for i, n in enumerate(TRAJ_FEATURES) if n != "coverage"]
+    assert np.allclose(T[:, shape], T2[:, shape], equal_nan=True)
+    X = L.full_matrix(feats, v.events, v.shuttle, v.players, "v3")
+    assert X.shape == (len(feats), len(L.FEATURES_V3))
+    assert traj_features(v.events, None, None, feats, v.fps).shape == (len(feats), len(TRAJ_FEATURES))
