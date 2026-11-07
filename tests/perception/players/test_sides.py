@@ -263,45 +263,78 @@ def test_side_memory_still_steers_reacquisition_after_a_cut():
 
 
 # -- far player without calibration ------------------------------------------------
+# A low camera like sam's DJI_0009 (1080p): the near player is ~450 px tall with
+# feet at y~1010; the far player stands beside them, feet at y~660, ~170 px tall.
+
+def _person_in_box(x1, y1, x2, y2, score=0.9):
+    """``person_at_court``'s pose stretched into the given box."""
+    from rallyiq.perception.players.models import PersonDetection
+
+    ref = person_at_court(3.0, 2.5)
+    bx1, by1, bx2, by2 = ref.bbox
+    k = ref.keypoints.copy()
+    k[:, 0] = x1 + (k[:, 0] - bx1) / (bx2 - bx1) * (x2 - x1)
+    k[:, 1] = y1 + (k[:, 1] - by1) / (by2 - by1) * (y2 - y1)
+    return PersonDetection([x1, y1, x2, y2], k, score)
+
+
+NEAR = _person_in_box(900, 560, 1080, 1010)
+FAR = _person_in_box(1150, 490, 1215, 660)
+CURTAIN = _person_in_box(700, 0, 760, 430)  # tall box on the curtain and lights
+BIG = _person_in_box(1200, 300, 1330, 640)  # too tall for the far player
+
 
 class UncalibratedEstimator(RoiEstimator):
-    """Full frame finds only the near player; the far pass finds the far one."""
+    """Full frame finds only the near player; the crop pass finds whoever is in it."""
 
-    def __init__(self, per_frame, px, far):
+    def __init__(self, per_frame, px, extra):
         super().__init__(per_frame, px)
-        self.far = far
+        self.extra = extra
         self.detect_rois = []
 
     def detect_roi(self, img, roi, dets):
         self.detect_rois.append(roi)
         x1, y1, x2, y2 = roi[:4]
-        fx, fy = (self.far.bbox[0] + self.far.bbox[2]) / 2, self.far.bbox[3]
-        return dets + ([self.far] if x1 <= fx <= x2 and y1 <= fy <= y2 else [])
+        inside = [d for d in self.extra if x1 <= (d.bbox[0] + d.bbox[2]) / 2 <= x2 and y1 <= d.bbox[3] <= y2]
+        return dets + inside
 
 
-def _run_uncalibrated(per_frame, boost="auto", px=40.0):
+def _run_uncalibrated(per_frame, extra=(FAR,), boost="auto", px=40.0):
     from rallyiq.perception.players.runner import PlayerTrackingConfig
 
-    far = person_at_court(3.0, 10.5)
-    est = UncalibratedEstimator(per_frame, px, far)
-    img = np.zeros((IMAGE_SIZE[1], IMAGE_SIZE[0], 3), np.uint8)
+    est = UncalibratedEstimator(per_frame, px, list(extra))
+    img = np.zeros((1080, 1920, 3), np.uint8)
     out = track_players(((i, i * 33.3, img) for i in range(len(per_frame))), est, lambda f: None,
                         PlayerTrackingConfig(match_format="singles", far_boost=boost))
     return est, out
 
 
 def test_far_player_found_without_calibration():
-    near = person_at_court(3.0, 2.5)
-    est, out = _run_uncalibrated([[near]] * 5)
+    est, out = _run_uncalibrated([[NEAR]] * 5)
     assert len(est.detect_rois) == 5
-    *_, y2, far_px = est.detect_rois[0]
-    assert y2 < near.bbox[3] and far_px < near.height
+    x1, y1, x2, y2, _ = est.detect_rois[0]
+    assert y1 < FAR.bbox[1] and y2 >= NEAR.bbox[3] and x2 - x1 < 1080  # smaller than the frame
     assert all(len(f.players) == 2 for f in out)
 
 
+def test_far_pass_without_calibration_rejects_implausible_people():
+    from rallyiq.perception.players.runner import (
+        PlayerTrackingConfig,
+        far_roi_from_players,
+        plausible_far_player,
+    )
+
+    cfg = PlayerTrackingConfig()
+    roi, near = far_roi_from_players([NEAR], (1920, 1080), 2, cfg)
+    assert plausible_far_player(FAR, near, roi, cfg)
+    assert not plausible_far_player(CURTAIN, near, roi, cfg)  # cut by the crop top, feet in the air
+    assert not plausible_far_player(BIG, near, roi, cfg)
+    _, out = _run_uncalibrated([[NEAR]] * 3, extra=(CURTAIN, BIG))
+    assert all(len(f.players) == 1 for f in out)
+
+
 def test_far_pass_without_calibration_skipped_when_not_needed():
-    near, far = person_at_court(3.0, 2.5), person_at_court(3.0, 10.5)
-    assert _run_uncalibrated([[near, far]] * 3)[0].detect_rois == []  # both already found
-    assert _run_uncalibrated([[near]] * 3, boost="off")[0].detect_rois == []
-    assert _run_uncalibrated([[near]] * 3, px=200.0)[0].detect_rois == []  # far player big enough
+    assert _run_uncalibrated([[NEAR, FAR]] * 3)[0].detect_rois == []  # both already found
+    assert _run_uncalibrated([[NEAR]] * 3, boost="off")[0].detect_rois == []
+    assert _run_uncalibrated([[NEAR]] * 3, px=200.0)[0].detect_rois == []  # far player big enough
     assert _run_uncalibrated([[]] * 3)[0].detect_rois == []  # nobody to anchor on
