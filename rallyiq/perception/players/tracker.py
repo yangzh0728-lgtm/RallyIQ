@@ -41,7 +41,7 @@ import numpy as np
 
 from .appearance import similarity
 from .geometry import PlayArea, court_side
-from .models import NET_Y_M, Candidate, PlayerState, Side
+from .models import COURT_WIDTH_M, NET_Y_M, Candidate, PlayerState, Side
 
 SLOT_IDS = ("P1", "P2")
 DOUBLES_SLOT_IDS = ("P1", "P2", "P3", "P4")
@@ -83,6 +83,12 @@ class TrackerConfig:
     # move the foot point ~0.5 m along the court, so the raw position of someone standing still keeps leaving
     # the static_extent_m box and the guard never fired on the real clip (2026-03-02 doubles).
     still_smooth_s: float = 0.5
+    # A free slot (first sighting, re-acquisition) is not given to someone standing further than this outside a
+    # sideline (calibrated only). Spectators, umpires and line judges stand there; players only lunge past it for
+    # a moment. On the 2026-03-02 doubles clip the opening frames seeded slots with a spectator by the left post
+    # and a man walking outside the right sideline, so the near man ended up in team B and the far man never got
+    # a slot. Behind the baselines is not restricted: far players often stand a metre behind theirs.
+    acquire_max_outside_side_m: float = 0.4
     bystander_radius_m: float = 1.0
     # Doubles: opponents sharing a half (feet away from the net) for this long.
     team_repair_s: float = 3.0
@@ -182,6 +188,10 @@ class PlayerTracker:
         m = self._motion_cost(slot, c, frame, calibrated)
         if m == float("inf"):
             return float("inf")
+        if m is None and calibrated and c.foot_court is not None:
+            x = float(c.foot_court[0])
+            if max(-x, x - COURT_WIDTH_M) > cfg.acquire_max_outside_side_m:
+                return float("inf")
         cost = -cfg.w_score * c.player_score
         if m is not None:
             cost += cfg.w_motion * m

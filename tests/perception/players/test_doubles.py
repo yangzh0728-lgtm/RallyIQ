@@ -175,4 +175,6 @@ def test_doubles_bystander_guard_tolerates_foot_jitter():
     for r in res[60:]:
         for p in r.players:
             assert p.team == ("A" if p.foot_court[1] < 6.7 else "B"), (r.frame, p.player_id, p.foot_court)
-    assert all(len(r.players) == 4 for r in res[400:])
+    # The bystander never gets a slot (free slots only go to people near the court), so all four players are
+    # tracked as soon as the far back player shows up, without waiting for the guards.
+    assert all(len(r.players) == 4 for r in res[130:])
