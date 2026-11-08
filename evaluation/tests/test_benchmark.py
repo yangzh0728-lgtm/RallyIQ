@@ -248,3 +248,10 @@ def test_label_session_check_mode():
     assert s2.load_check(check, "x", "round-002-check.json") == 40  # resume
     assert s2.load_check(check, "x", "round-003-check.json") == 10  # a new check file starts over
     schema.validate(doc)
+
+
+def test_load_dir_skips_macos_metadata_files(tmp_path):
+    doc = schema.empty_doc("c", "label", 1920, 1080, 30.0, (0, 1000))
+    schema.save(doc, tmp_path / "c.json")
+    (tmp_path / "._c.json").write_bytes(b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X        \xa3")
+    assert list(schema.load_dir(tmp_path)) == ["c"]

@@ -21,6 +21,8 @@ Inputs are built exactly like the authors' ``prepare_train_on_shuttleset.py``
 * pos: feet midpoint in court coordinates normalised to [0, 1] by the court outline,
   with y running from the far baseline (0) to the near baseline (1).
 * shuttle: px divided by the video resolution; unseen = (0, 0).
+* a frame without both players is a failed frame: players, positions and shuttle all zero, as in the
+  authors' preparation (``shuttle_result[failed_ls, :] = 0``).
 
 The 25 logits (``未知球種`` + 12 Top_ + 12 Bottom_) are folded onto our 12 codes using
 the hitter's side; probability mass on the other side or on "unknown" lowers the
@@ -147,6 +149,7 @@ def build_clip(events: EventsResult, shot_id: str, shuttle: ShuttleTrack | None,
     shut = np.zeros((t, 2), dtype=np.float32)
     for k, f in enumerate(frames):
         pf = by_frame.get(f)
+        filled = [False, False]
         if pf is not None:
             for p in pf.players:
                 if p.on_court is False or not p.keypoints or p.foot_court is None:
@@ -155,6 +158,14 @@ def build_clip(events: EventsResult, shot_id: str, shuttle: ShuttleTrack | None,
                 kp = np.asarray([[x, y] for x, y, _ in p.keypoints], dtype=np.float32)
                 joints[k, m] = normalize_joints(kp, np.asarray(p.bbox, dtype=np.float32))
                 pos[k, m] = court_pos(p.foot_court)
+                filled[m] = True
+        if not all(filled):
+            # The authors' preparation marks a frame failed unless both players are found, and zeroes the
+            # players AND the shuttle of a failed frame (prepare_train_on_shuttleset.py:
+            # ``shuttle_result[failed_ls, :] = 0``). Feed the network the same.
+            joints[k] = 0.0
+            pos[k] = 0.0
+            continue
         q = sh.get(f)
         if q is not None:
             shut[k] = (q.x / width, q.y / height)

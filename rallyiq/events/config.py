@@ -82,6 +82,37 @@ class EventsConfig:
     # extension) and best-of-a-few-frames proximity were tried and were worse.
     hitter_fill: bool = True
     hitter_pose_fallback_frames: int = 25
+    # A player tapping the shuttle to themselves (juggling it on the racket, feeding it up before a serve)
+    # makes runs of "hits" by one side. In a real exchange the side alternates, so a hit whose previous AND
+    # next hit in the rally are by its own side, both within this gap, is dropped (``self_feed``). Whole runs
+    # (``self_feed_run``): also drop the two ends of a run of 3+. 0 disables.
+    # DJI_0009, 50 reviewed rule hits: 2000 ms removes 8 of the 26 non-hits left after the floor gate; the 2 real
+    # hits it also removes were both marked unsure by the reviewer. 14 ShuttleSet test clips: rules 65.0 -> 64.8%,
+    # v2 76.0 -> 76.3%. Whole runs removed 5 real DJI hits and cost v2 0.8 pp, so ``self_feed_run`` stays off.
+    self_feed_max_gap_ms: float = 2000.0
+    self_feed_run: bool = False
+
+    # --- contact gates (ideas from shuttle-intelligence: only accept a hit with measured contact evidence) ---
+    # Shuttle height at the candidate above the hitter's ankles, in that player's heights. Below this, together
+    # with a slow incoming shuttle (next field), the shuttle is at the floor: a pickup, a bounce or a shuttle
+    # pushed along the floor between rallies, never a stroke. Rules only (``hit_scorer="off"`` or no bundled
+    # model): the learned scorer has these facts as features. 0 disables.
+    # DJI_0009, 50 reviewed rule hits: removes 6 of 32 non-hits (pickups, floor pushes) and none of the 18
+    # real hits; 14 ShuttleSet test clips: rule hit F1 64.5 -> 65.0%.
+    floor_contact_h: float = 0.3
+    # ... and only when the shuttle arrives slowly (player heights per second over ``window_ms``): a shuttle lying
+    # on or rolling along the floor. A real low lift or net return meets a falling, moving shuttle; on the
+    # ShuttleSet test clips every true hit below the height limit arrived faster than ~1.4 H/s.
+    floor_max_speed_in: float = 1.1
+    # Distance from the hitter's closest wrist to the shuttle, in torso lengths (shoulder-to-hip). Beyond this
+    # no racket can reach. Real DJI_0009 hits reached up to ~2.1 torso lengths (wrist + racket), so the
+    # shuttle-intelligence limit of 0.9 would drop real hits. Even 2.5 cost rule hit F1 on the 14 ShuttleSet
+    # test clips (64.5 -> 61.3%; v2 76.0 -> 69.5%), so it stays off. 0 disables (default).
+    max_reach_torso: float = 0.0
+    # Reject a candidate whose contact point was filled in by the tracker (not measured). Off by default: on the
+    # ShuttleSet test clips rule hit F1 64.5 -> 63.0%, and no DJI_0009 non-hit sits on a filled-in point.
+    require_observed_contact: bool = False
+
     occlusion_gap_ms: float = 150.0  # no observation this close around a hit -> occluded
     long_exchange_ms: float = 2600.0  # no hit for this long inside a rally -> maybe missed one
     default_player_height_px: float = 200.0

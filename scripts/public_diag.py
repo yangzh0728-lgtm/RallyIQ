@@ -156,6 +156,8 @@ def main(argv: list[str] | None = None) -> int:
     d = a.dir.expanduser()
     rows = []
     for lp in sorted((d / "labels").glob("*.json")):
+        if lp.name.startswith("._"):  # macOS metadata files on exFAT
+            continue
         cid = lp.stem
         pp = d / "preds" / f"{cid}.json"
         if not pp.exists():
