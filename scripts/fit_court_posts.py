@@ -80,6 +80,42 @@ def white_mask(img: np.ndarray, sat: int = 60, val: int = 160) -> np.ndarray:
     return cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
 
 
+def blue_mask(img: np.ndarray) -> np.ndarray:
+    """Blue court tape (hue ~ 100-130 on OpenCV's 0-180 scale), any brightness above shadow."""
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    m = ((hsv[..., 0] >= 95) & (hsv[..., 0] <= 130) & (hsv[..., 1] > 70) & (hsv[..., 2] > 60)).astype(np.uint8) * 255
+    return _keep_straight(cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)))
+
+
+def dark_mask(img: np.ndarray, width: int = 15, contrast: int = 28) -> np.ndarray:
+    """Thin dark lines on a light floor (wood): black-hat finds narrow dark features; wood
+    grain and wide dark bands (basketball paint) are removed by keeping only long straight
+    components of limited thickness."""
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (width, width))
+    bh = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, k)
+    m = (bh > contrast).astype(np.uint8) * 255
+    return _keep_straight(cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)))
+
+
+def _keep_straight(m: np.ndarray, min_len: int = 60, max_thick: float = 14.0) -> np.ndarray:
+    """Keep line paint, drop wood grain and wide bands: remove pixels inside regions thicker
+    than ``max_thick`` (basketball paint, shadows), then drop short connected pieces (grain)."""
+    dist = cv2.distanceTransform(m, cv2.DIST_L2, 3)
+    thick = cv2.dilate((dist > max_thick / 2).astype(np.uint8), np.ones((int(max_thick) + 1,) * 2, np.uint8))
+    m = m.copy()
+    m[thick > 0] = 0
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(m, connectivity=8)
+    keep = np.zeros(n, bool)
+    for k in range(1, n):
+        x, y, w, h, _ = stats[k]
+        keep[k] = np.hypot(w, h) >= min_len
+    return (keep[lab] * 255).astype(np.uint8)
+
+
+MASKS = {"white": white_mask, "blue": blue_mask, "dark": dark_mask}
+
+
 def detect_lines(mask: np.ndarray, floor_y: float, max_lines: int = 24) -> list[np.ndarray]:
     """Infinite image lines (a, b, c), a^2 + b^2 = 1, from Hough segments below ``floor_y``."""
     m = mask.copy()
@@ -231,9 +267,9 @@ def residual(H: np.ndarray, mask: np.ndarray, radius: int = 10) -> dict:
 
 
 def fit(img: np.ndarray, left: tuple[float, float], right: tuple[float, float], max_lines: int = 22,
-        post_tol: float = 30.0) -> dict:
+        post_tol: float = 30.0, lines_color: str = "white") -> dict:
     posts = np.array([left, right], float)
-    mask = white_mask(img)
+    mask = MASKS[lines_color](img)
     dist = cv2.distanceTransform(255 - mask, cv2.DIST_L2, 3)
     floor_y = min(left[1], right[1]) - 40
     lines = detect_lines(mask, floor_y, max_lines)
@@ -321,11 +357,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--check", type=Path)
     ap.add_argument("--video", type=Path, help="also measure the residual at 1/4, 1/2, 3/4 of this video")
     ap.add_argument("--max-lines", type=int, default=22)
+    ap.add_argument("--lines", choices=sorted(MASKS), default="white",
+                    help="court line colour: white paint, blue tape, or dark lines on a light (wood) floor")
     a = ap.parse_args(argv)
     img = cv2.imread(str(a.frame))
     if img is None:
         raise SystemExit(f"cannot read {a.frame}")
-    res = fit(img, tuple(a.left), tuple(a.right), a.max_lines)
+    res = fit(img, tuple(a.left), tuple(a.right), a.max_lines, lines_color=a.lines)
+    res["lines"] = a.lines
     H = np.array(res["image_from_court"])
     res["image_size"] = [img.shape[1], img.shape[0]]
     res["court_points"] = court_points(H, (img.shape[1], img.shape[0]))
@@ -334,7 +373,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.video:
         res["video_check"] = {}
         for f, im in frames_at(a.video):
-            res["video_check"][str(f)] = residual(H, white_mask(im))
+            res["video_check"][str(f)] = residual(H, MASKS[a.lines](im))
             checks.append(draw(im, H, posts))
     a.out.write_text(json.dumps(res, indent=1))
     if a.check:
