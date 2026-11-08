@@ -121,3 +121,32 @@ def test_doubles_change_of_ends_keeps_partners_together():
     assert all(seen[0][k][0] == seen[-1][k][0] for k in seen[0])
     assert {seen[-1][k][2] for k in ("P1", "P3")} == {"far"}
     assert {seen[-1][k][2] for k in ("P2", "P4")} == {"near"}
+
+
+def test_doubles_bystander_at_the_post_does_not_take_a_slot():
+    """Real 0302 clip: an umpire stands still by the left net post, inside the run-off, and takes a team A slot.
+    A near player starts the clip just past the net by the right post, so team B gets them, and they keep that
+    label after walking back to the near half; the far partner then finds no free slot. The still bystander is
+    released and ignored, the opponent sharing team A's half moves to team A, and the far partner is picked up."""
+    n = 450
+
+    def dets(i):
+        pos = _doubles_positions(i / 30)
+        if i < 60:  # walks from the right net post back to the near half
+            t, end = i / 60, np.array(_doubles_positions(2.0)["nr"])
+            pos["nr"] = tuple((1 - t) * np.array([6.6, 6.9]) + t * end)
+        out = [person_at_court(*xy) for k, xy in pos.items() if not (k == "fb" and i < 120)]
+        out.append(person_at_court(-0.85, 6.1))  # umpire by the left post, never moves
+        return out
+
+    def run():
+        return track_players(_frames(n), FakeEstimator([dets(i) for i in range(n)]), lambda f: H_IMG_TO_COURT,
+                             PlayerTrackingConfig(match_format="doubles"))
+
+    res = run()
+    assert not any(p.foot_court[0] < 0 for r in res for p in r.players), "bystander left in the output"
+    for r in res[60:]:
+        for p in r.players:
+            assert p.team == ("A" if p.foot_court[1] < 6.7 else "B"), (r.frame, p.player_id, p.foot_court)
+    # All four players tracked once the guards have kicked in (6 s still + 3 s on the wrong half).
+    assert all(len(r.players) == 4 for r in res[300:])

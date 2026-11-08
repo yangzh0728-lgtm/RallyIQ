@@ -12,6 +12,16 @@ combines
 * half-court priors: opponents on opposite halves, and in doubles partners on
   the same half (in doubles only for slots being (re-)acquired).
 
+Two guards keep a slot from being wasted on the wrong person (calibrated only):
+
+* a slot that stands still outside the court lines for ``bystander_s`` seconds
+  holds a bystander (umpire, spectator by the post): it is released and that
+  spot is ignored from then on, so a real player can take the slot;
+* in doubles, when one team has a free slot and an opponent has shared its
+  tracked player's half for ``team_repair_s`` seconds, the opponent was given
+  the wrong team: it moves into the free slot (``relabels`` records the
+  track, so the frames already emitted can be renamed afterwards).
+
 ``player_id`` stays with the person across changes of ends; ``side`` is
 recomputed every frame from the foot position. ``track_id`` changes whenever a
 slot is re-acquired after being lost, so downstream code can tell a continuous
@@ -30,8 +40,8 @@ from functools import lru_cache
 import numpy as np
 
 from .appearance import similarity
-from .geometry import court_side
-from .models import Candidate, PlayerState, Side
+from .geometry import PlayArea, court_side
+from .models import NET_Y_M, Candidate, PlayerState, Side
 
 SLOT_IDS = ("P1", "P2")
 DOUBLES_SLOT_IDS = ("P1", "P2", "P3", "P4")
@@ -64,6 +74,15 @@ class TrackerConfig:
     side_memory_penalty: float = 0.5
     # Candidates considered per frame in doubles (keeps the joint search small).
     max_doubles_candidates: int = 6
+    # Bystanders: still (within static_extent_m) and at least offcourt_m outside
+    # the court lines for this long. Players are never off court that long.
+    bystander_s: float = 6.0
+    offcourt_m: float = 0.3
+    static_extent_m: float = 1.0
+    bystander_radius_m: float = 1.0
+    # Doubles: opponents sharing a half (feet away from the net) for this long.
+    team_repair_s: float = 3.0
+    net_margin_m: float = 0.6
 
 
 @dataclass
@@ -76,6 +95,9 @@ class _Slot:
     last_frame: int = -(10**9)
     appearance: np.ndarray | None = None
     side: Side | None = None
+    # Start frame and position of the current still, off-court stretch (calibrated only).
+    still_since: int | None = None
+    still_at: np.ndarray | None = None
 
     def missed(self, frame: int) -> int:
         return frame - self.last_frame
@@ -124,6 +146,9 @@ class PlayerTracker:
         self._opp_pairs = [(i, j) for i in range(n) for j in range(i + 1, n) if teams[i] != teams[j]]
         self._mate_pairs = [(i, j) for i in range(n) for j in range(i + 1, n) if teams[i] == teams[j]]
         self._team_size = max(n // 2, 1)
+        self.bystander_spots: list[np.ndarray] = []
+        self.relabels: dict[int, str] = {}  # track_id -> player_id it was moved to
+        self._clash: dict[tuple[int, int], int] = {}  # (slot, opponent slot) -> first frame on one half
 
     @property
     def doubles(self) -> bool:
@@ -173,7 +198,7 @@ class PlayerTracker:
         cfg = self.cfg
         cands = [c for c in candidates if c.player_score >= cfg.min_candidate_score]
         if calibrated:
-            cands = [c for c in cands if c.foot_court is not None]
+            cands = [c for c in cands if c.foot_court is not None and not self._at_bystander_spot(c.foot_court)]
         sides = [_cand_side(c, net_y_px) for c in cands]
 
         never_seen = all(s.pos is None for s in self.slots)
@@ -200,7 +225,80 @@ class PlayerTracker:
                     appearance=c.appearance,
                 )
             )
+        if calibrated:
+            for slot in self.slots:
+                if slot.last_frame == frame:
+                    self._check_bystander(slot, frame)
+            if self.doubles:
+                self._repair_teams(frame)
         return out
+
+    # -- guards ---------------------------------------------------------------
+    _LINES = PlayArea(margin_side=0.0, margin_end=0.0)
+
+    def _at_bystander_spot(self, xy: np.ndarray) -> bool:
+        if not self.bystander_spots or self._LINES.distance_outside(xy) < self.cfg.offcourt_m:
+            return False
+        return any(float(np.linalg.norm(xy - s)) <= self.cfg.bystander_radius_m for s in self.bystander_spots)
+
+    def _check_bystander(self, slot: _Slot, frame: int) -> None:
+        cfg = self.cfg
+        pos = slot.pos
+        off = self._LINES.distance_outside(pos) >= cfg.offcourt_m
+        if not off:
+            slot.still_since, slot.still_at = None, None
+            return
+        if slot.still_at is None or np.max(np.abs(pos - slot.still_at)) > cfg.static_extent_m / 2:
+            slot.still_since, slot.still_at = frame, pos.copy()
+            return
+        if frame - slot.still_since >= cfg.bystander_s * cfg.fps:
+            self.bystander_spots.append(slot.still_at.copy())
+            self._release(slot)
+
+    def _release(self, slot: _Slot) -> None:
+        fresh = _Slot(slot.player_id)
+        fresh.last_frame = slot.last_frame
+        self.slots[self.slots.index(slot)] = fresh
+
+    def _repair_teams(self, frame: int) -> None:
+        """Move an opponent into a team's free slot when it keeps sharing that team's half."""
+        cfg = self.cfg
+        lost = cfg.lost_after_frames
+
+        def half(s: _Slot) -> Side | None:
+            if s.pos is None or s.last_frame != frame or abs(float(s.pos[1]) - NET_Y_M) < cfg.net_margin_m:
+                return None
+            return s.side
+
+        def tracked(s: _Slot) -> bool:
+            return s.pos is not None and s.missed(frame) <= lost
+
+        clash: dict[tuple[int, int], int] = {}
+        for a, b in self._mate_pairs:
+            for i, free in ((a, b), (b, a)):
+                if not tracked(self.slots[i]) or tracked(self.slots[free]) or half(self.slots[i]) is None:
+                    continue
+                h = half(self.slots[i])
+                for o in range(len(self.slots)):
+                    if TEAM_OF[self.slots[o].player_id] == TEAM_OF[self.slots[i].player_id] or half(self.slots[o]) != h:
+                        continue
+                    mate = next(j for pair in self._mate_pairs if o in pair for j in pair if j != o)
+                    if tracked(self.slots[mate]) and half(self.slots[mate]) == h:
+                        continue  # the opponent's own partner is here too: i is the odd one out
+                    clash[(i, o)] = self._clash.get((i, o), frame)
+                    if frame - clash[(i, o)] >= cfg.team_repair_s * cfg.fps:
+                        self._move(o, free)
+                        self._clash = {}
+                        return
+        self._clash = clash
+
+    def _move(self, src: int, dst: int) -> None:
+        s = self.slots[src]
+        moved = _Slot(self.slots[dst].player_id, s.track_id, s.pos, s.vel, s.scale, s.last_frame, s.appearance,
+                      s.side, s.still_since, s.still_at)
+        self.slots[dst] = moved
+        self.relabels[s.track_id] = moved.player_id
+        self._release(s)
 
     def _best_assignment(
         self, cands: list[Candidate], sides: list[Side | None], frame: int, calibrated: bool, never_seen: bool
