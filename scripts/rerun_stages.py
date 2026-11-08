@@ -52,7 +52,8 @@ def main(argv: list[str] | None = None) -> int:
     out = a.out.expanduser()
     results = json.loads((out / "results.json").read_text(encoding="utf-8"))
     store = Store(out / "data")
-    stages = [s for s in STAGES[STAGES.index(a.first):] if not (a.no_overlay and s == "overlay")]
+    stages = [s for s in STAGES[STAGES.index(a.first):]
+              if s != "players" and not (a.no_overlay and s == "overlay")]  # players are kept as they are
     config = {"shuttle": {"reuse_candidates": True}}
     for r in results:
         if a.only and r["clip_id"] not in a.only:
