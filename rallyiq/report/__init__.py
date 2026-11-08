@@ -5,14 +5,16 @@
 * ``coach.generate_coach_report`` turns ``MatchStats`` into Chinese coaching comments
   through a pluggable provider (Claude API by default, rule-based offline fallback),
   then checks every claim against the stats before it is shown.
-* ``export.render_markdown`` renders both for download.
+* ``export.render_markdown`` renders both for download; ``html.render_html`` makes a
+  self-contained, shareable HTML page (charts inline, no network, no video).
 """
 
 from .coach import CoachUnavailable, generate_coach_report, list_providers, register_provider
 from .export import render_markdown
+from .html import render_html
 from .stats import compute_match_stats
 
 __all__ = [
     "CoachUnavailable", "compute_match_stats", "generate_coach_report", "list_providers",
-    "register_provider", "render_markdown",
+    "register_provider", "render_html", "render_markdown",
 ]

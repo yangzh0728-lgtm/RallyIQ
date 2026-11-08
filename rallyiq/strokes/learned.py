@@ -32,8 +32,12 @@ import numpy as np
 from ..contracts import SHOT_TYPES
 from .context import CONTEXT_FEATURES, context_features
 from .features import StrokeFeatures
+from .trajectory import TRAJ_FEATURES, traj_features
 
 SKLEARN_NAME = "sklearn_hgb"
+GBT_NAME = "gbt_v3"
+# Trained on ShuttleSet broadcast singles by scripts/learn_strokes.py --out <...>.json (see README.md).
+BUNDLED = Path(__file__).with_name("models") / "strokes_v3.json"
 
 FEATURES = (
     "contact_h",
@@ -54,7 +58,9 @@ FEATURES = (
 # features of ``context.py``. On 6 held-out ShuttleSet matches it lifted accuracy from ~0.56 to
 # ~0.63 (see rallyiq/strokes/README.md). Models remember which set they were trained on.
 FEATURES_V2 = FEATURES + CONTEXT_FEATURES
-FEATURE_SETS = {"base": FEATURES, "v2": FEATURES_V2}
+# Feature set "v3": v2 plus the flight shape of ``trajectory.py`` (aimed at push vs lift).
+FEATURES_V3 = FEATURES_V2 + TRAJ_FEATURES
+FEATURE_SETS = {"base": FEATURES, "v2": FEATURES_V2, "v3": FEATURES_V3}
 
 
 class SklearnUnavailable(RuntimeError):
@@ -83,11 +89,14 @@ def full_matrix(feats: Sequence[StrokeFeatures], events=None, shuttle=None, play
     X = feature_matrix(feats)
     if feature_set == "base":
         return X
-    if feature_set != "v2":
+    if feature_set not in ("v2", "v3"):
         raise ValueError(f"unknown stroke feature set {feature_set!r}")
     if events is None:
-        raise ValueError("feature set v2 needs the events of the clip")
-    return np.hstack([X, context_features(events, shuttle, players, feats)])
+        raise ValueError(f"feature set {feature_set} needs the events of the clip")
+    X = np.hstack([X, context_features(events, shuttle, players, feats)])
+    if feature_set == "v3":
+        X = np.hstack([X, traj_features(events, shuttle, players, feats)])
+    return X
 
 
 def feature_set_of(names: Sequence[str]) -> str | None:
@@ -106,12 +115,15 @@ def _sklearn():
 
 @dataclass(frozen=True)
 class TrainConfig:
-    learning_rate: float = 0.08
+    # Chosen by 5-fold grouped CV over 40 settings on the 34 training matches (only then scored
+    # once on the held-out matches): 71.7% -> 73.1% CV. With 34 matches, more and larger trees pay
+    # off, and class weighting no longer helps accuracy.
+    learning_rate: float = 0.06
     max_iter: int = 300
-    max_leaf_nodes: int = 15
-    min_samples_leaf: int = 10
+    max_leaf_nodes: int = 31
+    min_samples_leaf: int = 40
     l2_regularization: float = 1.0
-    class_weight: str | None = "balanced"  # rare types (net kill, block) still count
+    class_weight: str | None = None
     folds: int = 5
     seed: int = 0
 
@@ -207,14 +219,34 @@ def save(model: Any, path: str | Path, meta: dict[str, Any] | None = None, featu
     joblib.dump(blob, path)
 
 
-def load(path: str | Path) -> dict[str, Any]:
-    _sklearn()
-    import joblib
+def export_json(model: Any, feature_set: str, meta: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A fitted ``HistGradientBoostingClassifier`` as JSON (no pickle; loads without scikit-learn)."""
+    from ..gbt import export_hgb
 
+    return {"kind": "strokes_gbt", "features": list(FEATURE_SETS[feature_set]), "feature_set": feature_set,
+            **export_hgb(model), **(meta or {})}
+
+
+def load(path: str | Path) -> dict[str, Any]:
+    """``{"model", "features", "feature_set", ...}`` from a ``.json`` (numpy only) or ``.joblib`` file."""
     p = Path(path).expanduser()
     if not p.is_file():
         raise SklearnUnavailable(f"stroke model not found: {p}")
-    blob = joblib.load(p)
+    if p.suffix == ".json":
+        import json
+
+        from ..gbt import GBT
+
+        spec = json.loads(p.read_text(encoding="utf-8"))
+        if spec.get("kind") != "strokes_gbt":
+            raise SklearnUnavailable(f"{p}: not a stroke model (kind {spec.get('kind')!r})")
+        blob = {k: v for k, v in spec.items() if k not in ("trees", "baseline")}
+        blob["model"] = GBT(spec)
+    else:
+        _sklearn()
+        import joblib
+
+        blob = joblib.load(p)
     fs = feature_set_of(blob.get("features", []))
     if fs is None:
         raise SklearnUnavailable(f"{p}: trained on different features {blob.get('features')}; retrain it")

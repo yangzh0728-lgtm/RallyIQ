@@ -47,6 +47,8 @@ def main(argv: list[str] | None = None) -> int:
     d = a.dir.expanduser()
     rows, before, after = [], M.CourtStats(), M.CourtStats()
     for lp in sorted((d / "labels").glob("*.json")):
+        if lp.name.startswith("._"):  # macOS metadata files on exFAT
+            continue
         pp, clip = d / "preds" / f"{lp.stem}.json", d / "clips" / f"{lp.stem}.mp4"
         if not (pp.exists() and clip.exists()):
             continue

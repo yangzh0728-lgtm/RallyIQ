@@ -165,3 +165,17 @@ def test_offline_report_lists_shot_advice_and_markdown(match):
     old = build_report({"summary": "", "insights": [], "training": [], "caveats": []}, stats, OfflineProvider(),
                        knowledge=knowledge_context(stats, notes=()))
     assert len(old.shot_advice) == 4
+
+
+def test_situation_uses_the_layered_stroke_label(match):
+    events, players = match
+    detail = c.StrokeDetail(family="lift", hand=c.StrokeAttr(value="backhand", p=0.8, source="model"),
+                            direction=c.StrokeAttr(value="cross", p=0.9, source="model"),
+                            description_zh="反手斜线挑球，击球点较低。")
+    shots = [s.model_copy(update={"stroke": c.StrokeInfo(shot_type=s.shot_type, confidence=0.9, detail=detail)})
+             if s.shot_type == "lift" else s for s in events.shots]
+    ms = compute_match_stats(events.model_copy(update={"shots": shots}), players).moments
+    lift = next(m for m in ms if m.shot_type == "lift")
+    assert lift.shot_label_zh == "反手斜线挑球" and lift.shot_detail_zh == "反手斜线挑球，击球点较低。"
+    out = ground_shot_advice([], [lift], "P1")
+    assert "打反手斜线挑球，对手在" in out[0].situation

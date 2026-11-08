@@ -30,12 +30,37 @@ export function Workbench({ videoId, startMs = null }: { videoId: string; startM
     );
   }, [videoId]);
   const { value: job, error: jobError } = useJob(jobId);
+  const [startError, setStartError] = useState<string | null>(null);
+  const start = () => {
+    setStartError(null);
+    api.startAnalysis(videoId).then(
+      (j) => setJobId(j.job_id),
+      (e: Error) => setStartError(e.message),
+    );
+  };
 
   if (loadError) return <Centered>无法加载视频：{loadError}</Centered>;
   if (!video) return <Centered>加载中…</Centered>;
-  if (!jobId) return <Centered>这个视频还没有分析任务。</Centered>;
+  if (!jobId)
+    return (
+      <Centered>
+        <div className="row">
+          <span>这个视频还没有分析任务。</span>
+          <button className="primary" onClick={start}>
+            开始分析
+          </button>
+        </div>
+        {startError && <p className="error small">启动失败：{startError}</p>}
+      </Centered>
+    );
   if (!job) return <Centered>{jobError ? `任务状态获取失败：${jobError}` : "获取任务状态…"}</Centered>;
-  if (job.state !== "succeeded") return <JobDetail job={job} />;
+  if (job.state !== "succeeded")
+    return (
+      <>
+        <JobDetail job={job} onRetry={start} />
+        {startError && <p className="error small" style={{ textAlign: "center" }}>启动失败：{startError}</p>}
+      </>
+    );
   return <Analysis key={job.job_id} video={video} startMs={startMs} onRerun={(j: Job) => setJobId(j.job_id)} />;
 }
 
@@ -154,6 +179,36 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
     [events, clock],
   );
 
+  // Review queue: model shots / stroke types / rallies that still need a human look, in time order.
+  const reviewQueue = useMemo(() => {
+    if (!events) return [];
+    const items: { t_ms: number; shot_id: string | null }[] = [];
+    for (const s of events.shots) {
+      const shotOpen = s.status === "needs_review" && s.source === "model";
+      const typeOpen = s.stroke?.source === "model" && s.stroke.status !== "ok";
+      if (shotOpen || typeOpen) items.push({ t_ms: s.t_ms, shot_id: s.shot_id });
+    }
+    for (const r of events.rallies) if (r.status === "needs_review" && r.source === "model") items.push({ t_ms: r.start_ms, shot_id: null });
+    return items.sort((a, b) => a.t_ms - b.t_ms);
+  }, [events]);
+  const nextReview = useCallback(
+    (dir: 1 | -1) => {
+      if (!clock || !reviewQueue.length) return;
+      const t = clock.ms;
+      const item =
+        dir > 0
+          ? (reviewQueue.find((x) => x.t_ms > t + 1) ?? reviewQueue[0])
+          : ([...reviewQueue].reverse().find((x) => x.t_ms < t - 1) ?? reviewQueue[reviewQueue.length - 1]);
+      if (item.shot_id) seekShot(item.shot_id);
+      else {
+        clock.pause();
+        clock.seek(item.t_ms);
+      }
+    },
+    [clock, reviewQueue, seekShot],
+  );
+  const [showKeys, setShowKeys] = useState(false);
+
   // Keyboard shortcuts.
   useEffect(() => {
     if (!clock || !events) return;
@@ -184,6 +239,10 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
           const r = rallyNear(1);
           if (r) clock.seek(r.start_ms);
         },
+        n: () => nextReview(1),
+        N: () => nextReview(-1),
+        "?": () => setShowKeys((v) => !v),
+        Escape: () => setShowKeys(false),
       };
       const fn = actions[e.key];
       if (fn) {
@@ -193,7 +252,7 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clock, events, fps, seekShot]);
+  }, [clock, events, fps, seekShot, nextReview]);
 
   const doExport = async (format: "json" | "csv") => {
     const url = api.exportUrl(video.video_id, format);
@@ -245,6 +304,19 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
             </span>
           </Stat>
           <Stat label="已做修正">{corrections.length}</Stat>
+          <div className="row" style={{ marginTop: 6 }}>
+            <button
+              disabled={!reviewQueue.length}
+              title="跳到当前时间之后下一个待复核的回合、击球或击球类型（快捷键 n，Shift+N 往回）"
+              onClick={() => nextReview(1)}
+            >
+              {reviewQueue.length ? `下一个待复核（剩 ${reviewQueue.length}）` : "没有待复核项"}
+            </button>
+            <span className="spacer" />
+            <button className="small" title="快捷键（?）" onClick={() => setShowKeys(true)}>
+              快捷键
+            </button>
+          </div>
           <div className="row">
             <span className="muted">比赛类型</span>
             <span className="spacer" />
@@ -311,6 +383,10 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
               {label}
             </label>
           ))}
+          <label title="隐藏原视频画面，只在深色背景上显示识别元素">
+            <input type="checkbox" checked={layers.abstract} disabled={!layers.ai} onChange={() => toggle("abstract")} />
+            纯抽象
+          </label>
           <label>
             透明度
             <input type="range" min={0.2} max={1} step={0.05} value={layers.opacity} onChange={(e) => setLayers((l) => ({ ...l, opacity: Number(e.target.value) }))} />
@@ -377,6 +453,7 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
         </div>
       </aside>
 
+      {showKeys && <ShortcutHelp onClose={() => setShowKeys(false)} />}
       <footer className="wb-timeline">
         <Timeline
           durationMs={meta.duration_ms}
@@ -404,6 +481,44 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
       <span className="muted">{label}</span>
       <span className="spacer" />
       <span className="mono">{children}</span>
+    </div>
+  );
+}
+
+const SHORTCUTS: [string, string][] = [
+  ["空格", "播放 / 暂停"],
+  ["← / →", "上一帧 / 下一帧"],
+  ["j / k", "上一拍 / 下一拍"],
+  ["[ / ]", "上一个 / 下一个回合"],
+  ["n / Shift+N", "下一个 / 上一个待复核项"],
+  ["?", "显示或关闭这个面板"],
+];
+
+function ShortcutHelp({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="card modal" role="dialog" aria-label="快捷键" onClick={(e) => e.stopPropagation()}>
+        <div className="row" style={{ marginBottom: 8 }}>
+          <h2 style={{ margin: 0 }}>快捷键</h2>
+          <span className="spacer" />
+          <button className="small" onClick={onClose}>
+            关闭
+          </button>
+        </div>
+        <table>
+          <tbody>
+            {SHORTCUTS.map(([k, v]) => (
+              <tr key={k}>
+                <td>
+                  <kbd>{k}</kbd>
+                </td>
+                <td>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="muted small">在输入框里打字时快捷键不生效。</p>
+      </div>
     </div>
   );
 }

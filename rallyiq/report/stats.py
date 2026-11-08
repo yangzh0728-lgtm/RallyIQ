@@ -39,6 +39,7 @@ from ..contracts import (
     team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
+from .flow import flow_metrics, rally_log
 from .moments import shot_moments
 from .style import MIN_SHOTS, analyze_styles, shot_phases
 
@@ -413,8 +414,15 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
     moments = shot_moments(events, players, fps, metric_ok) if shot_types_available else []
     if shot_types_available and players is not None and events.match_format == "doubles":
         caveats.append("逐拍击球建议暂只支持单打。")
+    pids = DOUBLES_PLAYERS if events.match_format == "doubles" else PLAYERS
     player_stats = [_player_stats(pid, events, rallies_by_id, players, spans, fps, metric_ok, rally_minutes)
-                    for pid in (DOUBLES_PLAYERS if events.match_format == "doubles" else PLAYERS)]
+                    for pid in pids]
+    # Rally log, score flow and tempo (rallyiq/report/flow.py).
+    lines, games = rally_log(events, lambda t: SHOT_TYPE_LABELS.get(t, t) if t else None)
+    flow_match, flow_players = flow_metrics(events, lines, games, pids)
+    metrics += flow_match
+    player_stats = [p.model_copy(update={"metrics": [*p.metrics, *flow_players.get(p.player_id, [])]})
+                    for p in player_stats]
     styles = []
     if shot_types_available:
         phases = shot_phases(events)
@@ -433,14 +441,14 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
                             for p in player_stats]
         if any(s.note and s.note.startswith("相邻两拍") for s in styles):
             caveats.append(next(s.note for s in styles if s.note and s.note.startswith("相邻两拍")) + "。")
-        if any(s.status == "undeterminable" for s in styles):
+        if any(s.status == "undeterminable" and s.n_shots < MIN_SHOTS for s in styles):
             caveats.append(f"有球员已分类的击球不足 {MIN_SHOTS} 拍，打法风格暂不判断。")
         caveats.append("打法风格由规则原型匹配得出（没有用标注数据训练），参考区间来自职业单打统计，业余比赛只作倾向参考。")
     return MatchStats(
         video_id=events.video_id, fingerprint=fingerprint(events, players, calibration),
         duration_ms=meta.duration_ms if meta else None, calibration_status=cal_status,
         shot_types_available=shot_types_available, metrics=metrics, distributions=distributions,
-        players=player_stats, moments=moments, styles=styles, caveats=caveats,
+        players=player_stats, moments=moments, rallies=lines, games=games, styles=styles, caveats=caveats,
     )
 
 

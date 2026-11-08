@@ -124,6 +124,9 @@ class HeatmapShuttleDetector:
             ckpt = torch.load(self.weights, map_location="cpu", weights_only=False)
         params = ckpt.get("param_dict", {}) if isinstance(ckpt, dict) else {}
         state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
+        # Fine-tuned checkpoints may carry the peak threshold they were validated at
+        # (scripts/shuttle_loop.py); stage._detector uses it unless the config sets one.
+        self.recommended_threshold = float(params["peak_threshold"]) if "peak_threshold" in params else None
         self.seq_len = int(params.get("seq_len", 8))
         self.bg_mode = str(params.get("bg_mode", "concat") or "")
         self.net = build_heatmap_net(self.seq_len, self.bg_mode)

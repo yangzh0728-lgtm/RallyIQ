@@ -74,7 +74,9 @@ from ..review import video_conditions
 from ..pipeline.clips import ClipError, cut_clip
 from ..pipeline.runner import MANUAL_CALIBRATION, MATCH_FORMAT, stages_from
 from ..pipeline.worker import Worker
-from ..report import CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_markdown
+from ..report import (
+    CoachUnavailable, compute_match_stats, generate_coach_report, list_providers, render_html, render_markdown,
+)
 from ..report.coach import default_provider_name
 from ..store import CONTENT_TYPES, Store, now
 from ..strokes.classify import merge_strokes
@@ -674,9 +676,16 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
         return coach
 
     @app.get("/api/videos/{video_id}/report/export")
-    def export_report(video_id: str, format: Literal["md", "json"] = "md", user: User | None = Depends(current_user)):
+    def export_report(video_id: str, format: Literal["md", "json", "html"] = "md",
+                      user: User | None = Depends(current_user)):
         v = video_or_404(video_id, user)
         rep = match_report(video_id)
+        if format == "html":
+            ev, _ = effective_events(video_id)
+            page = render_html(rep, ev, store.load_artifact(video_id, "players", PlayerTracks),
+                               title=f"赛后报告 · {v.filename}", video_name=v.filename)
+            return Response(content=page, media_type="text/html; charset=utf-8",
+                            headers={"Content-Disposition": f'attachment; filename="{video_id}_report.html"'})
         if format == "json":
             return Response(
                 content=rep.model_dump_json(indent=1), media_type="application/json",
@@ -709,7 +718,9 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
         w = csv.writer(buf)
         w.writerow(["shot_id", "rally_id", "frame", "t_ms", "time", "hitter", "team", "confidence", "status", "source",
                     "shuttle_x", "shuttle_y", "hitter_court_x", "hitter_court_y",
-                    "shot_type", "shot_type_confidence", "shot_type_status", "shot_type_source"])
+                    "shot_type", "shot_type_confidence", "shot_type_status", "shot_type_source",
+                    "rally_no", "shot_no", "rally_shots", "rally_winner"])
+        rally_no, shot_no, rally_by_id = rally_positions(ev)
         for s in ev.shots:
             secs = s.t_ms / 1000
             st = s.stroke
@@ -717,7 +728,9 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
                         s.hitter or "", team_of(s.hitter) or "", f"{s.confidence:.3f}", s.status, s.source,
                         *(s.shuttle_px or ["", ""]), *(s.hitter_court or ["", ""]),
                         s.shot_type or "", f"{st.confidence:.3f}" if st else "", st.status if st else "",
-                        st.source if st else ""])
+                        st.source if st else "", rally_no.get(s.rally_id or "", ""), shot_no.get(s.shot_id, ""),
+                        len(rally_by_id[s.rally_id].shot_ids) if s.rally_id in rally_by_id else "",
+                        (rally_by_id[s.rally_id].winner or "") if s.rally_id in rally_by_id else ""])
         return PlainTextResponse(buf.getvalue(), media_type="text/csv",
                                  headers={"Content-Disposition": f'attachment; filename="{video_id}_shots.csv"'})
 
@@ -729,6 +742,17 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
         app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
     return app
+
+
+def rally_positions(ev: EventsResult) -> tuple[dict[str, int], dict[str, int], dict]:
+    """1-based rally number by rally id, 1-based shot number within its rally by shot id, rallies by id."""
+    rallies = sorted(ev.rallies, key=lambda r: r.start_frame)
+    frame = {s.shot_id: s.frame for s in ev.shots}
+    shot_no = {}
+    for r in rallies:
+        for k, sid in enumerate(sorted((x for x in r.shot_ids if x in frame), key=frame.__getitem__)):
+            shot_no[sid] = k + 1
+    return {r.rally_id: i + 1 for i, r in enumerate(rallies)}, shot_no, {r.rally_id: r for r in rallies}
 
 
 _app: FastAPI | None = None

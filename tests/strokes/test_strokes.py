@@ -142,6 +142,7 @@ def test_taxonomy_matches_contract():
     assert from_shuttleset("Top_殺球") == ("smash", "far")
     assert from_shuttleset("Bottom_發短球") == ("short_serve", "near")
     assert from_shuttleset("未知球種") == (None, None)
+    assert from_shuttleset("Top_過度切球") == ("drop", "far")  # spelling used by the set CSVs
     assert {v for v in SHUTTLESET.values() if v} == set(SHOT_TYPES)
 
 
@@ -164,6 +165,24 @@ def test_bst_input_preparation():
 
     jn2b = bst.pose_features(np.ones((4, 2, 17, 2), np.float32), "Jn2B")
     assert jn2b.shape == (4, 2, 17 + 2 * 19, 2)
+
+
+def test_bst_frame_without_both_players_zeroes_the_shuttle_too():
+    v = make_rallies(n_rallies=1, seed=4)
+    cfg = bst.BSTConfig(pose_style="J_only", seq_len=100)
+    shot = v.events.shots[1]
+    full = bst.build_clip(v.events, shot.shot_id, v.shuttle, v.players, 1920, 1080, cfg)
+    # drop the far player from the first frame of the clip
+    frames = []
+    for pf in v.players.frames:
+        if pf.frame == shot.frame:
+            pf = pf.model_copy(update={"players": pf.players[:1]})
+        frames.append(pf)
+    players = v.players.model_copy(update={"frames": frames})
+    pose, pos, shut, _ = bst.build_clip(v.events, shot.shot_id, v.shuttle, players, 1920, 1080, cfg)
+    assert np.any(full[2][0] != 0)  # the shuttle is seen at the contact frame...
+    assert np.all(pose[0] == 0) and np.all(pos[0] == 0) and np.all(shut[0] == 0)  # ...but the frame failed
+    assert np.array_equal(shut[1:], full[2][1:])
 
 
 def test_bst_seq_len_subsampling_matches_authors():

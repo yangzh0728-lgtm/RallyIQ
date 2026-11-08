@@ -113,9 +113,43 @@ python -m rallyiq.perception.shuttle clip.mp4 --benchmark-clip-id <id> \
    python scripts/finetune_shuttle.py --out weights/shuttle/finetuned.pt
    ```
    每轮会打印验证集在阈值 0.5 / 0.3 / 0.2 下的精确率、召回和 F1，第 0 轮是预训练模型本身，
-   最后按 0.5 下的 F1 保留最好的一轮。checkpoint 和检测器的格式一样，旁边会写一个同名的 `.json` 报告。
+   最后按 0.2（检测器实际用的阈值）下的 F1 保留最好的一轮。按 0.5 选曾经选出一个在 0.2 下更差的轮次。checkpoint 和检测器的格式一样，旁边会写一个同名的 `.json` 报告。
 4. **对比**：`RALLYIQ_SHUTTLE_WEIGHTS=weights/shuttle/side.pt python scripts/real_run.py --only ko26_court3`，
    再用 `scripts/hits_ablation.py` 看 ok 击球有没有一起变好，不要只看覆盖率。
 
 默认只用 `status: reviewed` 的标注：未经复核的预标注拿来训练，等于让模型学自己的错误。
 默认设置是 BatchNorm 冻结、学习率 1e-4、10 轮、每轮 300 步、batch 4，数据增强只有水平翻转和亮度/对比度抖动。
+
+### 持续训练（`scripts/shuttle_loop.py`）
+
+日常用这一个命令就够了，每标完一段就跑一次：
+
+```bash
+python scripts/shuttle_loop.py            # 训练一轮，和现役模型比，变好才替换
+python scripts/shuttle_loop.py --status   # 现役模型、历次结果、下一段该标什么
+python scripts/shuttle_loop.py --rollback # 回到上一个模型
+```
+
+每一轮：所有已复核片段按时间切开（前 70% 训练、后 30% 验证；`--holdout ID` 让整段只做验证，
+会被记住），从原始预训练权重开始微调（`--from champion` 改为接着现役模型练），然后把现役模型
+放在**同一批**验证帧上评一次。阈值 0.2 下 F1 至少高 0.01、精确率最多降 0.03，才采用新模型，
+并复制为 `weights/shuttle/heatmap.pt`（流水线默认加载它，除非设了 `RALLYIQ_SHUTTLE_WEIGHTS`）。
+所有模型、`state.json` 和 `history.md` 都在 `weights/shuttle/loop/`。标注没变化时不会重复训练
+（`--force` 强制）。采用后脚本会打印在没参与训练的片段上跑 `real_run.py` 和 `hits_ablation.py`
+的命令：验证分数是逐帧检测，击球结果还要单独核对。
+
+**标注检查。** 用预标注打底时，模型没检测到的每一帧都会被标成"看不见"，其中有些球其实看得见
+（比如发球前在手里）。这些帧会让训练学错、让验证把对的检测算成误报。所以每轮结束后，脚本用
+最后一轮（学得最多的）模型过一遍所有已标注帧，把和标注对不上的帧写到
+`weights/shuttle/loop/round-NNN-check.json`，并拼一张最有把握的 48 帧的图（`.jpg`，绿圈=标注，
+紫圈=模型）。然后用
+`python -m evaluation.tools.label_tool <clip> --check weights/shuttle/loop/round-NNN-check.json`
+只看这些帧：`g` 跳过（标注是对的），`y` 采用模型的点，左键点击或 `n` 改标注，`x` 删掉拿不准的帧
+（训练时忽略）。`--check WEIGHTS` 不训练，只对任意 checkpoint 做这项检查。
+
+**自动标注（`scripts/auto_label.py`）。** 不用人从头标：以流水线的预测（或已有标注）为起点，
+用最近一轮的末轮模型跑遍整段视频，逐帧决定：手工改过的帧不动；模型和标注一致的帧不动；标注说看不见、
+模型以 ≥0.4 的分数看到并且前后 ±2 帧有呼应的点，**提议**为可见；其余矛盾的帧去掉标注（训练时忽略，
+不让模型学一个猜测）。每个提议在拼图里有编号（2 倍放大，紫圈=提议的点），看完后用
+`--apply --not-shuttle 编号 --unsure 编号` 写入（状态 reviewed，`auto_label` 字段记录模型、计数和采用的帧），
+`--preview` 生成带标注圈和帧号的预览视频，方便截图指出问题。输出在 `~/rallyiq-data/autolabel/<clip>/`。

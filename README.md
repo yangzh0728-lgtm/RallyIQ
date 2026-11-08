@@ -2,7 +2,23 @@
 
 **个人 AI 羽毛球训练与比赛分析系统：学习正确打法，读懂比赛，预测对手战术。**
 
-> 状态：MVP 开发中。后端骨架、任务队列、共享数据契约、球员/羽毛球感知、回合与击球候选、击球类型分类和网页工作台已就绪。本 README 是研发蓝图的摘要。
+> 状态：MVP 开发中，已经可以在自己的电脑上从头到尾跑通"上传视频 → 自动分析 → 网页回放与修正 → 报告"。
+> 下面先是**现在能用的功能**和**本地部署步骤**，后半部分是研发蓝图。完全免费、本地运行：不需要付费 API、云服务或账号。
+
+## 现在能做什么
+
+| 功能 | 说明 |
+| --- | --- |
+| 分析本地视频 | 手机、运动相机（如 DJI）或下载的比赛录像都行，支持 `.mp4 .mov .m4v .mkv .avi .webm`。网页拖入或命令行 `python -m rallyiq.pipeline analyze 视频.mp4`，不限机位 |
+| 球场标定 | 自动检测场线并估计单应性，镜头移动后自动重新标定；自动失败时在网页上点选四角。画面切到场外（观众、回放、特写）的片段自动忽略，不产生假击球 |
+| 球员与骨架 | RTMO 姿态模型（Apple Silicon 上走 CoreML），远端小人物有第二遍放大检测；单打 / 双打自动识别，双打四人稳定 ID 和 A/B 队伍 |
+| 羽毛球轨迹 | 热力图检测网络 + 时序跟踪，观测点与补点分开保存，不伪造轨迹 |
+| 回合与击球 | 球路转折 + 腕部邻近提出击球候选，回合自动切分；可选开启姿态序列补回发球和漏检的击球（`pose_hits`，默认关闭） |
+| 击球类型 | 12 类（发短球、高远球、杀球、吊球、放网、推球、扑球、平抽、挡网等），默认用随代码发布的学习模型 `strokes_v3`（在 34 场 ShuttleSet 比赛上训练，留出比赛约 69–71%，只依赖 numpy，不需要下载），并给每拍加上正反手、直线/斜线、击球点高低等分层描述；全部标"待复核"，可在网页上逐拍改 |
+| 网页工作台 | 视频 + 骨架 / 球轨迹 / 球场线叠加层，每层可单独开关；**纯抽象视图**（只显示叠加层、不显示画面，便于看站位和节奏）；时间轴逐拍跳转、热力图、小地图、修正击球和击球者、导出 JSON / CSV / 回合片段 MP4 |
+| 赛后报告与 AI 教练 | 统计 + 逐拍建议（带时间戳和双方站位）；默认用本机 Ollama + Qwen，免费且数据不出本机，没装时改用离线规则模板 |
+| 个人档案 | 把确认过的比赛写入只追加的档案，看趋势、训练复测和对手习惯 |
+| 持续提升识别 | 人工修正自动记为难例并按机位 / 帧率分组；羽毛球模型可以用自己的标注**持续微调，变好才替换**（见下方"持续训练羽毛球模型"） |
 
 ## 本地部署
 
@@ -62,15 +78,25 @@ RALLYIQ_WEB_DIR=web/dist uvicorn rallyiq.api.app:app --port 8000
 - 开发模式：`uvicorn rallyiq.api.app:app --reload --port 8000`，另开终端 `cd web && npm run dev`，打开 http://localhost:5173
   （`/api` 自动转发到 8000）。不装任何模型也能先看界面：`RALLYIQ_DEMO=1` 让各阶段输出合成数据，或打开 `?mock` 演示模式。
 
-### 不开网页，直接分析一段视频
+### 分析自己的视频
+
+最简单的是在网页上拖入视频。录像建议：机位尽量能看到整个球场（后场正中或侧后方都行），能用 60 fps 就用 60 fps
+（30 fps 也能分析，只是击球时刻和脚步没那么准）。网页上传默认上限 4 GB（`RALLYIQ_MAX_UPLOAD_MB` 可调）；
+文件很大（例如 4K 长录像）时，直接用命令行分析，不经过上传：
 
 ```bash
 source .venv/bin/activate
-python -m rallyiq.pipeline analyze match.mp4    # 打印各阶段状态和结果目录 data/videos/<video_id>/artifacts/
+python -m rallyiq.pipeline analyze ~/Movies/DJI_0009.MP4    # 打印各阶段状态和结果目录 data/videos/<video_id>/artifacts/
 ```
 
+- 视频会复制进数据目录（默认 `./data`），原文件不动。想放到外接硬盘：`python -m rallyiq.pipeline --data /Volumes/T7/rallyiq analyze 视频.mp4`
+  （`--data` 写在 `analyze` 前面；网页用同一个目录时启动前设 `RALLYIQ_DATA=/Volumes/T7/rallyiq`）。
+- 缺模型权重时不会中断：对应阶段输出空结果，日志里写明缺哪个模型。
+
 分析过的视频也会出现在网页的视频列表里。结果是 JSON（球场标定、球员轨迹、羽毛球轨迹、回合与击球、击球类型、叠加层），
-格式见 `contracts/README.md`；网页上可以导出 JSON / CSV、赛后报告（Markdown）和回合片段（MP4）。
+格式见 `contracts/README.md`；网页上可以导出 JSON / CSV、赛后报告（Markdown 或可分享的网页版 HTML）和回合片段（MP4）。
+网页版报告也可以在命令行生成：`python scripts/match_report_html.py <video_id 或结果目录> -o report.html`，
+示例见 [`docs/sample-report/match_report.html`](docs/sample-report/match_report.html)。
 
 ### 可选：本地 AI 教练点评（Ollama + Qwen）
 
@@ -89,8 +115,30 @@ ollama pull qwen2.5:7b        # 约 4.7 GB；内存充足可换 qwen2.5:14b，�
 RallyIQ 会自动连接 `http://localhost:11434`（`RALLYIQ_OLLAMA_URL` 可改）。没有装 Ollama 时，报告改用离线规则模板并注明原因；
 也可以改用 Claude API：`pip install -e '.[coach]'` 并设置 `ANTHROPIC_API_KEY`（按调用付费）。详见 `rallyiq/report/README.md`。
 
+### 持续训练羽毛球模型（可选）
+
+自带的羽毛球模型是在职业比赛转播上训练的，换到自己的机位（侧面、低机位、远端小球）会漏球。
+`scripts/shuttle_loop.py` 用你自己标的帧继续微调，**只有在同一批验证帧上明显变好才替换**现役模型，随时可以回退：
+
+```bash
+source .venv/bin/activate
+pip install -e '.[dev]'                       # 标注工具和评估用到 pyyaml
+python scripts/shuttle_loop.py --status       # 现役模型、历史、下一段建议标什么（附完整命令）
+python -m evaluation.tools.label_tool <片段名> --prefill <预测文件>   # 标注：模型预测打底，人工修正（按键说明见文件开头）
+python scripts/shuttle_loop.py                # 跑一轮：训练 → 与现役模型在同样的验证帧上比较 → 变好才替换
+python scripts/shuttle_loop.py --rollback     # 不满意，回到上一个模型
+python scripts/shuttle_loop.py --check weights/shuttle/loop/round-002.pt   # 不训练，只列出模型和标注对不上的帧
+```
+
+- 每个片段按时间切分：前 70% 训练、后 30% 验证；`--holdout 片段名` 让整段只当验证集（会被记住）。
+- 替换条件：F1@0.2 至少提高 0.01，且精确率下降不超过 0.03。被采用的模型复制为 `weights/shuttle/heatmap.pt`，之后的分析默认用它。
+- 每轮结束会列出"模型和标注对不上"的帧并打印标注工具的 `--check` 命令，逐帧核对标注错误。
+- 所有模型和每轮记录在 `weights/shuttle/loop/`（`history.md`、`state.json`）。标注没变化时不会重复训练（`--force` 强制）。
+- 训练在 Mac 上用 MPS（Apple Silicon GPU），一轮约 20–40 分钟。片段默认从 `~/rallyiq-data/bwf/clips` 读取（`--clips` 可改）。
+
 ### 常见问题
 
+- **Mac 上 `python3` 版本太旧？** macOS 自带的是 3.9。`brew install python@3.12` 之后 `setup_local.sh` 会自动找 `python3.12`；也可以 `PYTHON=python3.12 bash scripts/setup_local.sh` 指定。
 - **怎么确认用上了 GPU？** `setup_local.sh` 结束前会打印 `torch … -> mps / cuda / cpu` 和 ONNX Runtime 的可用后端。
   Apple Silicon 第一次分析时 CoreML 要编译姿态模型，会多等一两分钟，之后有缓存（`~/.cache/rallyiq/coreml`）。
 - **NVIDIA 显卡上的姿态模型**：默认的 `onnxruntime` 只用 CPU；需要时 `pip install onnxruntime-gpu`（先 `pip uninstall onnxruntime`）。
@@ -177,7 +225,7 @@ RallyIQ 不要求使用者按固定的机位、高度、帧率或流程录像。
 | API | FastAPI |
 | 结构化数据 | SQLite 起步，可迁移到 PostgreSQL |
 | 视频与模型权重 | 本地文件系统或私有对象存储 |
-| 前端工作台 | Next.js / React，视频叠加层用 Canvas / WebGL 绘制 |
+| 前端工作台 | React + Vite（TypeScript），视频叠加层用 Canvas 绘制 |
 
 ### 模块划分
 
@@ -200,7 +248,7 @@ rallyiq/perception/calibration/ 球场标定阶段
 rallyiq/perception/players/     球员姿态与跟踪阶段
 rallyiq/perception/shuttle/     羽毛球轨迹阶段
 rallyiq/events/                 回合与击球候选阶段
-rallyiq/strokes/                击球类型分类阶段（12 类，规则 v1；可选接入 BST 模型）
+rallyiq/strokes/                击球类型分类阶段（12 类；默认内置学习模型 strokes_v3，可换规则 / scikit-learn / BST）
 rallyiq/ingest/                 视频输入评估（机位、帧率、画质、各项输出可信度）
 rallyiq/memory/                 个人长期档案：只追加的分析事件日志、球员画像与训练复测、对手习惯报告
 rallyiq/review/                 难例收集：人工修正按视频条件分组，找出最弱场景
@@ -260,7 +308,7 @@ AI 教练默认用本机免费的开源模型（Ollama + `qwen2.5:7b`：`brew in
 
 ### 首版不做（推出后再加）
 
-个人长期档案与对手报告、抽象 / 双屏视图、球拍检测、模型训练与微调。
+球拍检测、双屏视图。（个人档案、对手报告、纯抽象视图和羽毛球模型微调已在推出后加入。）
 
 > 双打已提前接入：自动识别单 / 双打，四人稳定 ID 与 A/B 队伍（A = P1+P3，B = P2+P4），击球按队伍交替归属，双打边界线，热力图可按球员或队伍查看；识别不对时可在网页上强制指定。
 
@@ -279,7 +327,7 @@ AI 教练默认用本机免费的开源模型（Ollama + `qwen2.5:7b`：`brew in
 - 每次使用时的人工修正自动记录为难例，积累成评估集，按机位、帧率、场馆和光照分组。（已实现：`rallyiq/review`，首页“难例与薄弱场景”）
 - 每周挑出最弱的场景（例如远端小球、侧面机位、30 fps）针对性改进，并用同一评估集对比前后。
 - 当击球检测 F1 ≥ 0.90、可见球召回 ≥ 0.90（同一球员 ±3 帧匹配；1080p 下 ≤ 12 像素算命中）时，该功能才去掉"待复核"标记。
-- 击球类型分类已提前接入（规则 v1，见 `rallyiq/strokes/README.md`），所有类型默认待复核，直到真实标注验证；之后依次加入个人档案、对手报告和 AI Coach。
+- 击球类型分类已接入（默认是在 ShuttleSet 上训练的 `strokes_v3`，见 `rallyiq/strokes/README.md`），所有类型默认待复核，直到在真实标注上验证；个人档案、对手报告和 AI 教练也已接入。
 
 ### 算力与预算
 

@@ -175,7 +175,11 @@ def _detector(ctx: StageContext):
     for k in ("device", "batch_size", "peak_threshold", "top_k", "target_fps", "ensemble"):
         if k in cfg:
             setattr(det_cfg, k, cfg[k])
-    return HeatmapShuttleDetector(weights, det_cfg), det_cfg
+    det = HeatmapShuttleDetector(weights, det_cfg)
+    if "peak_threshold" not in cfg and det.recommended_threshold is not None:
+        det_cfg.peak_threshold = det.recommended_threshold  # det.cfg is det_cfg
+        log.info("shuttle: peak threshold %.2f from %s", det_cfg.peak_threshold, weights.name)
+    return det, det_cfg
 
 
 def _detect(ctx: StageContext, detector, progress):

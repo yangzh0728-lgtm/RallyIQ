@@ -91,8 +91,13 @@ def apply_corrections(
             if s is None:
                 skipped.append(c.correction_id)
                 continue
-            # Only the stroke label changes: the hit itself keeps its own status/source.
+            # Only the stroke label changes: the hit itself keeps its own status/source. The measured
+            # layers of the description (hand, direction, contact) stay; the rest follows the new type.
+            from ..strokes.detail import retype
+
+            old = s.stroke.detail if s.stroke else None
             s.shot_type, s.stroke = p["shot_type"], _human_stroke(p["shot_type"])
+            s.stroke.detail = retype(old, p["shot_type"])
         elif c.op in ("delete_shot", "set_hitter", "move_shot", "confirm_shot"):
             s = shots.get(p["shot_id"])
             if s is None:

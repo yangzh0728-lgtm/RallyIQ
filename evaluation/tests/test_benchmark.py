@@ -217,3 +217,41 @@ def test_label_session_resume_position():
     s.jump_uncertain(forward=False)
     assert doc["review_frame"] == 20 and s.resume_frame(pre) == 20
     schema.validate(doc)
+
+
+def test_label_session_check_mode():
+    fps = 30.0
+    t = lambda f: int(round(START + f * 1000 / fps))  # noqa: E731
+    doc = schema.empty_doc("x", "label", 1920, 1080, fps, (START, START + 10_000))
+    doc["shuttle"] = [{"t_ms": t(f), "visible": False, "xy": None} for f in range(50)]
+    doc["review_frame"] = 49
+    check = {"frames": [
+        {"clip": "x", "frame": 10, "kind": "fp", "score": 0.6, "xy": [100.0, 200.0], "label": None},
+        {"clip": "x", "frame": 30, "kind": "fp", "score": 0.4, "xy": [110.0, 210.0], "label": None},
+        {"clip": "x", "frame": 40, "kind": "fn", "score": None, "xy": None, "label": [5.0, 5.0]},
+        {"clip": "other", "frame": 20, "kind": "fp", "score": 0.9, "xy": [1.0, 1.0], "label": None},
+    ]}
+    s = Session(doc, START, 100)
+    assert s.load_check(check, "x", "round-002-check.json") == 10
+    assert s.uncertain == [10, 30, 40]
+    s.seek(10)
+    assert s.accept_suggestion() and s.frame == 30  # takes the model's point, jumps to the next check
+    assert s.shuttle_here()["visible"] is False
+    s.seek(10)
+    assert s.shuttle_here()["xy"] == [100.0, 200.0]
+    s.seek(30)
+    s.shuttle_hidden()
+    assert s.frame == 40 and not s.accept_suggestion()  # no model point on a miss
+    assert doc["check_progress"] == {"file": "round-002-check.json", "frame": 40}
+    assert doc["review_frame"] == 49  # the prefill review position is left alone
+    s2 = Session(doc, START, 100)
+    assert s2.load_check(check, "x", "round-002-check.json") == 40  # resume
+    assert s2.load_check(check, "x", "round-003-check.json") == 10  # a new check file starts over
+    schema.validate(doc)
+
+
+def test_load_dir_skips_macos_metadata_files(tmp_path):
+    doc = schema.empty_doc("c", "label", 1920, 1080, 30.0, (0, 1000))
+    schema.save(doc, tmp_path / "c.json")
+    (tmp_path / "._c.json").write_bytes(b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X        \xa3")
+    assert list(schema.load_dir(tmp_path)) == ["c"]

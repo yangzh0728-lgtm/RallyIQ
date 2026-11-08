@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { applyCorrections } from "./corrections";
+import { compareRows, leadSeries, rallyLog } from "./flow";
 import { generateMock } from "./mock";
 import { clock, fmtValue, indexStats, isMetric, mockCoach, mockStats, reportMarkdown, styleMarkdown } from "./report";
-import type { PlayerStyle } from "./types";
+import type { EventsResult, PlayerStyle } from "./types";
 
 describe("report (mock)", () => {
   const a = generateMock("demo");
@@ -75,5 +76,40 @@ describe("playing style", () => {
     expect(reportMarkdown("t", { ...stats, styles: [style] }, null, false)).toContain("## 打法风格");
     expect(clock(61000)).toBe("01:01");
     expect(clock(3661000)).toBe("1:01:01");
+  });
+});
+
+describe("match flow", () => {
+  const ev = (winners: (string | null)[]): EventsResult => ({
+    schema_version: "0.1.0",
+    video_id: "v",
+    match_format: "singles",
+    shots: winners.flatMap((_, i) =>
+      ["P1", "P2"].map((h, k) => ({
+        shot_id: `s${i}_${k}`, rally_id: `r${i}`, frame: i * 300 + 15 + k * 24, t_ms: i * 10000 + 500 + k * 800, hitter: h,
+        confidence: 0.9, status: "needs_review", source: "model", shuttle_px: null, hitter_court: null, shot_type: k ? "smash" : null,
+      })),
+    ),
+    rallies: winners.map((w, i) => ({
+      rally_id: `r${i}`, start_frame: i * 300, end_frame: i * 300 + 60, start_ms: i * 10000, end_ms: i * 10000 + 2000,
+      shot_ids: [`s${i}_0`, `s${i}_1`], end_reason: "unknown", winner: w, confidence: 0.9, status: "needs_review", source: "model",
+    })),
+  }) as unknown as EventsResult;
+
+  it("rebuilds games with the backend rules (21, win by 2)", () => {
+    const { rallies, games } = rallyLog(ev([...Array(21).fill("P2"), "P1", null]), (t) => (t === "smash" ? "杀球" : t));
+    expect(games[0]).toEqual({ game_no: 1, score: { P1: 0, P2: 21 }, winner: "P2", rallies: 21 });
+    expect(rallies[21].score).toEqual({ P1: 1, P2: 0 });
+    expect(rallies[22].score).toBeNull();
+    expect(rallies[0].last_shot_type).toBe("杀球");
+    expect(rallies[0].mean_interval_s).toBe(0.8);
+    expect(leadSeries(rallies, ["P1", "P2"]).map((x) => x.lead).slice(0, 2)).toEqual([-1, -2]);
+  });
+
+  it("demo stats carry a rally log and a comparison", () => {
+    const a = generateMock("demo");
+    const stats = mockStats(a.events, a.overlay);
+    expect(stats.rallies).toHaveLength(a.events.rallies.length);
+    expect(compareRows(stats.players).every((r) => r.values.length === 2)).toBe(true);
   });
 });

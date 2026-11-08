@@ -33,7 +33,12 @@ are in milliseconds, so nothing depends on the frame rate.
    the four players; if that player's team just hit and a player of the other team
    is nearly as close (within `2·hitter_margin`), the other team's player is used
    and the hit carries `hitter_from_alternation`.
-7. **Serve fallback.** If the shuttle is first seen already at the server's racket,
+7. **Floor contact (rules only).** A candidate where the shuttle is below `floor_contact_h` (0.3) of the
+   hitter's height above their ankles *and* arrives slower than `floor_max_speed_in` (1.1 H/s) is a pickup,
+   a bounce or a shuttle pushed along the floor between rallies, and is rejected (`floor_contact`). Optional,
+   off by default: `max_reach_torso` (wrist-to-shuttle distance in torso lengths, `out_of_reach`) and
+   `require_observed_contact` (no tracker-filled contact point). Both lowered hit F1 on the ShuttleSet test clips.
+8. **Serve fallback.** If the shuttle is first seen already at the server's racket,
    a hit is proposed there for review.
 
 ## Confidence and status
@@ -59,6 +64,8 @@ Reason codes (stable strings for the review UI):
 | `inferred_from_rally_start` | serve proposed from the rally start, not seen |
 | `no_pose_data` | no pose near this frame; hitter unknown |
 | `hitter_identity_unresolved` | nearest track has no P1–P4 identity yet |
+| `floor_contact` | shuttle arrived slowly at the hitter's feet (rejected; rules only) |
+| `out_of_reach` | shuttle beyond `max_reach_torso` of the nearest wrist (rejected; gate off by default) |
 | `no_hits_detected` / `possible_missed_hit` / `hits_need_review` | rally-level |
 
 ## Synthetic benchmark
@@ -97,10 +104,10 @@ ShuttleSet, 2026-11-07, shuttle scorer `hit_scorer_v1e` (±3 frames, same side):
 
 | | precision | recall | hit F1 |
 | --- | --- | --- | --- |
-| training matches, out of fold (59 clips): shuttle only | 77.7% | 62.7% | 69.4% |
-| + pose recovery | 77.5% | 65.7% | **71.1%** |
+| training matches, out of fold (85 clips, 19 matches): shuttle only | 77.3% | 64.3% | 70.2% |
+| + pose recovery | 77.3% | 66.8% | **71.7%** |
 | 6 held-out matches (14 clips): shuttle only | 80.5% | 61.1% | 69.5% |
-| + pose recovery | 77.6% | 66.1% | **71.4%** |
+| + pose recovery | 78.7% | 66.1% | **71.9%** |
 
 Most of the gain is the same-side gap. Serves are often missed because the pose stage has no pose
 for the server around the serve (between-rally camera cuts), so pose recovery finds few of them.

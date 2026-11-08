@@ -142,6 +142,27 @@ export interface StrokeInfo {
   candidates?: ShotTypeScore[];
   reasons?: string[];
   evidence?: Record<string, number | null>;
+  detail?: StrokeDetail | null;
+}
+
+/** One layer of a shot's description: model = learned, measured = from positions, rule = inferred. */
+export interface StrokeAttr {
+  value: string;
+  p?: number | null;
+  source: "model" | "measured" | "rule";
+}
+
+export interface StrokeDetail {
+  family?: string | null;
+  subtype?: string | null;
+  hand?: StrokeAttr | null; // forehand | backhand | around_head
+  contact?: StrokeAttr | null; // high | low
+  direction?: StrokeAttr | null; // straight | cross
+  pace?: StrokeAttr | null; // fast | medium | slow
+  role?: StrokeAttr | null; // attacking | neutral | defensive
+  intent?: StrokeAttr | null; // attack | move | control | defend | transition
+  description_zh?: string;
+  source?: string | null;
 }
 
 export interface ShotStroke {
@@ -339,7 +360,36 @@ export interface MatchStats {
   distributions: Distribution[];
   players: PlayerStats[];
   styles?: PlayerStyle[];
+  /** Rally log in time order (absent in reports from older versions). */
+  rallies?: RallyLine[];
+  /** Games rebuilt from the entered rally winners (21 points, win by 2, cap 30). */
+  games?: GameScore[];
   caveats: string[];
+}
+
+export interface RallyLine {
+  rally_no: number;
+  rally_id: string;
+  start_ms: number;
+  end_ms: number;
+  shots: number;
+  duration_s: number;
+  server: PlayerId | TeamId | null;
+  winner: PlayerId | TeamId | null;
+  last_hitter: PlayerId | null;
+  last_shot_type: string | null;
+  mean_interval_s: number | null;
+  game_no: number | null;
+  /** Game score after this rally, by side; null when the winner is not entered. */
+  score: Record<string, number> | null;
+  status: Status;
+}
+
+export interface GameScore {
+  game_no: number;
+  score: Record<string, number>;
+  winner: PlayerId | TeamId | null;
+  rallies: number;
 }
 
 export type InsightKind = "strength" | "weakness" | "pattern" | "tactic" | "data_quality";

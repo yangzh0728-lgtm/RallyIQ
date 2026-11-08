@@ -33,6 +33,8 @@ from pathlib import Path
 
 import numpy as np
 
+from ..gbt import GBT
+from ..gbt import export_hgb as gbt_export
 from .types import HitEvent, PoseFrame, RallySegment, ReviewStatus
 
 BUNDLED = Path(__file__).with_name("models") / "pose_hits.json"
@@ -171,11 +173,8 @@ def window_features(series: SideSeries, t_ms: float, frame_ms: float) -> list[fl
 
 # ------------------------------------------------------------------ model
 class PoseHitModel:
-    """Gradient-boosted trees exported to JSON (``kind: "gbt"``), evaluated with numpy.
-
-    Each tree: parallel node arrays ``f`` (feature), ``t`` (threshold, go left when x <= t),
-    ``m`` (NaN goes left), ``l`` / ``r`` (children), ``leaf`` and ``v`` (leaf value). The raw score is
-    ``baseline`` + the sum of the trees; the probability is its sigmoid (same as scikit-learn's
+    """Gradient-boosted trees exported to JSON (``kind: "gbt"``), evaluated with numpy by
+    :class:`rallyiq.gbt.GBT`: ``baseline`` + the sum of ``trees``, through a sigmoid (as scikit-learn's
     ``HistGradientBoostingClassifier``, from which ``scripts/learn_pose_hits.py`` exports it)."""
 
     def __init__(self, spec: dict):
@@ -184,26 +183,11 @@ class PoseHitModel:
         if spec.get("kind") != "gbt":
             raise ValueError(f"unknown pose hit model kind {spec.get('kind')!r}")
         self.spec = spec
-        self.baseline = float(spec["baseline"])
-        self.trees = [{k: np.asarray(v) for k, v in t.items()} for t in spec["trees"]]
+        self.gbt = GBT({"classes": [0, 1], "baseline": [float(spec["baseline"])], "trees": [[t] for t in spec["trees"]]})
         self.thresholds: dict[str, float] = dict(spec.get("thresholds") or {})
 
     def raw(self, X) -> np.ndarray:
-        X = np.asarray(X, float).reshape(-1, len(FEATURES))
-        out = np.full(len(X), self.baseline)
-        rows = np.arange(len(X))
-        for t in self.trees:
-            node = np.zeros(len(X), dtype=int)
-            while True:
-                live = ~t["leaf"][node].astype(bool)
-                if not live.any():
-                    break
-                n = node[live]
-                x = X[rows[live], t["f"][n]]
-                left = np.where(np.isnan(x), t["m"][n].astype(bool), x <= t["t"][n])
-                node[live] = np.where(left, t["l"][n], t["r"][n])
-            out += t["v"][node]
-        return out
+        return self.gbt.raw(np.asarray(X, float).reshape(-1, len(FEATURES)))[:, 0]
 
     def predict(self, X) -> np.ndarray:
         return 1.0 / (1.0 + np.exp(-self.raw(X)))
@@ -211,18 +195,9 @@ class PoseHitModel:
 
 def export_hgb(model, thresholds: dict | None = None, meta: dict | None = None) -> dict:
     """JSON spec of a fitted binary ``HistGradientBoostingClassifier`` (numerical features only)."""
-    trees = []
-    for (pred,) in model._predictors:
-        nd = pred.nodes
-        trees.append({
-            "f": nd["feature_idx"].astype(int).tolist(), "t": [float(v) for v in nd["num_threshold"]],
-            "m": nd["missing_go_to_left"].astype(int).tolist(), "l": nd["left"].astype(int).tolist(),
-            "r": nd["right"].astype(int).tolist(), "leaf": nd["is_leaf"].astype(int).tolist(),
-            "v": [round(float(v), 6) for v in nd["value"]],
-        })
-    base = np.asarray(model._baseline_prediction).ravel()
-    return {"kind": "gbt", "features": list(FEATURES), "baseline": float(base[0]), "trees": trees,
-            "thresholds": dict(thresholds or {}), **(meta or {})}
+    g = gbt_export(model)
+    return {"kind": "gbt", "features": list(FEATURES), "baseline": g["baseline"][0],
+            "trees": [it[0] for it in g["trees"]], "thresholds": dict(thresholds or {}), **(meta or {})}
 
 
 @lru_cache(maxsize=8)

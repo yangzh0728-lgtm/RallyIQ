@@ -268,6 +268,63 @@
       "title": "Distribution",
       "type": "object"
     },
+    "GameScore": {
+      "additionalProperties": false,
+      "description": "One game (\u5c40) reconstructed from the entered rally winners (21 points, win by 2, cap 30).",
+      "properties": {
+        "game_no": {
+          "minimum": 1,
+          "title": "Game No",
+          "type": "integer"
+        },
+        "score": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Score",
+          "type": "object"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "null while the game is unfinished",
+          "title": "Winner"
+        },
+        "rallies": {
+          "description": "rallies with a known winner in this game",
+          "minimum": 0,
+          "title": "Rallies",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "game_no",
+        "score",
+        "rallies"
+      ],
+      "title": "GameScore",
+      "type": "object"
+    },
     "MatchStats": {
       "additionalProperties": false,
       "description": "Post-match statistics computed from effective events + player tracks.\n\nPure function of the inputs (no model is called). ``fingerprint`` changes\nwhenever the inputs change, so a cached coach report can be marked stale.",
@@ -348,6 +405,22 @@
             "$ref": "#/$defs/PlayerStyle"
           },
           "title": "Styles",
+          "type": "array"
+        },
+        "rallies": {
+          "description": "rally log in time order",
+          "items": {
+            "$ref": "#/$defs/RallyLine"
+          },
+          "title": "Rallies",
+          "type": "array"
+        },
+        "games": {
+          "description": "games reconstructed from entered winners",
+          "items": {
+            "$ref": "#/$defs/GameScore"
+          },
+          "title": "Games",
           "type": "array"
         },
         "caveats": {
@@ -731,6 +804,179 @@
       "title": "PlayerStyle",
       "type": "object"
     },
+    "RallyLine": {
+      "additionalProperties": false,
+      "description": "One rally of the match as the report lists it (rally log, score flow, tempo).",
+      "properties": {
+        "rally_no": {
+          "description": "1-based, in time order",
+          "minimum": 1,
+          "title": "Rally No",
+          "type": "integer"
+        },
+        "rally_id": {
+          "title": "Rally Id",
+          "type": "string"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "shots": {
+          "minimum": 0,
+          "title": "Shots",
+          "type": "integer"
+        },
+        "duration_s": {
+          "title": "Duration S",
+          "type": "number"
+        },
+        "server": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "side of the first shot's hitter (team in doubles)",
+          "title": "Server"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "A",
+                "B"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Winner"
+        },
+        "last_hitter": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Hitter"
+        },
+        "last_shot_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Chinese label of the last shot's stroke type",
+          "title": "Last Shot Type"
+        },
+        "mean_interval_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mean time between consecutive hits, s",
+          "title": "Mean Interval S"
+        },
+        "game_no": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "game (\u5c40) this rally belongs to, from the running score",
+          "title": "Game No"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "game score after this rally, by side; null when the winner is not entered",
+          "title": "Score"
+        },
+        "status": {
+          "$ref": "#/$defs/Status",
+          "default": "needs_review"
+        }
+      },
+      "required": [
+        "rally_no",
+        "rally_id",
+        "start_ms",
+        "end_ms",
+        "shots",
+        "duration_s"
+      ],
+      "title": "RallyLine",
+      "type": "object"
+    },
     "ReplyHabit": {
       "additionalProperties": false,
       "description": "Next-shot tendency: after the opponent plays ``after``, this player most often replies ``reply``.",
@@ -1019,6 +1265,32 @@
           ],
           "title": "Shot Type",
           "type": "string"
+        },
+        "shot_label_zh": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "stroke with hand/direction, e.g. '\u6b63\u624b\u76f4\u7ebf\u6740\u7403'",
+          "title": "Shot Label Zh"
+        },
+        "shot_detail_zh": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the layered description (StrokeDetail)",
+          "title": "Shot Detail Zh"
         },
         "hitter_zone": {
           "description": "where the hitter stood, e.g. '\u540e\u573a\u5de6\u4fa7' (own view)",

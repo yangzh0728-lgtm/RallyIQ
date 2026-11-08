@@ -260,6 +260,32 @@ class ShotTypeScore(Contract):
     p: Confidence
 
 
+class StrokeAttr(Contract):
+    """One layer of a shot's description, and where it comes from."""
+
+    value: str
+    p: Confidence | None = Field(default=None, description="model probability; null when measured or a rule")
+    source: Literal["model", "measured", "rule"] = Field(
+        description="model = learned from ShuttleSet labels; measured = from tracked positions; "
+        "rule = a coach's reading of the other layers (no labels exist to learn it)"
+    )
+
+
+class StrokeDetail(Contract):
+    """Layered description of a shot on top of its stroke type (see ``rallyiq.strokes.detail``)."""
+
+    family: str | None = Field(default=None, description="clear smash drop drive block push lift net_shot net_kill serve")
+    subtype: str | None = Field(default=None, description="cross_court_net_shot, short_serve or long_serve; else null")
+    hand: StrokeAttr | None = Field(default=None, description="forehand, backhand or around_head")
+    contact: StrokeAttr | None = Field(default=None, description="high (above the net) or low")
+    direction: StrokeAttr | None = Field(default=None, description="straight or cross")
+    pace: StrokeAttr | None = Field(default=None, description="fast, medium or slow for this family")
+    role: StrokeAttr | None = Field(default=None, description="attacking, neutral or defensive")
+    intent: StrokeAttr | None = Field(default=None, description="attack, move, control, defend or transition")
+    description_zh: str = ""
+    source: str | None = Field(default=None, description="attribute model name, e.g. attrs_v1")
+
+
 class StrokeInfo(Contract):
     """Stroke-type prediction (or human label) for one shot."""
 
@@ -273,6 +299,7 @@ class StrokeInfo(Contract):
     evidence: dict[str, float | None] = Field(
         default_factory=dict, description="measured features behind the prediction (null = not measurable)"
     )
+    detail: StrokeDetail | None = Field(default=None, description="hand, direction, contact, pace, role, intent")
 
 
 class ShotStroke(Contract):
@@ -630,6 +657,8 @@ class ShotMoment(Contract):
     t_ms: int = Field(ge=0)
     player_id: PlayerId
     shot_type: ShotType
+    shot_label_zh: str | None = Field(default=None, description="stroke with hand/direction, e.g. '正手直线杀球'")
+    shot_detail_zh: str | None = Field(default=None, description="the layered description (StrokeDetail)")
     hitter_zone: str = Field(description="where the hitter stood, e.g. '后场左侧' (own view)")
     hitter_pos: Point2 = Field(description="hitter (lateral, depth) m, own-half frame")
     opponent_id: PlayerId
@@ -650,6 +679,36 @@ class ShotMoment(Contract):
     why: str
     severity: float = Field(ge=0)
     confidence: MetricConfidence
+
+
+class RallyLine(Contract):
+    """One rally of the match as the report lists it (rally log, score flow, tempo)."""
+
+    rally_no: int = Field(ge=1, description="1-based, in time order")
+    rally_id: str
+    start_ms: int = Field(ge=0)
+    end_ms: int = Field(ge=0)
+    shots: int = Field(ge=0)
+    duration_s: float
+    server: PlayerId | TeamId | None = Field(default=None, description="side of the first shot's hitter (team in doubles)")
+    winner: PlayerId | TeamId | None = None
+    last_hitter: PlayerId | None = None
+    last_shot_type: str | None = Field(default=None, description="Chinese label of the last shot's stroke type")
+    mean_interval_s: float | None = Field(default=None, description="mean time between consecutive hits, s")
+    game_no: int | None = Field(default=None, description="game (局) this rally belongs to, from the running score")
+    score: dict[str, int] | None = Field(
+        default=None, description="game score after this rally, by side; null when the winner is not entered"
+    )
+    status: Status = Status.needs_review
+
+
+class GameScore(Contract):
+    """One game (局) reconstructed from the entered rally winners (21 points, win by 2, cap 30)."""
+
+    game_no: int = Field(ge=1)
+    score: dict[str, int]
+    winner: PlayerId | TeamId | None = Field(default=None, description="null while the game is unfinished")
+    rallies: int = Field(ge=0, description="rallies with a known winner in this game")
 
 
 class MatchStats(Contract):
@@ -673,6 +732,8 @@ class MatchStats(Contract):
     )
     styles: list[PlayerStyle] = Field(
         default_factory=list, description="playing style per player (singles) or team (doubles); needs stroke types")
+    rallies: list[RallyLine] = Field(default_factory=list, description="rally log in time order")
+    games: list[GameScore] = Field(default_factory=list, description="games reconstructed from entered winners")
     caveats: list[str] = Field(default_factory=list)
 
 
