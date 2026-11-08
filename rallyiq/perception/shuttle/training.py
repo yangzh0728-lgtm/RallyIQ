@@ -212,13 +212,16 @@ def _set_bn_eval(net) -> None:
 
 
 def evaluate(net, data: Sequence[ClipFrames], cfg: TrainConfig, device,
-             mistakes: list[dict] | None = None) -> tuple[float, dict[str, dict[str, float]]]:
+             mistakes: list[dict] | None = None,
+             peaks: dict[str, dict[int, tuple[float, float, float] | None]] | None = None,
+             ) -> tuple[float, dict[str, dict[str, float]]]:
     """Centre-weighted sliding pass over every labeled frame; detection P/R/F1 per threshold.
 
     With ``mistakes``, every frame where the model disagrees with the label at ``cfg.select_at``
     is appended: ``kind`` is ``fp`` (labeled not visible, model fires), ``fn`` (labeled
     visible, no peak) or ``wrong`` (peak too far from the label); ``xy`` is the model's peak
-    and ``label`` the labeled position, both in source pixels."""
+    and ``label`` the labeled position, both in source pixels. With ``peaks``, the model's best
+    peak ``(x, y, score)`` (or None) of every evaluated frame is stored per clip id."""
     import torch
 
     from .detector import ensemble_weights
@@ -234,6 +237,7 @@ def evaluate(net, data: Sequence[ClipFrames], cfg: TrainConfig, device,
         acc: dict[int, np.ndarray] = {}
         acc_w: dict[int, float] = {}
         tol = cfg.tol_px * cf.height / 1080.0
+        frame_out = None if peaks is None else peaks.setdefault(cf.clip.video.stem, {})
         with torch.no_grad():
             for b0 in range(0, len(cf.starts), cfg.batch_size):
                 starts = cf.starts[b0:b0 + cfg.batch_size]
@@ -258,6 +262,8 @@ def evaluate(net, data: Sequence[ClipFrames], cfg: TrainConfig, device,
                 px = (peaks[0][0] + 0.5) * cf.width / INPUT_WIDTH - 0.5
                 py = (peaks[0][1] + 0.5) * cf.height / INPUT_HEIGHT - 0.5
                 score = float(peaks[0][2])
+            if frame_out is not None:
+                frame_out[int(f)] = None if score is None else (round(px, 1), round(py, 1), round(score, 3))
             for t in cfg.thresholds:
                 c = counts[t]
                 fired = score is not None and score >= t
@@ -410,9 +416,11 @@ def train(
 
 
 def disagreements(weights: Path, clips: Sequence[TrainClip], cfg: TrainConfig | None = None,
-                  progress: Callable[[str], None] = print) -> tuple[dict[str, dict[str, float]], list[dict]]:
+                  progress: Callable[[str], None] = print,
+                  peaks: dict[str, dict[int, tuple[float, float, float] | None]] | None = None,
+                  ) -> tuple[dict[str, dict[str, float]], list[dict]]:
     """Run a checkpoint over the labeled frames of ``clips``: scores and per-frame mistakes
-    at ``cfg.select_at`` (see :func:`evaluate`)."""
+    at ``cfg.select_at`` (see :func:`evaluate`), and optionally every frame's best peak."""
     from .detector import pick_device
 
     cfg = cfg or TrainConfig()
@@ -424,7 +432,7 @@ def disagreements(weights: Path, clips: Sequence[TrainClip], cfg: TrainConfig | 
     res: dict[str, dict[str, float]] = {}
     for c in clips:  # one clip at a time: a whole clip decoded is ~1 GB
         cf = ClipFrames(c, params["seq_len"], params["bg_mode"] == "concat")
-        _loss, r = evaluate(net, [cf], cfg, device, mistakes)
+        _loss, r = evaluate(net, [cf], cfg, device, mistakes, peaks)
         progress(f"{c.clip_id}: " + _fmt(r))
         for t, v in r.items():
             agg = res.setdefault(t, {"tp": 0, "fp": 0, "fn": 0, "tn": 0})
