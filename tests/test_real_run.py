@@ -71,10 +71,13 @@ def test_rerun_stages_picks_up_neighbour_courts(tmp_path, monkeypatch):
 
     out = tmp_path / "out"
     assert real_run.main(["--clips", str(clips), "--out", str(out)]) == 0
+    art = Path(json.loads((out / "results.json").read_text())[0]["artifacts"])
+    players_before = (art / "players.json").stat().st_mtime_ns
     (clips / "c1.meta.json").write_text(json.dumps(meta | {"neighbour_courts": [[-7.3, 0], [7.3, 0]]}))
     assert rerun_stages.main(["--out", str(out), "--clips", str(clips), "--no-overlay"]) == 0
     res = json.loads((out / "results.json").read_text())[0]
     assert res["state"] == "succeeded" and res["rerun_from"] == "calibration"
+    assert (Path(res["artifacts"]) / "players.json").stat().st_mtime_ns == players_before  # not re-run
     seg = json.loads((Path(res["artifacts"]) / "calibration.json").read_text())["segments"][0]
     assert len(seg["other_courts"]) == 2
     assert seg["other_courts"][0][3][0] < seg["image_corners"][3][0]  # left neighbour drawn left of ours
