@@ -25,6 +25,7 @@ from typing import Any, Protocol
 
 _SCHEMA_LOCK = 0x5241_4C4C  # pg advisory lock key for schema creation ("RALL")
 
+
 class Row(Protocol):
     def __getitem__(self, key: str) -> Any: ...
 
