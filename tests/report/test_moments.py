@@ -98,12 +98,11 @@ def test_rules_find_each_shot_with_time_and_positions(match):
     assert [m.moment_id for m in shot_moments(events, players, FPS)] == ["m1", "m2", "m3", "m4"]  # video order
 
 
-def test_no_moments_without_strokes_tracks_or_in_doubles(match):
+def test_no_moments_without_strokes_or_tracks(match):
     events, players = match
     untyped = events.model_copy(update={"shots": [s.model_copy(update={"shot_type": None}) for s in events.shots]})
     assert shot_moments(untyped, players, FPS) == []
     assert shot_moments(events, None, FPS) == []
-    assert shot_moments(events.model_copy(update={"match_format": "doubles"}), players, FPS) == []
 
 
 def test_won_rally_is_not_flagged():
