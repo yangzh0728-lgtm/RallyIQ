@@ -44,3 +44,23 @@ def db_url(request, tmp_path):
     yield f"{root}/{name}"
     with psycopg.connect(base, autocommit=True) as c:
         c.execute(f"DROP DATABASE IF EXISTS {name} WITH (FORCE)")
+
+
+@pytest.fixture(autouse=True)
+def _no_bundled_hit_scorer(request, monkeypatch, tmp_path):
+    """The bundled learned hit scorer (rallyiq/events/models/hit_scorer.json) is trained on broadcast footage
+    and replaces the rule confidences whenever ``hit_scorer`` is "auto". Tests of the rules run on synthetic
+    tracks, so they use the rules unless marked ``bundled_hit_scorer``."""
+    if request.node.get_closest_marker("bundled_hit_scorer"):
+        yield
+        return
+    from rallyiq.events import learned
+
+    monkeypatch.setattr(learned, "BUNDLED", tmp_path / "no_hit_scorer.json")
+    learned._load.cache_clear()
+    yield
+    learned._load.cache_clear()
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "bundled_hit_scorer: run with the bundled learned hit scorer")
