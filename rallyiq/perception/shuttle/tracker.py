@@ -113,6 +113,13 @@ class TrackerConfig:
     # dropped when it is not wholly inside our own air space.
     drop_idle_shared: bool = True
     idle_rest_min_frac: float = 0.5  # share of its points that must pass ``rest``
+    # Fixed scene features (a duct tip, a light, a poster corner) fire on many frames in
+    # the same few pixels, but jitter or blink too much for the static-spot test. Image
+    # cells of ``hot_cell_px`` that hold a candidate on more than ``hot_s`` seconds (and
+    # ``hot_frac`` of the video) are dropped, with their 8 neighbours. 0 disables.
+    hot_cell_px: float = 16.0
+    hot_s: float = 2.5
+    hot_frac: float = 0.01
 
 
 @dataclass
@@ -191,15 +198,19 @@ class _Tracklet:
 class ShuttleTracker:
     def __init__(self, fps: float, width: int, height: int, config: TrackerConfig | None = None,
                  region: RegionFn | None = None, support: SupportFn | None = None,
-                 rest: RestFn | None = None):
+                 rest: RestFn | None = None, strict_support: SupportFn | None = None):
         """``region`` / ``support`` lock the tracker onto the target court when
-        several matches are in view (see ``rallyiq.perception.target_court``)."""
+        several matches are in view (see ``rallyiq.perception.target_court``).
+        ``strict_support`` is a tighter racket-reach test that decides tracklets in air
+        shared with another court, where the loose ``support`` is reached too easily."""
         if fps <= 0:
             raise ValueError("fps must be > 0")
         self.fps = float(fps)
         self.width, self.height = int(width), int(height)
         self.cfg = config or TrackerConfig()
         self.region, self.support, self.rest = region, support, rest
+        self.strict_support = strict_support
+        self.hot_cells: set[tuple[int, int]] = set()  # fixed-feature cells, for diagnosis
         self.rejected_foreign = 0  # tracklets dropped as another court's shuttle
         # (start, end, n, mean region, supported, verdict) per linked tracklet, for diagnosis
         self.log: list[tuple[int, int, int, float | None, bool, str]] = []
@@ -221,6 +232,7 @@ class ShuttleTracker:
             f: [i for i, c in enumerate(candidates[f]) if c[2] >= self.cfg.weak_score]
             for f in candidates
         }
+        cands, index_map = self._drop_hot(cands, index_map, frame_count)
         tracklets = self._link(cands, index_map)
         spots = self._static_spots(tracklets)
         if spots:
@@ -244,6 +256,35 @@ class ShuttleTracker:
         points = self._fill(det)
         gaps = self._gaps(points, frame_count)
         return TrackResult(points=points, gaps=gaps, selected=selected)
+
+    # --------------------------------------------------------- fixed features
+
+    def hot_cell(self, x: float, y: float) -> tuple[int, int]:
+        c = self.cfg.hot_cell_px
+        return int(x // c), int(y // c)
+
+    def _drop_hot(
+        self, cands: dict[int, list[Candidate]], index_map: dict[int, list[int]], frame_count: int
+    ) -> tuple[dict[int, list[Candidate]], dict[int, list[int]]]:
+        """Drop candidates in cells that fire far more often than a moving shuttle can."""
+        if self.cfg.hot_s <= 0 or self.cfg.hot_cell_px <= 0:
+            return cands, index_map
+        frames_in: dict[tuple[int, int], int] = {}
+        for cs in cands.values():
+            for cell in {self.hot_cell(x, y) for x, y, _ in cs}:
+                frames_in[cell] = frames_in.get(cell, 0) + 1
+        need = max(self.cfg.hot_s * self.fps, self.cfg.hot_frac * max(frame_count, len(cands)))
+        hot = {c for c, n in frames_in.items() if n > need}
+        if not hot:
+            return cands, index_map
+        self.hot_cells = {(cx + dx, cy + dy) for cx, cy in hot for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+        kept_c: dict[int, list[Candidate]] = {}
+        kept_i: dict[int, list[int]] = {}
+        for f, cs in cands.items():
+            keep = [k for k, c in enumerate(cs) if self.hot_cell(c[0], c[1]) not in self.hot_cells]
+            kept_c[f] = [cs[k] for k in keep]
+            kept_i[f] = [index_map[f][k] for k in keep]
+        return kept_c, kept_i
 
     # ------------------------------------------------------------ static spots
 
@@ -359,6 +400,9 @@ class ShuttleTracker:
                 t.supported = any(self.support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
             if t.region:
                 m = t.mean_region()
+                if t.supported and self.strict_support is not None and m < self.cfg.region_ambiguous_mean:
+                    # Shared air: a loose brush past a big near player is not enough.
+                    t.supported = any(self.strict_support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
                 foreign = m < self.cfg.region_min_mean and not (t.supported and m > 0)
                 ambiguous = m < self.cfg.region_ambiguous_mean and not t.supported and self.support is not None
                 if foreign or ambiguous:

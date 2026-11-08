@@ -323,3 +323,56 @@ def test_still_object_kept_only_where_a_shuttle_can_rest():
     assert not duct.track(cands, 30).points  # a duct tip in our air space, near a big near player
     flying = {f: [(500.0 + 20 * f, 400.0 - 5 * f, 0.9)] for f in range(30)}
     assert duct.track(flying, 30).points  # moving shuttles are not judged by rest at all
+
+
+def test_blinking_fixed_feature_is_dropped_and_crossing_flight_survives():
+    """A duct tip fires on two frames in three, jittering a few px: too unsteady for the
+    static-spot test, but it sits in the same cells far longer than a shuttle can."""
+    rng = np.random.default_rng(5)
+    fps, n = 30.0, 300
+    cands = {f: [] for f in range(n)}
+    for f in range(n):
+        if f % 3:
+            cands[f].append((620.0 + rng.normal(0, 4), 436.0 + rng.normal(0, 4), 0.7))
+    shot = flight(100, 130, (300, 800), (1200, 300), 200)
+    for f, (x, y) in shot.items():
+        cands[f].append((x, y, 0.5))
+    tr = ShuttleTracker(fps, W, H)
+    got = by_frame(tr.track(cands, n))
+    assert tr.hot_cell(620, 436) in tr.hot_cells
+    assert set(got) <= set(shot)  # the feature claims no frame of its own
+    assert sum(1 for f in shot if f in got) == len(shot)  # where the flight crosses it, it is filled
+
+
+def test_shared_air_trajectory_needs_racket_reach_not_just_a_big_player_nearby():
+    shot = as_candidates(flight(0, 30, (300, 300), (700, 250), 150))
+    loose = lambda f, x, y: True  # noqa: E731  (everything is near the huge near player)
+    shared = lambda f, x, y: 0.6  # noqa: E731
+    far_from_racket = ShuttleTracker(30, W, H, region=shared, support=loose, strict_support=lambda f, x, y: False)
+    assert not far_from_racket.track(shot, 31).points
+    assert far_from_racket.log[-1][-1] == "ambiguous"
+    hit = ShuttleTracker(30, W, H, region=shared, support=loose, strict_support=lambda f, x, y: f == 0)
+    assert hit.track(shot, 31).points  # leaves our player's racket: ours
+    ours = ShuttleTracker(30, W, H, region=lambda f, x, y: 1.0, support=loose, strict_support=lambda f, x, y: False)
+    assert ours.track(shot, 31).points  # only shared air asks for racket reach
+
+
+def test_rest_area_counts_a_held_shuttle_but_not_a_pile_at_the_feet():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from evaluation.multicourt import make_scene
+    from rallyiq.contracts import PlayerFrame, PlayerTracks
+    from rallyiq.perception.shuttle.stage import rest_area
+
+    cal = make_scene("broadcast", "side_by_side", frames=10).calibration
+    tracks = PlayerTracks.model_validate({"video_id": "v", "frames": [{
+        "frame": 0, "t_ms": 0.0,
+        "players": [{"player_id": "P1", "track_id": 1, "bbox": [40.0, 20.0, 100.0, 220.0], "confidence": 0.9}],
+    }]})
+    assert isinstance(tracks.frames[0], PlayerFrame)
+    rest = rest_area(cal, tracks)
+    assert rest(0, 70, 90)  # in hand, chest height (off any floor we own)
+    assert not rest(0, 70, 210)  # at the feet: a pile on the floor next to the player
+    assert rest(0, 960, 600)  # on our court's floor

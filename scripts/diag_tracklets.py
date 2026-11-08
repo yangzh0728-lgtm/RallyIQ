@@ -7,9 +7,10 @@ Re-tracks the saved raw peaks of a finished run (no network) with the run's cali
 and players, the same way the shuttle stage does, and prints every linked trajectory that
 covers or comes within ``--window`` frames of the given frames: span, length, mean
 target-court weight (1 = only over our court, 0.6 = also over another court), whether it
-reaches one of our players, and the verdict (kept / foreign / ambiguous / idle). Also
-prints the court weight, support and rest flags of the candidate nearest to ``--at x y``
-on each frame when given.
+reaches one of our players, and the verdict (kept / foreign / ambiguous / idle). For
+every candidate on the given frames it prints the court weight, the loose and the strict
+(racket-reach) player support, the rest flag and whether it sits in a fixed-feature cell
+(dropped before linking).
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from rallyiq.perception.shuttle.stage import (
     court_lock,
     load_candidates,
     rest_area,
+    strict_support,
     tracker_config,
 )
 from rallyiq.perception.shuttle.tracker import ShuttleTracker
@@ -52,17 +54,21 @@ def main(argv: list[str] | None = None) -> int:
     cands, (w, h), _ = load_candidates(vdir / "work" / CANDIDATES_FILE)
     region, support, mode = court_lock(cal, players)
     rest = rest_area(cal, players)
+    strict = strict_support(players)
     sx, sy = meta.width / w, meta.height / h
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in cands.items()}
     tr = ShuttleTracker(meta.fps, meta.width, meta.height, tracker_config(None, a.peak_threshold),
-                        region=region, support=support, rest=rest)
+                        region=region, support=support, rest=rest, strict_support=strict)
     tr.track(scaled, meta.frame_count)
-    print(f"court lock: {mode}; {len(tr.log)} trajectories judged")
+    print(f"court lock: {mode}; {len(tr.log)} trajectories judged; {len(tr.hot_cells)} fixed-feature cells")
     for f in a.frames:
         print(f"\n== frame {f}: candidates {[tuple(round(v, 2) for v in c) for c in scaled.get(f, [])]}")
         for x, y, s in scaled.get(f, []):
-            print(f"   ({x:.0f},{y:.0f}) score {s:.2f}: court weight {region(f, x, y) if region else None:.2f}, "
-                  f"near our player {support(f, x, y) if support else None}, rest {rest(f, x, y) if rest else None}")
+            weight = f"{region(f, x, y):.2f}" if region else None
+            print(f"   ({x:.0f},{y:.0f}) score {s:.2f}: court weight {weight}, "
+                  f"near our player {support(f, x, y) if support else None}, "
+                  f"racket reach {strict(f, x, y) if strict else None}, rest {rest(f, x, y) if rest else None}, "
+                  f"fixed feature {tr.hot_cell(x, y) in tr.hot_cells}")
         for start, end, n, m, sup, verdict in tr.log:
             if start - a.window <= f <= end + a.window:
                 print(f"   track {start}-{end} ({n} pts): mean weight {m}, supported {sup} -> {verdict}")
