@@ -53,13 +53,23 @@ def _setup(tmp_path, clips=(("a", "reviewed"), ("b", "draft")), video=b""):
 
 def test_decide_needs_gain_and_bounded_precision_drop():
     ok, why = loop.decide(_res(0.93, 0.90), _res(0.90, 0.90))
-    assert ok and "0.900 -> 0.930" in why
+    assert ok and "0.900（阈值 0.2）-> 0.930（阈值 0.2）" in why
     ok, why = loop.decide(_res(0.905, 0.90), _res(0.90, 0.90))
     assert not ok and "提升不足" in why
     ok, why = loop.decide(_res(0.95, 0.80), _res(0.90, 0.90))
     assert not ok and "精确率下降" in why
     assert loop.decide(_res(0.95, 0.88), _res(0.90, 0.90))[0]  # small precision cost is allowed
 
+
+
+def test_decide_compares_each_model_at_its_best_threshold():
+    cand = {"0.2": {"f1": 0.85, "precision": 0.75, "recall": 0.98},
+            "0.3": {"f1": 0.97, "precision": 0.96, "recall": 0.98}}
+    champ = {"0.2": {"f1": 0.95, "precision": 0.93, "recall": 0.97},
+             "0.3": {"f1": 0.92, "precision": 0.97, "recall": 0.88}}
+    ok, why = loop.decide(cand, champ)
+    assert ok and "0.950（阈值 0.2）-> 0.970（阈值 0.3）" in why
+    assert not loop.decide(cand, champ, at=0.2)[0]  # the old fixed-threshold rule
 
 def test_fingerprint_follows_shuttle_labels_only():
     d = {"a": _doc("a")}
@@ -199,7 +209,7 @@ def test_rounds_promote_compare_and_rollback(tmp_path):
     assert chk["weights"].endswith("round-002-last.pt") and st["rounds"][1]["check"]["frames"] == len(chk["frames"])
     assert all(m["clip"] == "a" and m["kind"] in loop.KINDS for m in chk["frames"])
     assert {m["part"] for m in chk["frames"]} <= {"train", "val"}
-    c = chk["scores"]["0.2"]
+    c = chk["scores"][str(chk["threshold"])]  # the last epoch's own threshold
     assert c["tp"] + c["tn"] + len(chk["frames"]) == 40  # every labeled frame is right or listed once
 
     # Standalone check of any checkpoint, no training.

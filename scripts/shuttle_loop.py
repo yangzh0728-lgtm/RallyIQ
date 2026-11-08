@@ -10,14 +10,16 @@ Each round:
    the first 70% trains, the last 30% validates (``--val-frac``). ``--holdout ID`` keeps a
    whole clip for validation only, e.g. a camera the model has never been trained on.
 2. Fine-tunes a candidate starting from the original pretrained weights (``--from champion``
-   to continue from the current model instead), picking the best epoch by F1 at the
-   detector's operating peak threshold (0.2).
+   to continue from the current model instead), picking the best epoch by F1 at its own best
+   peak threshold (0.2 / 0.3 / 0.4 / 0.5). Fine-tuned models score higher overall, so the
+   original 0.2 lets in more false positives for them; the chosen threshold is stored in the
+   checkpoint and the pipeline uses it for that model. ``--select-at 0.2`` fixes it instead.
 3. Evaluates the model currently in use (the "champion") on the **same** validation frames,
    so the comparison is fair even though the validation set grows as labels are added.
-4. Promotes the candidate only if F1@0.2 improves by at least ``--min-gain`` (0.01) and
-   precision@0.2 drops by no more than ``--max-precision-drop`` (0.03). The margin is there
-   because the candidate's epoch was itself picked on these frames, which flatters it a little. A promoted model is
-   copied to ``weights/shuttle/heatmap.pt``, which the pipeline loads by default (unless
+4. Promotes the candidate only if its best F1 beats the champion's best F1 by at least
+   ``--min-gain`` (0.01) and precision drops by no more than ``--max-precision-drop`` (0.03).
+   The margin is there because the candidate's epoch and threshold were picked on these
+   frames, which flatters it a little. A promoted model is copied to ``weights/shuttle/heatmap.pt``, which the pipeline loads by default (unless
    ``RALLYIQ_SHUTTLE_WEIGHTS`` points elsewhere). Every model is kept in ``weights/shuttle/loop/``.
 5. Prints which clips to label next, with the exact commands.
 
@@ -52,7 +54,6 @@ MANIFEST = ROOT / "evaluation" / "clips.yaml"
 WEIGHTS = ROOT / "weights" / "shuttle"
 DEFAULT_CLIPS = Path.home() / "rallyiq-data" / "bwf" / "clips"
 RUNS = Path.home() / "rallyiq-data" / "runs"
-SELECT_AT = 0.2
 
 
 # ------------------------------------------------------------------ state
@@ -148,14 +149,21 @@ def build_split(docs: dict[str, dict], clips_dir: Path, val_frac: float, holdout
 # --------------------------------------------------------------- decision
 
 
-def decide(candidate: dict, champion: dict, at: float = SELECT_AT, min_gain: float = 0.01,
+def decide(candidate: dict, champion: dict, at: float | None = None, min_gain: float = 0.01,
            max_precision_drop: float = 0.03) -> tuple[bool, str]:
-    """``candidate`` / ``champion``: per-threshold metrics as returned by training.evaluate."""
-    c, k = candidate.get(str(at), {}), champion.get(str(at), {})
+    """``candidate`` / ``champion``: per-threshold metrics as returned by training.evaluate.
+
+    ``at=None`` compares each model at its own best threshold."""
+    from rallyiq.perception.shuttle.training import best_threshold
+
+    ct = at if at is not None else best_threshold(candidate)[1]
+    kt = at if at is not None else best_threshold(champion)[1]
+    c, k = candidate.get(str(ct), {}), champion.get(str(kt), {})
     cf, kf = c.get("f1", 0.0), k.get("f1", 0.0)
     cp, kp = c.get("precision", 0.0), k.get("precision", 0.0)
     cr, kr = c.get("recall", 0.0), k.get("recall", 0.0)
-    nums = f"F1@{at} {kf:.3f} -> {cf:.3f}（精确率 {kp:.3f} -> {cp:.3f}，召回率 {kr:.3f} -> {cr:.3f}）"
+    nums = (f"F1 {kf:.3f}（阈值 {kt}）-> {cf:.3f}（阈值 {ct}）"
+            f"（精确率 {kp:.3f} -> {cp:.3f}，召回率 {kr:.3f} -> {cr:.3f}）")
     if cf < kf + min_gain:
         return False, f"{nums}，F1 提升不足 {min_gain}"
     if cp < kp - max_precision_drop:
@@ -352,6 +360,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--steps", type=int, default=300)
     ap.add_argument("--batch-size", type=int, default=4)
     ap.add_argument("--lr", type=float, default=1e-4)
+    ap.add_argument("--select-at", type=float, default=None,
+                    help="compare at this peak threshold only (default: each model at its best)")
     ap.add_argument("--min-gain", type=float, default=0.01)
     ap.add_argument("--max-precision-drop", type=float, default=0.03)
     ap.add_argument("--device", help="cuda | mps | cpu")
@@ -390,7 +400,7 @@ def main(argv: list[str] | None = None) -> int:
         clips, missing = labeled_clips(docs, clips_dir)
         if not clips:
             raise SystemExit("没有已复核且本地有视频的片段")
-        cfg = TrainConfig(device=a.device, select_at=SELECT_AT)
+        cfg = TrainConfig(device=a.device, select_at=None)  # the checkpoint's own threshold
         doc = run_check(Path(a.check).expanduser(), clips, {c.video.stem: set(c.labels) for c in tr},
                         loop_dir(wdir) / f"check-{Path(a.check).stem}", clips_dir, cfg)
         print(check_summary(doc))
@@ -432,12 +442,12 @@ def main(argv: list[str] | None = None) -> int:
     last = loop_dir(wdir) / f"round-{n:03d}-last.pt"
     start = Path(state["base"] if a.start == "base" else state["champion"])
     cfg = TrainConfig(epochs=a.epochs, steps_per_epoch=a.steps, batch_size=a.batch_size, lr=a.lr,
-                      device=a.device, select_at=SELECT_AT)
+                      device=a.device, select_at=a.select_at)
     compare = {} if Path(state["champion"]) == start else {"champion": Path(state["champion"])}
     t0 = time.monotonic()
     report = train(start, tr, va, out, cfg, compare=compare, last_out=last)
     champ_val = (report["compare"].get("champion", {}).get("val") if compare else None) or report["history"][0]["val"]
-    ok, reason = decide(report["best_val"], champ_val, SELECT_AT, a.min_gain, a.max_precision_drop)
+    ok, reason = decide(report["best_val"], champ_val, a.select_at, a.min_gain, a.max_precision_drop)
     if report["best_epoch"] == 0 and a.start == "champion":
         ok, reason = False, "训练没有带来改进（最好的是第 0 轮）"
 
@@ -446,6 +456,7 @@ def main(argv: list[str] | None = None) -> int:
         "start": str(start), "best_epoch": report["best_epoch"], "promoted": ok, "reason": reason,
         "train": report["train_clips"], "val": report["val_clips"],
         "candidate_val": report["best_val"], "champion_val": champ_val,
+        "threshold": report.get("best_threshold"),
         "minutes": round((time.monotonic() - t0) / 60, 1),
     }
     check = None
@@ -453,7 +464,8 @@ def main(argv: list[str] | None = None) -> int:
         print("\n正在用最后一轮的模型找标注可能有错的帧……")
         clips, _ = labeled_clips(docs, clips_dir)
         check = run_check(last, clips, {c.video.stem: set(c.labels) for c in tr},
-                          loop_dir(wdir) / f"round-{n:03d}-check", clips_dir, cfg)
+                          loop_dir(wdir) / f"round-{n:03d}-check", clips_dir,
+                          TrainConfig(device=a.device, select_at=a.select_at))
         rec["check"] = {"path": check["path"], "frames": len(check["frames"])}
     if ok:
         state["previous"].append(state["champion"])
@@ -469,7 +481,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"== 第 {n} 轮结果：{'采用新模型' if ok else '保留现役模型'} ==")
     print(reason)
     if ok:
-        print(f"新模型已复制为 {wdir / 'heatmap.pt'}，之后的 real_run 会默认使用它。不满意可运行 --rollback 回退。")
+        print(f"新模型已复制为 {wdir / 'heatmap.pt'}，之后的 real_run 会默认使用它"
+              f"（峰值阈值 {report.get('best_threshold')}，随模型保存）。不满意可运行 --rollback 回退。")
         untrained = sorted((c for c in manifest if c not in docs and (clips_dir / f"{c}.mp4").exists()),
                            key=lambda c: (camera(manifest, c) != "side_court_fixed", c))[:2]
         if untrained:
