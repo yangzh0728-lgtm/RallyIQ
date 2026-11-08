@@ -123,6 +123,8 @@ def save(doc: dict[str, Any], path: str | Path) -> None:
 def load_dir(directory: str | Path) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     for p in sorted(Path(directory).glob("*.json")):
+        if p.name.startswith("._"):  # macOS metadata files on exFAT/FAT drives
+            continue
         doc = load(p)
         out[doc["clip_id"]] = doc
     return out
