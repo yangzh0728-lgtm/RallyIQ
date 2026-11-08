@@ -6,6 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from rallyiq.events.config import EventsConfig
 from rallyiq.events.learned import FEATURES, HitScorer, get_scorer
@@ -99,3 +100,21 @@ def test_evaluate_config_runs():
     folds = LH.folds_by_group(clips, 3)
     r = LH.evaluate_config(clips, replace(EventsConfig(), min_hit_gap_ms=240.0), 3, folds, 0, 1e-2)
     assert r["hits"]["f1"] is not None and 0 < r["ceiling"] <= 1
+
+
+@pytest.mark.bundled_hit_scorer
+def test_bundled_model_loads_and_runs_on_a_synthetic_rally():
+    from rallyiq.events import learned
+    from rallyiq.events.pipeline import with_scorer_thresholds
+
+    learned._load.cache_clear()
+    scorer = learned.get_scorer("auto")
+    assert scorer is not None, "rallyiq/events/models/hit_scorer.json missing"
+    cfg = with_scorer_thresholds(EventsConfig())
+    # Event parameters and thresholds tuned with the model travel with it.
+    assert cfg.keep_threshold == scorer.thresholds["keep_threshold"]
+    assert cfg.hit_frame_offset == scorer.thresholds.get("hit_frame_offset", 0)
+    v = make_video(n_rallies=2, seed=3)
+    hits = [h for r in segment_events(v.shuttle, v.poses) for h in r.hits]
+    assert hits and all(0.0 <= h.confidence <= 1.0 for h in hits)
+    learned._load.cache_clear()
