@@ -63,6 +63,13 @@ class EventsConfig:
     # "off" (default), "auto" (bundled models/pose_hits.json) or a JSON path. Adds the serve and the
     # missed hit between two same-side hits from the players' swing when the shuttle was not seen.
     pose_hits: str = "off"
+    # Drop a shuttle-based hit when the bundled pose model (models/pose_hits.json) sees no swing by the
+    # hitter (or, hitter unknown, by anyone) within ``swing_veto_window_ms`` of it: the max ``p_swing`` there
+    # is below this. Own footage from a low camera behind the court: the shuttle of a neighbouring court or
+    # one carried between points turns near a player who is walking, racket down. 0 disables.
+    swing_veto: float = 0.0
+    swing_veto_window_ms: float = 250.0
+    swing_veto_model: str = "auto"  # "auto" = bundled pose model, or a JSON path
 
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all

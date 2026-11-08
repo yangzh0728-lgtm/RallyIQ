@@ -51,6 +51,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--tracker", nargs="*", default=[], metavar="KEY=VALUE",
                     help="shuttle tracker settings, e.g. flight_split=true contact_gate=ends")
     ap.add_argument("--contact", choices=("box", "wrist"), help="shuttle racket-contact test")
+    ap.add_argument("--events", nargs="*", default=[], metavar="KEY=VALUE",
+                    help="events settings, e.g. swing_veto=0.3")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
@@ -65,6 +67,8 @@ def main(argv: list[str] | None = None) -> int:
     if a.contact:
         shuttle["contact"] = a.contact
     config = {"shuttle": shuttle}
+    if a.events:
+        config["events"] = parse_settings(a.events)
     for r in results:
         if a.only and r["clip_id"] not in a.only:
             continue

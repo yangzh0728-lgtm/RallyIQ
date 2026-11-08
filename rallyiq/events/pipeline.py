@@ -87,6 +87,10 @@ def segment_events(
             hits=hits,
         )
         rallies.append(rally)
+    if cfg.swing_veto > 0:
+        from .pose_hits import get_model, veto
+
+        veto(rallies, poses, get_model(cfg.swing_veto_model), cfg.swing_veto, cfg.swing_veto_window_ms, frame_ms=fps_ms)
     if cfg.pose_hits != "off":
         from .pose_hits import get_model, recover
 

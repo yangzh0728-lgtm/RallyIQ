@@ -114,18 +114,16 @@ class TrackerConfig:
     drop_idle_shared: bool = True
     idle_rest_min_frac: float = 0.5  # share of its points that must pass ``rest``
     # Fixed scene features (a duct tip, a light, a poster corner, a pile of shuttles on
-    # a floor) sit in the same few pixels frame after frame, but jitter or blink too much
-    # for the static-spot test. A candidate is still when one of the ``hot_still_frames``
-    # frames before had a candidate within ``hot_cell_px``; a shuttle in flight passes a
-    # cell in a frame or two and never counts. Cells of ``hot_cell_px`` with more than
-    # ``hot_s`` seconds of still candidates are dropped, with their 8 neighbours, unless
-    # the candidate is in a player's hand (``held``). 0 disables.
+    # a floor) sit in the same few pixels for a long time but jitter or blink too much for
+    # the static-spot test. ``hot_mode`` "count" (default, the best on hand-checked own
+    # footage) drops image cells of ``hot_cell_px`` holding a candidate on more than
+    # ``hot_count_s`` seconds and ``hot_frac`` of the video, with their 8 neighbours.
+    # "still" counts only still candidates (one within ``hot_cell_px`` in the
+    # ``hot_still_s`` before, not in a hand: ``held``) against ``hot_s``. "off" disables.
     hot_cell_px: float = 16.0
     hot_s: float = 2.0
     hot_still_s: float = 0.25
-    # "still" as above; "count" drops cells with a candidate (still or not) on more than
-    # ``hot_count_s`` seconds and ``hot_frac`` of the video; "off".
-    hot_mode: str = "still"
+    hot_mode: str = "count"
     hot_count_s: float = 2.5
     hot_frac: float = 0.01
     # Which parts of the court lock below are used. ``contact_gate``: "all" asks the

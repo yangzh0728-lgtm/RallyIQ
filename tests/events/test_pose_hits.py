@@ -71,6 +71,19 @@ def test_pipeline_option(tmp_path):
     assert PH.get_model("off") is None and PH.get_model(str(tmp_path / "missing.json")) is None
 
 
+def test_swing_veto_drops_hits_nobody_swings_at(tmp_path):
+    v, rallies = _rallies(3)
+    n = sum(len(r.hits) for r in rallies)
+    assert n and PH.veto(rallies, v.poses, PH.PoseHitModel(_const(5.0)), 0.3, frame_ms=1000.0 / v.fps) == 0
+    assert all("p_swing" in h.scores for r in rallies for h in r.hits)
+    assert PH.veto(rallies, v.poses, PH.PoseHitModel(_const(-5.0)), 0.3, frame_ms=1000.0 / v.fps) == n
+    assert not any(r.hits for r in rallies)
+    p = tmp_path / "no_swing.json"
+    p.write_text(json.dumps(_const(-5.0)))
+    cfg = replace(EventsConfig(), hit_scorer="off", swing_veto=0.3, swing_veto_model=str(p))
+    assert not any(r.hits for r in segment_events(v.shuttle, v.poses, cfg))
+
+
 def test_export_matches_sklearn():
     pytest.importorskip("sklearn")
     from sklearn.ensemble import HistGradientBoostingClassifier

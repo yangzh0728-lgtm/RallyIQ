@@ -303,3 +303,43 @@ def recover(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: Pose
             changed += len(added)
     return changed
 
+
+
+# -------------------------------------------------------------------- veto
+def veto(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: PoseHitModel | None,
+         threshold: float, window_ms: float = 250.0, frame_ms: float | None = None) -> int:
+    """Drop shuttle-based hits nobody swings at (max ``p_swing`` of the hitter's side within
+    ``window_ms`` below ``threshold``). Returns how many were dropped."""
+    if model is None or threshold <= 0 or not rallies or not poses:
+        return 0
+    if frame_ms is None:
+        ts = [p.t_ms for p in poses[:50]]
+        fr = [p.frame for p in poses[:50]]
+        frame_ms = (ts[-1] - ts[0]) / (fr[-1] - fr[0]) if len(ts) > 1 and fr[-1] > fr[0] else 40.0
+    series = side_series(poses)
+    step = max(frame_ms, 20.0)
+    dropped = 0
+    for r in rallies:
+        keep = []
+        for h in r.hits:
+            if h.source == SOURCE:
+                keep.append(h)
+                continue
+            side = _side_of(h, series)
+            sides = [series[side]] if side is not None else list(series.values())
+            best = 0.0
+            for s_ in sides:
+                _, p = swing_curve(s_, model, h.t_ms - window_ms, h.t_ms + window_ms, step, frame_ms)
+                if len(p):
+                    best = max(best, float(p.max()))
+            if best >= threshold:
+                h.scores["p_swing"] = round(best, 3)
+                keep.append(h)
+            else:
+                dropped += 1
+        if len(keep) != len(r.hits):
+            r.hits = keep
+            for k, h in enumerate(r.hits, start=1):
+                h.index_in_rally = k
+                h.hit_id = f"{r.rally_id}_S{k:02d}"
+    return dropped
