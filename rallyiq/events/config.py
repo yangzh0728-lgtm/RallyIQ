@@ -74,6 +74,9 @@ class EventsConfig:
     swing_veto_keep_serve: bool = False  # ... never drop a rally's first hit
     # ... never drop a hit answered by (or answering) the other side within this many ms; 0 = unused
     swing_veto_keep_exchange_ms: float = 0.0
+    # Drop a rally whose hits (at most this many; none counts too) are all by one side: nobody answered
+    # across the net, so it is a catch, pick-up or toss between points. 0 disables.
+    one_sided_rally_max_hits: int = 0
 
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all

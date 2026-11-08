@@ -90,6 +90,20 @@ def test_swing_veto_drops_hits_nobody_swings_at(tmp_path):
     assert sum(len(r.hits) for r in moving) > 0  # synthetic players move their wrists
 
 
+def test_one_sided_rallies_are_dropped():
+    v, rallies = _rallies(4)
+    assert all(not PH.one_sided(r, v.poses, 3) for r in rallies if len({h.hitter_id for h in r.hits}) > 1)
+    r = rallies[0]
+    near = r.hits[0].hitter_id
+    r.hits = [h for h in r.hits if h.hitter_id == near][:2]
+    assert PH.one_sided(r, v.poses, 3)
+    assert not PH.one_sided(r, v.poses, 1)  # more hits than the limit: left alone
+    cfg = replace(EventsConfig(), hit_scorer="off", one_sided_rally_max_hits=3)
+    base = segment_events(v.shuttle, v.poses, replace(cfg, one_sided_rally_max_hits=0))
+    assert len(segment_events(v.shuttle, v.poses, cfg)) == sum(
+        1 for r in base if not PH.one_sided(r, v.poses, 3))
+
+
 def test_export_matches_sklearn():
     pytest.importorskip("sklearn")
     from sklearn.ensemble import HistGradientBoostingClassifier

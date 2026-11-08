@@ -368,3 +368,17 @@ def veto(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: PoseHit
                 h.index_in_rally = k
                 h.hit_id = f"{r.rally_id}_S{k:02d}"
     return dropped
+
+
+def one_sided(rally: RallySegment, poses: Sequence[PoseFrame], max_hits: int,
+              series: dict[str, SideSeries] | None = None) -> bool:
+    """A "rally" whose hits (at most ``max_hits``) are all by one side, or that has none: between
+    points a player catches the shuttle, picks it up, taps it to themselves or tosses it to the
+    other side, and nobody across the net answers. A real rally needs a reply."""
+    if not rally.hits:
+        return True
+    if len(rally.hits) > max_hits:
+        return False
+    series = series if series is not None else side_series(poses)
+    sides = {_side_of(h, series) for h in rally.hits} - {None}
+    return len(sides) <= 1

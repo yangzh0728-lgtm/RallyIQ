@@ -249,6 +249,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--stride", type=int, default=1, help="players: pose every n-th frame")
     ap.add_argument("--parallel", choices=("auto", "on", "off"), default="auto",
                     help="run shuttle detection alongside players (auto: only when the shuttle model has a GPU)")
+    ap.add_argument("--match-format", choices=("auto", "singles", "doubles"), help="players: match format")
+    ap.add_argument("--events", nargs="*", default=[], metavar="KEY=VALUE",
+                    help="events settings, e.g. swing_veto=0.1 swing_veto_keep_exchange_ms=2700")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
@@ -258,6 +261,12 @@ def main(argv: list[str] | None = None) -> int:
     store = Store(out / "data")
     config: dict[str, Any] = {"players_stride": a.stride, "players_far_boost": a.far_boost,
                               "parallel_stages": a.parallel}
+    if a.match_format:
+        config["match_format"] = a.match_format
+    if a.events:
+        from scripts.diag_tracklets import parse_settings
+
+        config["events"] = parse_settings(a.events)
 
     clips = sorted(p for p in a.clips.expanduser().glob("*.mp4")
                    if not p.name.startswith("._") and (not a.only or p.stem in a.only))

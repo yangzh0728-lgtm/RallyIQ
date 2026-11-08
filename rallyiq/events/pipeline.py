@@ -97,6 +97,10 @@ def segment_events(
         from .pose_hits import get_model, recover
 
         recover(rallies, poses, get_model(cfg.pose_hits), frame_ms=fps_ms)
+    if cfg.one_sided_rally_max_hits > 0:
+        from .pose_hits import one_sided
+
+        rallies = [r for r in rallies if not one_sided(r, poses, cfg.one_sided_rally_max_hits)]
     for rally in rallies:
         _decide_rally(rally, cfg)
     return rallies
