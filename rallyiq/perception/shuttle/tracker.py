@@ -43,6 +43,9 @@ Candidate = tuple[float, float, float]  # x px, y px, score 0..1
 RegionFn = Callable[[int, float, float], float]
 # (frame, x, y) -> True when the point is within reach of one of the target players.
 SupportFn = Callable[[int, float, float], bool]
+# (frame, x, y) -> True where a shuttle can lie or be held still: on our court's floor
+# (with run-off) or inside one of our players' boxes.
+RestFn = Callable[[int, float, float], bool]
 
 
 @dataclass
@@ -103,11 +106,13 @@ class TrackerConfig:
     region_ambiguous_mean: float = 0.75
     # Weight multiplier for a tracklet that passes within reach of a target player.
     player_support_bonus: float = 0.5
-    # A tracklet that barely moves (same travel test as weak-only ones) and is not
-    # entirely in our own air space is a still white thing seen through the overlap
-    # with another court: a shuttle lying on a neighbour's floor, a pile of them, a shoe,
-    # a poster. Strong scores don't save it; a shuttle lying on our court still does.
+    # A tracklet that barely moves (same travel test as weak-only ones) is a shuttle at
+    # rest or a still white thing. With a ``rest`` function it is kept only where a
+    # shuttle can rest: on our floor or in a player's hand (a duct tip, a poster, a pile
+    # on a neighbour's floor are dropped, strong scores or not). Without one, it is
+    # dropped when it is not wholly inside our own air space.
     drop_idle_shared: bool = True
+    idle_rest_min_frac: float = 0.5  # share of its points that must pass ``rest``
 
 
 @dataclass
@@ -185,7 +190,8 @@ class _Tracklet:
 
 class ShuttleTracker:
     def __init__(self, fps: float, width: int, height: int, config: TrackerConfig | None = None,
-                 region: RegionFn | None = None, support: SupportFn | None = None):
+                 region: RegionFn | None = None, support: SupportFn | None = None,
+                 rest: RestFn | None = None):
         """``region`` / ``support`` lock the tracker onto the target court when
         several matches are in view (see ``rallyiq.perception.target_court``)."""
         if fps <= 0:
@@ -193,8 +199,10 @@ class ShuttleTracker:
         self.fps = float(fps)
         self.width, self.height = int(width), int(height)
         self.cfg = config or TrackerConfig()
-        self.region, self.support = region, support
+        self.region, self.support, self.rest = region, support, rest
         self.rejected_foreign = 0  # tracklets dropped as another court's shuttle
+        # (start, end, n, mean region, supported, verdict) per linked tracklet, for diagnosis
+        self.log: list[tuple[int, int, int, float | None, bool, str]] = []
         self.diag = math.hypot(self.width, self.height)
         self.max_step = self.cfg.max_speed_diag_per_s * self.diag / self.fps  # px per frame
         self.link_skip = max(1, int(round(self.cfg.link_skip_s * self.fps)))
@@ -356,6 +364,7 @@ class ShuttleTracker:
                 if foreign or ambiguous:
                     if len(t.frames) >= self.cfg.min_len:
                         self.rejected_foreign += 1
+                    self._note(t, "foreign" if foreign else "ambiguous")
                     continue
                 keep = [i for i, r in enumerate(t.region) if r > 0.0]
                 if len(keep) < len(t.frames):
@@ -377,12 +386,21 @@ class ShuttleTracker:
             if not keep:
                 continue
             sub = t.subset(keep)
-            if sub.weight(self.cfg) <= 0 or self._idle_weak(sub) or self._idle_shared(sub):
+            if sub.weight(self.cfg) <= 0:
+                continue
+            if self._idle_weak(sub) or self._idle_shared(sub):
+                self._note(sub, "idle")
                 continue
             claimed.update(sub.frames)
             chosen.append(sub)
+            self._note(sub, "kept")
         chosen.sort(key=lambda t: t.start)
         return chosen
+
+    def _note(self, t: _Tracklet, verdict: str) -> None:
+        if len(t.frames) >= self.cfg.min_len:
+            self.log.append((t.start, t.end, len(t.frames),
+                             round(t.mean_region(), 3) if t.region else None, t.supported, verdict))
 
     def _idle_weak(self, t: _Tracklet) -> bool:
         """True for a weak-only tracklet that hardly moves (likely not a shuttle)."""
@@ -391,8 +409,15 @@ class ShuttleTracker:
         return self._idle(t)
 
     def _idle_shared(self, t: _Tracklet) -> bool:
-        """True for a still tracklet that is not wholly inside our own air space."""
-        if not self.cfg.drop_idle_shared or not t.region or min(t.region) >= 1.0:
+        """True for a still tracklet where no shuttle of ours can be resting."""
+        if not self.cfg.drop_idle_shared:
+            return False
+        if self.rest is not None:
+            if not self._idle(t):
+                return False
+            ok = sum(1 for f, (x, y) in zip(t.frames, t.xy) if self.rest(f, x, y))
+            return ok < self.cfg.idle_rest_min_frac * len(t.frames)
+        if not t.region or min(t.region) >= 1.0:
             return False
         return self._idle(t)
 

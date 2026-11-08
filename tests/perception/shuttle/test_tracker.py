@@ -310,3 +310,16 @@ def test_saved_candidates_round_trip(tmp_path):
     save_candidates(tmp_path / "c.json", cands, {3: 0}, "det@1", (1920, 1080))
     got, size, det = load_candidates(tmp_path / "c.json")
     assert got == cands and size == (1920, 1080) and det == "det@1"
+
+
+def test_still_object_kept_only_where_a_shuttle_can_rest():
+    from rallyiq.perception.shuttle.tracker import ShuttleTracker
+
+    cands = {f: [(500.0, 400.0, 0.9)] for f in range(30)}  # strong, never moves
+    on_floor = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 1.0, rest=lambda f, x, y: True)
+    assert on_floor.track(cands, 30).points  # lying on our court / held by our player
+    duct = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 1.0, support=lambda f, x, y: True,
+                          rest=lambda f, x, y: False)
+    assert not duct.track(cands, 30).points  # a duct tip in our air space, near a big near player
+    flying = {f: [(500.0 + 20 * f, 400.0 - 5 * f, 0.9)] for f in range(30)}
+    assert duct.track(flying, 30).points  # moving shuttles are not judged by rest at all

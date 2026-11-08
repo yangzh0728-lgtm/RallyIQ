@@ -36,7 +36,7 @@ from pathlib import Path
 from ...contracts import CourtCalibration, FrameGap, PlayerTracks, ShuttlePoint, ShuttleTrack, VideoMeta
 from ...pipeline.context import StageContext, demo_mode
 from ..target_court import PlayerProximity, PlayerSpanRegion, SegmentRegions
-from .tracker import Candidate, RegionFn, ShuttleTracker, SupportFn, TrackerConfig
+from .tracker import Candidate, RegionFn, RestFn, ShuttleTracker, SupportFn, TrackerConfig
 
 log = logging.getLogger("rallyiq.shuttle")
 
@@ -86,6 +86,27 @@ def court_lock(
     return region, support, mode
 
 
+def rest_area(calibration: CourtCalibration | None, players: PlayerTracks | None) -> RestFn | None:
+    """Where a still shuttle of ours can be: on the target court's floor (with run-off)
+    or inside a target player's box (held). ``None`` without a calibration."""
+    regions = SegmentRegions(calibration)
+    if not regions:
+        return None
+    boxes: dict[int, list] = {}
+    for fr in (players.frames if players else []):
+        boxes[fr.frame] = [p.bbox for p in fr.players if p.player_id in ("P1", "P2")]
+
+    def rest(frame: int, x: float, y: float) -> bool:
+        for x1, y1, x2, y2 in boxes.get(frame, ()):
+            m = 0.1 * (y2 - y1)
+            if x1 - m <= x <= x2 + m and y1 - m <= y <= y2 + m:
+                return True
+        r = regions.for_frame(frame)
+        return r is not None and r.floor_outside_m([x, y]) == 0.0
+
+    return rest
+
+
 def build_track(
     meta: VideoMeta,
     candidates: dict[int, Sequence[Candidate]],
@@ -95,6 +116,7 @@ def build_track(
     config: TrackerConfig | None = None,
     region: RegionFn | None = None,
     support: SupportFn | None = None,
+    rest: RestFn | None = None,
 ) -> tuple[ShuttleTrack, dict[int, int]]:
     """Run the tracker and convert to the contract. Also returns the selected
     candidate index per frame (for the raw-candidates file)."""
@@ -106,7 +128,7 @@ def build_track(
         )
     # Coordinates are in decoded-frame px; scale if the decoder's size differs from the probe.
     sx, sy = meta.width / width, meta.height / height
-    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support)
+    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support, rest=rest)
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in candidates.items()}
     res = tracker.track(scaled, frame_count)
     if tracker.rejected_foreign:
@@ -275,12 +297,13 @@ def run(ctx: StageContext) -> ShuttleTrack:
             return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
         detector, det_cfg = got
         candidates, size = _detect(ctx, detector, lambda p: ctx.report(0.95 * p))
-    region = support = None
+    region = support = rest = None
     if cfg.get("court_lock", "auto") != "off":
         region, support, mode = court_lock(ctx.calibration, ctx.players)
+        rest = rest_area(ctx.calibration, ctx.players)
         log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
-                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support)
+                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support, rest)
     save_candidates(Path(ctx.work_dir) / CANDIDATES_FILE, candidates, selected, detector.name, size)
     ctx.report(1.0)
     return track
