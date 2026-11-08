@@ -84,6 +84,9 @@ WHO = {  # distribution suffix -> label
 }
 
 
+MIN_CONFIRMED_SHARE = 0.5  # below this share of confirmed hits, shot shares are only tendencies
+
+
 def _conf(n: int, ok_n: int, review_n: int, degrade: bool = False) -> tuple[str, str]:
     if n >= ok_n:
         status, conf = "ok", "high"
@@ -328,6 +331,11 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
         nr = len(data.rallies_seen)
         pre = f"{team}.dbl"
         tm: dict[str, Metric] = {}
+        # Mostly unconfirmed hits: false detections and wrong hitters are common, so shot shares, and the
+        # attack / defense states read from the last shot, are only tendencies.
+        team_shots = [s for s in events.shots if s.hitter in (p, q)]
+        confirmed = sum(1 for s in team_shots if s.status == "ok")
+        hit_deg = bool(team_shots) and confirmed < MIN_CONFIRMED_SHARE * len(team_shots)
 
         def add(key, label, value, unit, nn, ok_n, review_n, note=None, deg=False, digits=1, pre=pre, tm=tm):
             m = _metric(f"{pre}.{key}", label, value, unit, nn, ok_n, review_n, deg, note, digits)
@@ -344,9 +352,9 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
         att = [s for s in S if s.state == "attack"]
         dfn = [s for s in S if s.state == "defense"]
         add("formation.attack_fb_pct", "进攻时前后站位的比例", _pct(sum(s.form == "fb" for s in att), len(att)), "%",
-            len(att), 150, 30, "进攻 = 对手刚挑球/起高球，或本方刚下压之后", degrade)
+            len(att), 150, 30, "进攻 = 对手刚挑球/起高球，或本方刚下压之后", degrade or hit_deg)
         add("formation.defense_sbs_pct", "防守时左右站位的比例", _pct(sum(s.form == "sbs" for s in dfn), len(dfn)), "%",
-            len(dfn), 150, 30, "防守 = 本方刚挑球/起高球，或对手刚杀球/扑球之后", degrade)
+            len(dfn), 150, 30, "防守 = 本方刚挑球/起高球，或对手刚杀球/扑球之后", degrade or hit_deg)
         add("rotation.front_swaps_per_rally", "每回合前场换人次数", data.front_swaps / nr if nr else None, "次", nr,
             10, 3, "两段前后站位之间，在前面的人换了一次记 1 次")
         add("rotation.switches_per_rally", "每回合攻守站位转换次数", data.form_switches / nr if nr else None, "次", nr,
@@ -369,7 +377,7 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
         for k, label in WHO.items():
             c = who[k]
             tot = sum(c.values())
-            status, conf = _conf(tot, 20, 6)
+            status, conf = _conf(tot, 20, 6, hit_deg)
             d = Distribution(key=f"{pre}.who.{k}", label=f"谁打{label}" if k not in ("lost_last",) else label,
                              counts={p: c[p], q: c[q]}, n=tot, status=status, confidence=conf)
             dists.append(d)
@@ -389,14 +397,14 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
                               degrade))
             mine = sum(1 for s in events.shots if s.hitter == pid)
             pm.append(_metric(f"{pid}.dbl.team_share_pct", "占本队击球的比例", _pct(mine, team_hits), "%", team_hits,
-                              30, 8))
+                              30, 8, hit_deg))
             pm.append(_metric(f"{pid}.dbl.smash_share_pct", "占本队杀球的比例", _pct(whod["smash"][pid], team_smash), "%",
-                              team_smash, 15, 5))
+                              team_smash, 15, 5, hit_deg))
             pm.append(_metric(f"{pid}.dbl.net_share_pct", "占本队网前小球的比例", _pct(whod["net"][pid], team_net), "%",
-                              team_net, 15, 5))
+                              team_net, 15, 5, hit_deg))
             zone_n = whod["rear"][pid] + whod["mid"][pid] + whod["front"][pid]
             pm.append(_metric(f"{pid}.dbl.rear_hit_pct", "本人击球中在后场击球的比例", _pct(whod["rear"][pid], zone_n),
-                              "%", zone_n, 20, 6, degrade))
+                              "%", zone_n, 20, 6, degrade or hit_deg))
             pmetrics[pid] = pm
             reasons = [bad_players[pid]] if pid in bad_players else []
             if front_pct is None or len(fbs) < MIN_FB_SAMPLES:
@@ -427,6 +435,10 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
                     "“谁打什么球”只按当前识别列出，仅供参考。")
         elif not n:
             note = "两人很少同时被跟踪到，站位和轮转不可判定。"
+        if hit_deg and not problems:
+            extra = (f"本队 {len(team_shots)} 拍里只有 {confirmed} 拍经过人工确认，自动识别会把不是击球的动作算进来、"
+                     "也会认错击球人，所以“谁打什么球”、杀球和网前的分工比例，以及按上一拍判断的攻防站位，都只作参考；整体站位、间距和轮转按球员跟踪计算，不受影响。")
+            note = f"{note}{extra}" if note else extra
         teams.append(DoublesTeam(team=team, players=[p, q], roles=roles, division=division, findings=findings,
                                  status=status, confidence=conf, note=note))
     return teams, metrics, dists, pmetrics

@@ -182,3 +182,20 @@ def test_identity_mixups_are_flagged_not_analysed(match):
     assert "同一个半场" in by["B"].note
     assert all(r.role == "unknown" for t in st.doubles for r in t.roles)
     assert not st.moments and any("身份识别" in x for x in st.caveats)
+
+
+def test_unconfirmed_hits_make_shot_shares_tendencies(match):
+    """Real 0302 run: 59 of 80 hits unconfirmed. Positions stay trusted, shot shares are flagged."""
+    events, players = match
+    shots = [s.model_copy(update={"status": "needs_review"}) for s in events.shots]
+    st = compute_match_stats(events.model_copy(update={"shots": shots}), players)
+    ix = index(st)
+    base = index(compute_match_stats(events, players))
+    a = next(t for t in st.doubles if t.team == "A")
+    assert a.findings and "人工确认" in a.note
+    rank = {"low": 0, "medium": 1, "high": 2}
+    for k in ("A.dbl.who.smash", "A.dbl.who.net", "P3.dbl.smash_share_pct", "P1.dbl.team_share_pct"):
+        assert rank[ix[k].confidence] < rank[base[k].confidence] or ix[k].confidence == "low", k
+    # positions do not depend on the hits being confirmed
+    k = "A.dbl.formation.fb_pct"
+    assert (ix[k].value, ix[k].confidence) == (base[k].value, base[k].confidence)
