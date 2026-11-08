@@ -43,6 +43,10 @@ class TrackerConfig:
     # Grey-histogram correlation below this between checks means a scene cut.
     cut_correlation: float = 0.6
     min_feature_inliers: int = 25
+    # The deep search (stand-in lines for undetected far court lines) costs
+    # several seconds per frame. Run it on the first frame, then at most once
+    # every this many checks (broadcasts cut to close-ups all the time).
+    deep_every_checks: int = 20
 
 
 @dataclass
@@ -133,6 +137,7 @@ class CourtTracker:
         self._prev_sig: np.ndarray | None = None
         self._ref_inlier = 0.0
         self._last_good: np.ndarray | None = None  # last good image_from_court, for label continuity
+        self._checks_since_deep = 0
 
     @property
     def current(self) -> Segment | None:
@@ -146,21 +151,30 @@ class CourtTracker:
             self._ref_inlier = cal.metrics.inlier_ratio
             self._last_good = cal.image_from_court
 
+    def _deep(self, force: bool = False) -> bool | str:
+        """``"auto"`` when this check may run the deep search, else False."""
+        if force or self._checks_since_deep >= self.cfg.deep_every_checks:
+            self._checks_since_deep = 0
+            return "auto"
+        return False
+
     def update(self, frame_idx: int, frame: np.ndarray) -> FrameCalibration:
+        self._checks_since_deep += 1
         sig = _signature(frame)
         cut = self._prev_sig is not None and cv2.compareHist(self._prev_sig, sig, cv2.HISTCMP_CORREL) < self.cfg.cut_correlation
         cur = self.current
         try:
             if cur is None:
-                self._start(frame_idx, calibrate_frame(frame), "initial")
+                self._start(frame_idx, calibrate_frame(frame, deep=self._deep(True)), "initial")
             elif cut:
                 # After a cut the old labelling may not apply; calibrate from scratch.
-                cal = calibrate_frame(frame)
+                cal = calibrate_frame(frame, deep=self._deep())
                 if cal.ok and self._last_good is not None:
-                    cal = calibrate_frame(frame, previous=self._last_good)
+                    relabelled = calibrate_frame(frame, previous=self._last_good, deep=False)
+                    cal = relabelled if relabelled.ok else cal
                 self._start(frame_idx, cal, "scene_cut")
             elif not cur.calibration.ok:
-                cal = calibrate_frame(frame, previous=self._last_good)
+                cal = calibrate_frame(frame, previous=self._last_good, deep=self._deep())
                 if cal.ok:
                     self._start(frame_idx, cal, "recovered")
                 else:
@@ -191,7 +205,7 @@ class CourtTracker:
         if G is not None:
             Hp = G @ H
             extra.append(Hp / Hp[2, 2])
-        cal = calibrate_frame(frame, previous=H, extra_hypotheses=extra)
+        cal = calibrate_frame(frame, previous=H, extra_hypotheses=extra, deep=self._deep())
         if cal.ok:
             self._start(frame_idx, cal, "camera_moved")
         else:

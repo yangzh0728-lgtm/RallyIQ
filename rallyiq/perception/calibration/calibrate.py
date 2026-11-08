@@ -11,6 +11,8 @@ import numpy as np
 from . import court_model as cm
 from .homography import (
     METRIC_TOL,
+    MIN_CAMERA_HEIGHT,
+    camera_height,
     Score,
     metric_error,
     canonicalize,
@@ -22,7 +24,7 @@ from .homography import (
     upright,
     verified_keypoints,
 )
-from .lines import LineEvidence, detect_lines, line_evidence, sort_family, split_families
+from .lines import ImageLine, LineEvidence, detect_lines, line_evidence, pick_lines, sort_family, split_families
 
 ALGORITHM_VERSION = "court-calib/0.1.0"
 WORK_WIDTH = 1280
@@ -229,11 +231,62 @@ def _overlap(Ha: np.ndarray, Hb: np.ndarray) -> float:
     return float(inter / union) if union > 0 else 0.0
 
 
+MIN_FRAME_SHARE = 0.12  # the analysed court covers at least this share of the frame
+
+
+def _frame_share(H: np.ndarray, wh: tuple[int, int]) -> float:
+    """Share of the frame covered by the court (outer boundary) under ``H``."""
+    w, h = wh
+    q, wz = project(H, np.array(list(cm.CORNERS.values())))
+    if not np.all(np.isfinite(q)) or np.any(wz <= 0):
+        return 0.0
+    frame = np.array([[0, 0], [w, 0], [w, h], [0, h]], np.float32)
+    quad = np.clip(q, -1e6, 1e6).astype(np.float32)
+    if cv2.contourArea(quad, oriented=True) < 0:
+        quad = quad[::-1].copy()
+    area, _ = cv2.intersectConvexConvex(quad, frame)
+    return float(area) / float(w * h)
+
+
+def _synthetic_lines(fam: list, other: list, wh: tuple[int, int], n: int = 8) -> list:
+    """Lines through ``fam``'s vanishing point at spread-out depths, from near the
+    other family's vanishing point down to the bottom of the frame.
+
+    With a low camera the far court lines are short and buried in a band of
+    background lines (benches, nets of other courts), so they are rarely among
+    the detected lines; the near court's lines are, but alone they cannot fix
+    the court's depth. A placement through stand-in lines at the right depth
+    still scores well, and refinement then snaps it onto the real far lines
+    (sam's own0529_0006).
+    """
+    if not fam or not other or fam[0].vp is None or other[0].vp is None:
+        return []
+    vF, vO = fam[0].vp, other[0].vp
+    w, h = wh
+    if abs(vO[2]) < 1e-9:
+        return []
+    o = vO[:2] / vO[2]
+    if not (0 <= o[0] < w and 0 <= o[1] < h):
+        return []  # the other direction does not converge inside the frame: not a low camera
+    bottom = np.array([o[0], h - 1.0])
+    out = []
+    for t in np.geomspace(0.03, 1.0, n):
+        p = o + t * (bottom - o)
+        line = np.cross(np.append(p, 1.0), vF)
+        norm = float(np.hypot(line[0], line[1]))
+        if norm < 1e-12:
+            continue
+        line = line / norm
+        out.append(ImageLine(normal=line[:2], c=float(-line[2]), support=0.0, points=[np.array([p, p])], vp=vF))
+    return out
+
+
 def calibrate_frame(
     image: np.ndarray,
     previous: np.ndarray | None = None,
     extra_hypotheses: Sequence[np.ndarray] = (),
     method: Method = "auto",
+    deep: bool | str = "auto",
 ) -> FrameCalibration:
     """Automatically calibrate one BGR frame.
 
@@ -241,20 +294,38 @@ def calibrate_frame(
     court labelling consistent and as an extra starting hypothesis.
     extra_hypotheses: more full-resolution image_from_court guesses to try,
     e.g. the previous calibration warped by estimated camera motion.
+    deep: also try stand-in lines for court lines that were not detected (see
+    ``_synthetic_lines``; several times slower). ``"auto"`` does so only when
+    the normal search does not reach status ok.
     """
+    if deep == "auto":
+        cal = _calibrate(image, previous, extra_hypotheses, method, False)
+        if cal.status == "ok":
+            return cal
+        alt = _calibrate(image, previous, extra_hypotheses, method, True)
+        return alt if alt.confidence > cal.confidence else cal
+    return _calibrate(image, previous, extra_hypotheses, method, bool(deep))
+
+
+def _calibrate(image: np.ndarray, previous, extra_hypotheses, method: Method, deep: bool) -> FrameCalibration:
     h0, w0 = image.shape[:2]
     work, s = _work_image(image)
     ev = line_evidence(work)
     tol = _tol(ev)
     S = np.diag([s, s, 1.0])
 
-    lines = detect_lines(ev.mask)
+    lines = detect_lines(ev.mask, max_lines=40)
     centre = np.array([work.shape[1] / 2, work.shape[0] / 2])
     fam_a, fam_b = split_families(lines)
-    fam_a = sort_family(fam_a[:8], centre)
-    fam_b = sort_family(fam_b[:8], centre)
+    fam_a = sort_family(pick_lines(fam_a), centre)
+    fam_b = sort_family(pick_lines(fam_b), centre)
 
-    seeds = hypotheses(fam_a, fam_b, ev, tol)
+    if deep:
+        wh_work = (work.shape[1], work.shape[0])
+        seeds = hypotheses(fam_a, fam_b, ev, tol, synth_a=_synthetic_lines(fam_a, fam_b, wh_work),
+                           synth_b=_synthetic_lines(fam_b, fam_a, wh_work))
+    else:
+        seeds = hypotheses(fam_a, fam_b, ev, tol)
     for Hx in ([previous] if previous is not None else []) + list(extra_hypotheses):
         seeds.insert(0, S @ Hx)
     if not seeds:
@@ -269,9 +340,18 @@ def calibrate_frame(
         refined.append((Hr, s_ref) if use_ref else (H, s_raw))
     # Seeds from earlier frames and refinement skip the hypothesis filter; drop any
     # placement no upright camera could see (court above its own horizon).
-    refined = [(H, sc) for H, sc in refined if upright(H)[0]]
+    refined = [(H, sc) for H, sc in refined if upright(H)[0] and camera_height(H, *wh)[0] >= MIN_CAMERA_HEIGHT]
     if not refined:
-        return _failed((w0, h0), method, "no court placement an upright camera could see (horizon below the court)",
+        return _failed((w0, h0), method,
+                       "no court placement an upright camera could see (horizon below the court, or camera at floor level)",
+                       CalibrationMetrics(lines_detected=len(lines)))
+    # A sliver along the far wall (a band of background lines read as a whole
+    # court far away) is not the court being filmed: the analysed court fills a
+    # good part of the frame. Without this, low courtside views lock onto the
+    # band (sam's high-school footage).
+    refined = [(H, sc) for H, sc in refined if _frame_share(H, wh) >= MIN_FRAME_SHARE]
+    if not refined:
+        return _failed((w0, h0), method, "no court placement covers enough of the frame",
                        CalibrationMetrics(lines_detected=len(lines)))
     refined.sort(key=lambda t: -t[1].value)
     # value = matched cells - half the unmatched ones; at <= 0 the best placement
