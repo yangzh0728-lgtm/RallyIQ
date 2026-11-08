@@ -80,6 +80,20 @@ class EventsConfig:
     # 14 held-out ShuttleSet clips, near/far right among correctly timed hits: rules 87.0 -> 92.3%,
     # v1e 89.7 -> 95.4%; hit F1 rules 61.8 -> 65.4%, v1e 70.4 -> 74.6%. Wrist-only proximity (no racket
     # extension) and best-of-a-few-frames proximity were tried and were worse.
+    # Doubles: choose the hitting team of every hit in a rally at once (dynamic programming over the rally)
+    # instead of fixing alternation breaks one pair at a time. Each hit scores its best player of each team
+    # (proximity); two consecutive hits by one team closer than ``doubles_alternation_max_gap_ms`` cost
+    # ``doubles_alternation_penalty`` (a missed hit in between is plausible after a longer gap). The hit then
+    # goes to the closest player of the chosen team. On a side-on camera, near and far players overlap on
+    # screen around the net, so the nearest player alone often names the wrong team; one wrong greedy
+    # hand-over then pushes the next hits to the wrong side too. 0 (default) disables it.
+    # Off by default: measured neutral so far. 2026-03-02 doubles clip (run4 shuttle/players, 26 confident
+    # hand-labelled hits): side of net right 19/26 at 0 and at 0.5 (0.8+ worse: 18/26); near player exact 10 -> 11
+    # of 13; same-team back-to-back hits 10/50 -> 4/57. Of the hits it moved to the other team, 2 were right and 2
+    # wrong on video. Synthetic doubles: identical. The remaining errors are upstream: the far man is missing from
+    # the tracks at his hits, and the shuttle point at a candidate can still sit next to the previous hitter.
+    doubles_alternation_penalty: float = 0.0
+    doubles_alternation_max_gap_ms: float = 1800.0
     hitter_fill: bool = True
     hitter_pose_fallback_frames: int = 25
     # A player tapping the shuttle to themselves (juggling it on the racket, feeding it up before a serve)
