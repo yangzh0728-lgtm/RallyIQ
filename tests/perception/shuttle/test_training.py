@@ -91,11 +91,29 @@ def test_tiny_finetune_round_trip(tmp_path):
     assert abs(xx - x * 512 / w) <= 1 and abs(yy - y * 288 / h) <= 1 and mask.sum() == seq_len
 
     out = tmp_path / "ft.pt"
-    cfg = TrainConfig(epochs=1, steps_per_epoch=2, batch_size=1, device="cpu")
+    cfg = TrainConfig(epochs=1, steps_per_epoch=2, batch_size=1, device="cpu", select_at=None)
     val = TrainClip("v", video, 30.0, {f: v for f, v in labels.items() if f >= 12})
-    report = train(ckpt, [TrainClip("c", video, 30.0, {f: v for f, v in labels.items() if f < 12})], [val],
+    val2 = TrainClip("v2", video, 30.0, {f: v for f, v in labels.items() if f >= 18})
+    report = train(ckpt, [TrainClip("c", video, 30.0, {f: v for f, v in labels.items() if f < 12})], [val, val2],
                    out, cfg, progress=lambda s: None)
     assert [h["epoch"] for h in report["history"]] == [0, 1]
-    assert set(report["history"][0]["val"]) == {"0.5", "0.3", "0.2"}
+    # several clips in one pass, with per-frame peaks (a local name once shadowed the argument)
+    from rallyiq.perception.shuttle.training import disagreements
+    peaks: dict = {}
+    _res, _mistakes = disagreements(out, [val, val2], TrainConfig(device="cpu"), progress=lambda s: None,
+                                   peaks=peaks)
+    assert set(peaks) == {"c"} and set(peaks["c"]) == {f for f in labels if f >= 12}
+    assert set(report["history"][0]["val"]) == {"0.5", "0.4", "0.3", "0.2"}
+    assert report["best_threshold"] in (0.5, 0.4, 0.3, 0.2)
     det = HeatmapShuttleDetector(out)  # loads as a normal detector checkpoint
     assert det.seq_len == seq_len and det.bg_mode == "concat"
+    assert det.recommended_threshold == report["best_threshold"]  # travels with the checkpoint
+
+
+def test_best_threshold_prefers_higher_on_ties():
+    from rallyiq.perception.shuttle.training import ValResult, best_threshold
+
+    res = {"0.5": {"f1": 0.9}, "0.3": {"f1": 0.95}, "0.2": {"f1": 0.95}}
+    assert best_threshold(res) == (0.95, 0.3)
+    assert ValResult(1, 0.0, res).best() == (0.95, 0.3)
+    assert best_threshold({}) == (0.0, 0.2)

@@ -30,7 +30,8 @@
           "court_speed_mps": 7.14,
           "rise": 1.77,
           "left_frame": 0.0
-        }
+        },
+        "detail": null
       }
     },
     {
@@ -68,7 +69,8 @@
           "court_speed_mps": 7.45,
           "rise": 1.7,
           "left_frame": 0.0
-        }
+        },
+        "detail": null
       }
     },
     {
@@ -106,7 +108,8 @@
           "court_speed_mps": 6.49,
           "rise": 1.772,
           "left_frame": 0.0
-        }
+        },
+        "detail": null
       }
     },
     {
@@ -136,7 +139,8 @@
           "court_speed_mps": 8.33,
           "rise": 1.46,
           "left_frame": 0.0
-        }
+        },
+        "detail": null
       }
     },
     {
@@ -174,7 +178,8 @@
           "court_speed_mps": 9.35,
           "rise": 1.379,
           "left_frame": 0.0
-        }
+        },
+        "detail": null
       }
     },
     {
@@ -204,7 +209,8 @@
           "court_speed_mps": 8.15,
           "rise": 1.598,
           "left_frame": 0.0
-        }
+        },
+        "detail": null
       }
     },
     {
@@ -246,7 +252,8 @@
           "court_speed_mps": null,
           "rise": null,
           "left_frame": 0.0
-        }
+        },
+        "detail": null
       }
     }
   ]

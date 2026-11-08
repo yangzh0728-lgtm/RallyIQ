@@ -137,3 +137,19 @@ python scripts/shuttle_loop.py --rollback # 回到上一个模型
 所有模型、`state.json` 和 `history.md` 都在 `weights/shuttle/loop/`。标注没变化时不会重复训练
 （`--force` 强制）。采用后脚本会打印在没参与训练的片段上跑 `real_run.py` 和 `hits_ablation.py`
 的命令：验证分数是逐帧检测，击球结果还要单独核对。
+
+**标注检查。** 用预标注打底时，模型没检测到的每一帧都会被标成"看不见"，其中有些球其实看得见
+（比如发球前在手里）。这些帧会让训练学错、让验证把对的检测算成误报。所以每轮结束后，脚本用
+最后一轮（学得最多的）模型过一遍所有已标注帧，把和标注对不上的帧写到
+`weights/shuttle/loop/round-NNN-check.json`，并拼一张最有把握的 48 帧的图（`.jpg`，绿圈=标注，
+紫圈=模型）。然后用
+`python -m evaluation.tools.label_tool <clip> --check weights/shuttle/loop/round-NNN-check.json`
+只看这些帧：`g` 跳过（标注是对的），`y` 采用模型的点，左键点击或 `n` 改标注，`x` 删掉拿不准的帧
+（训练时忽略）。`--check WEIGHTS` 不训练，只对任意 checkpoint 做这项检查。
+
+**自动标注（`scripts/auto_label.py`）。** 不用人从头标：以流水线的预测（或已有标注）为起点，
+用最近一轮的末轮模型跑遍整段视频，逐帧决定：手工改过的帧不动；模型和标注一致的帧不动；标注说看不见、
+模型以 ≥0.4 的分数看到并且前后 ±2 帧有呼应的点，**提议**为可见；其余矛盾的帧去掉标注（训练时忽略，
+不让模型学一个猜测）。每个提议在拼图里有编号（2 倍放大，紫圈=提议的点），看完后用
+`--apply --not-shuttle 编号 --unsure 编号` 写入（状态 reviewed，`auto_label` 字段记录模型、计数和采用的帧），
+`--preview` 生成带标注圈和帧号的预览视频，方便截图指出问题。输出在 `~/rallyiq-data/autolabel/<clip>/`。

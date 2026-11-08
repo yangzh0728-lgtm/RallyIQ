@@ -73,6 +73,8 @@ class Clip:
 def load_clips(d: Path) -> list[Clip]:
     out = []
     for lp in sorted((d / "labels").glob("*.json")):
+        if lp.name.startswith("._"):  # macOS metadata files on exFAT
+            continue
         pp = d / "preds" / f"{lp.stem}.json"
         if not pp.exists():
             continue

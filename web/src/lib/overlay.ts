@@ -54,10 +54,12 @@ export interface Layers {
   shuttle: boolean;
   court: boolean;
   feet: boolean; // footprints (planted / just lifted) and footwork actions
+  /** Pure abstract view: hide the original frame, draw only the overlays on a dark background. */
+  abstract: boolean;
   opacity: number; // 0..1
 }
 
-export const DEFAULT_LAYERS: Layers = { ai: true, skeleton: true, bbox: false, shuttle: true, court: true, feet: true, opacity: 0.9 };
+export const DEFAULT_LAYERS: Layers = { ai: true, skeleton: true, bbox: false, shuttle: true, court: true, feet: true, abstract: false, opacity: 0.9 };
 
 const KP_MIN_CONF = 0.3;
 const TRAIL_FRAMES = 14;

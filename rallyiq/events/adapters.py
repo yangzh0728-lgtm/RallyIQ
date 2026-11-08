@@ -10,6 +10,14 @@ from .types import HitEvent, Keypoint, PlayerPose, PoseFrame, RallySegment, Shut
 _PLAYER_IDS = ("P1", "P2", "P3", "P4")
 
 
+def calibration_segments(cal) -> list[tuple[int, int, bool]]:
+    """(start_frame, end_frame, usable) per camera segment of a ``CourtCalibration`` (None -> [])."""
+    if cal is None:
+        return []
+    return [(sg.start_frame, sg.end_frame, sg.homography is not None and str(getattr(sg.status, "value", sg.status))
+             != "undeterminable") for sg in cal.segments]
+
+
 def shuttle_from_contract(track: Optional[ShuttleTrack]) -> list[ShuttleObs]:
     if track is None:
         return []

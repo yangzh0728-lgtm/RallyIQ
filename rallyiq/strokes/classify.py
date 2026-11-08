@@ -1,7 +1,7 @@
 """Turn shots + perception into ``StrokesResult`` (one ``StrokeInfo`` per shot).
 
 The classifier backend is pluggable: ``auto`` (default: the gradient-boosting model bundled in
-``models/strokes_v2.json``, see ``learned.py``; the rules if it is missing), ``rules`` (no weights),
+``models/strokes_v3.json``, see ``learned.py``; the rules if it is missing), ``rules`` (no weights),
 ``bst`` (optional skeleton + shuttle transformer, see ``bst.py``) or ``sklearn`` (a model file you
 trained, ``.json`` or ``.joblib``). Whatever the backend,
 the review policy here is the same:
@@ -56,7 +56,10 @@ def classify(
     cfg: StrokesConfig | None = None,
     model: ModelFn | None = None,
     model_name: str | None = None,
+    detail: bool = False,
+    attrs=None,
 ) -> StrokesResult:
+    """``detail``: add ``StrokeInfo.detail`` (``attrs``: the ``detail.AttrModel``; None = rules-only layers)."""
     cfg = cfg or StrokesConfig()
     feats = shot_features(events, shuttle, players, fps, cfg.features)
     shots = {s.shot_id: s for s in events.shots}
@@ -111,6 +114,12 @@ def classify(
                 evidence=f.evidence(),
             ),
         ))
+    if detail:
+        from .detail import details
+
+        dets = details(events, shuttle, players, feats, fps, {s.shot_id: s.stroke.shot_type for s in out}, attrs)
+        out = [s.model_copy(update={"stroke": s.stroke.model_copy(update={"detail": dets.get(s.shot_id)})})
+               if s.stroke.shot_type else s for s in out]
     return StrokesResult(video_id=events.video_id, classifier=name, shots=out)
 
 

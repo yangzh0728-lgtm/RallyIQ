@@ -11,9 +11,9 @@ from dataclasses import fields, replace
 
 from ..contracts import EventsResult
 from ..pipeline.context import StageContext, demo_mode
-from .adapters import events_to_contract, poses_from_contract, shuttle_from_contract
+from .adapters import calibration_segments, events_to_contract, poses_from_contract, shuttle_from_contract
 from .config import EventsConfig
-from .pipeline import segment_events
+from .pipeline import off_court_views, segment_events
 
 
 def _config(ctx: StageContext) -> EventsConfig:
@@ -35,11 +35,14 @@ def run(ctx: StageContext) -> EventsResult:
         return EventsResult(video_id=meta.video_id, match_format=fmt, rallies=[], shots=[])
 
     ctx.report(0.1)
+    cfg = _config(ctx)
+    off = off_court_views(calibration_segments(ctx.calibration), cfg.court_view_min_share) if cfg.mask_off_court_views else []
     rallies = segment_events(
         shuttle_from_contract(shuttle),
         poses_from_contract(players),
-        _config(ctx),
+        cfg,
         video_end_ms=float(meta.duration_ms),
+        off_court=off,
     )
     ctx.report(0.9)
     return events_to_contract(meta.video_id, rallies, players.match_format if players is not None else "singles")

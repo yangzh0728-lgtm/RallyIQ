@@ -148,7 +148,8 @@ def _situation(m: ShotMoment, self_player: str | None) -> str:
     reply = f"，对手回{ZH[m.next_shot_type]}" if m.next_shot_type else ""
     res = {"lost": "，丢分", "won": "，得分"}.get(m.outcome, "")
     where = f"第{m.rally_no}回合第{m.shot_no}拍" if m.rally_no else f"第{m.shot_no}拍"
-    return f"{where}：{who}在{m.hitter_zone}打{ZH.get(m.shot_type, m.shot_type)}，对手在{m.opponent_zone}{reply}{res}"
+    shot = m.shot_label_zh or ZH.get(m.shot_type, m.shot_type)
+    return f"{where}：{who}在{m.hitter_zone}打{shot}，对手在{m.opponent_zone}{reply}{res}"
 
 
 def ground_shot_advice(raw: list, moments: list[ShotMoment], self_player: str | None = None) -> list[ShotAdvice]:

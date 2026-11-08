@@ -5,7 +5,7 @@
     # quick check on synthetic rallies (says nothing about real video)
     python scripts/learn_strokes.py --source synthetic --out ~/rallyiq-data/models/strokes_synth.joblib
 
-    # .json output = numpy-only model; rallyiq/strokes/models/strokes_v2.json is the bundled one
+    # .json output = numpy-only model; rallyiq/strokes/models/strokes_v3.json is the bundled one
     # ShuttleSet clips built and run by scripts/build_train_set.py (cached artifacts, no video work)
     python scripts/learn_strokes.py --source shuttleset \\
         --data ~/rallyiq-data/public/shuttleset_train ~/rallyiq-data/public/shuttleset_train_v3 \\
@@ -79,9 +79,12 @@ def synthetic_examples(n_seeds: int) -> list[Example]:
 
 # ------------------------------------------------------------------ ShuttleSet
 def _label_types(label: dict[str, Any], entry: dict[str, Any], cid: str, set_dir: Path | None) -> list[tuple[float, str]]:
-    """(t_ms, type) of every labelled stroke, in label time."""
+    """(t_ms, type) of every labelled stroke, in label time.
+
+    With ``set_dir`` the types are re-read from the set CSVs (so a taxonomy fix applies without
+    rebuilding the label files); otherwise the label files' ``shot_type`` is used."""
     typed = [(h["t_ms"], h["shot_type"]) for h in label["hits"] if h.get("shot_type")]
-    if typed or set_dir is None:
+    if set_dir is None:
         return typed
     from evaluation.public import shuttleset as SS
 
@@ -152,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--data", type=Path, nargs="+", help="shuttleset: build_train_set.py output folder(s)")
     ap.add_argument("--features", choices=tuple(L.FEATURE_SETS), default="v2",
                     help="base = the rules' evidence only; v2 = plus rally context, direction, pose, early flight")
-    ap.add_argument("--shuttleset", type=Path, help="ShuttleSet/set dir, for label files without shot_type")
+    ap.add_argument("--shuttleset", type=Path, help="ShuttleSet/set dir: read stroke types from the set CSVs")
     ap.add_argument("--seeds", type=int, default=24, help="synthetic: number of videos")
     ap.add_argument("--tol", type=float, default=3, help="frames between a predicted shot and its labelled stroke")
     ap.add_argument("--folds", type=int, default=5)

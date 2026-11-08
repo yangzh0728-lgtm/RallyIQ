@@ -36,7 +36,7 @@ SYSTEM_PROMPT = """你是 RallyIQ 的羽毛球单打教练助手。你会收到�
 - training 最多 5 项，按重要性排序；insights 中对应的问题可以简要提一句“见训练建议”。
 
 逐拍建议（moments 字段，可能为空）：
-- 系统已结合击球类型和双方在球场上的站位，用规则找出了需要改变球路选择的击球（moments）。每条有 moment_id、视频时间 time、第几回合第几拍、击球者 player_id、击球类型、击球者位置 hitter_zone（本人视角）、对手位置 opponent_zone（从击球者这边看过去的左右）、对手接这一拍移动的距离 opponent_reach_m、对手的回球 next_shot、结果 outcome，以及规则给出的 problem / suggestion / why。
+- 系统已结合击球类型和双方在球场上的站位，用规则找出了需要改变球路选择的击球（moments）。每条有 moment_id、视频时间 time、第几回合第几拍、击球者 player_id、击球类型、击球者位置 hitter_zone（本人视角）、对手位置 opponent_zone（从击球者这边看过去的左右）、对手接这一拍移动的距离 opponent_reach_m、对手的回球 next_shot、结果 outcome，以及规则给出的 problem / suggestion / why。shot 可能带正反手和直线/斜线（如“反手斜线挑球”）；shot_detail 是这一拍的分层描述，其中“主动进攻/相持/被动防守”和“意图”是系统按规则推断的，只作参考，不要当成确定事实。
 - shot_advice 为每个 moment 写一条：moment_id 原样照抄；advice 用一两句话说这一拍应该怎么打（打什么球、送到对方哪个区域），why 结合“我在哪、对手在哪、对手怎么回”解释为什么这样更好。可以参考规则的 suggestion，但要讲得像教练当面指出那一拍。
 - 不要写或改动时间、回合号、拍数和站位，这些由系统显示；不要编造 moments 里没有的击球。confidence 为 low 的击球，在 why 里说“识别把握不大，可以回看这一拍确认”。
 - 每条 moment 可能带 footwork：击球者这一拍的脚步（启动步、起动时间、步数和步法、是否弓步、击球后多久回到中心）。脚步有问题时（没有启动步、起动慢、回位慢），在 advice 或 why 里顺带指出怎么改；issue 为 slow_recovery / late_start 的 moment 本身就是脚步问题，advice 重点讲脚步，不要硬改球路。
@@ -128,7 +128,8 @@ def knowledge_payload(knowledge) -> str:
 def moment_card(m) -> dict:
     return {
         "moment_id": m.moment_id, "time": timestamp(m.t_ms), "rally_no": m.rally_no, "shot_no": m.shot_no,
-        "player_id": m.player_id, "shot": ZH.get(m.shot_type, m.shot_type), "hitter_zone": m.hitter_zone,
+        "player_id": m.player_id, "shot": m.shot_label_zh or ZH.get(m.shot_type, m.shot_type),
+        "shot_detail": m.shot_detail_zh, "hitter_zone": m.hitter_zone,
         "opponent_zone": m.opponent_zone, "opponent_reach_m": m.opponent_reach_m,
         "next_shot": ZH.get(m.next_shot_type, m.next_shot_type) if m.next_shot_type else None,
         "outcome": m.outcome, "problem": m.problem, "suggestion": m.suggestion, "why": m.why,

@@ -9,6 +9,9 @@ compare rules vs learned on held-out clips.
     python scripts/learn_hits.py train --config ~/rallyiq-data/public/shuttleset_train/search/best.json
     # 2. before/after on the held-out matches scored by scripts/public_eval.py
     python scripts/learn_hits.py eval --data ~/rallyiq-data/public/shuttleset
+    #    compare rule variants too: --variant strict:same_side_min_gap_ms=800,hitter_scale=mixed
+    # 3. hit-sequence sanity on unlabelled footage (same player twice in a row, very short gaps)
+    python scripts/learn_hits.py stats ~/rallyiq-data/data/videos/<id>/artifacts --variant ...
 
 Only the events stage is re-run (cached shuttle/players artifacts), so both steps take minutes.
 
@@ -38,18 +41,21 @@ sys.path.insert(0, str(ROOT))
 
 from evaluation import benchmark, from_contracts, schema  # noqa: E402
 from evaluation import metrics as M  # noqa: E402
-from rallyiq.contracts import PlayerTracks, ShuttleTrack  # noqa: E402
+from rallyiq.contracts import CourtCalibration, PlayerTracks, ShuttleTrack  # noqa: E402
 from rallyiq.events import hits as H  # noqa: E402
-from rallyiq.events.adapters import events_to_contract, poses_from_contract, shuttle_from_contract  # noqa: E402
+from rallyiq.events.adapters import (calibration_segments, events_to_contract, poses_from_contract,  # noqa: E402
+                                    shuttle_from_contract)
 from rallyiq.events.config import EventsConfig  # noqa: E402
 from rallyiq.events.learned import BUNDLED, FEATURES, HitScorer  # noqa: E402
-from rallyiq.events.pipeline import segment_events  # noqa: E402
+from rallyiq.events.pipeline import off_court_views, segment_events  # noqa: E402
 
 PLAYER_IDS = {"P1", "P2", "P3", "P4"}
 
 
 # ------------------------------------------------------------------ data
 class Clip:
+    cal_segments: list[tuple[int, int, bool]] = []  # (start, end, calibrated) per camera segment
+
     def __init__(self, cid: str, art: Path, label: dict[str, Any], group: str):
         self.cid, self.art, self.label, self.group = cid, art, label, group
         meta = json.loads((art / "probe.json").read_text(encoding="utf-8"))
@@ -61,6 +67,9 @@ class Clip:
         self.shuttle = shuttle_from_contract(sh)
         self.poses = poses_from_contract(self.players)
         self.match_format = self.players.match_format if self.players is not None else "singles"
+        cp = art / "calibration.json"
+        cal = CourtCalibration.model_validate_json(cp.read_text(encoding="utf-8")) if cp.exists() else None
+        self.cal_segments = calibration_segments(cal)
         self.rallies: list[dict[str, Any]] = []
         self.X = np.zeros((0, len(FEATURES)))
         self.y = np.zeros(0)
@@ -68,14 +77,17 @@ class Clip:
     def t_label(self, frame: int) -> float:
         return self.offset + frame * 1000.0 / self.fps
 
+    def off_court(self, cfg: EventsConfig) -> list[tuple[int, int]]:
+        return off_court_views(self.cal_segments, cfg.court_view_min_share) if cfg.mask_off_court_views else []
+
     def run(self, cfg: EventsConfig):
-        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms)
+        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms, off_court=self.off_court(cfg))
 
     def collect(self, cfg: EventsConfig, tol_frames: float) -> None:
         """Candidates per rally with features and labels (scorer off: rule confidences kept)."""
         sink: list = []
         rallies = segment_events(self.shuttle, self.poses, replace(cfg, hit_scorer="off"),
-                                 video_end_ms=self.duration_ms, collect=sink)
+                                 video_end_ms=self.duration_ms, collect=sink, off_court=self.off_court(cfg))
         by_id = {r.rally_id: {"start_ms": r.start_ms, "cands": [], "serve": None} for r in rallies}
         self.pred_rallies = [{"start_ms": self.offset + r.start_ms, "end_ms": self.offset + r.end_ms}
                              for r in rallies if r.end_ms > r.start_ms]
@@ -139,6 +151,8 @@ def load_clips(data: Path, index_name: str) -> list[Clip]:
         # (results.json only lists the clips of the last run, e.g. with --skip-run, so it is not used)
         items = []
         for lp in sorted((data / "labels").glob("*.json")):
+            if lp.name.startswith("._"):  # macOS metadata files on exFAT
+                continue
             pp = data / "preds" / lp.name
             vid = json.loads(pp.read_text(encoding="utf-8")).get("source_video_id") if pp.exists() else None
             if vid:
@@ -179,9 +193,7 @@ def simulate(clip: Clip, probs: np.ndarray | None, cfg: EventsConfig,
                 kept.insert(0, (c, s))
         cands = [c for c, _ in kept]
         ev = {id(c): e for c, e in kept}
-        cands = H._alternating_subset(cands, cfg)
-        H._reattribute(cands, cfg)
-        H._check_alternation(cands)
+        cands = H.resolve_sequence(cands, cfg)
         for c in cands:
             b = c.best
             hitter = b.player_id if c.hitter_known and b.player_id in PLAYER_IDS else None
@@ -509,6 +521,49 @@ def _events_preds(clips: list[Clip], cfg: EventsConfig, preds: Path) -> None:
             schema.save(from_contracts.convert(t, c.cid, c.offset), preds / f"{c.cid}.json")
 
 
+def parse_variant(spec: str) -> tuple[str, EventsConfig]:
+    """``name:key=value,key=value`` -> (name, EventsConfig with those fields set; values typed like the field)."""
+    name, _, body = spec.partition(":")
+    base = EventsConfig()
+    kw: dict[str, Any] = {}
+    for item in filter(None, body.split(",")):
+        k, _, v = item.partition("=")
+        k = k.strip()
+        if not hasattr(base, k):
+            raise SystemExit(f"unknown EventsConfig field {k!r} in variant {spec!r}")
+        cur = getattr(base, k)
+        kw[k] = type(cur)(float(v)) if isinstance(cur, (int, float)) and not isinstance(cur, bool) else (
+            v.lower() in ("1", "true", "yes") if isinstance(cur, bool) else v)
+    return name, replace(base, **kw)
+
+
+def seq_stats(seqs: list[list[tuple[float, str | None]]], short_ms: float = 500.0) -> dict[str, Any]:
+    """Per rally, time-ordered (t_ms, who) of its hits -> share of consecutive pairs by the same side/player
+    (pairs where both are known) and share of gaps under ``short_ms``."""
+    pairs = known = same = short = 0
+    for hs in seqs:
+        for (ta, a), (tb, b) in zip(hs, hs[1:]):
+            pairs += 1
+            short += (tb - ta) < short_ms
+            if a is not None and b is not None:
+                known += 1
+                same += a == b
+    return {"pairs": pairs, "same_side": same / known if known else None,
+            "short_gap": short / pairs if pairs else None, "hits": sum(len(h) for h in seqs)}
+
+
+def _doc_seqs(doc: dict[str, Any]) -> list[list[tuple[float, str | None]]]:
+    """Hits of an evaluation doc (label or prediction) grouped by its rallies, with the hitting side."""
+    rallies = sorted((r["start_ms"], r["end_ms"]) for r in doc.get("rallies", []))
+    groups: list[list[tuple[float, str | None]]] = [[] for _ in rallies]
+    for h in sorted(doc.get("hits", []), key=lambda h: h["t_ms"]):
+        for k, (a, b) in enumerate(rallies):
+            if a - 50 <= h["t_ms"] <= b + 50:
+                groups[k].append((h["t_ms"], h.get("side")))
+                break
+    return groups
+
+
 def cmd_eval(a: argparse.Namespace) -> int:
     data = a.data.expanduser()
     clips = load_clips(data, "results.json")
@@ -521,6 +576,7 @@ def cmd_eval(a: argparse.Namespace) -> int:
     out = data / a.out_name
     variants = {"rules": EventsConfig(hit_scorer="off")}
     variants.update({m.stem: EventsConfig(hit_scorer=str(m)) for m in models})
+    variants.update(parse_variant(v) for v in a.variant or [])
     L = [f"# Hits: rules vs learned scorer on {len(clips)} held-out clips ({data.name})", "",
          f"clips: {', '.join(c.cid for c in clips)}", "", "models: " + ", ".join(f"`{m}`" for m in models), ""]
     summary = {}
@@ -535,15 +591,19 @@ def cmd_eval(a: argparse.Namespace) -> int:
         finally:
             M.HIT_TOL_FRAMES = old
         o = rep["overall"]
-        summary[name] = {"hits": o["hits"], "hits_6f": loose, "rallies": o["rallies"]}
+        seq = seq_stats([g for c in clips for g in _doc_seqs(schema.load(out / name / f"{c.cid}.json"))])
+        summary[name] = {"hits": o["hits"], "hits_6f": loose, "rallies": o["rallies"], "seq": seq}
         for cid, cs in rep["clips"].items():
             per_clip.setdefault(cid, {})[name] = cs["hits"]["f1"]
     f = lambda x: "—" if x is None else f"{x * 100:.1f}%"  # noqa: E731
-    L += ["| scorer | hit P | hit R | hit F1 | F1 any side | F1 ±6 frames | rally F1 |", "|---|---|---|---|---|---|---|"]
+    lab = seq_stats([g for c in clips for g in _doc_seqs(c.label)])
+    L += ["| variant | hit P | hit R | hit F1 | F1 any side | F1 ±6 frames | rally F1 | same side twice | gap < 0.5 s |",
+          "|---|---|---|---|---|---|---|---|---|",
+          f"| labels | | | | | | | {f(lab['same_side'])} | {f(lab['short_gap'])} |"]
     for name, s in summary.items():
-        h = s["hits"]
+        h, q = s["hits"], s["seq"]
         L.append(f"| {name} | {f(h['precision'])} | {f(h['recall'])} | {f(h['f1'])} | {f(h['f1_ignore_side'])} | "
-                 f"{f(s['hits_6f']['f1'])} | {f(s['rallies']['f1'])} |")
+                 f"{f(s['hits_6f']['f1'])} | {f(s['rallies']['f1'])} | {f(q['same_side'])} | {f(q['short_gap'])} |")
     L += ["", "Hit F1 per clip:", "", "| clip | " + " | ".join(summary) + " |", "|---|" + "---|" * len(summary)]
     for cid, row in sorted(per_clip.items()):
         L.append(f"| {cid} | " + " | ".join(f(row.get(n)) for n in summary) + " |")
@@ -551,6 +611,24 @@ def cmd_eval(a: argparse.Namespace) -> int:
     (out / "report.json").write_text(json.dumps(summary, indent=1, default=str), encoding="utf-8")
     print("\n".join(L))
     print(f"\nreport: {out / 'report.md'}")
+    return 0
+
+
+def cmd_stats(a: argparse.Namespace) -> int:
+    """Hit-sequence sanity on unlabelled videos (e.g. a user's own footage): for each variant, hits, share of
+    consecutive hits by the same player, share of gaps under 0.5 s. ShuttleSet labels: ~0% and ~8%."""
+    variants = dict([("rules", EventsConfig(hit_scorer="off"))] + [parse_variant(v) for v in a.variant or []])
+    L = ["| video | variant | rallies | hits | same player twice | gap < 0.5 s |", "|---|---|---|---|---|---|"]
+    for art in a.artifacts:
+        art = art.expanduser()
+        clip = Clip(art.parent.name, art, {"range_ms": [0, 0], "hits": [], "rallies": []}, art.parent.name)
+        for name, cfg in variants.items():
+            rallies = clip.run(cfg)
+            q = seq_stats([[(h.t_ms, h.hitter_id) for h in r.hits] for r in rallies])
+            pct = lambda x: "—" if x is None else f"{x * 100:.1f}%"  # noqa: E731
+            L.append(f"| {clip.cid} | {name} | {len(rallies)} | {q['hits']} | {pct(q['same_side'])} | {pct(q['short_gap'])} |")
+            print(L[-1], flush=True)
+    print("\n".join(L))
     return 0
 
 
@@ -577,8 +655,13 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--data", type=Path, default=Path("~/rallyiq-data/public/shuttleset"))
     e.add_argument("--model", type=Path, nargs="+", default=[BUNDLED], help="one or more scorer JSON files")
     e.add_argument("--out-name", default="learn_eval", help="output folder inside --data")
+    vhelp = "extra variant NAME:field=value,... (EventsConfig), e.g. strict:same_side_min_gap_ms=800,hitter_scale=mixed"
+    e.add_argument("--variant", action="append", help=vhelp)
+    st = sub.add_parser("stats", help="hit-sequence sanity on unlabelled videos")
+    st.add_argument("artifacts", type=Path, nargs="+", help="data/videos/<id>/artifacts folders")
+    st.add_argument("--variant", action="append", help=vhelp)
     a = ap.parse_args(argv)
-    return {"train": cmd_train, "search": cmd_search, "eval": cmd_eval}[a.cmd](a)
+    return {"train": cmd_train, "search": cmd_search, "eval": cmd_eval, "stats": cmd_stats}[a.cmd](a)
 
 
 if __name__ == "__main__":

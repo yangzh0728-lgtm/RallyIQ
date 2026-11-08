@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { api } from "../lib/api";
 import { jobProgress } from "../lib/players";
 import { usePoll } from "../lib/usePoll";
@@ -28,9 +28,14 @@ export function useJob(jobId: string | null) {
   return usePoll(jobId ? fetchJob : null, 1000, jobFinished);
 }
 
-export function JobBadge({ job: initial }: { job: Job | null }) {
+export function JobBadge({ job: initial, onDone }: { job: Job | null; onDone?: () => void }) {
   const live = useJob(initial && !jobFinished(initial) ? initial.job_id : null);
   const job = live.value ?? initial;
+  // A job that finishes while the list is open: reload so duration / size / links appear.
+  const finishedLive = !!live.value && jobFinished(live.value);
+  useEffect(() => {
+    if (finishedLive) onDone?.();
+  }, [finishedLive, onDone]);
   if (!job) return <span className="muted">未分析</span>;
   const p = job.state === "succeeded" ? 1 : jobProgress(job.stages);
   const cls = job.state === "succeeded" ? "ok" : job.state === "failed" ? "bad" : "";
@@ -48,7 +53,7 @@ export function JobBadge({ job: initial }: { job: Job | null }) {
   );
 }
 
-export function JobDetail({ job, title }: { job: Job; title?: string }) {
+export function JobDetail({ job, title, onRetry }: { job: Job; title?: string; onRetry?: () => void }) {
   const p = jobProgress(job.stages);
   return (
     <div className="card" style={{ maxWidth: 520, margin: "40px auto" }}>
@@ -71,6 +76,14 @@ export function JobDetail({ job, title }: { job: Job; title?: string }) {
         ))}
       </div>
       {job.error && <p className="error">{job.error}</p>}
+      {onRetry && (job.state === "failed" || job.state === "cancelled") && (
+        <div className="row" style={{ marginTop: 12 }}>
+          <button className="primary" onClick={onRetry}>
+            重新分析
+          </button>
+          <span className="muted small">从头重新跑一遍全部阶段；已做的人工修正会保留。</span>
+        </div>
+      )}
     </div>
   );
 }

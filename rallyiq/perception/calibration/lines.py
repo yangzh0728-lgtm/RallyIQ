@@ -44,15 +44,21 @@ class ImageLine:
 def line_evidence(image_bgr: np.ndarray) -> LineEvidence:
     """Find thin bright structures (painted lines) robustly to floor colour and lighting.
 
-    A morphological top-hat on the brightest channel keeps structures thinner
-    than the kernel, so it works for white or yellow lines on green, blue, red
+    A morphological top-hat (on the brightest and on the darkest colour channel)
+    keeps structures thinner than the kernel, so it works for white or yellow lines on green, blue, red
     or wooden floors, and ignores broad glare and lighting gradients.
     """
     h, w = image_bgr.shape[:2]
-    value = image_bgr.max(axis=2) if image_bgr.ndim == 3 else image_bgr
     k = max(9, int(round(w / 50)) | 1)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
-    tophat = cv2.morphologyEx(value, cv2.MORPH_TOPHAT, kernel)
+    if image_bgr.ndim == 3:
+        # Brightest channel for coloured lines on a dark floor (yellow on blue);
+        # darkest channel for white lines on a bright coloured floor (white on a
+        # light green mat, where the green channel alone leaves little contrast).
+        tophat = np.maximum(cv2.morphologyEx(image_bgr.max(axis=2), cv2.MORPH_TOPHAT, kernel),
+                            cv2.morphologyEx(image_bgr.min(axis=2), cv2.MORPH_TOPHAT, kernel))
+    else:
+        tophat = cv2.morphologyEx(image_bgr, cv2.MORPH_TOPHAT, kernel)
     otsu, _ = cv2.threshold(tophat, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     thr = max(22.0, float(otsu))
     mask = (tophat >= thr).astype(np.uint8) * 255
@@ -202,6 +208,36 @@ def split_families(lines: list[ImageLine]) -> tuple[list[ImageLine], list[ImageL
 
 def _with_vp(line: ImageLine, vp: np.ndarray) -> ImageLine:
     return ImageLine(normal=line.normal, c=line.c, support=line.support, points=line.points, vp=vp)
+
+
+def pick_lines(lines: list[ImageLine], n: int = 8, extra: int = 4, min_sep: float = 20.0) -> list[ImageLine]:
+    """The ``n`` best-supported lines of a family plus up to ``extra`` others far
+    from all of them.
+
+    Clutter (bleachers, benches, a net in front of other courts) can stack many
+    strong parallel lines in one band and push every court line of the near
+    court out of the top ``n`` (sam's own0529_0006: the near short service line
+    ranked below a dozen background lines). The extra picks keep some lines from
+    elsewhere in the image as hypotheses; scoring still decides.
+    """
+    lines = sorted(lines, key=lambda l: -l.support)
+    out = lines[:n]
+    mids = {id(l): _midpoint(l) for l in lines}
+
+    def sep(a: ImageLine, b: ImageLine) -> float:
+        return min(abs(a.normal @ mids[id(b)] - a.c), abs(b.normal @ mids[id(a)] - b.c))
+
+    rest = lines[n:]
+    for _ in range(extra):
+        if not rest:
+            break
+        far = [(min(sep(l, o) for o in out), l) for l in rest]
+        d, best = max(far, key=lambda t: t[0])
+        if d < min_sep:
+            break
+        out.append(best)
+        rest = [l for l in rest if l is not best]
+    return out
 
 
 def sort_family(lines: list[ImageLine], centre: np.ndarray) -> list[ImageLine]:
