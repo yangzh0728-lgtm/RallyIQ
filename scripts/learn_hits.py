@@ -151,6 +151,8 @@ def load_clips(data: Path, index_name: str) -> list[Clip]:
         # (results.json only lists the clips of the last run, e.g. with --skip-run, so it is not used)
         items = []
         for lp in sorted((data / "labels").glob("*.json")):
+            if lp.name.startswith("._"):  # macOS metadata files on exFAT
+                continue
             pp = data / "preds" / lp.name
             vid = json.loads(pp.read_text(encoding="utf-8")).get("source_video_id") if pp.exists() else None
             if vid:
