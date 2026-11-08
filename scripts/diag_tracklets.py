@@ -9,7 +9,7 @@ covers or comes within ``--window`` frames of the given frames: span, length, me
 target-court weight (1 = only over our court, 0.6 = also over another court), whether it
 reaches one of our players, and the verdict (kept / foreign / ambiguous / idle). For
 every candidate on the given frames it prints the court weight, the loose and the strict
-(racket-reach) player support, the rest flag and whether it sits in a fixed-feature cell
+(swinging-wrist racket contact) player support, whether it is in a hand, the rest flag and whether it sits in a fixed-feature cell
 (dropped before linking).
 """
 
@@ -28,8 +28,8 @@ from rallyiq.perception.shuttle.stage import (
     CANDIDATES_FILE,
     court_lock,
     load_candidates,
+    RacketContact,
     rest_area,
-    strict_support,
     tracker_config,
 )
 from rallyiq.perception.shuttle.tracker import ShuttleTracker
@@ -54,11 +54,12 @@ def main(argv: list[str] | None = None) -> int:
     cands, (w, h), _ = load_candidates(vdir / "work" / CANDIDATES_FILE)
     region, support, mode = court_lock(cal, players)
     rest = rest_area(cal, players)
-    strict = strict_support(players)
+    rc = RacketContact(players, meta.fps)
+    strict, held = (rc.contact, rc.held) if rc else (None, None)
     sx, sy = meta.width / w, meta.height / h
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in cands.items()}
     tr = ShuttleTracker(meta.fps, meta.width, meta.height, tracker_config(None, a.peak_threshold),
-                        region=region, support=support, rest=rest, strict_support=strict)
+                        region=region, support=support, rest=rest, strict_support=strict, held=held)
     tr.track(scaled, meta.frame_count)
     print(f"court lock: {mode}; {len(tr.log)} trajectories judged; {len(tr.hot_cells)} fixed-feature cells")
     for f in a.frames:
@@ -67,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
             weight = f"{region(f, x, y):.2f}" if region else None
             print(f"   ({x:.0f},{y:.0f}) score {s:.2f}: court weight {weight}, "
                   f"near our player {support(f, x, y) if support else None}, "
-                  f"racket reach {strict(f, x, y) if strict else None}, rest {rest(f, x, y) if rest else None}, "
+                  f"racket contact {strict(f, x, y) if strict else None}, held {held(f, x, y) if held else None}, rest {rest(f, x, y) if rest else None}, "
                   f"fixed feature {tr.hot_cell(x, y) in tr.hot_cells}")
         for start, end, n, m, sup, verdict in tr.log:
             if start - a.window <= f <= end + a.window:

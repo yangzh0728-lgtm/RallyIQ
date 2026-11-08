@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from collections.abc import Callable, Sequence
 from dataclasses import fields
 from pathlib import Path
@@ -86,13 +87,83 @@ def court_lock(
     return region, support, mode
 
 
-# Racket reach (body heights) that decides a trajectory in air shared with another court.
-STRICT_REACH_BODIES = 0.45
+# Racket contact, in body heights of the player's box: a wrist this close to the shuttle,
+# while the wrist moves at least this fast (a swing, not a hand hanging at the side).
+CONTACT_REACH_BODIES = 0.45
+SWING_BODIES_PER_S = 1.5
+SWING_WINDOW_S = 0.15
+HELD_REACH_BODIES = 0.15
+_WRISTS = (9, 10)  # COCO-17 left / right wrist
+_MIN_KP_CONF = 0.3
 
 
-def strict_support(players: PlayerTracks | None) -> SupportFn | None:
-    prox = PlayerProximity(players, reach_bodies=STRICT_REACH_BODIES)
-    return prox.near if prox else None
+class RacketContact:
+    """Where our players' rackets can meet the shuttle, from the wrist keypoints.
+
+    ``contact`` is true near a wrist of P1/P2 that is swinging around that frame (the
+    box-based reach covers half the image for a big near player, so a neighbour court's
+    shuttle passing behind them looked ours). ``held`` is true right at a wrist (a
+    shuttle in hand before a serve sits still without being a scene feature). Players
+    without wrist keypoints fall back to the box reach for ``contact``.
+    """
+
+    def __init__(self, players: PlayerTracks | None, fps: float):
+        self.fps = float(fps)
+        self.win = max(1, round(SWING_WINDOW_S * self.fps))
+        # frame -> [(pid, h, box, wrists)]
+        self.by_frame: dict[int, list] = {}
+        self.wrists: dict[str, dict[int, dict[int, tuple[float, float]]]] = {}  # pid -> frame -> wrist
+        for fr in (players.frames if players else []):
+            rows = []
+            for p in fr.players:
+                if p.player_id not in ("P1", "P2"):
+                    continue
+                x1, y1, x2, y2 = p.bbox
+                h = max(y2 - y1, 1.0)
+                wd = {i: (k[0], k[1]) for i, k in enumerate(p.keypoints)
+                      if i in _WRISTS and len(k) > 2 and k[2] >= _MIN_KP_CONF}
+                ws = list(wd.values())
+                rows.append((p.player_id, h, (x1, y1, x2, y2), ws))
+                self.wrists.setdefault(p.player_id, {})[fr.frame] = wd
+            if rows:
+                self.by_frame[fr.frame] = rows
+        self._swing: dict[tuple[str, int], float] = {}
+
+    def __bool__(self) -> bool:
+        return bool(self.by_frame)
+
+    def swing(self, pid: str, frame: int, h: float) -> float:
+        """Fastest wrist speed (body heights per second) within ``win`` frames."""
+        key = (pid, frame)
+        if key not in self._swing:
+            track = self.wrists.get(pid, {})
+            best = 0.0
+            for f in range(frame - self.win, frame + self.win + 1):
+                a, b = track.get(f - 1), track.get(f)
+                for i in (a.keys() & b.keys()) if a and b else ():
+                    best = max(best, math.dist(a[i], b[i]))
+            self._swing[key] = best * self.fps / h
+        return self._swing[key]
+
+    def contact(self, frame: int, x: float, y: float) -> bool:
+        for pid, h, (x1, y1, x2, y2), ws in self.by_frame.get(frame, ()):
+            if ws:
+                if (any(math.dist(w, (x, y)) <= CONTACT_REACH_BODIES * h for w in ws)
+                        and self.swing(pid, frame, h) >= SWING_BODIES_PER_S):
+                    return True
+            elif (x1 - CONTACT_REACH_BODIES * h <= x <= x2 + CONTACT_REACH_BODIES * h
+                  and y1 - CONTACT_REACH_BODIES * h <= y <= y1 + 0.6 * h):
+                return True
+        return False
+
+    def held(self, frame: int, x: float, y: float) -> bool:
+        return any(math.dist(w, (x, y)) <= HELD_REACH_BODIES * h
+                   for _, h, _, ws in self.by_frame.get(frame, ()) for w in ws)
+
+
+def strict_support(players: PlayerTracks | None, fps: float = 30.0) -> SupportFn | None:
+    rc = RacketContact(players, fps)
+    return rc.contact if rc else None
 
 
 def rest_area(calibration: CourtCalibration | None, players: PlayerTracks | None) -> RestFn | None:
@@ -128,6 +199,7 @@ def build_track(
     support: SupportFn | None = None,
     rest: RestFn | None = None,
     strict: SupportFn | None = None,
+    held: SupportFn | None = None,
 ) -> tuple[ShuttleTrack, dict[int, int]]:
     """Run the tracker and convert to the contract. Also returns the selected
     candidate index per frame (for the raw-candidates file)."""
@@ -140,7 +212,7 @@ def build_track(
     # Coordinates are in decoded-frame px; scale if the decoder's size differs from the probe.
     sx, sy = meta.width / width, meta.height / height
     tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support, rest=rest,
-                             strict_support=strict)
+                             strict_support=strict, held=held)
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in candidates.items()}
     res = tracker.track(scaled, frame_count)
     if tracker.rejected_foreign:
@@ -309,14 +381,15 @@ def run(ctx: StageContext) -> ShuttleTrack:
             return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
         detector, det_cfg = got
         candidates, size = _detect(ctx, detector, lambda p: ctx.report(0.95 * p))
-    region = support = rest = strict = None
+    region = support = rest = strict = held = None
     if cfg.get("court_lock", "auto") != "off":
         region, support, mode = court_lock(ctx.calibration, ctx.players)
         rest = rest_area(ctx.calibration, ctx.players)
-        strict = strict_support(ctx.players)
+        rc = RacketContact(ctx.players, meta.fps)
+        strict, held = (rc.contact, rc.held) if rc else (None, None)
         log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
-                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support, rest, strict)
+                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support, rest, strict, held)
     save_candidates(Path(ctx.work_dir) / CANDIDATES_FILE, candidates, selected, detector.name, size)
     ctx.report(1.0)
     return track

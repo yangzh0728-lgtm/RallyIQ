@@ -81,3 +81,8 @@ def test_rerun_stages_picks_up_neighbour_courts(tmp_path, monkeypatch):
     seg = json.loads((Path(res["artifacts"]) / "calibration.json").read_text())["segments"][0]
     assert len(seg["other_courts"]) == 2
     assert seg["other_courts"][0][3][0] < seg["image_corners"][3][0]  # left neighbour drawn left of ours
+    # --from shuttle still rebuilds calibration.json from the (changed) manual court
+    (clips / "c1.meta.json").write_text(json.dumps(meta | {"neighbour_courts": [[-7.3, 0]]}))
+    assert rerun_stages.main(["--out", str(out), "--clips", str(clips), "--from", "shuttle", "--no-overlay"]) == 0
+    seg = json.loads((Path(res["artifacts"]) / "calibration.json").read_text())["segments"][0]
+    assert len(seg["other_courts"]) == 1

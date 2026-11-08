@@ -376,3 +376,37 @@ def test_rest_area_counts_a_held_shuttle_but_not_a_pile_at_the_feet():
     assert rest(0, 70, 90)  # in hand, chest height (off any floor we own)
     assert not rest(0, 70, 210)  # at the feet: a pile on the floor next to the player
     assert rest(0, 960, 600)  # on our court's floor
+
+
+def _players(frames):
+    from rallyiq.contracts import PlayerTracks
+
+    return PlayerTracks.model_validate({"video_id": "v", "frames": [
+        {"frame": f, "t_ms": f * 33, "players": [
+            {"player_id": "P1", "track_id": 1, "bbox": [800.0, 400.0, 1100.0, 1000.0], "confidence": 0.9,
+             "keypoints": [[0.0, 0.0, 0.0]] * 9 + [list(w) + [0.9], [1100.0, 700.0, 0.9]] + [[0.0, 0.0, 0.0]] * 6}]}
+        for f, w in frames.items()]})
+
+
+def test_racket_contact_needs_a_swinging_wrist_nearby():
+    from rallyiq.perception.shuttle.stage import RacketContact
+
+    hanging = RacketContact(_players({f: (820.0, 700.0) for f in range(30)}), 30)
+    assert not hanging.contact(15, 830, 600)  # right next to the box, but the arm hangs still
+    assert hanging.held(15, 822, 702)
+    swing = RacketContact(_players({f: (820.0 + 40 * f, 500.0) for f in range(30)}), 30)  # 2 h/s
+    w = (820.0 + 40 * 15, 500.0)
+    assert swing.contact(15, w[0] + 100, w[1] - 150)  # racket head above the wrist
+    assert not swing.contact(15, w[0] + 600, w[1])  # far beyond racket length
+    assert not swing.held(15, w[0] + 100, w[1] - 150)
+
+
+def test_shared_air_support_is_only_checked_where_a_trajectory_ends_or_turns():
+    shot = as_candidates(flight(0, 30, (300, 300), (700, 250), 150))
+    shared = lambda f, x, y: 0.6  # noqa: E731
+    mid_flight = ShuttleTracker(30, W, H, region=shared, support=lambda f, x, y: True,
+                                strict_support=lambda f, x, y: f == 15)
+    assert not mid_flight.track(shot, 31).points  # a player's racket brushed past it mid flight
+    at_end = ShuttleTracker(30, W, H, region=shared, support=lambda f, x, y: True,
+                            strict_support=lambda f, x, y: f == 30)
+    assert at_end.track(shot, 31).points
