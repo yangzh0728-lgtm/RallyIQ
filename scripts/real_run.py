@@ -131,10 +131,13 @@ def manual_calibration(video_id: str, points: dict[str, list[float]], frame_coun
     names = list(points)
     img = [list(map(float, points[n])) for n in names]
     court = [list(lookup[n]) for n in names]
-    h = fit_homography(img, court)
+    # fit court -> image so the least-squares error is in pixels, where the points were measured;
+    # fitting image -> court lets a 1 px slip on the squashed far court bend the whole near court
+    to_img = fit_homography(court, img)
+    h = invert_homography(to_img)
     resid = [((cx - px) ** 2 + (cy - py) ** 2) ** 0.5
-             for (cx, cy), (px, py) in zip(img, apply_homography(invert_homography(h), court))]
-    corners = apply_homography(invert_homography(h), COURT_CORNERS_M)
+             for (cx, cy), (px, py) in zip(img, apply_homography(to_img, court))]
+    corners = apply_homography(to_img, COURT_CORNERS_M)
     seg = CalibrationSegment(
         start_frame=0, end_frame=max(frame_count - 1, 0), homography=h, image_corners=corners,
         keypoints=[CourtKeypoint(name=n, image=i, court=c) for n, i, c in zip(names, img, court)],

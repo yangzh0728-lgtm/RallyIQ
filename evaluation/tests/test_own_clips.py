@@ -139,3 +139,16 @@ def test_manual_calibration_from_named_points_recovers_corners():
     assert seg.reprojection_error_px < 0.5
     with pytest.raises(ValueError):
         real_run.manual_calibration("v1", {"nope": [0, 0], **pts}, 600)
+
+
+def test_manifest_court_points_fit_one_court():
+    from scripts import real_run
+
+    own = schema.load_manifest(schema.OWN_MANIFEST)
+    with_points = {cid: c for cid, c in own.items() if c.get("court_points")}
+    assert {"own0529_0006", "own0529_0008"} <= set(with_points)
+    for cid, c in with_points.items():
+        seg = real_run.manual_calibration(cid, c["court_points"], 7200).segments[0]
+        assert seg.reprojection_error_px < 5, cid  # measured lines agree with one flat court
+        (nlx, nly), (nrx, nry), (frx, fry), (flx, fly) = seg.image_corners
+        assert nlx < flx < frx < nrx and fly < nly and fry < nry, cid  # left/right, near/far not swapped

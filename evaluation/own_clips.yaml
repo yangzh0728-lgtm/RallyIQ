@@ -12,6 +12,10 @@
 #   holdout       true = 整段只当考试题，shuttle_loop 不拿它训练
 #   segment_verified  false = 起点只是取了原片中间，还没确认画面里是回合；
 #                 抽片后快速看一眼，必要时调整 start_s
+#   court_points  固定机位的球场点，{球场线交点名: [x, y]}，坐标是切好的片段画面（1920×1080）。
+#                 名字是 "横线/竖线"，如 near_short_service/centre_line。有了它 real_run 整段直接用
+#                 这个球场，不再自动标定。点由画面里的白线拟合直线后求交点得到，投影回画面核对过。
+#                 同一场次机位没动时用 YAML 锚点（&名字 / *名字）共用一份
 #
 # 机位（conditions.camera）：
 #   amateur_baseline   底线后方低机位，整块场地可见（与 DJI_0009 同类）
@@ -26,6 +30,28 @@ clips:
     duration_s: 120
     segment_verified: false
     split: train
+    # 0529 前段机位：底线后方低机位，近端底线和发球线在画面外；0006、0008 的抽帧都对上
+    court_points: &cam_0529_a
+      near_short_service/left_doubles_sideline: [400.7, 828.1]
+      near_short_service/left_singles_sideline: [478.4, 827.3]
+      near_short_service/centre_line: [910.2, 823.0]
+      near_short_service/right_singles_sideline: [1333.1, 818.8]
+      near_short_service/right_doubles_sideline: [1407.5, 818.1]
+      far_short_service/left_doubles_sideline: [599.9, 730.4]
+      far_short_service/left_singles_sideline: [647.7, 730.0]
+      far_short_service/centre_line: [918.6, 727.6]
+      far_short_service/right_singles_sideline: [1184.8, 725.2]
+      far_short_service/right_doubles_sideline: [1231.7, 724.8]
+      far_doubles_long_service/left_doubles_sideline: [696.9, 682.9]
+      far_doubles_long_service/left_singles_sideline: [729.7, 682.9]
+      far_doubles_long_service/centre_line: [922.6, 682.9]
+      far_doubles_long_service/right_singles_sideline: [1117.8, 682.9]
+      far_doubles_long_service/right_doubles_sideline: [1152.8, 682.9]
+      far_baseline/left_doubles_sideline: [707.0, 677.9]
+      far_baseline/left_singles_sideline: [738.4, 677.8]
+      far_baseline/centre_line: [923.1, 677.3]
+      far_baseline/right_singles_sideline: [1108.3, 676.9]
+      far_baseline/right_doubles_sideline: [1141.3, 676.8]
     conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
 
   - id: own0529_0006
@@ -34,6 +60,7 @@ clips:
     duration_s: 120
     segment_verified: false
     split: train
+    court_points: *cam_0529_a
     conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
 
   - id: own0529_0009
@@ -44,6 +71,27 @@ clips:
     segment_verified: false
     split: eval
     holdout: true
+    # 机位比前几段高，整块场地可见；只在原片中间的抽帧上核对过，切片后要再看一眼片段开头
+    court_points:
+      near_baseline/left_doubles_sideline: [18.1, 1026.2]
+      near_baseline/left_singles_sideline: [164.4, 1025.6]
+      near_baseline/centre_line: [976.4, 1021.7]
+      near_baseline/right_singles_sideline: [1782.3, 1017.9]
+      near_baseline/right_doubles_sideline: [1926.0, 1017.2]
+      near_doubles_long_service/left_doubles_sideline: [186.3, 938.8]
+      near_doubles_long_service/left_singles_sideline: [306.2, 938.5]
+      near_doubles_long_service/centre_line: [972.8, 936.5]
+      near_doubles_long_service/right_singles_sideline: [1639.6, 934.5]
+      near_doubles_long_service/right_doubles_sideline: [1758.9, 934.1]
+      near_short_service/left_doubles_sideline: [555.6, 747.0]
+      near_short_service/left_singles_sideline: [618.2, 746.9]
+      near_short_service/centre_line: [964.8, 746.3]
+      near_short_service/right_singles_sideline: [1316.6, 745.6]
+      near_short_service/right_doubles_sideline: [1379.6, 745.5]
+      far_short_service/left_doubles_sideline: [688.3, 678.0]
+      far_short_service/left_singles_sideline: [730.3, 678.0]
+      far_short_service/right_singles_sideline: [1199.6, 677.3]
+      far_short_service/right_doubles_sideline: [1242.2, 677.2]
     conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
 
   # ---------------- 其他场馆：底线后方，换场馆测泛化 ----------------
