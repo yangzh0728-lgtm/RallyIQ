@@ -90,7 +90,8 @@ def segment_events(
     if cfg.swing_veto > 0:
         from .pose_hits import get_model, veto
 
-        veto(rallies, poses, get_model(cfg.swing_veto_model), cfg.swing_veto, cfg.swing_veto_window_ms, frame_ms=fps_ms)
+        veto(rallies, poses, get_model(cfg.swing_veto_model), cfg.swing_veto, cfg.swing_veto_window_ms,
+             frame_ms=fps_ms, keep_wrist_v=cfg.swing_veto_keep_wrist_v, keep_serve=cfg.swing_veto_keep_serve)
     if cfg.pose_hits != "off":
         from .pose_hits import get_model, recover
 

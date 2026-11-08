@@ -70,6 +70,8 @@ class EventsConfig:
     swing_veto: float = 0.0
     swing_veto_window_ms: float = 250.0
     swing_veto_model: str = "auto"  # "auto" = bundled pose model, or a JSON path
+    swing_veto_keep_wrist_v: float = 0.0  # ... unless a wrist still moved this fast (body spans/s); 0 = unused
+    swing_veto_keep_serve: bool = False  # ... never drop a rally's first hit
 
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all

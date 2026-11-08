@@ -306,10 +306,33 @@ def recover(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: Pose
 
 
 # -------------------------------------------------------------------- veto
+def swing_evidence(series: dict[str, SideSeries], t_ms: float, side: str | None, model: PoseHitModel,
+                   window_ms: float, frame_ms: float) -> tuple[float, float]:
+    """``(p_swing, wrist_v_max)`` of ``side`` (both sides when None) within ``window_ms`` of ``t_ms``:
+    the pose model's best swing probability and the fastest wrist (body spans per second)."""
+    sides = [series[side]] if side is not None and side in series else list(series.values())
+    step = max(frame_ms, 20.0)
+    best_p, best_v = 0.0, 0.0
+    iv = FEATURES.index("wrist_v_max")
+    for s_ in sides:
+        if not s_.bodies:
+            continue
+        ts = np.arange(t_ms - window_ms, t_ms + window_ms + 1e-6, step)
+        X = np.asarray([window_features(s_, float(t), frame_ms) for t in ts], float)
+        best_p = max(best_p, float(model.predict(X).max()))
+        v = X[:, iv]
+        if np.isfinite(v).any():
+            best_v = max(best_v, float(np.nanmax(v)))
+    return best_p, best_v
+
+
 def veto(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: PoseHitModel | None,
-         threshold: float, window_ms: float = 250.0, frame_ms: float | None = None) -> int:
-    """Drop shuttle-based hits nobody swings at (max ``p_swing`` of the hitter's side within
-    ``window_ms`` below ``threshold``). Returns how many were dropped."""
+         threshold: float, window_ms: float = 250.0, frame_ms: float | None = None,
+         keep_wrist_v: float = 0.0, keep_serve: bool = False) -> int:
+    """Drop shuttle-based hits nobody swings at: max ``p_swing`` of the hitter's side within
+    ``window_ms`` below ``threshold``, unless its wrist still moved at ``keep_wrist_v`` body spans
+    per second or more (0: not used) or it is a rally's first hit and ``keep_serve``. Returns how
+    many were dropped."""
     if model is None or threshold <= 0 or not rallies or not poses:
         return 0
     if frame_ms is None:
@@ -317,23 +340,16 @@ def veto(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: PoseHit
         fr = [p.frame for p in poses[:50]]
         frame_ms = (ts[-1] - ts[0]) / (fr[-1] - fr[0]) if len(ts) > 1 and fr[-1] > fr[0] else 40.0
     series = side_series(poses)
-    step = max(frame_ms, 20.0)
     dropped = 0
     for r in rallies:
         keep = []
-        for h in r.hits:
-            if h.source == SOURCE:
+        for k, h in enumerate(r.hits):
+            if h.source == SOURCE or (keep_serve and k == 0):
                 keep.append(h)
                 continue
-            side = _side_of(h, series)
-            sides = [series[side]] if side is not None else list(series.values())
-            best = 0.0
-            for s_ in sides:
-                _, p = swing_curve(s_, model, h.t_ms - window_ms, h.t_ms + window_ms, step, frame_ms)
-                if len(p):
-                    best = max(best, float(p.max()))
-            if best >= threshold:
-                h.scores["p_swing"] = round(best, 3)
+            p, wv = swing_evidence(series, h.t_ms, _side_of(h, series), model, window_ms, frame_ms)
+            h.scores["p_swing"], h.scores["wrist_v_max"] = round(p, 3), round(wv, 3)
+            if p >= threshold or (keep_wrist_v > 0 and wv >= keep_wrist_v):
                 keep.append(h)
             else:
                 dropped += 1

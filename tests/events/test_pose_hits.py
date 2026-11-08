@@ -82,6 +82,10 @@ def test_swing_veto_drops_hits_nobody_swings_at(tmp_path):
     p.write_text(json.dumps(_const(-5.0)))
     cfg = replace(EventsConfig(), hit_scorer="off", swing_veto=0.3, swing_veto_model=str(p))
     assert not any(r.hits for r in segment_events(v.shuttle, v.poses, cfg))
+    kept = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_serve=True))
+    assert all(len(r.hits) == 1 for r in kept if r.hits) and any(r.hits for r in kept)
+    moving = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_wrist_v=1e-6))
+    assert sum(len(r.hits) for r in moving) > 0  # synthetic players move their wrists
 
 
 def test_export_matches_sklearn():
