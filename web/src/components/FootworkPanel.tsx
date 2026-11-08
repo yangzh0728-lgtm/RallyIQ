@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { PlaybackClock } from "../lib/clock";
 import { formatMs } from "../lib/corrections";
-import { FOOTWORK_ZH, SPLIT_ZH, summarize } from "../lib/footwork";
+import { FOOTWORK_ZH, LANDING_ZH, SPLIT_ZH, summarize } from "../lib/footwork";
 import { colorOf } from "../lib/players";
 import type { FootworkResult, PlayerId, Rally } from "../lib/types";
 
@@ -29,7 +29,7 @@ export function FootworkPanel({ footwork, error, players, rally, rallyNo, select
     <div className="panel small">
       <h3>脚步</h3>
       <div className="muted" style={{ marginBottom: 6 }}>
-        从脚踝关键点投影到球场：实心脚印 = 正在着地，空心 = 刚离地。启动步 = 对手击球前后双脚同时轻跳落地。
+        从脚踝（有脚部模型时加上脚跟和脚尖）投影到球场：实心脚印 = 正在着地，空心 = 刚离地，脚印上的黑点是脚尖。启动步 = 对手击球前后双脚同时轻跳落地。
       </div>
       {players.map((pid) => {
         const s = summarize(footwork, pid);
@@ -56,6 +56,14 @@ export function FootworkPanel({ footwork, error, players, rally, rallyNo, select
               <span className="mono">
                 {s.lunges} / {s.jumps}
               </span>
+              {s.landingsJudged > 0 && (
+                <>
+                  <span className="muted" title="移动中每一步落地时脚的哪一部分先着地（由脚跟和脚尖关键点判断）">着地方式</span>
+                  <span className="mono">
+                    前脚掌 {s.forefootPct}% · 脚跟 {s.heelFirstPct}%
+                  </span>
+                </>
+              )}
             </div>
           </div>
         );
@@ -66,6 +74,7 @@ export function FootworkPanel({ footwork, error, players, rally, rallyNo, select
             <b>这一拍</b>
             <span className="muted">
               {shot.player_id} · 启动步{SPLIT_ZH[shot.split_step]}
+              {shot.lunge_landing ? ` · 弓步${LANDING_ZH[shot.lunge_landing]}` : ""}
             </span>
           </div>
           <div>{shot.summary || "这一拍没有可用的脚步数据"}</div>

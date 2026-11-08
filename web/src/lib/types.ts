@@ -31,7 +31,7 @@ export interface VideoMeta {
   variable_frame_rate?: boolean;
 }
 
-export type StageName = "probe" | "calibration" | "players" | "shuttle" | "events" | "strokes" | "overlay";
+export type StageName = "probe" | "calibration" | "players" | "shuttle" | "events" | "strokes" | "feet" | "overlay";
 export type JobState = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export interface StageRun {
@@ -597,7 +597,15 @@ export interface FootContact {
   end_ms: number;
   image: Point;
   court: Point | null;
+  /** heel / toe px while flat (needs the feet stage) */
+  heel_image?: Point | null;
+  toe_image?: Point | null;
+  /** foot direction in the player's own half: 0 = towards the net, +90 = to the player's right */
+  toe_dir_deg?: number | null;
+  landing?: FootLanding | null;
 }
+
+export type FootLanding = "heel" | "forefoot" | "flat";
 
 export interface FootStep {
   player_id: PlayerId;
@@ -608,6 +616,7 @@ export interface FootStep {
   length_m: number;
   from_court: Point;
   to_court: Point;
+  landing?: FootLanding | null;
 }
 
 export interface FootworkEvent {
@@ -638,6 +647,8 @@ export interface ShotFootwork {
   pattern: FootworkKind[];
   finish: "lunge" | "jump" | "planted" | "unknown";
   stance_m: number | null;
+  lunge_landing?: FootLanding | null;
+  lunge_toe_off_deg?: number | null;
   recovery_ms: number | null;
   recovery_gap_m: number | null;
   summary: string;

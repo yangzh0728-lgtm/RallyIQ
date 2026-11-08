@@ -70,6 +70,75 @@
           ],
           "default": null,
           "title": "Court"
+        },
+        "heel_image": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "heel px while flat (needs the feet stage)",
+          "title": "Heel Image"
+        },
+        "toe_image": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "toe px while flat",
+          "title": "Toe Image"
+        },
+        "toe_dir_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "foot direction in the player's own half: 0 = towards the net, +90 = to the player's right; null = not measurable",
+          "title": "Toe Dir Deg"
+        },
+        "landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "which part touched down first: heel (\u811a\u8ddf), forefoot (\u524d\u811a\u638c) or flat; null = not judged",
+          "title": "Landing"
         }
       },
       "required": [
@@ -148,6 +217,24 @@
           "minItems": 2,
           "title": "To Court",
           "type": "array"
+        },
+        "landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "how the foot landed at the end of the step",
+          "title": "Landing"
         }
       },
       "required": [
@@ -475,6 +562,37 @@
           "default": null,
           "description": "distance between the feet at the hit",
           "title": "Stance M"
+        },
+        "lunge_landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: how the front foot landed",
+          "title": "Lunge Landing"
+        },
+        "lunge_toe_off_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: angle between the front foot and the direction of the lunge step (0 = toe points where the step went)",
+          "title": "Lunge Toe Off Deg"
         },
         "recovery_ms": {
           "anyOf": [

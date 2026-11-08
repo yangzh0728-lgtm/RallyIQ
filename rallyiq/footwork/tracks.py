@@ -53,6 +53,9 @@ class Run:
     planted: np.ndarray  # (n, 2) bool
     filled: np.ndarray  # (n,) bool, interpolated frame
     H: np.ndarray  # image -> court
+    ankle: np.ndarray = field(default_factory=lambda: np.zeros((0, 2, 2)))  # (n, 2, 2) tracked ankles (L/R fixed), px
+    heel: np.ndarray | None = None  # (n, 2, 2) heel px from the foot model, NaN where missing (see ``sole``)
+    toe: np.ndarray | None = None  # (n, 2, 2) toe px
     center: np.ndarray = field(default_factory=lambda: np.zeros((0, 2)))  # (n, 2) smoothed mid-feet, court m
     center_speed: np.ndarray = field(default_factory=lambda: np.zeros(0))  # (n,) m/s
     center_vel: np.ndarray = field(default_factory=lambda: np.zeros((0, 2)))  # (n, 2) m/s
@@ -277,7 +280,7 @@ def _make_run(pid: str, rows: list, calibration: CourtCalibration, fps: float, m
                                           scale[:, j], fps) for j in range(2)], axis=1)
         frames = np.arange(f0 + a, f0 + b)
         run = Run(pid=pid, frames=frames, t=frames / fps, img=img, court=court, scale=scale, depth_scale=dscale,
-                  speed=speed, planted=planted, filled=filled[a:b], H=H)
+                  speed=speed, planted=planted, filled=filled[a:b], H=H, ankle=ft)
         _center(run, fps)
         out.append(run)
     return out

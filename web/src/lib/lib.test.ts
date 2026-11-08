@@ -255,7 +255,7 @@ describe("switching the analysed court", () => {
   });
 });
 
-import { FootIndex, mockFootwork, summarize } from "./footwork";
+import { FootIndex, mockFootwork, shoeShape, summarize } from "./footwork";
 
 describe("footwork", () => {
   it("finds planted and recently lifted contacts around a frame", () => {
@@ -288,6 +288,21 @@ describe("footwork", () => {
     expect(fw.contacts.length).toBeGreaterThan(10);
     expect(fw.events.some((e) => e.kind === "split_step")).toBe(true);
     expect(fw.shots.length).toBe(m.events.shots.filter((s) => s.hitter).length);
+  });
+
+  it("draws a shoe along heel -> toe and counts landings", () => {
+    const base = { player_id: "P1" as const, foot: "right" as const, start_frame: 0, end_frame: 5, t_ms: 0, end_ms: 167, image: [100, 200] as [number, number], court: null };
+    expect(shoeShape(base, 1)).toBeNull();
+    const s = shoeShape({ ...base, heel_image: [100, 200], toe_image: [130, 200] }, 1)!;
+    expect(s.cx).toBe(115);
+    expect(s.angle).toBeCloseTo(0);
+    expect(s.half).toBe(18);
+    const step = (landing: "heel" | "forefoot" | "flat" | null) => ({ player_id: "P1" as const, foot: "left" as const, start_frame: 0, end_frame: 1, t_ms: 0, length_m: 0.5, from_court: [0, 0] as [number, number], to_court: [0, 0.5] as [number, number], landing });
+    const fw = { schema_version: "0.2.0", video_id: "v", fingerprint: "x", base: [3.05, 3.6] as [number, number], base_radius_m: 1, contacts: [], events: [], shots: [], quality: [], caveats: [], steps: [step("heel"), step("forefoot"), step("flat"), step("forefoot"), step(null)] };
+    const sum = summarize(fw, "P1");
+    expect(sum.landingsJudged).toBe(4);
+    expect(sum.heelFirstPct).toBe(25);
+    expect(sum.forefootPct).toBe(50);
   });
 });
 

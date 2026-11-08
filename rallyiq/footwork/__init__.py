@@ -5,6 +5,6 @@ steps, split steps, jumps, lunges, step patterns and recovery, each linked to th
 ``Footwork`` is the same analysis as an object, used by the match statistics and the shot advice.
 """
 
-from .analyze import BASE, BASE_RADIUS_M, PATTERN_ZH, Footwork, analyze_footwork, summarize
+from .analyze import BASE, BASE_RADIUS_M, LANDING_ZH, PATTERN_ZH, Footwork, analyze_footwork, summarize
 
-__all__ = ["BASE", "BASE_RADIUS_M", "PATTERN_ZH", "Footwork", "analyze_footwork", "summarize"]
+__all__ = ["BASE", "BASE_RADIUS_M", "LANDING_ZH", "PATTERN_ZH", "Footwork", "analyze_footwork", "summarize"]

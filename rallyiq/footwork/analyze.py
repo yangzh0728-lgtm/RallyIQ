@@ -39,6 +39,7 @@ from ..contracts import (
     CourtCalibration,
     EventsResult,
     FootContact,
+    FootLandmarks,
     FootStep,
     FootworkEvent,
     FootworkResult,
@@ -47,6 +48,7 @@ from ..contracts import (
     ShotEvent,
     ShotFootwork,
 )
+from .sole import PLAYER_LENGTH_M, Sole, angle_between, attach_feet, plant_sole, toe_angle_deg
 from .tracks import Run, _odd, _segments, build_runs, smooth
 
 STEP_MIN_M = 0.18
@@ -68,6 +70,10 @@ MAX_REACTION_S = 1.0
 LUNGE_STANCE_M = 1.0
 LUNGE_LAST_STEP_M = 0.5
 NEAR_HIT_S = 0.3  # actions this close to a hit belong to it
+SOLE_MAX_JITTER_M = 0.08  # foot directions / landings only for players located this well
+LUNGE_TOE_OFF_DEG = 45  # front foot pointing further than this from the lunge direction
+LUNGE_BACKWARD = 0.5  # a lunge step going back more than this share of its length: toe direction not judged
+LUNGE_TOE_FLIP_DEG = 120  # a toe pointing back along the step is a heel / toe mix-up, not a technique
 MAX_RECOVERY_S = 2.5  # judge recovery only when the opponent's next hit comes within this
 
 
@@ -114,6 +120,7 @@ class Plant:
     b: int
     court: np.ndarray
     image: np.ndarray
+    sole: Sole | None = None
 
 
 def _plants(run: Run) -> list[Plant]:
@@ -209,7 +216,8 @@ class _Hit:
     t: float
 
 
-def fingerprint(events: EventsResult, players: PlayerTracks | None, calibration: CourtCalibration | None) -> str:
+def fingerprint(events: EventsResult, players: PlayerTracks | None, calibration: CourtCalibration | None,
+                feet: FootLandmarks | None = None) -> str:
     h = hashlib.sha256()
     h.update(events.model_dump_json(include={"rallies", "shots"}).encode())
     if players is not None:
@@ -219,6 +227,9 @@ def fingerprint(events: EventsResult, players: PlayerTracks | None, calibration:
             h.update(players.frames[-1].model_dump_json().encode())
     if calibration is not None:
         h.update(calibration.model_dump_json(include={"segments"}).encode())
+    if feet is not None and feet.frames:
+        h.update(f"{feet.model}|{len(feet.frames)}".encode())
+        h.update(feet.frames[-1].model_dump_json().encode())
     return h.hexdigest()[:16]
 
 
@@ -226,10 +237,11 @@ class Footwork:
     """Footwork of one video. ``result()`` gives the contract; the helpers serve stats and moments."""
 
     def __init__(self, events: EventsResult, players: PlayerTracks | None, calibration: CourtCalibration | None,
-                 fps: float = 30.0):
+                 fps: float = 30.0, feet: FootLandmarks | None = None):
         self.events = events
         self.fps = fps
         self.runs = build_runs(players, calibration, fps) if players is not None else []
+        attach_feet(self.runs, feet)
         self.by_pid: dict[str, list[Run]] = {}
         for r in self.runs:
             self.by_pid.setdefault(r.pid, []).append(r)
@@ -246,7 +258,8 @@ class Footwork:
             js = [jitter_m(r) for r in rs if len(r.frames) > 30]
             js = [j for j in js if np.isfinite(j)]
             self.jitter[pid] = float(np.median(js)) if js else float("nan")
-        self.fingerprint = fingerprint(events, players, calibration)
+        self.sole_ok: dict[str, bool] = {pid: self._attach_soles(pid) for pid in self.plants}
+        self.fingerprint = fingerprint(events, players, calibration, feet)
         self._events: list[FootworkEvent] = []
         self._shots: dict[str, ShotFootwork] = {}
         self._contacts: list[FootContact] = []
@@ -278,6 +291,19 @@ class Footwork:
         j = self.jitter.get(pid, float("nan"))
         return max(STEP_MIN_M, 3 * j) if np.isfinite(j) else STEP_MIN_M
 
+    def _attach_soles(self, pid: str) -> bool:
+        """Heel / toe of every contact, when this player's feet are located well enough to trust them."""
+        j = self.jitter.get(pid, float("nan"))
+        if not np.isfinite(j) or j > SOLE_MAX_JITTER_M:
+            return False
+        soles = [(p, plant_sole(p.run, p.foot, p.a, p.b, self.fps)) for p in self.plants.get(pid, [])]
+        lengths = [s.length_m for _, s in soles if s is not None]
+        if not lengths or (len(lengths) >= 5 and not PLAYER_LENGTH_M[0] <= float(np.median(lengths)) <= PLAYER_LENGTH_M[1]):
+            return False  # the projection does not keep a shoe's shape for this player
+        for p, s in soles:
+            p.sole = s
+        return True
+
     def _ms(self, frame: int) -> int:
         return int(round(frame * 1000 / self.fps))
 
@@ -289,10 +315,15 @@ class Footwork:
             last: dict[tuple[int, int], Plant] = {}
             for p in plants:
                 r = p.run
+                so = p.sole
                 self._contacts.append(FootContact(
                     player_id=pid, foot="left" if p.foot == 0 else "right", start_frame=int(r.frames[p.a]),
                     end_frame=int(r.frames[p.b]), t_ms=self._ms(int(r.frames[p.a])), end_ms=self._ms(int(r.frames[p.b])),
-                    image=[round(float(v), 1) for v in p.image], court=[round(float(v), 3) for v in p.court]))
+                    image=[round(float(v), 1) for v in p.image], court=[round(float(v), 3) for v in p.court],
+                    heel_image=None if so is None else [round(float(v), 1) for v in so.heel_image],
+                    toe_image=None if so is None else [round(float(v), 1) for v in so.toe_image],
+                    toe_dir_deg=None if so is None else round(toe_angle_deg(so.direction, float(p.court[1])), 0),
+                    landing=None if so is None else so.landing))
                 prev = last.get((id(r), p.foot))
                 last[(id(r), p.foot)] = p
                 if prev is None:
@@ -302,7 +333,8 @@ class Footwork:
                     self._steps.append(FootStep(
                         player_id=pid, foot="left" if p.foot == 0 else "right", start_frame=int(r.frames[prev.b + 1]),
                         end_frame=int(r.frames[p.a]), t_ms=self._ms(int(r.frames[p.a])), length_m=round(length, 2),
-                        from_court=[round(float(v), 3) for v in prev.court], to_court=[round(float(v), 3) for v in p.court]))
+                        from_court=[round(float(v), 3) for v in prev.court], to_court=[round(float(v), 3) for v in p.court],
+                        landing=None if p.sole is None else p.sole.landing))
         self._steps.sort(key=lambda s: (s.end_frame, s.player_id))
         self._steps_by_pid: dict[str, list[FootStep]] = {}
         for st in self._steps:
@@ -455,8 +487,9 @@ class Footwork:
         out.stance_m, finish = self._finish(pid, run, i_hit, s)
         out.finish = finish
         if finish == "lunge":
+            self._lunge_sole(pid, run, s, out)
             self._add_event(pid, "lunge", f_hit, f_hit, f_hit, hit_pos, out.stance_m,
-                            f"弓步击球（两脚相距 {out.stance_m:.1f} 米）", conf, s.shot_id)
+                            f"弓步击球（两脚相距 {out.stance_m:.1f} 米{_lunge_form(out)}）", conf, s.shot_id)
             if "lunge" not in out.pattern:
                 out.pattern.append("lunge")
         elif finish == "jump" and "jump" not in out.pattern:
@@ -504,6 +537,28 @@ class Footwork:
             if any(st.length_m >= LUNGE_LAST_STEP_M for st in last):
                 return round(stance, 2), "lunge"
         return round(stance, 2), "planted"
+
+    def _lunge_sole(self, pid: str, run: Run, s: ShotEvent, out: ShotFootwork) -> None:
+        """Front foot of a lunge: how it landed and where its toe points relative to the lunge step."""
+        w = int(round(NEAR_HIT_S * self.fps))
+        last = [st for st in self.steps_between(pid, s.frame - 2 * w - 1, s.frame + w) if st.length_m >= LUNGE_LAST_STEP_M]
+        if not last:
+            return
+        st = max(last, key=lambda x: x.length_m)
+        foot = 0 if st.foot == "left" else 1
+        plant = next((p for p in self._plants_of.get((id(run), foot), []) if int(run.frames[p.a]) == st.end_frame), None)
+        if plant is None or plant.sole is None:
+            return
+        out.lunge_landing = plant.sole.landing
+        # toe direction is judged for forward and sideways lunges only: stepping back into a wide stance the
+        # front foot is not expected to follow the step
+        fr = np.asarray(own_half(*st.from_court))
+        to = np.asarray(own_half(*st.to_court))
+        d = to - fr
+        if d[1] < -LUNGE_BACKWARD * float(np.linalg.norm(d)):
+            return
+        off = angle_between(plant.sole.direction, np.asarray(st.to_court) - np.asarray(st.from_court))
+        out.lunge_toe_off_deg = None if not np.isfinite(off) or off > LUNGE_TOE_FLIP_DEG else round(off, 0)
 
     def _pattern(self, pid: str, run: Run, steps: list[FootStep], start: np.ndarray, end: np.ndarray,
                  s: ShotEvent) -> list[str]:
@@ -621,6 +676,11 @@ class Footwork:
                     caveats.append(f"{x.player_id} 回合中只有 {x.tracked_pct:.0f}% 的帧能看清双脚，脚步数据不完整。")
                 else:
                     caveats.append(f"{x.player_id} 脚部跟踪不足。")
+        if self.runs and not any(r.heel is not None for r in self.runs):
+            caveats.append("没有脚跟 / 脚尖关键点（脚部模型未运行），只用踝点分析，脚尖朝向和着地方式无法判断。")
+        else:
+            for pid in sorted(p for p, ok in self.sole_ok.items() if not ok):
+                caveats.append(f"{pid} 的脚跟 / 脚尖在画面里定位不够准，不判断脚尖朝向和着地方式。")
         if self.events.match_format != "singles":
             caveats.append("双打暂只给出触地、步伐和起跳，不做启动步与回位分析。")
         caveats.append("启动步时间以识别出的对手击球时刻为准；击球时刻或击球者识别错误会影响结果。")
@@ -632,6 +692,19 @@ class Footwork:
 
 PATTERN_ZH = {"split_step": "启动步", "lunge": "弓步", "jump": "起跳", "chasse": "并步", "cross_step": "交叉步",
               "run": "跑动", "recovery": "回位"}
+
+
+LANDING_ZH = {"heel": "脚跟先着地", "forefoot": "前脚掌先着地", "flat": "全脚掌着地"}
+
+
+def _lunge_form(f: ShotFootwork) -> str:
+    parts = []
+    if f.lunge_landing is not None:
+        parts.append(LANDING_ZH[f.lunge_landing])
+    if f.lunge_toe_off_deg is not None:
+        parts.append(f"脚尖偏离跨步方向 {f.lunge_toe_off_deg:.0f}°" if f.lunge_toe_off_deg > LUNGE_TOE_OFF_DEG
+                     else "脚尖对准跨步方向")
+    return "，" + "，".join(parts) if parts else ""
 
 
 def _rel(ms: int) -> str:
@@ -658,7 +731,7 @@ def summarize(f: ShotFootwork) -> str:
         steps = f"{f.steps} 步" if f.steps else ""
         parts.append(f"{steps}移动 {f.move_m:.1f} 米" + (f"（{how}）" if how else ""))
     if f.finish == "lunge":
-        parts.append(f"弓步击球（两脚相距 {f.stance_m:.1f} 米）")
+        parts.append(f"弓步击球（两脚相距 {f.stance_m:.1f} 米{_lunge_form(f)}）")
     elif f.finish == "jump":
         parts.append("起跳击球")
     if f.recovery_gap_m is not None:
@@ -670,8 +743,8 @@ def summarize(f: ShotFootwork) -> str:
 
 
 def analyze_footwork(events: EventsResult, players: PlayerTracks | None, calibration: CourtCalibration | None,
-                     fps: float = 30.0) -> FootworkResult:
-    return Footwork(events, players, calibration, fps).result()
+                     fps: float = 30.0, feet: FootLandmarks | None = None) -> FootworkResult:
+    return Footwork(events, players, calibration, fps, feet).result()
 
 
-__all__ = ["Footwork", "analyze_footwork", "summarize", "BASE", "BASE_RADIUS_M", "PATTERN_ZH"]
+__all__ = ["Footwork", "analyze_footwork", "summarize", "BASE", "BASE_RADIUS_M", "PATTERN_ZH", "LANDING_ZH"]

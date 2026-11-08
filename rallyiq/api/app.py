@@ -47,6 +47,7 @@ from ..contracts import (
     CourtCalibration,
     CourtKeypoint,
     EventsResult,
+    FootLandmarks,
     FootworkResult,
     StrokesResult,
     HeatmapData,
@@ -147,7 +148,7 @@ class PeopleRequest(BaseModel):
 
 
 class JobRequest(BaseModel):
-    from_stage: Literal["probe", "calibration", "players", "shuttle", "events", "strokes", "overlay"] = "probe"
+    from_stage: Literal["probe", "calibration", "players", "shuttle", "events", "strokes", "feet", "overlay"] = "probe"
 
 
 class EffectiveEvents(EventsResult):
@@ -645,12 +646,14 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
         return compute_match_stats(
             ev, store.load_artifact(video_id, "players", PlayerTracks),
             store.load_artifact(video_id, "calibration", CourtCalibration), store.get_video_meta(video_id),
+            store.load_artifact(video_id, "feet", FootLandmarks),
         )
 
     @app.get("/api/videos/{video_id}/footwork", response_model=FootworkResult)
     def get_footwork(video_id: str, user: User | None = Depends(current_user)) -> FootworkResult:
         """Foot contacts, steps and footwork actions (split step, lunge, jump, chassé, cross step, recovery)
-        from the ankle keypoints, linked to the effective hits. Computed on demand."""
+        from the ankle keypoints (plus heel / toe from the ``feet`` stage when it ran), linked to the effective
+        hits. Computed on demand."""
         video_or_404(video_id, user)
         players = store.load_artifact(video_id, "players", PlayerTracks)
         if players is None:
@@ -658,7 +661,7 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
         ev, _ = effective_events(video_id)
         meta = store.get_video_meta(video_id)
         return analyze_footwork(ev, players, store.load_artifact(video_id, "calibration", CourtCalibration),
-                                meta.fps if meta else 30.0)
+                                meta.fps if meta else 30.0, store.load_artifact(video_id, "feet", FootLandmarks))
 
     def match_report(video_id: str) -> MatchReport:
         stats = match_stats(video_id)

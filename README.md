@@ -59,9 +59,10 @@ bash scripts/start_local.sh     # 打开 http://localhost:8000
 ```bash
 # 1. Python 环境和分析模型的依赖（PyTorch、ONNX Runtime、OpenCV）
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e '.[calibration,players,shuttle]'
+pip install -e '.[calibration,players,shuttle,feet]'
 
-# 2. 模型权重 → weights/pose.onnx（RTMO 姿态，Apache-2.0）和 weights/shuttle/heatmap.pt（羽毛球检测，MIT）
+# 2. 模型权重 → weights/pose.onnx（RTMO 姿态，Apache-2.0）、weights/shuttle/heatmap.pt（羽毛球检测，MIT）
+#    和 weights/feet.tflite（脚跟 / 脚尖，BlazePose，Apache-2.0，可选）
 bash scripts/fetch_weights.sh            # POSE_VARIANT=rtmo-m 换更大的姿态模型（远端球员更准、更慢）
 
 # 3. 网页界面
@@ -247,6 +248,7 @@ rallyiq/contracts/              共享数据契约（pydantic）与球场几何�
 rallyiq/perception/calibration/ 球场标定阶段
 rallyiq/perception/players/     球员姿态与跟踪阶段
 rallyiq/perception/shuttle/     羽毛球轨迹阶段
+rallyiq/perception/feet/        脚跟 / 脚尖关键点阶段（可选，脚步分析用）
 rallyiq/events/                 回合与击球候选阶段
 rallyiq/strokes/                击球类型分类阶段（12 类；默认内置学习模型 strokes_v3，可换规则 / scikit-learn / BST）
 rallyiq/ingest/                 视频输入评估（机位、帧率、画质、各项输出可信度）
@@ -271,7 +273,7 @@ python -m rallyiq.pipeline analyze clip.mp4 --demo       # 离线跑一遍流水
 pytest
 ```
 
-主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/clip?rally_id=…`（或 `start_ms`/`end_ms`）导出回合片段 MP4；`GET /videos/{id}/quality` 视频条件与各项输出可信度；`PUT /videos/{id}/people` 标注谁是我、对手是谁；`POST /videos/{id}/memory/commit` 把确认过的比赛写入档案（`/memory/withdraw` 撤下，均为追加）；`GET /profile`（`?person=`）个人画像、趋势与训练复测；`GET /opponents/{name}` 对手习惯；`GET /people`；`GET /memory/log`；`GET /hard_examples`（`?format=jsonl`）与 `GET /hard_examples/summary` 难例及按条件分组的错误率（命令行：`python -m rallyiq.review export --out hard_examples/`）；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/footwork` 脚步分析（触地、步伐、启动步、弓步、起跳、并步/交叉步、回位，见 `rallyiq/footwork/README.md`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
+主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/clip?rally_id=…`（或 `start_ms`/`end_ms`）导出回合片段 MP4；`GET /videos/{id}/quality` 视频条件与各项输出可信度；`PUT /videos/{id}/people` 标注谁是我、对手是谁；`POST /videos/{id}/memory/commit` 把确认过的比赛写入档案（`/memory/withdraw` 撤下，均为追加）；`GET /profile`（`?person=`）个人画像、趋势与训练复测；`GET /opponents/{name}` 对手习惯；`GET /people`；`GET /memory/log`；`GET /hard_examples`（`?format=jsonl`）与 `GET /hard_examples/summary` 难例及按条件分组的错误率（命令行：`python -m rallyiq.review export --out hard_examples/`）；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/footwork` 脚步分析（触地、步伐、启动步、弓步、起跳、并步/交叉步、回位；装了脚部模型时还有脚尖朝向和脚跟 / 前脚掌着地，见 `rallyiq/footwork/README.md`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
 
 AI 教练默认用本机免费的开源模型（Ollama + `qwen2.5:7b`：`brew install ollama && ollama serve && ollama pull qwen2.5:7b`），数据不出本机；设置了 `ANTHROPIC_API_KEY` 时可改用 Claude；都不可用时自动改用离线规则模板并在报告中注明。详见 `rallyiq/report/README.md`。
 

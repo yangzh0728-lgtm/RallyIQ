@@ -20,6 +20,7 @@ STAGE_ENTRYPOINTS: dict[str, str] = {
     "shuttle": "rallyiq.perception.shuttle.stage:run",
     "events": "rallyiq.events.stage:run",
     "strokes": "rallyiq.strokes.stage:run",
+    "feet": "rallyiq.perception.feet.stage:run",
     "overlay": "rallyiq.pipeline.overlay:run",
 }
 

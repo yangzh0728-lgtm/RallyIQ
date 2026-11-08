@@ -19,6 +19,8 @@ const STAGE_LABEL: Record<string, string> = {
   players: "球员与骨架",
   shuttle: "羽毛球轨迹",
   events: "回合与击球",
+  strokes: "击球类型",
+  feet: "脚跟与脚尖",
   overlay: "生成叠加层",
 };
 export const jobFinished = (j: Job) => j.state === "succeeded" || j.state === "failed" || j.state === "cancelled";

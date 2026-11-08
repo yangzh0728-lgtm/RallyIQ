@@ -1,4 +1,4 @@
-import type { EventsResult, FootContact, FootworkEvent, FootworkKind, FootworkResult, OverlayData, PlayerId, ShotFootwork, SplitStepTiming } from "./types";
+import type { EventsResult, FootContact, FootLanding, FootworkEvent, FootworkKind, FootworkResult, OverlayData, PlayerId, ShotFootwork, SplitStepTiming } from "./types";
 
 export const FOOTWORK_ZH: Record<FootworkKind, string> = {
   split_step: "启动步",
@@ -27,6 +27,12 @@ export const SPLIT_ZH: Record<SplitStepTiming, string> = {
   late: "偏晚",
   none: "没有",
   unknown: "无法判断",
+};
+
+export const LANDING_ZH: Record<FootLanding, string> = {
+  heel: "脚跟先着地",
+  forefoot: "前脚掌先着地",
+  flat: "全脚掌着地",
 };
 
 /** Kinds shown on the timeline and the video by default (recovery and step patterns are in the panel). */
@@ -99,7 +105,13 @@ export function drawFootwork(
     lastImage.set(c.player_id, [x, y]);
     ctx.globalAlpha = opacity * (planted ? 0.95 : 0.6 * (1 - age));
     ctx.beginPath();
-    ctx.ellipse(x, y, 12 * px, 6 * px, 0, 0, Math.PI * 2);
+    const shoe = shoeShape(c, px);
+    if (shoe) {
+      // the shoe along heel -> toe, with a notch at the toe
+      ctx.ellipse(shoe.cx, shoe.cy, shoe.half, 5 * px, shoe.angle, 0, Math.PI * 2);
+    } else {
+      ctx.ellipse(x, y, 12 * px, 6 * px, 0, 0, Math.PI * 2);
+    }
     ctx.lineWidth = 2 * px;
     ctx.strokeStyle = color;
     if (planted) {
@@ -108,12 +120,18 @@ export function drawFootwork(
       ctx.strokeStyle = "#0b1220";
     }
     ctx.stroke();
+    if (shoe && planted) {
+      ctx.beginPath();
+      ctx.arc(shoe.tx, shoe.ty, 2.5 * px, 0, Math.PI * 2);
+      ctx.fillStyle = "#0b1220";
+      ctx.fill();
+    }
     if (planted) {
       ctx.fillStyle = "#0b1220";
       ctx.font = `bold ${9 * px}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(c.foot === "left" ? "L" : "R", x, y + 0.5 * px);
+      ctx.fillText(c.foot === "left" ? "L" : "R", shoe ? shoe.cx : x, (shoe ? shoe.cy : y) + 0.5 * px);
     }
   }
   // action labels (split step, lunge, jump) next to the player's feet
@@ -138,6 +156,15 @@ export function drawFootwork(
   ctx.textBaseline = "alphabetic";
 }
 
+/** Heel -> toe of a contact as an oriented shoe on the video, or null without heel / toe keypoints. */
+export function shoeShape(c: FootContact, px: number): { cx: number; cy: number; half: number; angle: number; tx: number; ty: number } | null {
+  if (!c.heel_image || !c.toe_image) return null;
+  const [hx, hy] = c.heel_image;
+  const [tx, ty] = c.toe_image;
+  const len = Math.hypot(tx - hx, ty - hy);
+  return { cx: (hx + tx) / 2, cy: (hy + ty) / 2, half: Math.max(len / 2 + 3 * px, 8 * px), angle: Math.atan2(ty - hy, tx - hx), tx, ty };
+}
+
 export interface FootworkSummary {
   judged: number;
   splitPct: number | null;
@@ -146,6 +173,10 @@ export interface FootworkSummary {
   recoveredPct: number | null;
   lunges: number;
   jumps: number;
+  /** step landings judged from heel / toe (0 without the feet stage) */
+  landingsJudged: number;
+  heelFirstPct: number | null;
+  forefootPct: number | null;
 }
 
 function median(xs: number[]): number | null {
@@ -163,6 +194,7 @@ export function summarize(fw: FootworkResult, pid: PlayerId): FootworkSummary {
   const onTime = judged.filter((s) => s.split_step === "on_time");
   const gaps = shots.map((s) => s.recovery_gap_m).filter((g): g is number => g != null);
   const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
+  const landings = fw.steps.filter((st) => st.player_id === pid && st.landing).map((st) => st.landing as FootLanding);
   return {
     judged: judged.length,
     splitPct: pct(split.length, judged.length),
@@ -171,6 +203,9 @@ export function summarize(fw: FootworkResult, pid: PlayerId): FootworkSummary {
     recoveredPct: pct(gaps.filter((g) => g <= fw.base_radius_m).length, gaps.length),
     lunges: fw.events.filter((e) => e.player_id === pid && e.kind === "lunge").length,
     jumps: fw.events.filter((e) => e.player_id === pid && e.kind === "jump").length,
+    landingsJudged: landings.length,
+    heelFirstPct: pct(landings.filter((l) => l === "heel").length, landings.length),
+    forefootPct: pct(landings.filter((l) => l === "forefoot").length, landings.length),
   };
 }
 
@@ -191,7 +226,12 @@ export function mockFootwork(overlay: OverlayData, result: EventsResult): Footwo
         const end = f.frame + Math.round(seg * 0.7);
         if (!byFrame.has(end)) continue;
         const [x, y] = p.keypoints[k];
-        contacts.push({ player_id: p.player_id, foot, start_frame: f.frame, end_frame: end, t_ms: f.t_ms, end_ms: Math.round((end * 1000) / fps), image: [x, y + 4], court: p.foot_court ?? null });
+        const dir = foot === "left" ? -1 : 1; // toes turned slightly out
+        contacts.push({
+          player_id: p.player_id, foot, start_frame: f.frame, end_frame: end, t_ms: f.t_ms, end_ms: Math.round((end * 1000) / fps), image: [x, y + 4],
+          court: p.foot_court ?? null, heel_image: [x - 2 * dir, y + 7], toe_image: [x + 6 * dir, y - 1], toe_dir_deg: 25 * dir,
+          landing: (["forefoot", "flat", "heel"] as const)[(f.frame / seg) % 3 | 0],
+        });
       }
     }
   }

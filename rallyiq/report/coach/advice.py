@@ -204,6 +204,23 @@ def detect_focus(stats: MatchStats) -> list[Focus]:
                              [react.key], aspects=["split_step", "footwork"], retest_metric=react.key,
                              confidence=react.confidence))
 
+        heel = m(f"{pid}.footwork.heel_first_pct")
+        if heel is not None and heel.n >= 15 and heel.value >= 40:
+            out.append(Focus(f"{pid}.heel_steps", pid, f"{pid} 移动中常用脚跟先着地（{_fmt(heel.value)}%），重心偏后、起动慢",
+                             [heel.key], aspects=["footwork"], retest_metric=heel.key, confidence=heel.confidence))
+        toe_off = m(f"{pid}.footwork.lunge_toe_off_deg")
+        lunge_heel = m(f"{pid}.footwork.lunge_heel_first_pct")
+        if toe_off is not None and toe_off.n >= 2 and toe_off.value > 45:
+            ev = [toe_off.key] + ([lunge_heel.key] if lunge_heel is not None and lunge_heel.value is not None else [])
+            out.append(Focus(f"{pid}.lunge_toe", pid,
+                             f"{pid} 弓步时脚尖没有对准跨步方向（偏 {_fmt(toe_off.value)}°），膝盖容易扭转",
+                             ev, aspects=["footwork", "physical"], retest_metric=toe_off.key, confidence=toe_off.confidence))
+        elif lunge_heel is not None and lunge_heel.n >= 2 and lunge_heel.value < 50:
+            out.append(Focus(f"{pid}.lunge_heel", pid,
+                             f"{pid} 弓步多数不是脚跟先着地（只有 {_fmt(lunge_heel.value)}%），制动和回位都吃力",
+                             [lunge_heel.key], aspects=["footwork", "physical"], retest_metric=lunge_heel.key,
+                             confidence=lunge_heel.confidence))
+
         depth = dist(f"{pid}.pos.depth_zones")
         if depth is not None:
             zone, cnt = max(depth.counts.items(), key=lambda kv: kv[1])

@@ -544,6 +544,37 @@
           "description": "distance between the feet at the hit",
           "title": "Stance M"
         },
+        "lunge_landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: how the front foot landed",
+          "title": "Lunge Landing"
+        },
+        "lunge_toe_off_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: angle between the front foot and the direction of the lunge step (0 = toe points where the step went)",
+          "title": "Lunge Toe Off Deg"
+        },
         "recovery_ms": {
           "anyOf": [
             {
