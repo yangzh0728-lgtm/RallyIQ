@@ -90,8 +90,8 @@ def court_lock(
 # Racket contact, in body heights of the player's box: a wrist this close to the shuttle,
 # while the wrist moves at least this fast (a swing, not a hand hanging at the side).
 CONTACT_REACH_BODIES = 0.45
-SWING_BODIES_PER_S = 1.5
-SWING_WINDOW_S = 0.15
+SWING_BODIES_PER_S = 1.0
+SWING_WINDOW_S = 0.2
 HELD_REACH_BODIES = 0.15
 _WRISTS = (9, 10)  # COCO-17 left / right wrist
 _MIN_KP_CONF = 0.3

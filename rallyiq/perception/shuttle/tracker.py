@@ -122,13 +122,20 @@ class TrackerConfig:
     # the candidate is in a player's hand (``held``). 0 disables.
     hot_cell_px: float = 16.0
     hot_s: float = 2.0
-    hot_still_frames: int = 3
-    # In air shared with another court a trajectory is ours only when the racket of one
-    # of our players meets it where it starts, ends or turns (``strict_support``); being
-    # near a player somewhere along a long trajectory is not enough. Turns sharper than
-    # this (degrees) count as a possible hit.
+    hot_still_s: float = 0.25
+    # With a racket-contact test (``strict_support``) linked tracklets are cut into
+    # flights at sharp turns (> ``contact_turn_deg``) and where they stop or start
+    # moving (``stop_min_points`` steps slower than ``stop_px_frac`` of the diagonal per
+    # frame), since one linked tracklet can run from our shuttle into a neighbour's or
+    # onto a duct tip. Each flight is then judged on its own: ours when it reaches air
+    # that is only ours (``sure_points`` points of weight 1); in air shared with another
+    # court, only when one of our players' rackets meets it where it starts or ends.
     contact_turn_deg: float = 50.0
     contact_end_points: int = 2
+    contact_extrapolate_s: float = 0.15
+    stop_px_frac: float = 0.002
+    stop_min_points: int = 5
+    sure_points: int = 3
 
 
 @dataclass
@@ -284,7 +291,8 @@ class ShuttleTracker:
         r = self.cfg.hot_cell_px
         still: dict[tuple[int, int], int] = {}
         for f, cs in cands.items():
-            before = [c for k in range(1, self.cfg.hot_still_frames + 1) for c in cands.get(f - k, ())]
+            back = max(1, round(self.cfg.hot_still_s * self.fps))
+            before = [c for k in range(1, back + 1) for c in cands.get(f - k, ())]
             if not before:
                 continue
             prev = np.asarray([c[:2] for c in before])
@@ -411,48 +419,123 @@ class ShuttleTracker:
     # ------------------------------------------------------------ target court
 
     def _target_court(self, tracklets: list[_Tracklet]) -> list[_Tracklet]:
-        """Trajectory-level court lock: judge each linked tracklet as a whole, so one
-        frame drifting over a line neither keeps a foreign trajectory nor cuts ours."""
+        """Trajectory-level court lock: judge each linked tracklet (with a racket-contact
+        test: each flight of it) as a whole, so one frame drifting over a line neither
+        keeps a foreign trajectory nor cuts ours."""
         if self.region is None and self.support is None:
             return tracklets
         out = []
-        for t in tracklets:
+        for whole in tracklets:
             if self.region is not None:
-                t.region = [self.region(f, x, y) for f, (x, y) in zip(t.frames, t.xy)]
-            if self.support is not None:
-                t.supported = any(self.support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
-            if t.region:
-                m = t.mean_region()
-                if t.supported and self.strict_support is not None and m < self.cfg.region_ambiguous_mean:
-                    # Shared air: a loose brush past a big near player is not enough.
-                    t.supported = any(self.strict_support(t.frames[i], *t.xy[i]) for i in self._contact_points(t))
-                foreign = m < self.cfg.region_min_mean and not (t.supported and m > 0)
-                ambiguous = m < self.cfg.region_ambiguous_mean and not t.supported and self.support is not None
-                if foreign or ambiguous:
-                    if len(t.frames) >= self.cfg.min_len:
-                        self.rejected_foreign += 1
-                    self._note(t, "foreign" if foreign else "ambiguous")
-                    continue
-                keep = [i for i, r in enumerate(t.region) if r > 0.0]
-                if len(keep) < len(t.frames):
-                    if not keep:
-                        continue
-                    t = t.subset(keep)
-            out.append(t)
+                whole.region = [self.region(f, x, y) for f, (x, y) in zip(whole.frames, whole.xy)]
+            pieces = self._flights(whole) if (self.strict_support is not None and whole.region) else [whole]
+            for t in pieces:
+                t = self._judge(t)
+                if t is not None:
+                    out.append(t)
         return out
 
-    def _contact_points(self, t: _Tracklet) -> list[int]:
-        """Indices where a racket may have met the shuttle: the ends and sharp turns."""
+    def _judge(self, t: _Tracklet) -> _Tracklet | None:
+        if self.support is not None:
+            t.supported = any(self.support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
+        if not t.region:
+            return t
+        m = t.mean_region()
+        sure = sum(1 for r in t.region if r >= 0.999) >= min(self.cfg.sure_points, len(t.frames))
+        if self.strict_support is not None and not sure and m < self.cfg.region_ambiguous_mean:
+            # Shared air: being near a big near player somewhere is not enough; a racket
+            # of ours must meet the flight where it starts or ends.
+            t.supported = self._racket_at_end(t)
+        foreign = m < self.cfg.region_min_mean and not sure and not (t.supported and m > 0)
+        ambiguous = (m < self.cfg.region_ambiguous_mean and not sure and not t.supported
+                     and (self.support is not None or self.strict_support is not None))
+        if foreign or ambiguous:
+            if len(t.frames) >= self.cfg.min_len:
+                self.rejected_foreign += 1
+            self._note(t, "foreign" if foreign else "ambiguous")
+            return None
+        keep = [i for i, r in enumerate(t.region) if r > 0.0]
+        if len(keep) < len(t.frames):
+            if not keep:
+                return None
+            t = t.subset(keep)
+        return t
+
+    def _racket_at_end(self, t: _Tracklet) -> bool:
+        """Does a racket of ours meet the flight where it starts or ends? Detection
+        usually resumes a few frames after a hit, so each end is also followed back
+        (forward) along its own velocity for ``contact_extrapolate_s``."""
         n, k = len(t.frames), self.cfg.contact_end_points
-        out = set(range(min(k, n))) | set(range(max(n - k, 0), n))
+        for i in sorted(set(range(min(k, n))) | set(range(max(n - k, 0), n))):
+            if self.strict_support(t.frames[i], *t.xy[i]):
+                return True
+        if n < 2:
+            return False
+        back = max(1, round(self.cfg.contact_extrapolate_s * self.fps))
+        for (i, j), sign in (((0, 1), -1), ((n - 1, n - 2), 1)):
+            df = abs(t.frames[i] - t.frames[j]) or 1
+            vx, vy = ((t.xy[i][0] - t.xy[j][0]) / df, (t.xy[i][1] - t.xy[j][1]) / df)
+            for d in range(1, back + 1):
+                x, y = t.xy[i][0] + vx * d, t.xy[i][1] + vy * d
+                if self.strict_support(t.frames[i] + sign * d, x, y):
+                    return True
+        return False
+
+    def _turns(self, t: _Tracklet) -> list[int]:
+        """Middle index of each run of sharp turns."""
+        n = len(t.frames)
         cos_max = math.cos(math.radians(self.cfg.contact_turn_deg))
+        hits = []
         for i in range(2, n - 2):
             (ax, ay), (bx, by), (cx, cy) = t.xy[i - 2], t.xy[i], t.xy[i + 2]
             u, v = (bx - ax, by - ay), (cx - bx, cy - by)
             nu, nv = math.hypot(*u), math.hypot(*v)
             if nu > 1 and nv > 1 and (u[0] * v[0] + u[1] * v[1]) / (nu * nv) < cos_max:
-                out.update((i - 1, i, i + 1))
-        return sorted(out)
+                hits.append(i)
+        out, run = [], []
+        for i in hits:
+            if run and i != run[-1] + 1:
+                out.append(run[len(run) // 2])
+                run = []
+            run.append(i)
+        if run:
+            out.append(run[len(run) // 2])
+        return out
+
+    def _flights(self, t: _Tracklet) -> list[_Tracklet]:
+        """Cut a linked tracklet at sharp turns and where it stops or starts moving."""
+        n = len(t.frames)
+        if n < 2 * self.cfg.min_len:
+            return [t]
+        cuts = set(self._turns(t))
+        slow = self.cfg.stop_px_frac * self.diag
+        still = [False] + [
+            math.dist(t.xy[i - 1], t.xy[i]) / max(t.frames[i] - t.frames[i - 1], 1) < slow for i in range(1, n)
+        ]
+        i = 0
+        while i < n:
+            if not still[i]:
+                i += 1
+                continue
+            j = i
+            while j + 1 < n and still[j + 1]:
+                j += 1
+            if j - i + 1 >= self.cfg.stop_min_points:
+                cuts.update((i - 1, j))  # the still stretch is a piece of its own
+            i = j + 1
+        bounds = sorted(c for c in cuts if 0 <= c < n - 1)
+        pieces, a = [], 0
+        for c in bounds:
+            if c >= a:
+                pieces.append(list(range(a, c + 1)))
+                a = c + 1
+        pieces.append(list(range(a, n)))
+        out = []
+        for idx in pieces:
+            if idx:
+                sub = t.subset(idx)
+                out.append(sub)
+        return out
 
     # --------------------------------------------------------------- selection
 

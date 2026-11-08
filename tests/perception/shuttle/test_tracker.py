@@ -410,3 +410,40 @@ def test_shared_air_support_is_only_checked_where_a_trajectory_ends_or_turns():
     at_end = ShuttleTracker(30, W, H, region=shared, support=lambda f, x, y: True,
                             strict_support=lambda f, x, y: f == 30)
     assert at_end.track(shot, 31).points
+
+
+def _air(sure_above_y):
+    """Our air only above ``sure_above_y`` (high in the image), shared below."""
+    return lambda f, x, y: 1.0 if y < sure_above_y else 0.6
+
+
+def test_one_linked_tracklet_is_judged_flight_by_flight():
+    # Our clear peaks high (air that is only ours), then the linker runs straight on into
+    # a neighbour's shuttle crossing at mid height: a sharp turn, no racket of ours.
+    ours = flight(0, 20, (900, 500), (700, 300), 300)
+    theirs = {f: (700 - 25 * (f - 20), 300 + 12 * (f - 20)) for f in range(21, 45)}
+    cands = as_candidates(ours | theirs)
+    tr = ShuttleTracker(30, W, H, region=_air(200), support=lambda f, x, y: True,
+                        strict_support=lambda f, x, y: False)
+    got = by_frame(tr.track(cands, 45))
+    assert sum(1 for f in ours if f in got) >= len(ours) - 1
+    assert not any(f in got and got[f].source == "detected" for f in range(24, 45))
+
+
+def test_flight_that_runs_onto_a_duct_tip_loses_only_the_duct_part():
+    shot = {f: (300 + 20 * f, 700 - 9 * f) for f in range(0, 15)}  # ends at (580, 574)
+    duct = {f: (600 + (f % 2), 560.0) for f in range(15, 45)}
+    tr = ShuttleTracker(30, W, H, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
+                        strict_support=lambda f, x, y: f == 0, rest=lambda f, x, y: False)
+    got = by_frame(tr.track(as_candidates(shot | duct), 45))
+    assert sum(1 for f in shot if f in got) >= len(shot) - 1
+    assert not any(f in got for f in range(18, 45))
+
+
+def test_racket_contact_found_behind_where_detection_resumes():
+    # Hit at frame 10 at (500, 600); the shuttle is first detected 4 frames later.
+    shot = {f: (500 + 30 * (f - 10), 600 - 40 * (f - 10)) for f in range(14, 30)}
+    at_racket = lambda f, x, y: f == 10 and math.dist((x, y), (500, 600)) < 40  # noqa: E731
+    tr = ShuttleTracker(30, W, H, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
+                        strict_support=at_racket)
+    assert tr.track(as_candidates(shot), 30).points
