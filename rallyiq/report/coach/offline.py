@@ -116,6 +116,8 @@ class OfflineProvider:
                                             f"（{lost_own.n} 回合），可能是主动失误偏多{_hedge(lost_own)}。",
                                      evidence=[lost_own.key], confidence=lost_own.confidence))
 
+        insights += _style_insights(stats, idx)
+
         if not stats.shot_types_available:
             insights.append(dict(kind="data_quality", player_id=None, title="暂不评价技术动作",
                                  detail="击球类型分类尚未接入，本报告不涉及拍法和球路选择。", evidence=[], confidence="high"))
@@ -158,4 +160,37 @@ def _knowledge_training(knowledge) -> list[dict]:
             key_points=list(note.get("coach_cues") or note.get("key_points") or [])[:4],
             sources=[{"note_id": i, "drill": d["name"] if d and i == ids[0] else None} for i in ids[:2]],
         ))
+    return out
+
+
+def _style_insights(stats: MatchStats, idx: dict) -> list[dict]:
+    """Style verdict per player / team, and how to play the opponent's style (rules from ``report.style``)."""
+    from ..style import CLEAR_STYLE, COUNTER, style_by_subject
+
+    out = []
+    by = style_by_subject(stats.styles)
+    for st in stats.styles:
+        if st.status == "undeterminable" or st.primary is None or st.primary.score is None:
+            continue
+        ev = [k for k in st.evidence if k in idx]
+        if not ev:
+            continue
+        conf = _weakest(st.confidence, *(idx[k].confidence for k in ev))
+        pid = st.subject if st.kind == "singles" else None
+        who = st.subject if st.kind == "singles" else f"{st.subject}队"
+        why = "、".join(st.primary.reasons) or "多项特征接近"
+        also = f"；也带有{st.secondary.name}的特点" if st.secondary else ""
+        hedge = "" if conf == "high" else f"（{st.n_shots} 拍，初步判断）"
+        out.append(dict(kind="pattern", player_id=pid, title=f"{who} 打法：{st.label}",
+                        detail=f"{who}与{st.primary.name}原型的吻合度 {_fmt(st.primary.score)}（满分 100）{hedge}。"
+                               f"主要依据：{why}{also}。",
+                        evidence=ev, confidence=conf))
+        opp = by.get(next((o for o in by if o != st.subject), ""))
+        if opp is not None and opp.primary is not None and opp.primary.score is not None \
+                and opp.primary.score >= CLEAR_STYLE and opp.primary.code in COUNTER and opp.status != "undeterminable":
+            oev = [k for k in opp.evidence if k in idx]
+            if oev:
+                out.append(dict(kind="tactic", player_id=pid, title=f"{who} 对阵{opp.primary.name}的打法",
+                                detail=COUNTER[opp.primary.code], evidence=oev,
+                                confidence=_weakest(opp.confidence, *(idx[k].confidence for k in oev))))
     return out

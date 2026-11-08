@@ -41,6 +41,7 @@ from ..contracts import (
 from ..contracts.geometry import SINGLES_INSET
 from .flow import flow_metrics, rally_log
 from .moments import shot_moments
+from .style import MIN_SHOTS, analyze_styles, shot_phases
 
 PLAYERS = ("P1", "P2")
 DOUBLES_PLAYERS = ("P1", "P3", "P2", "P4")
@@ -422,11 +423,32 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
     metrics += flow_match
     player_stats = [p.model_copy(update={"metrics": [*p.metrics, *flow_players.get(p.player_id, [])]})
                     for p in player_stats]
+    styles = []
+    if shot_types_available:
+        phases = shot_phases(events)
+        moments = [m.model_copy(update={"phase": phases.get(m.shot_id)}) for m in moments]
+        shared = {m.key: m for m in metrics}
+        shared.update({m.key: m for p in player_stats for m in p.metrics})
+        res = analyze_styles(events, players, fps, metric_ok, shared)
+        styles = res.styles
+        if events.match_format == "doubles":  # team features live at match level (keys A.style.*, B.style.*)
+            for team in ("A", "B"):
+                metrics += res.metrics.get(team, [])
+                distributions += res.distributions.get(team, [])
+        else:
+            player_stats = [p.model_copy(update={"metrics": p.metrics + res.metrics.get(p.player_id, []),
+                                                 "distributions": p.distributions + res.distributions.get(p.player_id, [])})
+                            for p in player_stats]
+        if any(s.note and s.note.startswith("相邻两拍") for s in styles):
+            caveats.append(next(s.note for s in styles if s.note and s.note.startswith("相邻两拍")) + "。")
+        if any(s.status == "undeterminable" and s.n_shots < MIN_SHOTS for s in styles):
+            caveats.append(f"有球员已分类的击球不足 {MIN_SHOTS} 拍，打法风格暂不判断。")
+        caveats.append("打法风格由规则原型匹配得出（没有用标注数据训练），参考区间来自职业单打统计，业余比赛只作倾向参考。")
     return MatchStats(
         video_id=events.video_id, fingerprint=fingerprint(events, players, calibration),
         duration_ms=meta.duration_ms if meta else None, calibration_status=cal_status,
         shot_types_available=shot_types_available, metrics=metrics, distributions=distributions,
-        players=player_stats, moments=moments, rallies=lines, games=games, caveats=caveats,
+        players=player_stats, moments=moments, rallies=lines, games=games, styles=styles, caveats=caveats,
     )
 
 
