@@ -641,6 +641,46 @@ class PlayerStyle(Contract):
     note: str | None = None
 
 
+class DoublesRole(Contract):
+    """Where one doubles player plays: mostly at the front, mostly at the back, or rotating."""
+
+    player_id: PlayerId
+    role: Literal["front", "rear", "rotating", "unknown"]
+    label: str = Field(description="前场型 / 后场型 / 轮转型 / 不可判定")
+    front_pct: float | None = Field(
+        default=None, description="share of front-back moments in which this player was the front one")
+    reasons: list[str] = Field(default_factory=list)
+
+
+class DoublesFinding(Contract):
+    """One rule-based observation about a doubles pair (formation, spacing, who takes which shots)."""
+
+    kind: Literal["strength", "weakness", "pattern"]
+    title: str
+    detail: str
+    advice: str | None = None
+    evidence: list[str] = Field(default_factory=list, description="metric / distribution keys")
+    confidence: MetricConfidence
+
+
+class DoublesTeam(Contract):
+    """Doubles teamwork of one pair: formation, rotation, spacing, roles and shot division.
+
+    The numbers are ``Metric``s under ``A.dbl.*`` / ``B.dbl.*`` (team, in ``MatchStats.metrics``) and
+    ``Pn.dbl.*`` (player); "who takes which shots" are ``Distribution``s ``<team>.dbl.who.*`` whose
+    keys are listed in ``division``.
+    """
+
+    team: TeamId
+    players: list[PlayerId]
+    roles: list[DoublesRole] = Field(default_factory=list)
+    division: list[str] = Field(default_factory=list, description="distribution keys: who took which shots")
+    findings: list[DoublesFinding] = Field(default_factory=list)
+    status: Status
+    confidence: MetricConfidence
+    note: str | None = None
+
+
 class ShotMoment(Contract):
     """One shot whose choice should change, found by rules from stroke type + both players' positions.
 
@@ -732,6 +772,8 @@ class MatchStats(Contract):
     )
     styles: list[PlayerStyle] = Field(
         default_factory=list, description="playing style per player (singles) or team (doubles); needs stroke types")
+    doubles: list[DoublesTeam] = Field(
+        default_factory=list, description="doubles only: formation, rotation, spacing, roles and shot division per team")
     rallies: list[RallyLine] = Field(default_factory=list, description="rally log in time order")
     games: list[GameScore] = Field(default_factory=list, description="games reconstructed from entered winners")
     caveats: list[str] = Field(default_factory=list)

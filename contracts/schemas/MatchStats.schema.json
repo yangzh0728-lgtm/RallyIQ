@@ -60,6 +60,205 @@
       "title": "Distribution",
       "type": "object"
     },
+    "DoublesFinding": {
+      "additionalProperties": false,
+      "description": "One rule-based observation about a doubles pair (formation, spacing, who takes which shots).",
+      "properties": {
+        "kind": {
+          "enum": [
+            "strength",
+            "weakness",
+            "pattern"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "advice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Advice"
+        },
+        "evidence": {
+          "description": "metric / distribution keys",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "detail",
+        "confidence"
+      ],
+      "title": "DoublesFinding",
+      "type": "object"
+    },
+    "DoublesRole": {
+      "additionalProperties": false,
+      "description": "Where one doubles player plays: mostly at the front, mostly at the back, or rotating.",
+      "properties": {
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "front",
+            "rear",
+            "rotating",
+            "unknown"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "label": {
+          "description": "\u524d\u573a\u578b / \u540e\u573a\u578b / \u8f6e\u8f6c\u578b / \u4e0d\u53ef\u5224\u5b9a",
+          "title": "Label",
+          "type": "string"
+        },
+        "front_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "share of front-back moments in which this player was the front one",
+          "title": "Front Pct"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "player_id",
+        "role",
+        "label"
+      ],
+      "title": "DoublesRole",
+      "type": "object"
+    },
+    "DoublesTeam": {
+      "additionalProperties": false,
+      "description": "Doubles teamwork of one pair: formation, rotation, spacing, roles and shot division.\n\nThe numbers are ``Metric``s under ``A.dbl.*`` / ``B.dbl.*`` (team, in ``MatchStats.metrics``) and\n``Pn.dbl.*`` (player); \"who takes which shots\" are ``Distribution``s ``<team>.dbl.who.*`` whose\nkeys are listed in ``division``.",
+      "properties": {
+        "team": {
+          "enum": [
+            "A",
+            "B"
+          ],
+          "title": "Team",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "enum": [
+              "P1",
+              "P2",
+              "P3",
+              "P4"
+            ],
+            "type": "string"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "roles": {
+          "items": {
+            "$ref": "#/$defs/DoublesRole"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "division": {
+          "description": "distribution keys: who took which shots",
+          "items": {
+            "type": "string"
+          },
+          "title": "Division",
+          "type": "array"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/DoublesFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "team",
+        "players",
+        "status",
+        "confidence"
+      ],
+      "title": "DoublesTeam",
+      "type": "object"
+    },
     "GameScore": {
       "additionalProperties": false,
       "description": "One game (\u5c40) reconstructed from the entered rally winners (21 points, win by 2, cap 30).",
@@ -1194,6 +1393,14 @@
         "$ref": "#/$defs/PlayerStyle"
       },
       "title": "Styles",
+      "type": "array"
+    },
+    "doubles": {
+      "description": "doubles only: formation, rotation, spacing, roles and shot division per team",
+      "items": {
+        "$ref": "#/$defs/DoublesTeam"
+      },
+      "title": "Doubles",
       "type": "array"
     },
     "rallies": {

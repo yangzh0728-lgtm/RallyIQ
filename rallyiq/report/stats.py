@@ -39,6 +39,7 @@ from ..contracts import (
     team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
+from .doubles import analyze_doubles, track_issues
 from .flow import flow_metrics, rally_log
 from .moments import shot_moments
 from .style import MIN_SHOTS, analyze_styles, shot_phases
@@ -260,10 +261,11 @@ def _player_stats(pid: str, events: EventsResult, rallies_by_id: dict[str, Rally
         m.append(_metric(f"{pid}.move.tracked_pct", "回合内有足点的帧占比", mv["tracked_ratio"], "%", mv["samples"],
                          300, 60, note="低于 60% 时移动和覆盖数据偏低"))
         area = mv["cells"] * COVER_CELL_M**2 if mv["samples"] else None
-        half_area = SINGLES_W * NET_Y_M
+        doubles_fmt = events.match_format == "doubles"
+        half_area = COURT_WIDTH_M * NET_Y_M / 2 if doubles_fmt else SINGLES_W * NET_Y_M
         m.append(_metric(f"{pid}.cover.area_m2", "覆盖面积（本方半场）", area, "m²", mv["samples"], 300, 60, degrade,
                          f"按 {COVER_CELL_M} m 网格，至少出现 {COVER_MIN_SAMPLES} 帧的格子计入", digits=1))
-        m.append(_metric(f"{pid}.cover.ratio_pct", "覆盖率（占单打半场）",
+        m.append(_metric(f"{pid}.cover.ratio_pct", "覆盖率（占双打半场的一半）" if doubles_fmt else "覆盖率（占单打半场）",
                          100 * area / half_area if area is not None else None, "%", mv["samples"], 300, 60, degrade))
         m.append(_metric(f"{pid}.pos.depth_mean_m", "平均站位离底线距离", mv["depth_mean"], "m", mv["samples"], 300, 60,
                          degrade, "0 = 本方底线，6.7 = 球网"))
@@ -412,11 +414,29 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
         caveats.append("击球类型分类尚未接入，暂不评价具体技术动作或球路选择。")
 
     moments = shot_moments(events, players, fps, metric_ok) if shot_types_available else []
-    if shot_types_available and players is not None and events.match_format == "doubles":
-        caveats.append("逐拍击球建议暂只支持单打。")
+    if events.match_format == "doubles":
+        # identity mix-ups (a spectator as P3, partners on opposite halves) make "the opponent" wrong
+        bad_players, bad_teams = track_issues(events, players)
+        if bad_players or bad_teams:
+            def suspect(pid: str | None) -> bool:
+                return pid in bad_players or team_of(pid) in bad_teams
+            kept = [m for m in moments if not suspect(m.player_id) and not suspect(m.opponent_id)]
+            dropped = f"，去掉了 {len(moments) - len(kept)} 条涉及这些球员的逐拍建议" if len(kept) < len(moments) else ""
+            caveats.append(f"双打球员身份识别有问题（{'；'.join([*bad_players.values(), *bad_teams.values()])}）"
+                           f"{dropped}；请先在工作台修正球员身份。")
+            moments = kept
     pids = DOUBLES_PLAYERS if events.match_format == "doubles" else PLAYERS
     player_stats = [_player_stats(pid, events, rallies_by_id, players, spans, fps, metric_ok, rally_minutes)
                     for pid in pids]
+    # Doubles teamwork: formation, rotation, spacing, roles, who takes which shots (rallyiq/report/doubles.py).
+    doubles, dbl_metrics, dbl_dists, dbl_players = analyze_doubles(events, players, fps, metric_ok)
+    metrics += dbl_metrics
+    distributions += dbl_dists
+    player_stats = [p.model_copy(update={"metrics": [*p.metrics, *dbl_players.get(p.player_id, [])]})
+                    for p in player_stats]
+    if doubles and players is not None:
+        caveats.append("双打站位按两人离底线的距离差判断前后 / 左右站位，攻防状态按上一拍推断，"
+                       "球员身份互换（跟踪 ID 交换）会让分工统计偏差。")
     # Rally log, score flow and tempo (rallyiq/report/flow.py).
     lines, games = rally_log(events, lambda t: SHOT_TYPE_LABELS.get(t, t) if t else None)
     flow_match, flow_players = flow_metrics(events, lines, games, pids)
@@ -448,7 +468,8 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
         video_id=events.video_id, fingerprint=fingerprint(events, players, calibration),
         duration_ms=meta.duration_ms if meta else None, calibration_status=cal_status,
         shot_types_available=shot_types_available, metrics=metrics, distributions=distributions,
-        players=player_stats, moments=moments, rallies=lines, games=games, styles=styles, caveats=caveats,
+        players=player_stats, moments=moments, rallies=lines, games=games, styles=styles, doubles=doubles,
+        caveats=caveats,
     )
 
 
