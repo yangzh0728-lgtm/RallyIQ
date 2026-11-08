@@ -25,7 +25,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from rallyiq.contracts.geometry import apply_homography, invert_homography  # noqa: E402
+from rallyiq.contracts.geometry import apply_homography, invert_homography
 
 COURT_W, COURT_L, NET_Y = 6.10, 13.40, 6.70
 _X = (0.0, 0.46, 3.05, 5.64, 6.10)
@@ -87,7 +87,7 @@ def draw_frame(img: np.ndarray, frame: int, fps: float, data: dict[str, Any]) ->
         cv2.rectangle(img, (x1, y1), (x2, y2), col, 2)
         tag = f"{p.get('player_id') or '#' + str(p.get('track_id'))} {p.get('side') or '?'} {p.get('confidence', 0):.2f}"
         cv2.putText(img, tag, (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, col, 2, cv2.LINE_AA)
-    trail = max(2, int(round(fps / 2)))
+    trail = max(2, round(fps / 2))
     prev = None
     for f in range(frame - trail, frame + 1):
         pt = data["shuttle"].get(f)
@@ -114,7 +114,7 @@ def draw_frame(img: np.ndarray, frame: int, fps: float, data: dict[str, Any]) ->
 
 
 def pick_frames(n_frames: int, hits: list[int], n_even: int, n_hits: int) -> list[int]:
-    even = [int(round(i * (n_frames - 1) / max(n_even - 1, 1))) for i in range(n_even)]
+    even = [round(i * (n_frames - 1) / max(n_even - 1, 1)) for i in range(n_even)]
     step = max(1, len(hits) // max(n_hits, 1))
     return sorted(set(even + hits[::step][:n_hits]))
 

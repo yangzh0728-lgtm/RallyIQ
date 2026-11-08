@@ -120,7 +120,11 @@ def test_loop_prefers_own_footage_and_keeps_holdout_last(tmp_path):
 
 
 def test_manual_calibration_from_named_points_recovers_corners():
-    from rallyiq.contracts.geometry import COURT_CORNERS_M, apply_homography, fit_homography
+    from rallyiq.contracts.geometry import (
+        COURT_CORNERS_M,
+        apply_homography,
+        fit_homography,
+    )
     from scripts import real_run
 
     # a made-up camera: court metres -> image px

@@ -35,13 +35,24 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from evaluation import benchmark, from_contracts, schema  # noqa: E402
-from rallyiq.contracts import STAGES  # noqa: E402
-from rallyiq.contracts import CalibrationSegment, CourtCalibration, CourtKeypoint  # noqa: E402
-from rallyiq.contracts.geometry import COURT_CORNERS_M, apply_homography, fit_homography, invert_homography  # noqa: E402
-from rallyiq.pipeline.runner import MANUAL_CALIBRATION  # noqa: E402
-from rallyiq.pipeline.runner import run_job  # noqa: E402
-from rallyiq.store import Store  # noqa: E402
+from evaluation import benchmark, from_contracts, schema
+from rallyiq.contracts import (
+    STAGES,
+    CalibrationSegment,
+    CourtCalibration,
+    CourtKeypoint,
+)
+from rallyiq.contracts.geometry import (
+    COURT_CORNERS_M,
+    apply_homography,
+    fit_homography,
+    invert_homography,
+)
+from rallyiq.pipeline.runner import (
+    MANUAL_CALIBRATION,
+    run_job,
+)
+from rallyiq.store import Store
 
 DEFAULT_CLIPS = Path.home() / "rallyiq-data" / "bwf" / "clips"
 DEFAULT_OUT = Path.home() / "rallyiq-data" / "runs" / "latest"
