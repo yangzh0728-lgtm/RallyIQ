@@ -19,7 +19,9 @@ What it does:
 * Validation on held-out clips: one centre-weighted pass like the detector, then a peak
   per frame; a hit is a peak within ``tol_px`` source pixels (scaled for 1080p). Reports
   precision / recall / F1 at a few peak thresholds; the best epoch by F1 at ``select_at`` (the
-  detector's operating peak threshold, 0.2) is kept.
+  detector's operating peak threshold, 0.2) is kept. With ``select_at=None`` each epoch is
+  scored at its own best threshold, and the chosen one is stored in the checkpoint as
+  ``param_dict["peak_threshold"]``, which the pipeline then uses for this model.
 
 The checkpoint is written in the format the detector loads (``model`` + ``param_dict``)
 plus a ``finetune`` block describing the data and the validation result.
@@ -64,11 +66,13 @@ class TrainConfig:
     device: str | None = None
     seed: int = 0
     tol_px: float = 10.0  # at 1080p; scaled with the frame height
-    thresholds: tuple[float, ...] = (0.5, 0.3, 0.2)
+    thresholds: tuple[float, ...] = (0.5, 0.4, 0.3, 0.2)
     # Epochs are compared by F1 at this peak threshold: the one the detector runs at
     # (DetectorConfig.peak_threshold). Selecting at 0.5 once picked an epoch that was
     # worse at 0.2 (more low-score false positives).
-    select_at: float = 0.2
+    # None: each epoch at its own best threshold (fine-tuned models score higher overall, so
+    # their best operating threshold is often above 0.2).
+    select_at: float | None = 0.2
 
 
 @dataclass
@@ -79,6 +83,17 @@ class ValResult:
 
     def score(self, at: float) -> float:
         return self.per_threshold.get(str(at), {}).get("f1", 0.0)
+
+    def best(self) -> tuple[float, float]:
+        """``(f1, threshold)`` at the threshold with the highest F1 (ties: the higher threshold)."""
+        return best_threshold(self.per_threshold)
+
+
+def best_threshold(per_threshold: dict[str, dict[str, float]]) -> tuple[float, float]:
+    if not per_threshold:
+        return 0.0, 0.2
+    t = max(per_threshold, key=lambda k: (per_threshold[k].get("f1", 0.0), float(k)))
+    return per_threshold[t].get("f1", 0.0), float(t)
 
 
 # --------------------------------------------------------------------- data
@@ -336,8 +351,12 @@ def train(
     if not pool:
         raise ValueError("no training windows: check that the train clips have labeled frames")
 
-    if cfg.select_at not in cfg.thresholds:
+    if cfg.select_at is not None and cfg.select_at not in cfg.thresholds:
         cfg.thresholds = (*cfg.thresholds, cfg.select_at)
+
+    def pick(h: ValResult) -> tuple[float, float]:
+        return h.best() if cfg.select_at is None else (h.score(cfg.select_at), cfg.select_at)
+
     compared: dict[str, dict] = {}
     for name, path in (compare or {}).items():
         if not val_data:
@@ -353,7 +372,7 @@ def train(
         loss, res = evaluate(net, val_data, cfg, device)
         history.append(ValResult(0, loss, res))
         progress(f"epoch 0 (start): val loss {loss:.2e} " + _fmt(res))
-    best = history[0].score(cfg.select_at) if history else -1.0
+    best, best_thr = pick(history[0]) if history else (-1.0, cfg.select_at or 0.2)
     best_state = {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
     best_epoch = 0
 
@@ -387,8 +406,8 @@ def train(
             vloss, res = evaluate(net, val_data, cfg, device)
             history.append(ValResult(epoch, vloss, res))
             msg += f", val loss {vloss:.2e} " + _fmt(res)
-            if history[-1].score(cfg.select_at) > best:
-                best, best_epoch = history[-1].score(cfg.select_at), epoch
+            if pick(history[-1])[0] > best:
+                (best, best_thr), best_epoch = pick(history[-1]), epoch
                 best_state = {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
         else:
             best_state = {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
@@ -399,6 +418,7 @@ def train(
         "base_weights": str(weights),
         "best_epoch": best_epoch,
         "select_at": cfg.select_at,
+        "best_threshold": best_thr,
         "best_val": next((h.per_threshold for h in history if h.epoch == best_epoch), None),
         "compare": compared,
         "train_clips": {c.clip_id: len(c.labels) for c in train_clips},
@@ -406,12 +426,18 @@ def train(
         "config": {k: v for k, v in asdict(cfg).items() if k != "device"},
         "history": [{"epoch": h.epoch, "val_loss": round(h.loss, 5), "val": h.per_threshold} for h in history],
     }
+    if cfg.select_at is None and history:
+        params = {**params, "peak_threshold": best_thr}
     out.parent.mkdir(parents=True, exist_ok=True)
     torch.save({"model": best_state, "param_dict": params, "finetune": report}, out)
     progress(f"saved epoch {best_epoch} -> {out}")
     if last_out is not None:
         last = {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
-        torch.save({"model": last, "param_dict": params, "finetune": {**report, "epoch": cfg.epochs}}, last_out)
+        last_params = params
+        if cfg.select_at is None and history:
+            last_params = {**params, "peak_threshold": history[-1].best()[1]}
+        torch.save({"model": last, "param_dict": last_params, "finetune": {**report, "epoch": cfg.epochs}},
+                   last_out)
     return report
 
 
@@ -424,10 +450,12 @@ def disagreements(weights: Path, clips: Sequence[TrainClip], cfg: TrainConfig | 
     from .detector import pick_device
 
     cfg = cfg or TrainConfig()
-    if cfg.select_at not in cfg.thresholds:
-        cfg.thresholds = (*cfg.thresholds, cfg.select_at)
     device = pick_device(cfg.device)
     net, params = load_model(weights, device)
+    if cfg.select_at is None:  # the model's own operating threshold
+        cfg.select_at = float(params.get("peak_threshold", 0.2))
+    if cfg.select_at not in cfg.thresholds:
+        cfg.thresholds = (*cfg.thresholds, cfg.select_at)
     mistakes: list[dict] = []
     res: dict[str, dict[str, float]] = {}
     for c in clips:  # one clip at a time: a whole clip decoded is ~1 GB

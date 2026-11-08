@@ -77,3 +77,22 @@ def test_cli_retracks_saved_candidates_without_model(tmp_path, sample_video):
     assert main([str(sample_video), "--from-candidates", str(cfile), "--out", str(out), "--peak-threshold", "0.1",
                  "--tracker", "weak_score=0.5"]) == 0
     assert ShuttleTrack.model_validate_json(out.read_text()).points == []
+
+
+def test_checkpoint_peak_threshold_is_used_unless_configured(tmp_path):
+    import pytest
+
+    torch = pytest.importorskip("torch")
+    from rallyiq.perception.shuttle.model import build_heatmap_net
+
+    w = tmp_path / "ft.pt"
+    torch.save({"model": build_heatmap_net(3, "concat").state_dict(),
+                "param_dict": {"seq_len": 3, "bg_mode": "concat", "peak_threshold": 0.3}}, w)
+    ctx = StageContext(video_id="v1", video_path=Path("missing.mp4"), work_dir=tmp_path, store=Store(tmp_path),
+                       meta=_meta())
+    ctx.config = {"shuttle": {"weights": str(w), "device": "cpu"}}
+    det, cfg = stage._detector(ctx)
+    assert cfg.peak_threshold == 0.3 and det.cfg.peak_threshold == 0.3
+    ctx.config = {"shuttle": {"weights": str(w), "device": "cpu", "peak_threshold": 0.2}}
+    _det, cfg = stage._detector(ctx)
+    assert cfg.peak_threshold == 0.2  # an explicit setting wins
