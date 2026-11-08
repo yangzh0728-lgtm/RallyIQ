@@ -256,12 +256,12 @@ def evaluate(net, data: Sequence[ClipFrames], cfg: TrainConfig, device,
         for f, hm in sorted(acc.items()):
             hm = hm / max(acc_w[f], 1e-6)
             truth = cf.clip.labels[f]
-            peaks = extract_peaks(hm, min(cfg.thresholds), 1)
+            top = extract_peaks(hm, min(cfg.thresholds), 1)
             px = py = score = None
-            if peaks:
-                px = (peaks[0][0] + 0.5) * cf.width / INPUT_WIDTH - 0.5
-                py = (peaks[0][1] + 0.5) * cf.height / INPUT_HEIGHT - 0.5
-                score = float(peaks[0][2])
+            if top:
+                px = (top[0][0] + 0.5) * cf.width / INPUT_WIDTH - 0.5
+                py = (top[0][1] + 0.5) * cf.height / INPUT_HEIGHT - 0.5
+                score = float(top[0][2])
             if frame_out is not None:
                 frame_out[int(f)] = None if score is None else (round(px, 1), round(py, 1), round(score, 3))
             for t in cfg.thresholds:

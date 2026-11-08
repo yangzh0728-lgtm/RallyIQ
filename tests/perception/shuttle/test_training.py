@@ -93,9 +93,16 @@ def test_tiny_finetune_round_trip(tmp_path):
     out = tmp_path / "ft.pt"
     cfg = TrainConfig(epochs=1, steps_per_epoch=2, batch_size=1, device="cpu")
     val = TrainClip("v", video, 30.0, {f: v for f, v in labels.items() if f >= 12})
-    report = train(ckpt, [TrainClip("c", video, 30.0, {f: v for f, v in labels.items() if f < 12})], [val],
+    val2 = TrainClip("v2", video, 30.0, {f: v for f, v in labels.items() if f >= 18})
+    report = train(ckpt, [TrainClip("c", video, 30.0, {f: v for f, v in labels.items() if f < 12})], [val, val2],
                    out, cfg, progress=lambda s: None)
     assert [h["epoch"] for h in report["history"]] == [0, 1]
+    # several clips in one pass, with per-frame peaks (a local name once shadowed the argument)
+    from rallyiq.perception.shuttle.training import disagreements
+    peaks: dict = {}
+    _res, _mistakes = disagreements(out, [val, val2], TrainConfig(device="cpu"), progress=lambda s: None,
+                                   peaks=peaks)
+    assert set(peaks) == {"c"} and set(peaks["c"]) == {f for f in labels if f >= 12}
     assert set(report["history"][0]["val"]) == {"0.5", "0.3", "0.2"}
     det = HeatmapShuttleDetector(out)  # loads as a normal detector checkpoint
     assert det.seq_len == seq_len and det.bg_mode == "concat"
