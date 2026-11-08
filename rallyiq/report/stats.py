@@ -39,7 +39,7 @@ from ..contracts import (
     team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
-from .doubles import analyze_doubles
+from .doubles import analyze_doubles, track_issues
 from .flow import flow_metrics, rally_log
 from .moments import shot_moments
 from .style import MIN_SHOTS, analyze_styles, shot_phases
@@ -414,6 +414,17 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
         caveats.append("击球类型分类尚未接入，暂不评价具体技术动作或球路选择。")
 
     moments = shot_moments(events, players, fps, metric_ok) if shot_types_available else []
+    if events.match_format == "doubles":
+        # identity mix-ups (a spectator as P3, partners on opposite halves) make "the opponent" wrong
+        bad_players, bad_teams = track_issues(events, players)
+        if bad_players or bad_teams:
+            def suspect(pid: str | None) -> bool:
+                return pid in bad_players or team_of(pid) in bad_teams
+            kept = [m for m in moments if not suspect(m.player_id) and not suspect(m.opponent_id)]
+            dropped = f"，去掉了 {len(moments) - len(kept)} 条涉及这些球员的逐拍建议" if len(kept) < len(moments) else ""
+            caveats.append(f"双打球员身份识别有问题（{'；'.join([*bad_players.values(), *bad_teams.values()])}）"
+                           f"{dropped}；请先在工作台修正球员身份。")
+            moments = kept
     pids = DOUBLES_PLAYERS if events.match_format == "doubles" else PLAYERS
     player_stats = [_player_stats(pid, events, rallies_by_id, players, spans, fps, metric_ok, rally_minutes)
                     for pid in pids]

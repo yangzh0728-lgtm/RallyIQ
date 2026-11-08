@@ -197,6 +197,66 @@ def _team_samples(events: EventsResult, pos: _Positions, fps: float, team: str) 
     return out
 
 
+# --------------------------------------------------------------------------- track sanity
+
+OUT_MARGIN_M = 0.5  # a foot this far outside the doubles court counts as off court
+MAX_OFF_COURT_PCT = 50.0
+STATIC_SPREAD_M = 1.0  # a "player" whose 5-95 % range is below this on both axes never moved
+MIN_SAME_HALF_PCT = 60.0
+MIN_CHECK_SAMPLES = 50
+
+
+def track_issues(events: EventsResult, players: PlayerTracks | None) -> tuple[dict[str, str], dict[str, str]]:
+    """Player tracks that cannot be a doubles player, and pairs whose partners are not on the same half.
+
+    Returns (player id -> reason, team -> reason). An identity mix-up (a spectator or umpire tracked as
+    P3, a near-court player put in the far team) would otherwise turn into confident but wrong findings.
+    """
+    if players is None:
+        return {}, {}
+    spans = sorted((r.start_frame, r.end_frame) for r in events.rallies)
+    if not spans:
+        return {}, {}
+    starts = [a for a, _ in spans]
+    from bisect import bisect_right
+
+    def in_rally(f: int) -> bool:
+        i = bisect_right(starts, f) - 1
+        return i >= 0 and f <= spans[i][1]
+
+    xy: dict[str, list[tuple[float, float]]] = {}
+    half: dict[int, dict[str, bool]] = {}
+    for pf in players.frames:
+        if not in_rally(pf.frame):
+            continue
+        for d in pf.players:
+            if d.player_id is None or d.foot_court is None or d.interpolated:
+                continue
+            x, y = float(d.foot_court[0]), float(d.foot_court[1])
+            xy.setdefault(d.player_id, []).append((x, y))
+            half.setdefault(pf.frame, {})[d.player_id] = y <= NET_Y_M
+    bad: dict[str, str] = {}
+    for pid, pts in xy.items():
+        if len(pts) < MIN_CHECK_SAMPLES:
+            continue
+        xs, ys = sorted(p[0] for p in pts), sorted(p[1] for p in pts)
+        off = sum(1 for x, y in pts if x < -OUT_MARGIN_M or x > COURT_WIDTH_M + OUT_MARGIN_M
+                  or y < -OUT_MARGIN_M - 0.5 or y > 2 * NET_Y_M + OUT_MARGIN_M + 0.5)
+        lo, hi = int(0.05 * len(pts)), int(0.95 * len(pts)) - 1
+        if 100 * off / len(pts) > MAX_OFF_COURT_PCT:
+            bad[pid] = f"{pid} 在回合中 {100 * off / len(pts):.0f}% 的时间站在场外，可能是裁判、观众或邻场球员"
+        elif xs[hi] - xs[lo] < STATIC_SPREAD_M and ys[hi] - ys[lo] < STATIC_SPREAD_M:
+            bad[pid] = f"{pid} 整场几乎没有移动（活动范围不到 {STATIC_SPREAD_M:.0f} 米），可能是裁判或观众"
+    team_bad: dict[str, str] = {}
+    for team, (p, q) in TEAMS.items():
+        both = [h for h in half.values() if p in h and q in h]
+        if len(both) >= MIN_CHECK_SAMPLES:
+            same = 100 * sum(h[p] == h[q] for h in both) / len(both)
+            if same < MIN_SAME_HALF_PCT:
+                team_bad[team] = f"{p} 和 {q} 只有 {same:.0f}% 的时间在同一个半场，队伍分配可能有误"
+    return bad, team_bad
+
+
 # --------------------------------------------------------------------------- shot division
 
 
@@ -252,12 +312,17 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
         return [], [], [], {}
     pos = _Positions(players, fps) if players is not None else None
     degrade = not metric_ok
+    bad_players, bad_teams = track_issues(events, players)
     teams: list[DoublesTeam] = []
     metrics: list[Metric] = []
     dists: list[Distribution] = []
     pmetrics: dict[str, list[Metric]] = {}
     for team, (p, q) in TEAMS.items():
-        data = _team_samples(events, pos, fps, team) if pos is not None else _TeamData()
+        problems = [bad_players[x] for x in (p, q) if x in bad_players]
+        if team in bad_teams:
+            problems.append(bad_teams[team])
+        trusted = pos is not None and not problems
+        data = _team_samples(events, pos, fps, team) if trusted else _TeamData()
         S = data.samples
         n = len(S)
         nr = len(data.rallies_seen)
@@ -333,7 +398,7 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
             pm.append(_metric(f"{pid}.dbl.rear_hit_pct", "本人击球中在后场击球的比例", _pct(whod["rear"][pid], zone_n),
                               "%", zone_n, 20, 6, degrade))
             pmetrics[pid] = pm
-            reasons = []
+            reasons = [bad_players[pid]] if pid in bad_players else []
             if front_pct is None or len(fbs) < MIN_FB_SAMPLES:
                 role, label = "unknown", "不可判定"
             else:
@@ -349,13 +414,17 @@ def analyze_doubles(events: EventsResult, players: PlayerTracks | None, fps: flo
             roles.append(DoublesRole(player_id=pid, role=role, label=label,
                                      front_pct=None if front_pct is None else round(front_pct, 1), reasons=reasons))
 
-        findings = _findings(team, (p, q), tm, whod, roles, pmetrics)
+        findings = _findings(team, (p, q), tm, whod, roles, pmetrics) if not problems else []
         status, conf = _conf(n, 300, 60, degrade)
         if not n and team_hits:
             status, conf = "needs_review", "low"
         note = None
         if pos is None:
             note = "缺少球员跟踪数据：只统计谁打了哪些球，站位和轮转不可判定。"
+        elif problems:
+            status, conf = "undeterminable", "low"
+            note = ("；".join(problems) + "。球员身份需要先在工作台里修正，站位、分工和建议暂不给出；"
+                    "“谁打什么球”只按当前识别列出，仅供参考。")
         elif not n:
             note = "两人很少同时被跟踪到，站位和轮转不可判定。"
         teams.append(DoublesTeam(team=team, players=[p, q], roles=roles, division=division, findings=findings,

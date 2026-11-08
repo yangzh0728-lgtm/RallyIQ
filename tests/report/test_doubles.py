@@ -159,3 +159,26 @@ def test_offline_coach_uses_doubles_findings(match):
     assert "B队 两人经常挤在一起" in titles and titles["B队 两人经常挤在一起"].grounded
     assert not any("场地覆盖偏窄" in t for t in titles)  # per-player coverage is not judged in doubles
     assert any(t.drill.startswith("B队配合") for t in rep.training)
+
+
+def test_identity_mixups_are_flagged_not_analysed(match):
+    """A spectator tracked as P3 at the net post, and B's players on opposite halves: no findings, a clear note."""
+    events, players = match
+    frames = []
+    for pf in players.frames:
+        dets = []
+        for d in pf.players:
+            if d.player_id == "P3":
+                d = d.model_copy(update={"foot_court": [-0.8, 6.6]})  # stands by the post the whole match
+            if d.player_id == "P4":
+                d = d.model_copy(update={"foot_court": [3.0, 3.0]})  # tracked on the near half: wrong team
+            dets.append(d)
+        frames.append(pf.model_copy(update={"players": dets}))
+    st = compute_match_stats(events, players.model_copy(update={"frames": frames}))
+    by = {t.team: t for t in st.doubles}
+    assert by["A"].status == by["B"].status == "undeterminable"
+    assert not by["A"].findings and not by["B"].findings
+    assert "P3" in by["A"].note and "场外" in by["A"].note
+    assert "同一个半场" in by["B"].note
+    assert all(r.role == "unknown" for t in st.doubles for r in t.roles)
+    assert not st.moments and any("身份识别" in x for x in st.caveats)
