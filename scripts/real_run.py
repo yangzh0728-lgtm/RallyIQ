@@ -248,7 +248,8 @@ def main(argv: list[str] | None = None) -> int:
     config: dict[str, Any] = {"players_stride": a.stride, "players_far_boost": a.far_boost,
                               "parallel_stages": a.parallel}
 
-    clips = sorted(p for p in a.clips.expanduser().glob("*.mp4") if not a.only or p.stem in a.only)
+    clips = sorted(p for p in a.clips.expanduser().glob("*.mp4")
+                   if not p.name.startswith("._") and (not a.only or p.stem in a.only))
     if not clips:
         print(f"{a.clips} 里没有片段，先运行 python -m evaluation.tools.extract_clips", file=sys.stderr)
         return 1

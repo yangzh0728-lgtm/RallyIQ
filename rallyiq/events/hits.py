@@ -26,8 +26,9 @@ from .config import EventsConfig
 from .learned import features, get_scorer
 from .players import PoseIndex, Proximity
 from .rallies import RallySpan
-from .trajectory import Track, angle_deg, norm
-from .types import RallyEndReason
+from .trajectory import Track, Vec, angle_deg, norm
+from .types import KP_L_ANKLE, KP_L_HIP, KP_L_SHOULDER, KP_L_WRIST, KP_R_ANKLE, KP_R_HIP, KP_R_SHOULDER, KP_R_WRIST
+from .types import PlayerPose, RallyEndReason
 
 # Reason codes (stable strings; the review UI can translate them).
 R_NO_PLAYER_NEAR = "no_player_near"
@@ -44,6 +45,8 @@ R_HITTER_FROM_ALTERNATION = "hitter_from_alternation"  # nearest player broke al
 R_INFERRED_SERVE = "inferred_from_rally_start"
 R_HITTER_FROM_TRAJECTORY = "hitter_from_trajectory"  # learned side model overruled the nearest player
 R_HITTER_FROM_SEQUENCE = "hitter_from_sequence"  # no player near the shuttle: hitter taken from alternation
+R_FLOOR_CONTACT = "floor_contact"  # shuttle at the hitter's feet: bounce, pickup or floor push (rejected)
+R_OUT_OF_REACH = "out_of_reach"  # shuttle beyond any racket reach of the nearest wrist (rejected)
 
 WEIGHTS = {"change": 0.35, "proximity": 0.35, "sharpness": 0.15, "track_quality": 0.15}
 
@@ -189,6 +192,11 @@ def detect_hits(
     out: list[Candidate] = []
     for c in picked:
         rule_conf, landing, rejected = _decide(c, track, span, cfg, no_pose)
+        if scorer is None and _contact_gate(c, track, poses, cfg):
+            # Rules only: the learned scorer already sees contact height and incoming speed (y_rel,
+            # log_speed_in), and on the ShuttleSet test clips the gate on top of it lost a true hit.
+            rejected = True
+            c.confidence = 0.0
         if scorer is not None or collect is not None:
             x = features(c, track, span, poses, cfg, rule_conf, landing, no_pose)
             if collect is not None:
@@ -227,8 +235,88 @@ def resolve_sequence(cands: list[Candidate], cfg: EventsConfig) -> list[Candidat
     _reattribute(out, cfg)
     if cfg.hitter_fill:
         _fill_hitters(out)
+    if cfg.self_feed_max_gap_ms > 0:
+        out = _drop_self_feeds(out, cfg)
     _check_alternation(out)
     return out
+
+
+def _drop_self_feeds(hits: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Drop hits inside a run of 3+ consecutive hits by one side with short gaps (see ``self_feed_max_gap_ms``)."""
+    gap = cfg.self_feed_max_gap_ms
+    drop: set[int] = set()
+    for i in range(1, len(hits) - 1):
+        a, b, c = hits[i - 1], hits[i], hits[i + 1]
+        k = _side_key(b)
+        if k is None or _side_key(a) != k or _side_key(c) != k:
+            continue
+        if b.t_ms - a.t_ms > gap or c.t_ms - b.t_ms > gap:
+            continue
+        drop.add(i)
+        if cfg.self_feed_run:
+            drop.update((i - 1, i + 1))
+    return [h for i, h in enumerate(hits) if i not in drop]
+
+
+def _kp(p: PlayerPose, i: int, min_conf: float):
+    if len(p.keypoints) <= i or p.keypoints[i].confidence < min_conf:
+        return None
+    return p.keypoints[i].x, p.keypoints[i].y
+
+
+def contact_height(p: PlayerPose, xy: Vec, min_conf: float) -> Optional[float]:
+    """Height of ``xy`` above the player's lower ankle, in that player's (ankle-to-top keypoint) heights.
+
+    None without a visible ankle: an occluded or cut-off lower body says nothing about the floor.
+    """
+    ankles = [a for a in (_kp(p, KP_L_ANKLE, min_conf), _kp(p, KP_R_ANKLE, min_conf)) if a]
+    ys = [k.y for k in p.keypoints if k.confidence >= min_conf]
+    if not ankles or len(ys) < 4:
+        return None
+    foot = max(a[1] for a in ankles)
+    h = foot - min(ys)
+    return (foot - xy[1]) / h if h > 1.0 else None
+
+
+def reach_torso(p: PlayerPose, xy: Vec, min_conf: float) -> Optional[float]:
+    """Distance from the closest visible wrist to ``xy``, in torso lengths (shoulder centre to hip centre)."""
+    sh = [q for q in (_kp(p, KP_L_SHOULDER, min_conf), _kp(p, KP_R_SHOULDER, min_conf)) if q]
+    hp = [q for q in (_kp(p, KP_L_HIP, min_conf), _kp(p, KP_R_HIP, min_conf)) if q]
+    wr = [q for q in (_kp(p, KP_L_WRIST, min_conf), _kp(p, KP_R_WRIST, min_conf)) if q]
+    if not (sh and hp and wr):
+        return None
+    mid = lambda qs: (sum(q[0] for q in qs) / len(qs), sum(q[1] for q in qs) / len(qs))  # noqa: E731
+    torso = math.hypot(*(a - b for a, b in zip(mid(sh), mid(hp))))
+    if torso <= 1.0:
+        return None
+    return min(math.hypot(w[0] - xy[0], w[1] - xy[1]) for w in wr) / torso
+
+
+def _contact_gate(c: Candidate, track: Track, poses: PoseIndex, cfg: EventsConfig) -> bool:
+    """Measured-contact checks that hold for any scorer. True (and a reason code) when the candidate cannot be
+    a stroke: the shuttle arrives slowly at the hitter's feet, is out of any racket's reach, or (optionally)
+    was not measured at the contact."""
+    pt = track.points[c.idx]
+    if cfg.require_observed_contact and pt.interpolated:
+        return True
+    b = c.best
+    if b is None or b.score <= 0:
+        return False
+    if cfg.floor_contact_h > 0:
+        h = contact_height(b.pose, pt.xy, cfg.min_kp_conf)
+        vin = track.incoming(c.idx, cfg.window_ms, cfg.max_window_ms)
+        slow = vin is None or norm(vin) / max(poses.scale_at(pt.frame, pt.xy), 1.0) < cfg.floor_max_speed_in
+        if h is not None and h < cfg.floor_contact_h and slow:
+            if R_FLOOR_CONTACT not in c.reasons:
+                c.reasons.append(R_FLOOR_CONTACT)
+            return True
+    if cfg.max_reach_torso > 0:
+        r = reach_torso(b.pose, pt.xy, cfg.min_kp_conf)
+        if r is not None and r > cfg.max_reach_torso:
+            if R_OUT_OF_REACH not in c.reasons:
+                c.reasons.append(R_OUT_OF_REACH)
+            return True
+    return False
 
 
 def _decide(c: Candidate, track: Track, span: RallySpan, cfg: EventsConfig, no_pose: bool) -> tuple[float, bool, bool]:

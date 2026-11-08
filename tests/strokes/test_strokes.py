@@ -167,6 +167,24 @@ def test_bst_input_preparation():
     assert jn2b.shape == (4, 2, 17 + 2 * 19, 2)
 
 
+def test_bst_frame_without_both_players_zeroes_the_shuttle_too():
+    v = make_rallies(n_rallies=1, seed=4)
+    cfg = bst.BSTConfig(pose_style="J_only", seq_len=100)
+    shot = v.events.shots[1]
+    full = bst.build_clip(v.events, shot.shot_id, v.shuttle, v.players, 1920, 1080, cfg)
+    # drop the far player from the first frame of the clip
+    frames = []
+    for pf in v.players.frames:
+        if pf.frame == shot.frame:
+            pf = pf.model_copy(update={"players": pf.players[:1]})
+        frames.append(pf)
+    players = v.players.model_copy(update={"frames": frames})
+    pose, pos, shut, _ = bst.build_clip(v.events, shot.shot_id, v.shuttle, players, 1920, 1080, cfg)
+    assert np.any(full[2][0] != 0)  # the shuttle is seen at the contact frame...
+    assert np.all(pose[0] == 0) and np.all(pos[0] == 0) and np.all(shut[0] == 0)  # ...but the frame failed
+    assert np.array_equal(shut[1:], full[2][1:])
+
+
 def test_bst_seq_len_subsampling_matches_authors():
     j = np.ones((260, 2, 17, 2)); p = np.ones((260, 2, 2)); s = np.ones((260, 2))  # noqa: E702
     j2, p2, s2, n = bst.make_seq_len_same(100, j, p, s)

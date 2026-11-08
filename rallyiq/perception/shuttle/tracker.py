@@ -64,6 +64,16 @@ class TrackerConfig:
     weak_short_s: float = 0.5
     weak_short_min_travel_diag_per_s: float = 0.07
     min_len: int = 3
+    # A fixed bright spot (a chink of light in a curtain) looks like a shuttle at any
+    # score but never moves. A stretch counts as held still when a tracklet stays inside
+    # this radius (fraction of diagonal) for ``static_min_s``. Once one place has held
+    # still for ``static_total_s`` in all, every candidate there is dropped before
+    # tracklets are linked, so it cannot claim frames from the real shuttle or flicker
+    # back in short pieces. The total is long so that a shuttle briefly lying on the
+    # floor at the end of a rally stays: that is real rally-end evidence.
+    static_min_s: float = 0.5
+    static_total_s: float = 3.0
+    static_radius_frac: float = 0.003
     # Fastest plausible image-space speed, in image diagonals per second. A smash
     # close to the camera crosses ~half the frame in 0.15 s.
     max_speed_diag_per_s: float = 4.5
@@ -198,7 +208,12 @@ class ShuttleTracker:
             f: [i for i, c in enumerate(candidates[f]) if c[2] >= self.cfg.weak_score]
             for f in candidates
         }
-        tracklets = self._target_court(self._link(cands, index_map))
+        tracklets = self._link(cands, index_map)
+        spots = self._static_spots(tracklets)
+        if spots:
+            cands, index_map = self._without_spots(cands, index_map, spots)
+            tracklets = self._link(cands, index_map)
+        tracklets = self._target_court(tracklets)
         chosen = self._select(tracklets)
 
         det: dict[int, TrackPoint] = {}
@@ -216,6 +231,52 @@ class ShuttleTracker:
         points = self._fill(det)
         gaps = self._gaps(points, frame_count)
         return TrackResult(points=points, gaps=gaps, selected=selected)
+
+    # ------------------------------------------------------------ static spots
+
+    def _static_spots(self, tracklets: list[_Tracklet]) -> list[tuple[float, float]]:
+        """Places that held still for ``static_total_s`` in all, over the whole video."""
+        radius = 1.5 * self.cfg.static_radius_frac * self.diag
+        held: list[tuple[float, float, float]] = []  # x, y, seconds
+        for t in tracklets:
+            held.extend(self._held_stretches(t))
+        spots: list[tuple[float, float]] = []
+        for x, y, _ in held:
+            total = sum(s for hx, hy, s in held if math.hypot(hx - x, hy - y) <= radius)
+            if total >= self.cfg.static_total_s:
+                spots.append((x, y))
+        return spots
+
+    def _held_stretches(self, t: _Tracklet) -> list[tuple[float, float, float]]:
+        radius = self.cfg.static_radius_frac * self.diag
+        out: list[tuple[float, float, float]] = []
+        i = 0
+        while i < len(t.frames):
+            j = i
+            while j + 1 < len(t.frames) and math.dist(t.xy[j + 1], t.xy[i]) <= radius:
+                j += 1
+            seconds = (t.frames[j] - t.frames[i]) / self.fps
+            if seconds >= self.cfg.static_min_s:
+                pts = t.xy[i : j + 1]
+                out.append((sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts), seconds))
+                i = j + 1
+            else:
+                i += 1
+        return out
+
+    def _without_spots(
+        self, cands: dict[int, list[Candidate]], index_map: dict[int, list[int]], spots: list[tuple[float, float]]
+    ) -> tuple[dict[int, list[Candidate]], dict[int, list[int]]]:
+        """Drop candidates at a static spot, keeping both maps aligned."""
+        radius = 1.5 * self.cfg.static_radius_frac * self.diag
+        centres = np.asarray(spots)
+        kept_c: dict[int, list[Candidate]] = {}
+        kept_i: dict[int, list[int]] = {}
+        for f, cs in cands.items():
+            keep = [k for k, c in enumerate(cs) if np.hypot(*(centres - c[:2]).T).min() > radius]
+            kept_c[f] = [cs[k] for k in keep]
+            kept_i[f] = [index_map[f][k] for k in keep]
+        return kept_c, kept_i
 
     # ----------------------------------------------------------------- linking
 

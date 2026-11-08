@@ -33,7 +33,15 @@ are in milliseconds, so nothing depends on the frame rate.
    the four players; if that player's team just hit and a player of the other team
    is nearly as close (within `2·hitter_margin`), the other team's player is used
    and the hit carries `hitter_from_alternation`.
-7. **Serve fallback.** If the shuttle is first seen already at the server's racket,
+7. **Floor contact (rules only).** A candidate where the shuttle is below `floor_contact_h` (0.3) of the
+   hitter's height above their ankles *and* arrives slower than `floor_max_speed_in` (1.1 H/s) is a pickup,
+   a bounce or a shuttle pushed along the floor between rallies, and is rejected (`floor_contact`). Optional,
+   off by default: `max_reach_torso` (wrist-to-shuttle distance in torso lengths, `out_of_reach`) and
+   `require_observed_contact` (no tracker-filled contact point). Both lowered hit F1 on the ShuttleSet test clips.
+8. **Self-feeds.** A hit whose previous and next hits in the rally are by its own side, both within
+   `self_feed_max_gap_ms` (2 s), is a player tapping the shuttle to themselves (juggling, feeding before a
+   serve) and is dropped. Runs on rules and the learned scorer.
+9. **Serve fallback.** If the shuttle is first seen already at the server's racket,
    a hit is proposed there for review.
 
 ## Confidence and status
@@ -59,6 +67,8 @@ Reason codes (stable strings for the review UI):
 | `inferred_from_rally_start` | serve proposed from the rally start, not seen |
 | `no_pose_data` | no pose near this frame; hitter unknown |
 | `hitter_identity_unresolved` | nearest track has no P1–P4 identity yet |
+| `floor_contact` | shuttle arrived slowly at the hitter's feet (rejected; rules only) |
+| `out_of_reach` | shuttle beyond `max_reach_torso` of the nearest wrist (rejected; gate off by default) |
 | `no_hits_detected` / `possible_missed_hit` / `hits_need_review` | rally-level |
 
 ## Synthetic benchmark
