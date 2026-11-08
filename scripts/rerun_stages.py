@@ -68,8 +68,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"=== {r['clip_id']} ({vid}): {', '.join(stages)}", flush=True)
         t0 = time.monotonic()
         job = run_job(store, store.create_job(vid, stages), config)
-        art = Path(r["artifacts"])
-        r.update({"state": job.state, "error": job.error, "rerun_from": a.first,
+        art = store.video_dir(vid) / "artifacts"  # this store, also when the run dir was copied
+        r.update({"artifacts": str(art), "state": job.state, "error": job.error, "rerun_from": a.first,
                   "rerun_s": round(time.monotonic() - t0, 1)})
         r["stages"].update({s.name: {"state": s.state, "error": s.error,
                                      "s": round((s.finished_at - s.started_at).total_seconds(), 1)
