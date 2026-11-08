@@ -177,6 +177,26 @@ def detect_focus(stats: MatchStats) -> list[Focus]:
                              f"{pid} 每回合跑动 {per_rally.value:.1f} 米，对手 {o.value:.1f} 米，可能常被调动",
                              [per_rally.key, o.key], aspects=["footwork", "split_step", "tactics"],
                              retest_metric=per_rally.key, confidence=_weakest(per_rally.confidence, o.confidence)))
+        # 5. attack / defense execution (playing-style features)
+        conv = m(f"{pid}.style.convert_pct")
+        if conv is not None and conv.n >= 8 and conv.value < 45:
+            out.append(Focus(f"{pid}.convert", pid,
+                             f"{pid} 主动状态下只有 {_fmt(conv.value)}% 选择进攻（{conv.n} 拍），常错过进攻机会",
+                             [conv.key], strokes=["smash", "drop", "slice", "net_kill", "push"], aspects=["tactics"],
+                             retest_metric=conv.key, confidence=conv.confidence))
+        hold = m(f"{pid}.style.hold_pct")
+        if hold is not None and hold.n >= 8 and hold.value < 65:
+            out.append(Focus(f"{pid}.defense", pid,
+                             f"{pid} 被动状态下只有 {_fmt(hold.value)}% 的球顶住（{hold.n} 拍）",
+                             [hold.key], strokes=["defense", "lift", "drive"], aspects=["technique", "split_step"],
+                             retest_metric=hold.key, confidence=hold.confidence))
+        aerr = m(f"{pid}.style.attack_err_pct")
+        if aerr is not None and aerr.n >= 8 and aerr.value >= 30:
+            out.append(Focus(f"{pid}.attack_errors", pid,
+                             f"{pid} 进攻后直接失误丢分占 {_fmt(aerr.value)}%（{aerr.n} 次进攻）",
+                             [aerr.key], strokes=["smash", "net_kill"], aspects=["technique", "stability"],
+                             retest_metric=aerr.key, confidence=aerr.confidence))
+
         depth = dist(f"{pid}.pos.depth_zones")
         if depth is not None:
             zone, cnt = max(depth.counts.items(), key=lambda kv: kv[1])

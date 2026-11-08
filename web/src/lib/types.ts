@@ -292,6 +292,63 @@ export interface PlayerStats {
   distributions: Distribution[];
 }
 
+export type GamePhase = "attack" | "neutral" | "defense";
+
+export interface StyleScore {
+  code: string;
+  name: string;
+  name_en: string;
+  score: number | null;
+  coverage: number;
+  reasons: string[];
+  representatives: string[];
+}
+
+export interface TacticUse {
+  code: string;
+  name: string;
+  uses: number;
+  decided: number;
+  won: number;
+  success_pct: number | null;
+  forced_pct: number | null;
+  examples_ms: number[];
+}
+
+export interface ReplyHabit {
+  after: string;
+  reply: string;
+  n: number;
+  of: number;
+  pct: number;
+}
+
+export interface PhaseChoice {
+  phase: GamePhase;
+  shots: number;
+  counts: Record<string, number>;
+  recommended_pct: number | null;
+}
+
+export interface PlayerStyle {
+  subject: string;
+  players: PlayerId[];
+  kind: "singles" | "doubles";
+  primary: StyleScore | null;
+  secondary: StyleScore | null;
+  scores: StyleScore[];
+  label: string;
+  phases: PhaseChoice[];
+  tactics: TacticUse[];
+  habits: ReplyHabit[];
+  evidence: string[];
+  advice: string[];
+  n_shots: number;
+  status: Status;
+  confidence: MetricConfidence;
+  note: string | null;
+}
+
 export interface MatchStats {
   schema_version: string;
   video_id: string;
@@ -302,6 +359,7 @@ export interface MatchStats {
   metrics: Metric[];
   distributions: Distribution[];
   players: PlayerStats[];
+  styles?: PlayerStyle[];
   /** Rally log in time order (absent in reports from older versions). */
   rallies?: RallyLine[];
   /** Games rebuilt from the entered rally winners (21 points, win by 2, cap 30). */

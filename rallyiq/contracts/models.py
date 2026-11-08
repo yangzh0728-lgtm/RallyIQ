@@ -566,6 +566,81 @@ class PlayerStats(Contract):
     distributions: list[Distribution] = Field(default_factory=list)
 
 
+GamePhase = Literal["attack", "neutral", "defense"]
+
+
+class StyleScore(Contract):
+    """How well one player's numbers match one playing-style prototype (rules, no trained model)."""
+
+    code: str = Field(description="style / system code, e.g. 'power_attack', 'rear_attack'")
+    name: str = Field(description="Chinese name, e.g. '强攻压制型'")
+    name_en: str
+    score: float | None = Field(description="0-100 match to the prototype; null when too few features were measurable")
+    coverage: float = Field(ge=0, le=1, description="share of the prototype's feature weight that could be measured")
+    reasons: list[str] = Field(default_factory=list, description="the features that matched best, with their values")
+    representatives: list[str] = Field(default_factory=list, description="well-known players of this style")
+
+
+class TacticUse(Contract):
+    """How often a player ran one tactical pattern, and how it went."""
+
+    code: str = Field(description="space_control | net_to_attack | rally_to_attack | defence_to_attack | "
+                                  "pattern_breaking | tempo_disruption")
+    name: str
+    uses: int = Field(ge=0)
+    decided: int = Field(ge=0, description="uses in rallies with a known winner")
+    won: int = Field(ge=0, description="of ``decided``, rallies the player (team) won")
+    success_pct: float | None = Field(default=None, description="won / decided")
+    forced_pct: float | None = Field(
+        default=None, description="uses after which the opponent had to defend (lift / block) or lost the rally")
+    examples_ms: list[int] = Field(default_factory=list, description="video times of up to 3 uses, to replay")
+
+
+class ReplyHabit(Contract):
+    """Next-shot tendency: after the opponent plays ``after``, this player most often replies ``reply``."""
+
+    after: ShotType
+    reply: ShotType
+    n: int = Field(ge=0)
+    of: int = Field(ge=0)
+    pct: float
+
+
+class PhaseChoice(Contract):
+    """What a player did in one attack / neutral / defense state."""
+
+    phase: GamePhase
+    shots: int = Field(ge=0)
+    counts: dict[str, int] = Field(default_factory=dict, description="stroke code -> count")
+    recommended_pct: float | None = Field(
+        default=None, description="share of these shots that were a recommended choice for the state")
+
+
+class PlayerStyle(Contract):
+    """Playing style of one singles player or one doubles team, from rule-based prototype matching.
+
+    Features are ``Metric``s under ``<Pn|team>.style.*`` in ``MatchStats`` (cite those as evidence);
+    this object holds the style scores, tactics, attack/neutral/defense choices and next-shot habits.
+    """
+
+    subject: str = Field(description="P1/P2 (singles) or A/B (doubles team)")
+    players: list[PlayerId] = Field(default_factory=list)
+    kind: Literal["singles", "doubles"]
+    primary: StyleScore | None = None
+    secondary: StyleScore | None = Field(default=None, description="set when it is within a few points of primary")
+    scores: list[StyleScore] = Field(default_factory=list, description="every prototype, best first")
+    label: str = Field(description="one-line Chinese verdict, e.g. '拉吊突击型（兼速度抢攻型）' or '证据不足'")
+    phases: list[PhaseChoice] = Field(default_factory=list)
+    tactics: list[TacticUse] = Field(default_factory=list)
+    habits: list[ReplyHabit] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list, description="feature metric keys used")
+    advice: list[str] = Field(default_factory=list, description="rule advice: execution, state choices, vs this opponent")
+    n_shots: int = Field(ge=0, description="classified non-serve shots the style is based on")
+    status: Status
+    confidence: MetricConfidence
+    note: str | None = None
+
+
 class ShotMoment(Contract):
     """One shot whose choice should change, found by rules from stroke type + both players' positions.
 
@@ -594,6 +669,8 @@ class ShotMoment(Contract):
     outcome: Literal["won", "lost", "continued", "unknown"] = Field(
         description="won/lost = the hitter's side won/lost the rally within the next two shots"
     )
+    phase: GamePhase | None = Field(
+        default=None, description="the hitter's state at this shot: attack / neutral / defense (from the incoming ball)")
     issue: str = Field(description="rule code, e.g. 'to_opponent', 'clear_to_rear', 'short_to_front'")
     problem: str
     suggested_shot: ShotType | None = None
@@ -653,6 +730,8 @@ class MatchStats(Contract):
     moments: list[ShotMoment] = Field(
         default_factory=list, description="shots whose choice should change (singles, needs stroke types + tracks)"
     )
+    styles: list[PlayerStyle] = Field(
+        default_factory=list, description="playing style per player (singles) or team (doubles); needs stroke types")
     rallies: list[RallyLine] = Field(default_factory=list, description="rally log in time order")
     games: list[GameScore] = Field(default_factory=list, description="games reconstructed from entered winners")
     caveats: list[str] = Field(default_factory=list)
