@@ -131,8 +131,15 @@ def court_lookup() -> dict[str, tuple[float, float]]:
     return names | {f"{k}_corner": v for k, v in cm.CORNERS.items()}
 
 
-def manual_calibration(video_id: str, points: dict[str, list[float]], frame_count: int) -> CourtCalibration:
-    """One manual segment for the whole clip from >= 4 named image points (fixed camera)."""
+def manual_calibration(video_id: str, points: dict[str, list[float]], frame_count: int,
+                       neighbours: list[list[float]] | None = None) -> CourtCalibration:
+    """One manual segment for the whole clip from >= 4 named image points (fixed camera).
+
+    ``neighbours``: other courts in the same hall as [dx, dy] offsets (metres, our court
+    frame) of their near-left corner. They become ``other_courts`` so the court lock can
+    reject shuttles and people on them; without them a low camera puts much of the hall
+    inside our court's air box.
+    """
     lookup = court_lookup()
     unknown = sorted(set(points) - set(lookup))
     if unknown:
@@ -149,8 +156,11 @@ def manual_calibration(video_id: str, points: dict[str, list[float]], frame_coun
     resid = [((cx - px) ** 2 + (cy - py) ** 2) ** 0.5
              for (cx, cy), (px, py) in zip(img, apply_homography(to_img, court))]
     corners = apply_homography(to_img, COURT_CORNERS_M)
+    others = [apply_homography(to_img, [[x + dx, y + dy] for x, y in COURT_CORNERS_M])
+              for dx, dy in (neighbours or [])]
     seg = CalibrationSegment(
         start_frame=0, end_frame=max(frame_count - 1, 0), homography=h, image_corners=corners,
+        other_courts=others,
         keypoints=[CourtKeypoint(name=n, image=i, court=c) for n, i, c in zip(names, img, court)],
         reprojection_error_px=round(max(resid), 2), method="manual", confidence=1.0, status="ok",
         notes=[f"fixed camera: {len(names)} court points from own_clips.yaml"],
@@ -167,7 +177,8 @@ def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path, on_p
     store.register_video(video_id, clip.name, dest)
     if cmeta.get("court_points"):
         n = int(cmeta.get("frame_count") or round(cmeta["duration_ms"] / 1000 * cmeta["fps"]))
-        store.save_artifact(video_id, MANUAL_CALIBRATION, manual_calibration(video_id, cmeta["court_points"], n))
+        store.save_artifact(video_id, MANUAL_CALIBRATION, manual_calibration(video_id, cmeta["court_points"], n,
+                                                                       cmeta.get("neighbour_courts")))
     job = store.create_job(video_id, list(STAGES))
 
     t0 = time.monotonic()

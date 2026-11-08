@@ -289,3 +289,24 @@ def test_slow_apex_is_not_a_static_spot():
     cands = {f: [(400.0 + 6 * f, 300.0 + 0.04 * (f - 30) ** 2, 0.6)] for f in range(n)}
     res = ShuttleTracker(fps, 1920, 1080).track(cands, n)
     assert len([p for p in res.points if p.source == "detected"]) == n
+
+
+def test_still_strong_object_over_shared_air_is_dropped():
+    from rallyiq.perception.shuttle.tracker import ShuttleTracker
+
+    # 1 s at 30 fps: a strong still blob (a shuttle lying on a neighbour's floor) where our
+    # air space overlaps another court's (weight 0.6), always next to our player.
+    cands = {f: [(500.0, 400.0, 0.9)] for f in range(30)}
+    shared = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 0.6, support=lambda f, x, y: True)
+    assert not shared.track(cands, 30).points
+    ours = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 1.0, support=lambda f, x, y: True)
+    assert ours.track(cands, 30).points  # a shuttle lying on our own court is kept
+
+
+def test_saved_candidates_round_trip(tmp_path):
+    from rallyiq.perception.shuttle.stage import load_candidates, save_candidates
+
+    cands = {3: [(10.5, 20.25, 0.9), (30.0, 40.0, 0.3)], 7: [(1.0, 2.0, 0.5)]}
+    save_candidates(tmp_path / "c.json", cands, {3: 0}, "det@1", (1920, 1080))
+    got, size, det = load_candidates(tmp_path / "c.json")
+    assert got == cands and size == (1920, 1080) and det == "det@1"

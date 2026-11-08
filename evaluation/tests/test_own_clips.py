@@ -156,3 +156,16 @@ def test_manifest_court_points_fit_one_court():
         assert seg.reprojection_error_px < 5, cid  # measured lines agree with one flat court
         (nlx, nly), (nrx, nry), (frx, fry), (flx, fly) = seg.image_corners
         assert nlx < flx < frx < nrx and fly < nly and fry < nry, cid  # left/right, near/far not swapped
+
+
+def test_neighbour_courts_mark_the_next_court_as_foreign():
+    from rallyiq.perception.target_court import CourtRegion
+    from scripts import real_run
+
+    c = schema.load_manifest(schema.OWN_MANIFEST)["own0529_0006"]
+    seg = real_run.manual_calibration("v", c["court_points"], 10, c["neighbour_courts"]).segments[0]
+    assert len(seg.other_courts) == len(c["neighbour_courts"])
+    region = CourtRegion(seg.homography, seg.other_courts)
+    # a player's foot on the left neighbour court (seen in the 0006 stills) is on another court
+    assert region.on_other_court([165, 705])
+    assert not region.on_other_court([650, 1000])  # our near player

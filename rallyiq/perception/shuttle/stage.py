@@ -9,6 +9,9 @@
 * ``roi``: ``"off"`` (default) or ``"auto"``: crop to the calibrated court plus the air
   above it, which enlarges small far-court shuttles. Experimental until measured.
 * ``tracker``: overrides for ``TrackerConfig`` fields.
+* ``reuse_candidates``: re-track the raw peaks saved by an earlier run of this video
+  (``<work_dir>/shuttle_candidates.json``) instead of running the network again. For
+  re-running the court lock / tracker after a calibration fix; ignored when no file.
 * ``court_lock``: ``"auto"`` (default) or ``"off"``. When several courts are in view,
   keep only trajectories over the target court: the air box above the calibrated
   court (or, without calibration, the band spanned by the tracked players), with a
@@ -154,6 +157,19 @@ def save_candidates(path: Path, candidates: dict[int, Sequence[Candidate]], sele
     path.write_text(json.dumps(doc, separators=(",", ":")))
 
 
+def load_candidates(path: Path) -> tuple[dict[int, list[Candidate]], tuple[int, int], str | None]:
+    """Inverse of ``save_candidates``: ``(candidates, frame_size, detector)``."""
+    doc = json.loads(Path(path).read_text())
+    cands = {int(f): [tuple(c) for c in v["candidates"]] for f, v in doc.get("frames", {}).items()}
+    return cands, tuple(doc["frame_size"]), doc.get("detector")
+
+
+def _reuse_path(ctx: StageContext) -> Path | None:
+    cfg = dict(ctx.config.get("shuttle") or {})
+    p = Path(ctx.work_dir) / CANDIDATES_FILE
+    return p if cfg.get("reuse_candidates") and p.exists() else None
+
+
 class Cancelled(Exception):
     """Raised inside a background detection when the job no longer needs it."""
 
@@ -199,7 +215,7 @@ def prefetch(ctx: StageContext, report, cancel) -> "Callable[[], tuple] | None":
     or ``None`` when there is nothing worth starting (demo mode, no weights, or no
     accelerator, where both stages would fight for the same CPU cores).
     """
-    if demo_mode(ctx):
+    if demo_mode(ctx) or _reuse_path(ctx) is not None:
         return None
     got = _detector(ctx)
     if got is None:
@@ -243,8 +259,16 @@ def run(ctx: StageContext) -> ShuttleTrack:
 
     cfg = dict(ctx.config.get("shuttle") or {})
     started = ctx.prefetched.pop("shuttle", None)
+    reuse = _reuse_path(ctx)
     if started is not None:
         detector, det_cfg, candidates, size = started()
+    elif reuse is not None:
+        got = _detector(ctx)
+        if got is None:
+            return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
+        detector, det_cfg = got
+        candidates, size, _ = load_candidates(reuse)
+        log.info("shuttle: re-tracking %d frames of saved candidates", len(candidates))
     else:
         got = _detector(ctx)
         if got is None:

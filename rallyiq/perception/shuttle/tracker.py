@@ -103,6 +103,11 @@ class TrackerConfig:
     region_ambiguous_mean: float = 0.75
     # Weight multiplier for a tracklet that passes within reach of a target player.
     player_support_bonus: float = 0.5
+    # A tracklet that barely moves (same travel test as weak-only ones) and is not
+    # entirely in our own air space is a still white thing seen through the overlap
+    # with another court: a shuttle lying on a neighbour's floor, a pile of them, a shoe,
+    # a poster. Strong scores don't save it; a shuttle lying on our court still does.
+    drop_idle_shared: bool = True
 
 
 @dataclass
@@ -372,7 +377,7 @@ class ShuttleTracker:
             if not keep:
                 continue
             sub = t.subset(keep)
-            if sub.weight(self.cfg) <= 0 or self._idle_weak(sub):
+            if sub.weight(self.cfg) <= 0 or self._idle_weak(sub) or self._idle_shared(sub):
                 continue
             claimed.update(sub.frames)
             chosen.append(sub)
@@ -383,6 +388,15 @@ class ShuttleTracker:
         """True for a weak-only tracklet that hardly moves (likely not a shuttle)."""
         if max(t.scores) >= self.cfg.strong_score:
             return False
+        return self._idle(t)
+
+    def _idle_shared(self, t: _Tracklet) -> bool:
+        """True for a still tracklet that is not wholly inside our own air space."""
+        if not self.cfg.drop_idle_shared or not t.region or min(t.region) >= 1.0:
+            return False
+        return self._idle(t)
+
+    def _idle(self, t: _Tracklet) -> bool:
         xs = [p[0] for p in t.xy]
         ys = [p[1] for p in t.xy]
         extent = math.hypot(max(xs) - min(xs), max(ys) - min(ys))

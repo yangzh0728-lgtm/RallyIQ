@@ -16,6 +16,9 @@
 #                 名字是 "横线/竖线"，如 near_short_service/centre_line。有了它 real_run 整段直接用
 #                 这个球场，不再自动标定。点由画面里的白线拟合直线后求交点得到，投影回画面核对过。
 #                 同一场次机位没动时用 YAML 锚点（&名字 / *名字）共用一份
+#   neighbour_courts  同一馆里其他球场的位置 [[dx, dy], ...]（米，相对我们球场近左角）。
+#                 低机位下我们球场上方的"空中"会盖住大半个画面，不告诉它邻场在哪，
+#                 邻场的球就会被当成我们的
 #
 # 机位（conditions.camera）：
 #   amateur_baseline   底线后方低机位，整块场地可见（与 DJI_0009 同类）
@@ -52,6 +55,10 @@ clips:
       far_baseline/centre_line: [923.1, 677.3]
       far_baseline/right_singles_sideline: [1108.3, 676.9]
       far_baseline/right_doubles_sideline: [1141.3, 676.8]
+    # 同一馆里的其他球场：[dx, dy] 是它们近左角相对我们近左角的偏移（米）。左右两块隔 1.18 m 边线间距，
+    # 后排一排在我们远端底线后 2.8 m。量自 0006 抽帧的邻场边线和后排底线；用来去掉邻场的球和人
+    neighbour_courts: &halls_0529_a [[-14.56, 0], [-7.28, 0], [7.28, 0], [14.56, 0],
+                                     [-7.28, 16.2], [0, 16.2], [7.28, 16.2]]
     conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
 
   - id: own0529_0006
@@ -61,6 +68,7 @@ clips:
     segment_verified: false
     split: train
     court_points: *cam_0529_a
+    neighbour_courts: *halls_0529_a
     conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
 
   - id: own0529_0009

@@ -36,6 +36,8 @@ DEFAULT_DATA = Path.home() / "rallyiq-data" / "bwf"
 VIDEO_EXTS = (".mp4", ".mkv", ".webm", ".mov")
 DEFAULT_FOOTAGE = Path(os.environ.get("RALLYIQ_FOOTAGE", "/Volumes/T7/YZH/Badminton Film"))
 MAX_HEIGHT = 1080  # 自有素材多是 4K：缩到 1080p，和 BWF 片段一致，片段也小得多
+# 固定机位的球场信息：从清单原样抄进 meta.json，real_run 据此做人工标定
+COURT_KEYS = ("court_points", "neighbour_courts")
 
 
 def probe(path: Path) -> dict:
@@ -118,10 +120,11 @@ def main(argv: list[str] | None = None) -> int:
         if out.exists() and meta_p.exists():
             if is_own(c):  # 清单里的球场点可能后来才补上：只更新 meta，不重新切
                 meta = json.loads(meta_p.read_text(encoding="utf-8"))
-                if meta.get("court_points") != c.get("court_points"):
-                    meta.pop("court_points", None)
-                    if c.get("court_points"):
-                        meta["court_points"] = c["court_points"]
+                if any(meta.get(k) != c.get(k) for k in COURT_KEYS):
+                    for k in COURT_KEYS:
+                        meta.pop(k, None)
+                        if c.get(k):
+                            meta[k] = c[k]
                     meta_p.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
                     print(f"[更新] {c['id']} 的球场点")
                     continue
@@ -137,8 +140,7 @@ def main(argv: list[str] | None = None) -> int:
             meta = {"clip_id": c["id"], "video_id": Path(c["file"]).stem, "source_file": c["file"],
                     "start_ms": int(round(c["start_s"] * 1000)), "duration_ms": int(round(c["duration_s"] * 1000)),
                     **info}
-            if c.get("court_points"):
-                meta["court_points"] = c["court_points"]
+            meta |= {k: c[k] for k in COURT_KEYS if c.get(k)}
             meta_p.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
             print(f"[完成] {c['id']}  {info['width']}x{info['height']} @ {info['fps']}fps → {out}")
             continue
