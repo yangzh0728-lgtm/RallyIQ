@@ -82,6 +82,16 @@ class EventsConfig:
     # extension) and best-of-a-few-frames proximity were tried and were worse.
     hitter_fill: bool = True
     hitter_pose_fallback_frames: int = 25
+    # A player tapping the shuttle to themselves (juggling it on the racket, feeding it up before a serve)
+    # makes runs of "hits" by one side. In a real exchange the side alternates, so a hit whose previous AND
+    # next hit in the rally are by its own side, both within this gap, is dropped (``self_feed``). Whole runs
+    # (``self_feed_run``): also drop the two ends of a run of 3+. 0 disables.
+    # DJI_0009, 50 reviewed rule hits: 2000 ms removes 8 of the 26 non-hits left after the floor gate; the 2 real
+    # hits it also removes were both marked unsure by the reviewer. 14 ShuttleSet test clips: rules 65.0 -> 64.8%,
+    # v2 76.0 -> 76.3%. Whole runs removed 5 real DJI hits and cost v2 0.8 pp, so ``self_feed_run`` stays off.
+    self_feed_max_gap_ms: float = 2000.0
+    self_feed_run: bool = False
+
     # --- contact gates (ideas from shuttle-intelligence: only accept a hit with measured contact evidence) ---
     # Shuttle height at the candidate above the hitter's ankles, in that player's heights. Below this, together
     # with a slow incoming shuttle (next field), the shuttle is at the floor: a pickup, a bounce or a shuttle

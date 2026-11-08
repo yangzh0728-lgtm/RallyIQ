@@ -138,3 +138,17 @@ def test_rallies_in_off_court_views_are_masked():
     # switched off
     off_cfg = replace(EventsConfig(), mask_off_court_views=False)
     assert len(segment_events(v.shuttle, v.poses, off_cfg, off_court=off)) == 3
+
+
+def test_self_feed_middle_of_a_same_side_run_is_dropped():
+    cfg = EventsConfig()  # self_feed_max_gap_ms on by default
+    hits = [_cand(0, 0.9, (NEAR, 0.8)), _cand(900, 0.9, (NEAR, 0.8)), _cand(1800, 0.9, (NEAR, 0.8)),
+            _cand(2700, 0.9, (FAR, 0.8))]
+    from rallyiq.events.hits import _drop_self_feeds
+    assert [h.t_ms for h in _drop_self_feeds(hits, cfg)] == [0, 1800, 2700]
+    # slow taps (gaps over the limit) and an alternating exchange are left alone
+    slow = [_cand(0, 0.9, (NEAR, 0.8)), _cand(2500, 0.9, (NEAR, 0.8)), _cand(5000, 0.9, (NEAR, 0.8))]
+    assert len(_drop_self_feeds(slow, cfg)) == 3
+    rally = [_cand(0, 0.9, (NEAR, 0.8)), _cand(900, 0.9, (FAR, 0.8)), _cand(1800, 0.9, (NEAR, 0.8))]
+    assert len(_drop_self_feeds(rally, cfg)) == 3
+    assert len(_drop_self_feeds(hits, replace(cfg, self_feed_run=True))) == 1

@@ -38,7 +38,10 @@ are in milliseconds, so nothing depends on the frame rate.
    a bounce or a shuttle pushed along the floor between rallies, and is rejected (`floor_contact`). Optional,
    off by default: `max_reach_torso` (wrist-to-shuttle distance in torso lengths, `out_of_reach`) and
    `require_observed_contact` (no tracker-filled contact point). Both lowered hit F1 on the ShuttleSet test clips.
-8. **Serve fallback.** If the shuttle is first seen already at the server's racket,
+8. **Self-feeds.** A hit whose previous and next hits in the rally are by its own side, both within
+   `self_feed_max_gap_ms` (2 s), is a player tapping the shuttle to themselves (juggling, feeding before a
+   serve) and is dropped. Runs on rules and the learned scorer.
+9. **Serve fallback.** If the shuttle is first seen already at the server's racket,
    a hit is proposed there for review.
 
 ## Confidence and status
