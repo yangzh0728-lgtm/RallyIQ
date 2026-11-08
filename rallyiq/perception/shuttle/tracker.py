@@ -136,6 +136,13 @@ class TrackerConfig:
     stop_px_frac: float = 0.002
     stop_min_points: int = 5
     sure_points: int = 3
+    # A shared-air flight that carries straight on from one of ours across a detection
+    # gap (within ``chain_s``, turning less than ``chain_turn_deg``, starting within
+    # ``chain_px_frac`` of the diagonal plus half its own travel of where ours would be)
+    # is the same flight and is kept.
+    chain_s: float = 0.3
+    chain_turn_deg: float = 45.0
+    chain_px_frac: float = 0.03
 
 
 @dataclass
@@ -424,22 +431,72 @@ class ShuttleTracker:
         keeps a foreign trajectory nor cuts ours."""
         if self.region is None and self.support is None:
             return tracklets
-        out = []
+        out: list[_Tracklet] = []
+        pending: list[_Tracklet] = []  # shared-air flights without a racket of ours
         for whole in tracklets:
             if self.region is not None:
                 whole.region = [self.region(f, x, y) for f, (x, y) in zip(whole.frames, whole.xy)]
             pieces = self._flights(whole) if (self.strict_support is not None and whole.region) else [whole]
             for t in pieces:
-                t = self._judge(t)
-                if t is not None:
+                verdict, t = self._judge(t)
+                if verdict == "kept":
                     out.append(t)
+                elif verdict == "ambiguous" and self.strict_support is not None:
+                    pending.append(t)
+        return out + self._chained(out, pending)
+
+    def _chained(self, ours: list[_Tracklet], pending: list[_Tracklet]) -> list[_Tracklet]:
+        """Shared-air flights that carry straight on from (or into) one of ours: the
+        same flight, cut by a detection gap. A turn is not a continuation, so this
+        never follows the linker onto a neighbour's shuttle."""
+        rescued: list[_Tracklet] = []
+        anchors = list(ours)
+        for _ in range(8):
+            new = [t for t in pending if any(self._continues(a, t) or self._continues(t, a) for a in anchors)]
+            if not new:
+                break
+            ids = {id(t) for t in new}
+            pending = [t for t in pending if id(t) not in ids]
+            rescued += new
+            anchors = new
+        out = []
+        for t in rescued:
+            if len(t.frames) >= self.cfg.min_len:
+                self.rejected_foreign -= 1
+            self._note(t, "chained")
+            trimmed = self._trim_zero(t)
+            if trimmed is not None:
+                out.append(trimmed)
         return out
 
-    def _judge(self, t: _Tracklet) -> _Tracklet | None:
+    def _continues(self, a: _Tracklet, b: _Tracklet) -> bool:
+        """Does ``b`` start where ``a``, flying on, would be?"""
+        dt = b.start - a.end
+        if dt <= 0 or dt > self.cfg.chain_s * self.fps or len(a.frames) < 2 or len(b.frames) < 2:
+            return False
+        va = a.velocity()
+        df = b.frames[1] - b.frames[0] or 1
+        vb = ((b.xy[1][0] - b.xy[0][0]) / df, (b.xy[1][1] - b.xy[0][1]) / df)
+        na, nb = math.hypot(*va), math.hypot(*vb)
+        if na < 1 or nb < 1:
+            return False
+        if (va[0] * vb[0] + va[1] * vb[1]) / (na * nb) < math.cos(math.radians(self.cfg.chain_turn_deg)):
+            return False
+        ex, ey = a.xy[-1][0] + va[0] * dt, a.xy[-1][1] + va[1] * dt
+        tol = self.cfg.chain_px_frac * self.diag + 0.5 * na * dt
+        return math.hypot(b.xy[0][0] - ex, b.xy[0][1] - ey) <= tol
+
+    def _trim_zero(self, t: _Tracklet) -> _Tracklet | None:
+        keep = [i for i, r in enumerate(t.region) if r > 0.0] if t.region else list(range(len(t.frames)))
+        if not keep:
+            return None
+        return t if len(keep) == len(t.frames) else t.subset(keep)
+
+    def _judge(self, t: _Tracklet) -> tuple[str, _Tracklet]:
         if self.support is not None:
             t.supported = any(self.support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
         if not t.region:
-            return t
+            return "kept", t
         m = t.mean_region()
         sure = sum(1 for r in t.region if r >= 0.999) >= min(self.cfg.sure_points, len(t.frames))
         if self.strict_support is not None and not sure and m < self.cfg.region_ambiguous_mean:
@@ -452,14 +509,11 @@ class ShuttleTracker:
         if foreign or ambiguous:
             if len(t.frames) >= self.cfg.min_len:
                 self.rejected_foreign += 1
-            self._note(t, "foreign" if foreign else "ambiguous")
-            return None
-        keep = [i for i, r in enumerate(t.region) if r > 0.0]
-        if len(keep) < len(t.frames):
-            if not keep:
-                return None
-            t = t.subset(keep)
-        return t
+            verdict = "foreign" if foreign else "ambiguous"
+            self._note(t, verdict)
+            return verdict, t
+        trimmed = self._trim_zero(t)
+        return ("kept", trimmed) if trimmed is not None else ("foreign", t)
 
     def _racket_at_end(self, t: _Tracklet) -> bool:
         """Does a racket of ours meet the flight where it starts or ends? Detection

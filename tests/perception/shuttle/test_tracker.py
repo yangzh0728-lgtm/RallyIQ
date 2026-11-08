@@ -447,3 +447,15 @@ def test_racket_contact_found_behind_where_detection_resumes():
     tr = ShuttleTracker(30, W, H, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
                         strict_support=at_racket)
     assert tr.track(as_candidates(shot), 30).points
+
+
+def test_shared_air_flight_carrying_on_from_ours_across_a_gap_is_kept():
+    # Our shuttle in air that is only ours, lost for 5 frames, then on in shared air in
+    # the same direction: the same flight, though no racket of ours touches that part.
+    path = {f: (400 + 20 * f, 150 + 15 * f) for f in range(0, 40)}
+    cands = as_candidates({f: xy for f, xy in path.items() if not 15 <= f < 20})
+    tr = ShuttleTracker(30, W, H, region=_air(380), support=lambda f, x, y: True,
+                        strict_support=lambda f, x, y: False)
+    got = by_frame(tr.track(cands, 40))
+    assert sum(1 for f in range(20, 40) if f in got) >= 19
+    assert any(v == "chained" for *_, v in tr.log)

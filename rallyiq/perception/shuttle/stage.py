@@ -93,6 +93,9 @@ CONTACT_REACH_BODIES = 0.45
 SWING_BODIES_PER_S = 1.0
 SWING_WINDOW_S = 0.2
 HELD_REACH_BODIES = 0.15
+# A far player is small: the racket meets the shuttle within this share of the frame
+# height however small the box (detections at a far racket sit a few px off).
+CONTACT_MIN_FRAME_FRAC = 0.035
 _WRISTS = (9, 10)  # COCO-17 left / right wrist
 _MIN_KP_CONF = 0.3
 
@@ -107,8 +110,9 @@ class RacketContact:
     without wrist keypoints fall back to the box reach for ``contact``.
     """
 
-    def __init__(self, players: PlayerTracks | None, fps: float):
+    def __init__(self, players: PlayerTracks | None, fps: float, frame_height: float = 1080.0):
         self.fps = float(fps)
+        self.min_reach = CONTACT_MIN_FRAME_FRAC * float(frame_height)
         self.win = max(1, round(SWING_WINDOW_S * self.fps))
         # frame -> [(pid, h, box, wrists)]
         self.by_frame: dict[int, list] = {}
@@ -148,7 +152,8 @@ class RacketContact:
     def contact(self, frame: int, x: float, y: float) -> bool:
         for pid, h, (x1, y1, x2, y2), ws in self.by_frame.get(frame, ()):
             if ws:
-                if (any(math.dist(w, (x, y)) <= CONTACT_REACH_BODIES * h for w in ws)
+                reach = max(CONTACT_REACH_BODIES * h, self.min_reach)
+                if (any(math.dist(w, (x, y)) <= reach for w in ws)
                         and self.swing(pid, frame, h) >= SWING_BODIES_PER_S):
                     return True
             elif (x1 - CONTACT_REACH_BODIES * h <= x <= x2 + CONTACT_REACH_BODIES * h
@@ -385,7 +390,7 @@ def run(ctx: StageContext) -> ShuttleTrack:
     if cfg.get("court_lock", "auto") != "off":
         region, support, mode = court_lock(ctx.calibration, ctx.players)
         rest = rest_area(ctx.calibration, ctx.players)
-        rc = RacketContact(ctx.players, meta.fps)
+        rc = RacketContact(ctx.players, meta.fps, meta.height)
         strict, held = (rc.contact, rc.held) if rc else (None, None)
         log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
