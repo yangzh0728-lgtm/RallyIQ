@@ -79,6 +79,10 @@ class TrackerConfig:
     bystander_s: float = 6.0
     offcourt_m: float = 0.3
     static_extent_m: float = 1.0
+    # The stillness test runs on the position smoothed over this long: near the net a few pixels of box change
+    # move the foot point ~0.5 m along the court, so the raw position of someone standing still keeps leaving
+    # the static_extent_m box and the guard never fired on the real clip (2026-03-02 doubles).
+    still_smooth_s: float = 0.5
     bystander_radius_m: float = 1.0
     # Doubles: opponents sharing a half (feet away from the net) for this long.
     team_repair_s: float = 3.0
@@ -98,6 +102,7 @@ class _Slot:
     # Start frame and position of the current still, off-court stretch (calibrated only).
     still_since: int | None = None
     still_at: np.ndarray | None = None
+    still_ema: np.ndarray | None = None  # smoothed position for the stillness test
 
     def missed(self, frame: int) -> int:
         return frame - self.last_frame
@@ -243,7 +248,9 @@ class PlayerTracker:
 
     def _check_bystander(self, slot: _Slot, frame: int) -> None:
         cfg = self.cfg
-        pos = slot.pos
+        a = 1.0 / max(cfg.still_smooth_s * cfg.fps, 1.0)
+        slot.still_ema = slot.pos.copy() if slot.still_ema is None else (1 - a) * slot.still_ema + a * slot.pos
+        pos = slot.still_ema
         off = self._LINES.distance_outside(pos) >= cfg.offcourt_m
         if not off:
             slot.still_since, slot.still_at = None, None
@@ -295,7 +302,7 @@ class PlayerTracker:
     def _move(self, src: int, dst: int) -> None:
         s = self.slots[src]
         moved = _Slot(self.slots[dst].player_id, s.track_id, s.pos, s.vel, s.scale, s.last_frame, s.appearance,
-                      s.side, s.still_since, s.still_at)
+                      s.side, s.still_since, s.still_at, s.still_ema)
         self.slots[dst] = moved
         self.relabels[s.track_id] = moved.player_id
         self._release(s)
@@ -367,6 +374,7 @@ class PlayerTracker:
             slot.track_id = self._next_track_id
             self._next_track_id += 1
             slot.vel = np.zeros(2)
+            slot.still_since, slot.still_at, slot.still_ema = None, None, None
         else:
             n = max(slot.missed(frame), 1)
             v = (pos - slot.pos) / n
