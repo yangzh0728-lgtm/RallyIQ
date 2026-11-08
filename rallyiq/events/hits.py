@@ -235,8 +235,27 @@ def resolve_sequence(cands: list[Candidate], cfg: EventsConfig) -> list[Candidat
     _reattribute(out, cfg)
     if cfg.hitter_fill:
         _fill_hitters(out)
+    if cfg.self_feed_max_gap_ms > 0:
+        out = _drop_self_feeds(out, cfg)
     _check_alternation(out)
     return out
+
+
+def _drop_self_feeds(hits: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Drop hits inside a run of 3+ consecutive hits by one side with short gaps (see ``self_feed_max_gap_ms``)."""
+    gap = cfg.self_feed_max_gap_ms
+    drop: set[int] = set()
+    for i in range(1, len(hits) - 1):
+        a, b, c = hits[i - 1], hits[i], hits[i + 1]
+        k = _side_key(b)
+        if k is None or _side_key(a) != k or _side_key(c) != k:
+            continue
+        if b.t_ms - a.t_ms > gap or c.t_ms - b.t_ms > gap:
+            continue
+        drop.add(i)
+        if cfg.self_feed_run:
+            drop.update((i - 1, i + 1))
+    return [h for i, h in enumerate(hits) if i not in drop]
 
 
 def _kp(p: PlayerPose, i: int, min_conf: float):
