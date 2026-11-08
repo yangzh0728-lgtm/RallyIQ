@@ -4,7 +4,8 @@
 
 For each detected hit: frame, hitter and side, whether it is the rally's first hit, the
 shuttle's image position, the pose model's best ``p_swing`` for the hitter's side within
-``--window`` ms and the fastest wrist there (body spans per second). Join it with what a
+``--window`` ms, the fastest wrist there (body spans per second), and the side and time gap of
+the hits before and after it in the rally. Join it with what a
 reviewer saw to pick ``swing_veto`` / ``swing_veto_keep_wrist_v`` / ``swing_veto_keep_serve``.
 """
 
@@ -51,7 +52,6 @@ def main(argv: list[str] | None = None) -> int:
     for s in events.get("shots", []):
         first.setdefault(s.get("rally_id"), s["frame"])
     rows = []
-    print("frame  hitter side  first  shuttle_px       p_swing  wrist_v_max")
     for s in events.get("shots", []):
         side = None
         for ser in series.values():
@@ -64,9 +64,20 @@ def main(argv: list[str] | None = None) -> int:
                "first": first.get(s.get("rally_id")) == s["frame"],
                "shuttle_px": [round(v) for v in px] if px else None,
                "p_swing": round(p, 3), "wrist_v_max": round(wv, 2)}
+        row["rally_id"], row["t_ms"] = s.get("rally_id"), float(s["t_ms"])
         rows.append(row)
-        print(f"{row['frame']:>5}  {row['hitter'] or '-':>6} {side or '-':>4}  {'yes' if row['first'] else '-':>5}  "
-              f"{str(row['shuttle_px']):<15}  {row['p_swing']:7.3f}  {row['wrist_v_max']:11.2f}")
+    # the neighbouring hits in the same rally: an exchange has the other side answering
+    for i, row in enumerate(rows):
+        for tag, j in (("prev", i - 1), ("next", i + 1)):
+            o = rows[j] if 0 <= j < len(rows) and rows[j]["rally_id"] == row["rally_id"] else None
+            row[f"{tag}_side"] = o["side"] if o else None
+            row[f"{tag}_gap_ms"] = round(abs(o["t_ms"] - row["t_ms"])) if o else None
+    print("frame  hitter side  first  shuttle_px       p_swing  wrist_v_max  prev(side,ms)  next(side,ms)")
+    for row in rows:
+        print(f"{row['frame']:>5}  {row['hitter'] or '-':>6} {row['side'] or '-':>4}  "
+              f"{'yes' if row['first'] else '-':>5}  {str(row['shuttle_px']):<15}  {row['p_swing']:7.3f}  "
+              f"{row['wrist_v_max']:11.2f}  {row['prev_side'] or '-':>4},{row['prev_gap_ms'] or '-':>6}  "
+              f"{row['next_side'] or '-':>4},{row['next_gap_ms'] or '-':>6}")
     if a.json:
         a.json.expanduser().write_text(json.dumps(rows, indent=1))
     return 0

@@ -84,6 +84,8 @@ def test_swing_veto_drops_hits_nobody_swings_at(tmp_path):
     assert not any(r.hits for r in segment_events(v.shuttle, v.poses, cfg))
     kept = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_serve=True))
     assert all(len(r.hits) == 1 for r in kept if r.hits) and any(r.hits for r in kept)
+    rally = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_exchange_ms=5000.0))
+    assert sum(len(r.hits) for r in rally) > 0  # synthetic rallies alternate sides: an exchange
     moving = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_wrist_v=1e-6))
     assert sum(len(r.hits) for r in moving) > 0  # synthetic players move their wrists
 

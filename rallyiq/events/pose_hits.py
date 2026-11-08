@@ -328,11 +328,14 @@ def swing_evidence(series: dict[str, SideSeries], t_ms: float, side: str | None,
 
 def veto(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: PoseHitModel | None,
          threshold: float, window_ms: float = 250.0, frame_ms: float | None = None,
-         keep_wrist_v: float = 0.0, keep_serve: bool = False) -> int:
+         keep_wrist_v: float = 0.0, keep_serve: bool = False, keep_exchange_ms: float = 0.0) -> int:
     """Drop shuttle-based hits nobody swings at: max ``p_swing`` of the hitter's side within
     ``window_ms`` below ``threshold``, unless its wrist still moved at ``keep_wrist_v`` body spans
-    per second or more (0: not used) or it is a rally's first hit and ``keep_serve``. Returns how
-    many were dropped."""
+    per second or more (0: not used), it is a rally's first hit and ``keep_serve``, or it is part
+    of an exchange: the hit before or after it, within ``keep_exchange_ms`` (0: not used), is by the
+    other side. A catch, a toss or a shuttle carried between points has no answer from across the
+    net; a short net stroke or a serve the pose model barely sees does. Returns how many were
+    dropped."""
     if model is None or threshold <= 0 or not rallies or not poses:
         return 0
     if frame_ms is None:
@@ -343,11 +346,17 @@ def veto(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: PoseHit
     dropped = 0
     for r in rallies:
         keep = []
+        sides = [_side_of(h, series) for h in r.hits]
         for k, h in enumerate(r.hits):
             if h.source == SOURCE or (keep_serve and k == 0):
                 keep.append(h)
                 continue
-            p, wv = swing_evidence(series, h.t_ms, _side_of(h, series), model, window_ms, frame_ms)
+            if keep_exchange_ms > 0 and sides[k] is not None and any(
+                    0 <= j < len(r.hits) and sides[j] is not None and sides[j] != sides[k]
+                    and abs(r.hits[j].t_ms - h.t_ms) <= keep_exchange_ms for j in (k - 1, k + 1)):
+                keep.append(h)
+                continue
+            p, wv = swing_evidence(series, h.t_ms, sides[k], model, window_ms, frame_ms)
             h.scores["p_swing"], h.scores["wrist_v_max"] = round(p, 3), round(wv, 3)
             if p >= threshold or (keep_wrist_v > 0 and wv >= keep_wrist_v):
                 keep.append(h)
