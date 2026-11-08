@@ -55,7 +55,10 @@ def tracker_config(overrides: dict | None, peak_threshold: float | None = None) 
     for k, v in (overrides or {}).items():
         if k not in names:
             raise ValueError(f"unknown shuttle tracker setting {k!r}")
-        setattr(cfg, k, type(getattr(cfg, k))(v))
+        kind = type(getattr(cfg, k))
+        if kind is bool and isinstance(v, str):
+            v = v.strip().lower() in ("1", "true", "yes", "on")
+        setattr(cfg, k, kind(v))
     return cfg
 
 
@@ -166,9 +169,21 @@ class RacketContact:
                    for _, h, _, ws in self.by_frame.get(frame, ()) for w in ws)
 
 
-def strict_support(players: PlayerTracks | None, fps: float = 30.0) -> SupportFn | None:
-    rc = RacketContact(players, fps)
-    return rc.contact if rc else None
+# Box-based racket reach (body heights) for the "box" contact test.
+STRICT_REACH_BODIES = 0.45
+
+
+def contact_tests(players: PlayerTracks | None, meta: VideoMeta, mode: str = "box") -> tuple[SupportFn | None, SupportFn | None]:
+    """``(contact, held)`` for the tracker. ``mode`` "box": a band of 0.45 body heights
+    around P1/P2's box (scored best on own footage); "wrist": a swinging wrist."""
+    rc = RacketContact(players, meta.fps, meta.height)
+    held = rc.held if rc else None
+    if mode == "wrist":
+        return (rc.contact if rc else None), held
+    if mode != "box":
+        raise ValueError(f"unknown shuttle contact test {mode!r}")
+    prox = PlayerProximity(players, reach_bodies=STRICT_REACH_BODIES)
+    return (prox.near if prox else None), held
 
 
 def rest_area(calibration: CourtCalibration | None, players: PlayerTracks | None) -> RestFn | None:
@@ -390,8 +405,7 @@ def run(ctx: StageContext) -> ShuttleTrack:
     if cfg.get("court_lock", "auto") != "off":
         region, support, mode = court_lock(ctx.calibration, ctx.players)
         rest = rest_area(ctx.calibration, ctx.players)
-        rc = RacketContact(ctx.players, meta.fps, meta.height)
-        strict, held = (rc.contact, rc.held) if rc else (None, None)
+        strict, held = contact_tests(ctx.players, meta, cfg.get("contact", "box"))
         log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
                                   tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support, rest, strict, held)

@@ -17,6 +17,7 @@ def test_score_points_counts_each_verdict(tmp_path, capsys):
         {"clip": "c", "frame": 1, "real": [100, 100], "false": [[500, 500]], "hit": "near"},
         {"clip": "c", "frame": 2, "real": None, "false": [[500, 500]], "hit": None},
         {"clip": "c", "frame": 3, "real": [100, 100], "false": []},
+        {"clip": "c", "frame": 9, "real": "?", "false": [[500, 500]]},  # only false points scored
     ]
     (tmp_path / "t.json").write_text(json.dumps(truth))
     good = _run(tmp_path, "good", {1: (105, 98), 3: (101, 100)}, [(2, 2.0)])
@@ -29,3 +30,13 @@ def test_score_points_counts_each_verdict(tmp_path, capsys):
     assert good_row == ["2", "0", "0", "0", "1", "0", "0", "1"]
     assert bad_row == ["0", "2", "2", "1", "0", "0", "1", "1"]
     assert any("c f1:" in line for line in out)
+
+
+def test_tracker_settings_from_the_command_line():
+    from rallyiq.perception.shuttle.stage import tracker_config
+    from scripts.diag_tracklets import parse_settings
+
+    got = parse_settings(["flight_split=true", "contact_gate=ends", "hot_s=1.5"])
+    assert got == {"flight_split": True, "contact_gate": "ends", "hot_s": 1.5}
+    cfg = tracker_config(got | {"chain": "false"})
+    assert cfg.flight_split is True and cfg.chain is False and cfg.contact_gate == "ends"

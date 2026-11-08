@@ -30,6 +30,7 @@ from evaluation import from_contracts, schema
 from rallyiq.contracts import STAGES
 from rallyiq.pipeline.runner import MANUAL_CALIBRATION, run_job
 from rallyiq.store import Store
+from scripts.diag_tracklets import parse_settings
 from scripts.real_run import (
     DEFAULT_CLIPS,
     clip_stats,
@@ -47,6 +48,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--from", dest="first", choices=RERUNNABLE, default="calibration")
     ap.add_argument("--no-overlay", action="store_true", help="skip the overlay video stage")
+    ap.add_argument("--tracker", nargs="*", default=[], metavar="KEY=VALUE",
+                    help="shuttle tracker settings, e.g. flight_split=true contact_gate=ends")
+    ap.add_argument("--contact", choices=("box", "wrist"), help="shuttle racket-contact test")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
@@ -55,7 +59,12 @@ def main(argv: list[str] | None = None) -> int:
     store = Store(out / "data")
     stages = [s for s in STAGES[STAGES.index(a.first):]
               if s != "players" and not (a.no_overlay and s == "overlay")]  # players are kept as they are
-    config = {"shuttle": {"reuse_candidates": True}}
+    shuttle: dict = {"reuse_candidates": True}
+    if a.tracker:
+        shuttle["tracker"] = parse_settings(a.tracker)
+    if a.contact:
+        shuttle["contact"] = a.contact
+    config = {"shuttle": shuttle}
     for r in results:
         if a.only and r["clip_id"] not in a.only:
             continue

@@ -28,11 +28,22 @@ from rallyiq.perception.shuttle.stage import (
     CANDIDATES_FILE,
     court_lock,
     load_candidates,
-    RacketContact,
+    contact_tests,
     rest_area,
     tracker_config,
 )
 from rallyiq.perception.shuttle.tracker import ShuttleTracker
+
+
+def parse_settings(items: list[str]) -> dict:
+    out = {}
+    for item in items:
+        k, _, v = item.partition("=")
+        try:
+            out[k] = json.loads(v)
+        except json.JSONDecodeError:
+            out[k] = v
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -42,6 +53,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--frames", type=int, nargs="+", required=True)
     ap.add_argument("--window", type=int, default=15)
     ap.add_argument("--peak-threshold", type=float, default=0.2)
+    ap.add_argument("--contact", default="box", choices=("box", "wrist"))
+    ap.add_argument("--tracker", nargs="*", default=[], metavar="KEY=VALUE", help="tracker settings")
     a = ap.parse_args(argv)
 
     run = a.run.expanduser()
@@ -54,11 +67,10 @@ def main(argv: list[str] | None = None) -> int:
     cands, (w, h), _ = load_candidates(vdir / "work" / CANDIDATES_FILE)
     region, support, mode = court_lock(cal, players)
     rest = rest_area(cal, players)
-    rc = RacketContact(players, meta.fps, meta.height)
-    strict, held = (rc.contact, rc.held) if rc else (None, None)
+    strict, held = contact_tests(players, meta, a.contact)
     sx, sy = meta.width / w, meta.height / h
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in cands.items()}
-    tr = ShuttleTracker(meta.fps, meta.width, meta.height, tracker_config(None, a.peak_threshold),
+    tr = ShuttleTracker(meta.fps, meta.width, meta.height, tracker_config(parse_settings(a.tracker), a.peak_threshold),
                         region=region, support=support, rest=rest, strict_support=strict, held=held)
     tr.track(scaled, meta.frame_count)
     print(f"court lock: {mode}; {len(tr.log)} trajectories judged; {len(tr.hot_cells)} fixed-feature cells")

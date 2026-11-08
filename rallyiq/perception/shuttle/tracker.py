@@ -123,6 +123,22 @@ class TrackerConfig:
     hot_cell_px: float = 16.0
     hot_s: float = 2.0
     hot_still_s: float = 0.25
+    # "still" as above; "count" drops cells with a candidate (still or not) on more than
+    # ``hot_count_s`` seconds and ``hot_frac`` of the video; "off".
+    hot_mode: str = "still"
+    hot_count_s: float = 2.5
+    hot_frac: float = 0.01
+    # Which parts of the court lock below are used. ``contact_gate``: "all" asks the
+    # racket test (``strict_support``) of any point of a shared-air tracklet, "ends" only
+    # of its ends (followed back along its velocity), "off" never. ``flight_split`` judges
+    # flights instead of whole linked tracklets; ``chain`` keeps shared-air flights that
+    # carry on from ours ("ends" only); ``sure_points`` 0 turns the our-air-only rule off.
+    # The defaults are the combination that scored best on hand-checked frames of own
+    # footage (scripts/score_points.py): cutting at flights and gating on their ends lost
+    # real clears and serves.
+    contact_gate: str = "all"
+    flight_split: bool = False
+    chain: bool = False
     # With a racket-contact test (``strict_support``) linked tracklets are cut into
     # flights at sharp turns (> ``contact_turn_deg``) and where they stop or start
     # moving (``stop_min_points`` steps slower than ``stop_px_frac`` of the diagonal per
@@ -135,7 +151,7 @@ class TrackerConfig:
     contact_extrapolate_s: float = 0.15
     stop_px_frac: float = 0.002
     stop_min_points: int = 5
-    sure_points: int = 3
+    sure_points: int = 0
     # A shared-air flight that carries straight on from one of ours across a detection
     # gap (within ``chain_s``, turning less than ``chain_turn_deg``, starting within
     # ``chain_px_frac`` of the diagonal plus half its own travel of where ours would be)
@@ -293,8 +309,10 @@ class ShuttleTracker:
         self, cands: dict[int, list[Candidate]], index_map: dict[int, list[int]]
     ) -> tuple[dict[int, list[Candidate]], dict[int, list[int]]]:
         """Drop candidates in cells where something sits still far longer than a shuttle."""
-        if self.cfg.hot_s <= 0 or self.cfg.hot_cell_px <= 0:
+        if self.cfg.hot_mode == "off" or self.cfg.hot_s <= 0 or self.cfg.hot_cell_px <= 0:
             return cands, index_map
+        if self.cfg.hot_mode == "count":
+            return self._drop_cells(cands, index_map, self._busy_cells(cands))
         r = self.cfg.hot_cell_px
         still: dict[tuple[int, int], int] = {}
         for f, cs in cands.items():
@@ -312,7 +330,20 @@ class ShuttleTracker:
                 cells.add(self.hot_cell(x, y))
             for cell in cells:
                 still[cell] = still.get(cell, 0) + 1
-        hot = {c for c, n in still.items() if n > self.cfg.hot_s * self.fps}
+        return self._drop_cells(cands, index_map, {c for c, n in still.items() if n > self.cfg.hot_s * self.fps})
+
+    def _busy_cells(self, cands: dict[int, list[Candidate]]) -> set[tuple[int, int]]:
+        frames_in: dict[tuple[int, int], int] = {}
+        for cs in cands.values():
+            for cell in {self.hot_cell(x, y) for x, y, _ in cs}:
+                frames_in[cell] = frames_in.get(cell, 0) + 1
+        n = (max(cands) + 1) if cands else 0
+        need = max(self.cfg.hot_count_s * self.fps, self.cfg.hot_frac * n)
+        return {c for c, k in frames_in.items() if k > need}
+
+    def _drop_cells(
+        self, cands: dict[int, list[Candidate]], index_map: dict[int, list[int]], hot: set[tuple[int, int]]
+    ) -> tuple[dict[int, list[Candidate]], dict[int, list[int]]]:
         if not hot:
             return cands, index_map
         self.hot_cells = {(cx + dx, cy + dy) for cx, cy in hot for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
@@ -436,14 +467,15 @@ class ShuttleTracker:
         for whole in tracklets:
             if self.region is not None:
                 whole.region = [self.region(f, x, y) for f, (x, y) in zip(whole.frames, whole.xy)]
-            pieces = self._flights(whole) if (self.strict_support is not None and whole.region) else [whole]
+            split = self.cfg.flight_split and self.strict_support is not None and whole.region
+            pieces = self._flights(whole) if split else [whole]
             for t in pieces:
                 verdict, t = self._judge(t)
                 if verdict == "kept":
                     out.append(t)
-                elif verdict == "ambiguous" and self.strict_support is not None:
+                elif verdict == "ambiguous" and self.cfg.chain and self.strict_support is not None:
                     pending.append(t)
-        return out + self._chained(out, pending)
+        return out + self._chained(out, pending) if pending else out
 
     def _chained(self, ours: list[_Tracklet], pending: list[_Tracklet]) -> list[_Tracklet]:
         """Shared-air flights that carry straight on from (or into) one of ours: the
@@ -498,11 +530,16 @@ class ShuttleTracker:
         if not t.region:
             return "kept", t
         m = t.mean_region()
-        sure = sum(1 for r in t.region if r >= 0.999) >= min(self.cfg.sure_points, len(t.frames))
-        if self.strict_support is not None and not sure and m < self.cfg.region_ambiguous_mean:
-            # Shared air: being near a big near player somewhere is not enough; a racket
-            # of ours must meet the flight where it starts or ends.
-            t.supported = self._racket_at_end(t)
+        sure = self.cfg.sure_points > 0 and (
+            sum(1 for r in t.region if r >= 0.999) >= min(self.cfg.sure_points, len(t.frames)))
+        gate = self.cfg.contact_gate
+        if self.strict_support is not None and gate != "off" and t.supported and not sure \
+                and m < self.cfg.region_ambiguous_mean:
+            # Shared air: being near a big near player somewhere is not enough.
+            if gate == "ends":
+                t.supported = self._racket_at_end(t)
+            else:
+                t.supported = any(self.strict_support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
         foreign = m < self.cfg.region_min_mean and not sure and not (t.supported and m > 0)
         ambiguous = (m < self.cfg.region_ambiguous_mean and not sure and not t.supported
                      and (self.support is not None or self.strict_support is not None))

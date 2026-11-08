@@ -6,9 +6,11 @@ import pytest
 from rallyiq.contracts import ShuttleTrack, VideoMeta
 from rallyiq.perception.shuttle.heatmap import extract_peaks
 from rallyiq.perception.shuttle.stage import build_track, segments_for, tracker_config
-from rallyiq.perception.shuttle.tracker import ShuttleTracker
+from rallyiq.perception.shuttle.tracker import ShuttleTracker, TrackerConfig
 
 W, H = 1920, 1080
+# The flight-by-flight court lock (off by default; it lost real clears on own footage).
+FLIGHTS = TrackerConfig(flight_split=True, contact_gate="ends", chain=True, sure_points=3)
 
 
 def flight(f0, f1, a, b, apex, fps=30.0):
@@ -404,10 +406,10 @@ def test_racket_contact_needs_a_swinging_wrist_nearby():
 def test_shared_air_support_is_only_checked_where_a_trajectory_ends_or_turns():
     shot = as_candidates(flight(0, 30, (300, 300), (700, 250), 150))
     shared = lambda f, x, y: 0.6  # noqa: E731
-    mid_flight = ShuttleTracker(30, W, H, region=shared, support=lambda f, x, y: True,
+    mid_flight = ShuttleTracker(30, W, H, FLIGHTS, region=shared, support=lambda f, x, y: True,
                                 strict_support=lambda f, x, y: f == 15)
     assert not mid_flight.track(shot, 31).points  # a player's racket brushed past it mid flight
-    at_end = ShuttleTracker(30, W, H, region=shared, support=lambda f, x, y: True,
+    at_end = ShuttleTracker(30, W, H, FLIGHTS, region=shared, support=lambda f, x, y: True,
                             strict_support=lambda f, x, y: f == 30)
     assert at_end.track(shot, 31).points
 
@@ -423,7 +425,7 @@ def test_one_linked_tracklet_is_judged_flight_by_flight():
     ours = flight(0, 20, (900, 500), (700, 300), 300)
     theirs = {f: (700 - 25 * (f - 20), 300 + 12 * (f - 20)) for f in range(21, 45)}
     cands = as_candidates(ours | theirs)
-    tr = ShuttleTracker(30, W, H, region=_air(200), support=lambda f, x, y: True,
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=_air(200), support=lambda f, x, y: True,
                         strict_support=lambda f, x, y: False)
     got = by_frame(tr.track(cands, 45))
     assert sum(1 for f in ours if f in got) >= len(ours) - 1
@@ -433,7 +435,7 @@ def test_one_linked_tracklet_is_judged_flight_by_flight():
 def test_flight_that_runs_onto_a_duct_tip_loses_only_the_duct_part():
     shot = {f: (300 + 20 * f, 700 - 9 * f) for f in range(0, 15)}  # ends at (580, 574)
     duct = {f: (600 + (f % 2), 560.0) for f in range(15, 45)}
-    tr = ShuttleTracker(30, W, H, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
                         strict_support=lambda f, x, y: f == 0, rest=lambda f, x, y: False)
     got = by_frame(tr.track(as_candidates(shot | duct), 45))
     assert sum(1 for f in shot if f in got) >= len(shot) - 1
@@ -444,7 +446,7 @@ def test_racket_contact_found_behind_where_detection_resumes():
     # Hit at frame 10 at (500, 600); the shuttle is first detected 4 frames later.
     shot = {f: (500 + 30 * (f - 10), 600 - 40 * (f - 10)) for f in range(14, 30)}
     at_racket = lambda f, x, y: f == 10 and math.dist((x, y), (500, 600)) < 40  # noqa: E731
-    tr = ShuttleTracker(30, W, H, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
                         strict_support=at_racket)
     assert tr.track(as_candidates(shot), 30).points
 
@@ -454,7 +456,7 @@ def test_shared_air_flight_carrying_on_from_ours_across_a_gap_is_kept():
     # the same direction: the same flight, though no racket of ours touches that part.
     path = {f: (400 + 20 * f, 150 + 15 * f) for f in range(0, 40)}
     cands = as_candidates({f: xy for f, xy in path.items() if not 15 <= f < 20})
-    tr = ShuttleTracker(30, W, H, region=_air(380), support=lambda f, x, y: True,
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=_air(380), support=lambda f, x, y: True,
                         strict_support=lambda f, x, y: False)
     got = by_frame(tr.track(cands, 40))
     assert sum(1 for f in range(20, 40) if f in got) >= 19

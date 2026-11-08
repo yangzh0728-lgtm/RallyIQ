@@ -11,7 +11,7 @@ The truth file is a list of checked frames, written while looking at review stil
      {"clip": "own0529_0006", "frame": 2390, "real": null, "false": [], "hit": null}]
 
 ``real`` is where our shuttle is (null: not in view / not in play, so nothing should be
-shown), ``false`` are things that must not be shown (a neighbour's shuttle, a duct tip),
+shown; "?": unknown, so only ``false`` and ``hit`` are scored), ``false`` are things that must not be shown (a neighbour's shuttle, a duct tip),
 ``hit`` (optional) is "near" / "far" when one of our players hits within 3 frames, null
 when nobody does. Each run is scored per frame: real shuttle found, false thing shown,
 something shown where nothing should be, hit found with the right side, false hit.
@@ -58,12 +58,20 @@ def load_run(run: Path, clips: set[str]) -> dict[str, dict]:
 def verdict(entry: dict, run: dict) -> dict[str, bool]:
     shown = run[entry["clip"]]["shuttle"].get(entry["frame"])
     real, false = entry.get("real"), entry.get("false") or []
+    if real == "?":
+        v = {"false_shown": bool(shown and any(math.dist(shown, q) <= TOL_PX for q in false))}
+        return v | _hit_verdict(entry, run)
     v = {
         "real_found": bool(real and shown and math.dist(shown, real) <= TOL_PX),
         "real_missed": bool(real and not (shown and math.dist(shown, real) <= TOL_PX)),
         "false_shown": bool(shown and any(math.dist(shown, q) <= TOL_PX for q in false)),
         "shown_when_none": bool(real is None and shown is not None),
     }
+    return v | _hit_verdict(entry, run)
+
+
+def _hit_verdict(entry: dict, run: dict) -> dict[str, bool]:
+    v: dict[str, bool] = {}
     if "hit" in entry:
         near = [side for f, side in run[entry["clip"]]["hits"] if abs(f - entry["frame"]) <= HIT_FRAMES]
         if entry["hit"]:
