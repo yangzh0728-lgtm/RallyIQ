@@ -6,6 +6,7 @@ All homographies here map court metres -> image pixels ("image_from_court").
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Sequence
 from itertools import combinations
 
 import cv2
@@ -182,15 +183,45 @@ def _plausible(Hs: np.ndarray, w: int, h: int, min_area_frac: float = 0.015) -> 
     ok &= np.all(cross > 0, 1) | np.all(cross < 0, 1)
     area = 0.5 * np.abs((xy[..., 0] * np.roll(xy[..., 1], -1, 1) - np.roll(xy[..., 0], -1, 1) * xy[..., 1]).sum(1))
     ok &= area > min_area_frac * w * h
-    # Very thin courts are degenerate: shortest side vs longest side.
-    sides = np.linalg.norm(e, axis=2)
+    # Very thin courts are degenerate: shortest side vs longest side. Corners far
+    # outside the frame are pulled in first: with the camera just behind the near
+    # baseline (a low tripod at the back of the court, sam's own0529_0006) the
+    # near corners project thousands of pixels away and would make a correct
+    # placement look "thin" next to its far baseline.
+    xc = np.stack([np.clip(xy[..., 0], -w, 2 * w), np.clip(xy[..., 1], -h, 2 * h)], -1)
+    sides = np.linalg.norm(np.roll(xc, -1, axis=1) - xc, axis=2)
     ok &= sides.min(1) > 0.02 * sides.max(1)
     ok &= metric_error(Hs, w, h)[0] < METRIC_TOL
     ok &= upright(Hs)
+    ok &= camera_height(Hs, w, h) >= MIN_CAMERA_HEIGHT
     return np.nan_to_num(ok, nan=False).astype(bool)
 
 
 METRIC_TOL = 0.2
+# Nobody films badminton with the lens a hand's width above the floor. Wrong
+# placements on a cluttered gym floor (the court laid along the floor/wall
+# junction, or onto a basketball line running away from the camera) imply a
+# camera 0.1 - 0.4 m high; real footage, even a low tripod behind the
+# baseline, is at 1 m or more (sam's high-school stills, own0529_0006: 1.5 m).
+MIN_CAMERA_HEIGHT = 0.6
+
+
+def camera_height(Hs: np.ndarray, w: int, h: int) -> np.ndarray:
+    """Camera height above the floor in metres implied by each image_from_court
+    homography, using the focal length that best explains it (``metric_error``)."""
+    Hs = np.asarray(Hs, dtype=np.float64).reshape(-1, 3, 3)
+    _, f = metric_error(Hs, w, h)
+    T = np.array([[1.0, 0, -w / 2], [0, 1, -h / 2], [0, 0, 1]])
+    M = np.einsum("ij,bjk->bik", T, Hs)
+    M = M / np.stack([f, f, np.ones_like(f)], 1)[:, :, None]  # K^-1 H
+    with np.errstate(divide="ignore", invalid="ignore"):
+        scale = 0.5 * (np.linalg.norm(M[:, :, 0], axis=1) + np.linalg.norm(M[:, :, 1], axis=1))
+        M = M / scale[:, None, None]
+        r3 = np.cross(M[:, :, 0], M[:, :, 1])
+        r3 = r3 / np.linalg.norm(r3, axis=1, keepdims=True)
+        # Camera centre C = -R^T t; its distance from the floor plane is |r3 . t|.
+        height = np.abs((r3 * M[:, :, 2]).sum(1))
+    return np.nan_to_num(height, nan=np.inf)
 
 
 def upright(Hs: np.ndarray) -> np.ndarray:
@@ -274,6 +305,9 @@ def hypotheses(
     ev: LineEvidence,
     tol: float,
     top_k: int = 60,
+    synth_a: Sequence[ImageLine] = (),
+    synth_b: Sequence[ImageLine] = (),
+    synth_partners: int = 12,
 ) -> list[np.ndarray]:
     """Enumerate line-to-model correspondences and return the best-scoring homographies.
 
@@ -281,17 +315,34 @@ def hypotheses(
     homography. Image lines are ordered within their family and matched to
     model lines in increasing order; the reversed orders are the court's own
     symmetries, which are resolved later.
+
+    ``synth_a`` / ``synth_b`` are extra lines through a family's vanishing point
+    where no line was detected (see ``calibrate._synthetic_lines``). Each is
+    paired only with the ``synth_partners`` best-supported real lines of its
+    family, as the second line of that direction, never with another synthetic
+    one, to keep the search small.
     """
+    from .lines import sort_family
+
     h, w = ev.shape
     diag = np.hypot(w, h)
     centre = np.array([w / 2, h / 2])
     cand_H, cand_s = [], []
 
-    for fam_y, fam_x in ((fam_a, fam_b), (fam_b, fam_a)):
-        if len(fam_y) < 2 or len(fam_x) < 2:
+    for fam_y, fam_x, synth in ((fam_a, fam_b, synth_a), (fam_b, fam_a, synth_b)):
+        if len(fam_x) < 2 or len(fam_y) + (1 if synth else 0) < 2:
             continue
+        if synth:
+            partners = {id(l) for l in sorted(fam_y, key=lambda l: -l.support)[:synth_partners]}
+            is_synth = {id(l) for l in synth}
+            fam_y = sort_family(list(fam_y) + list(synth), centre)
+            py = [(i, j) for i, j in combinations(range(len(fam_y)), 2)
+                  if (id(fam_y[i]) not in is_synth and id(fam_y[j]) not in is_synth)
+                  or (id(fam_y[i]) in is_synth and id(fam_y[j]) in partners)
+                  or (id(fam_y[j]) in is_synth and id(fam_y[i]) in partners)]
+        else:
+            py = list(combinations(range(len(fam_y)), 2))
         P = _intersections(fam_y, fam_x)
-        py = list(combinations(range(len(fam_y)), 2))
         px = list(combinations(range(len(fam_x)), 2))
         quads = []
         for i, j in py:
