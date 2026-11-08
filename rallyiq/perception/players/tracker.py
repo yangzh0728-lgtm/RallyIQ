@@ -27,7 +27,7 @@ recomputed every frame from the foot position. ``track_id`` changes whenever a
 slot is re-acquired after being lost, so downstream code can tell a continuous
 track from a re-identification.
 
-All joint assignments are scored at once with numpy (at most 7^4 options in
+All joint assignments are scored at once with numpy (at most 9^4 options in
 doubles), so the priors that couple slots stay exact.
 """
 
@@ -73,7 +73,7 @@ class TrackerConfig:
     # (appearance term, up to w_appearance per slot) still override it.
     side_memory_penalty: float = 0.5
     # Candidates considered per frame in doubles (keeps the joint search small).
-    max_doubles_candidates: int = 6
+    max_doubles_candidates: int = 8
     # Bystanders: still (within static_extent_m) and at least offcourt_m outside
     # the court lines for this long. Players are never off court that long.
     bystander_s: float = 6.0
@@ -122,6 +122,14 @@ class _Slot:
 
 def _cand_pos(c: Candidate, calibrated: bool) -> np.ndarray:
     return c.foot_court.astype(np.float64) if calibrated else c.foot_px.astype(np.float64)
+
+
+def _outside_side(c: Candidate) -> float:
+    """Metres the candidate's feet are outside the nearer sideline (0 inside, or without calibration)."""
+    if c.foot_court is None:
+        return 0.0
+    x = float(c.foot_court[0])
+    return max(-x, x - COURT_WIDTH_M, 0.0)
 
 
 def _cand_side(c: Candidate, net_y_px: float | None) -> Side | None:
@@ -176,6 +184,11 @@ class PlayerTracker:
         d = float(np.linalg.norm(_cand_pos(c, calibrated) - pred))
         n = max(slot.missed(frame), 1)
         if calibrated:
+            # A tracked player is followed past a sideline step by step, but a slot that lost its player does
+            # not jump to someone standing outside it (a spectator by the post took over the far man's slot
+            # while he was hidden, on the 2026-03-02 doubles clip).
+            if d > cfg.gate_base_m and _outside_side(c) > cfg.acquire_max_outside_side_m:
+                return float("inf")
             gate = cfg.gate_base_m + cfg.max_speed_mps * n / cfg.fps
         else:
             gate = slot.scale * (0.25 + cfg.gate_px_rel * min(n, 10) / 3)
@@ -188,10 +201,8 @@ class PlayerTracker:
         m = self._motion_cost(slot, c, frame, calibrated)
         if m == float("inf"):
             return float("inf")
-        if m is None and calibrated and c.foot_court is not None:
-            x = float(c.foot_court[0])
-            if max(-x, x - COURT_WIDTH_M) > cfg.acquire_max_outside_side_m:
-                return float("inf")
+        if m is None and calibrated and _outside_side(c) > cfg.acquire_max_outside_side_m:
+            return float("inf")
         cost = -cfg.w_score * c.player_score
         if m is not None:
             cost += cfg.w_motion * m

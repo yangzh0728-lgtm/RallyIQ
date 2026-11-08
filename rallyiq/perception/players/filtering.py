@@ -32,8 +32,10 @@ class FilterConfig:
     reject_outside_m: float = 1.5
     # Accepted range of observed / expected pixel height before penalising.
     height_ratio_range: tuple[float, float] = (0.4, 2.5)
-    # Keep only this many candidates per frame (singles: 2 players + slack).
-    max_candidates: int = 6
+    # Keep only this many candidates per frame. Doubles needs 4 players plus the people standing just outside the
+    # lines (inside the run-off margin they keep their full score): with 6, a far player partly hidden behind a
+    # near one was the 7th person on some frames of the 2026-03-02 doubles clip and never reached the tracker.
+    max_candidates: int = 8
     # Two candidates whose feet land this close on court, with heavily
     # overlapping boxes, are one person detected twice (keep the better one).
     duplicate_foot_m: float = 0.35
