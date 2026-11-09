@@ -14,6 +14,7 @@ from rallyiq.events.hits import (
     Candidate,
     _alternating_subset,
     _check_alternation,
+    _choose_teams,
     _reattribute,
 )
 from rallyiq.events.metrics import HitScore, match_hits
@@ -107,3 +108,51 @@ def test_doubles_contract_round_trip_from_demo():
     s = match_hits([(sh.frame, sh.hitter) for sh in ev.shots], truth)
     assert {sh.hitter for sh in ev.shots} >= {"P1", "P2", "P3", "P4"}
     assert s.fp <= 1 and s.tp >= len(truth) - 3
+
+
+def _timed(cands: list[Candidate], gap_ms: float = 700.0) -> list[Candidate]:
+    for i, c in enumerate(cands):
+        c.t_ms = i * gap_ms
+    return cands
+
+
+def _chain() -> list[Candidate]:
+    # B hits, then a hit near the net where partner P4 looks closer than opponent P1, then B again.
+    return _timed(
+        [
+            _cand(0, [("P2", "B", 0.9), ("P1", "A", 0.1)], 0.8),
+            _cand(10, [("P4", "B", 0.6), ("P1", "A", 0.3)], 0.8),
+            _cand(20, [("P2", "B", 0.9), ("P3", "A", 0.1)], 0.8),
+        ]
+    )
+
+
+def test_choose_teams_off_by_default_keeps_greedy_rules():
+    hits = _chain()
+    assert not _choose_teams(hits, EventsConfig())
+    _reattribute(hits, EventsConfig())
+    assert [c.best.player_id for c in hits] == ["P2", "P4", "P2"]
+
+
+def test_choose_teams_picks_alternating_teams_over_the_rally():
+    cfg = EventsConfig(doubles_alternation_penalty=0.5)
+    hits = _chain()
+    assert _choose_teams(hits, cfg)
+    assert [c.best.player_id for c in hits] == ["P2", "P1", "P2"]
+    assert R_HITTER_FROM_ALTERNATION in hits[1].reasons
+    # Hits far apart in time: a missed hit in between is plausible, so proximity decides alone.
+    hits = _timed(_chain(), gap_ms=3000.0)
+    assert _choose_teams(hits, cfg)
+    assert [c.best.player_id for c in hits] == ["P2", "P4", "P2"]
+
+
+def test_choose_teams_does_nothing_in_singles():
+    cfg = EventsConfig(doubles_alternation_penalty=0.5)
+    hits = _timed(
+        [
+            _cand(i * 10, [(pid, None, 0.6), (o, None, 0.3)], 0.8)
+            for i, (pid, o) in enumerate([("P1", "P2"), ("P1", "P2"), ("P2", "P1")])
+        ]
+    )
+    assert not _choose_teams(hits, cfg)
+    assert [c.best.player_id for c in hits] == ["P1", "P1", "P2"]
