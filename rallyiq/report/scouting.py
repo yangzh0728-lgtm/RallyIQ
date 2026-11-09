@@ -460,7 +460,7 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
             ds.append(_dist(k_h, f"你打{ZH.get(h.after, h.after)}后 {pid} 的回球",
                             {ZH.get(t, t): v for t, v in reply_counts.most_common()}, 15, 5))
             habit_items.append((h.pct / 40, ScoutTactic(
-                code="habit", title=f"你{ZH.get(h.after, h.after)}后，{pid} 多半回{ZH.get(h.reply, h.reply)}",
+                code="habit", title=f"你{ZH.get(h.after, h.after)}后，{pid} {'多半' if h.pct >= 50 else '最常'}回{ZH.get(h.reply, h.reply)}",
                 how=f"{hint}。",
                 why=f"你打{ZH.get(h.after, h.after)}后，{pid} {h.pct:.0f}% 回{ZH.get(h.reply, h.reply)}（{h.n}/{h.of}）。",
                 evidence=[k_h], n=h.of, confidence=_cap(_n_conf(h.of, 15, 6), *caps), examples_ms=[])))
