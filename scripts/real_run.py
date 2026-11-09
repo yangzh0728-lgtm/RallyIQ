@@ -23,8 +23,10 @@ produced, which is NOT accuracy; the report says so.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import logging
+import math
 import shutil
 import statistics
 import sys
@@ -63,6 +65,14 @@ def _load(art: Path, name: str) -> dict[str, Any] | None:
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
 
 
+def _stride(frames: list[dict[str, Any]]) -> int:
+    """The frame step pose ran at (players_stride), read back from the frame numbers."""
+    step = 0
+    for a, b in itertools.pairwise(frames):
+        step = math.gcd(step, b["frame"] - a["frame"])
+    return max(step, 1)
+
+
 def clip_stats(art: Path) -> dict[str, Any]:
     """Label-free numbers: what fraction of frames each module produced output for."""
     meta = _load(art, "probe") or {}
@@ -90,9 +100,11 @@ def clip_stats(art: Path) -> dict[str, Any]:
 
         both = sum(1 for f in frames if all_in(f))
         far = sum(1 for f in frames if any(p.get("side") == "far" and not p.get("interpolated") for p in f["players"]))
+        # With players_stride > 1 pose runs on every n-th frame only, so the share is over those frames.
+        n_pose = (n - 1) // _stride(frames) + 1
         out["players_model"] = pl.get("model")
-        out["players_both_frac"] = round(both / n, 3)
-        out["players_far_frac"] = round(far / n, 3)
+        out["players_both_frac"] = round(min(both / n_pose, 1.0), 3)
+        out["players_far_frac"] = round(min(far / n_pose, 1.0), 3)
         if cal_frames:
             # Close-ups and replays have no court, so nobody can be placed there:
             # the share over calibrated frames is the number that shows misses.

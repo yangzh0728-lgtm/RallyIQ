@@ -86,3 +86,17 @@ def test_rerun_stages_picks_up_neighbour_courts(tmp_path, monkeypatch):
     assert rerun_stages.main(["--out", str(out), "--clips", str(clips), "--from", "shuttle", "--no-overlay"]) == 0
     seg = json.loads((Path(res["artifacts"]) / "calibration.json").read_text())["segments"][0]
     assert len(seg["other_courts"]) == 1
+
+
+def test_clip_stats_counts_players_over_pose_frames(tmp_path):
+    """players_stride 2 stores only even frames: the share must not be halved by the skipped ones."""
+    spec = importlib.util.spec_from_file_location("real_run", ROOT / "scripts" / "real_run.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    (tmp_path / "probe.json").write_text(json.dumps({"frame_count": 10, "fps": 30, "width": 1920, "height": 1080}))
+    two = [{"side": "near"}, {"side": "far"}]
+    frames = [{"frame": i, "players": two if i < 8 else two[:1]} for i in range(0, 10, 2)]
+    (tmp_path / "players.json").write_text(json.dumps({"frames": frames, "match_format": "singles"}))
+    st = mod.clip_stats(tmp_path)
+    assert st["players_both_frac"] == 0.8
+    assert st["players_far_frac"] == 0.8
