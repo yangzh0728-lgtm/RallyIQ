@@ -75,6 +75,10 @@ LUNGE_TOE_OFF_DEG = 45  # front foot pointing further than this from the lunge d
 LUNGE_BACKWARD = 0.5  # a lunge step going back more than this share of its length: toe direction not judged
 LUNGE_TOE_FLIP_DEG = 120  # a toe pointing back along the step is a heel / toe mix-up, not a technique
 MAX_RECOVERY_S = 2.5  # judge recovery only when the opponent's next hit comes within this
+HIT_SLACK_S = 0.07  # a logged hit frame can be this far off the moment the feet show (2 frames at 30 fps)
+JUMP_HIT_SLACK_S = 0.1  # a hit this close to a jump's take-off / landing belongs to the jump
+JITTER_MIN_S = 0.13  # contacts at least this long measure a player's foot jitter ...
+JITTER_MIN_RUN_S = 1.0  # ... in runs at least this long
 
 
 def own_half(x: float, y: float) -> tuple[float, float]:
@@ -133,12 +137,13 @@ def _plants(run: Run) -> list[Plant]:
     return out
 
 
-def jitter_m(run: Run) -> float:
+def jitter_m(run: Run, fps: float) -> float:
     """Typical planted-foot wander on the court (median absolute deviation within contacts)."""
     devs = []
+    min_len = max(4, int(round(JITTER_MIN_S * fps)))
     for j in range(2):
         for a, b in _segments(run.planted[:, j]):
-            if b - a >= 4:
+            if b - a >= min_len:
                 c = run.court[a:b + 1, j]
                 devs.append(float(np.median(np.linalg.norm(c - np.median(c, axis=0), axis=1))))
     return float(np.median(devs)) if devs else float("nan")
@@ -254,8 +259,9 @@ class Footwork:
         self.hops: dict[str, list[Hop]] = {pid: [h for r in rs for h in _hops(r, fps)] for pid, rs in self.by_pid.items()}
         self._split: dict[str, tuple[str, str, int | None]] = {}  # opponent shot id -> (player, timing, offset ms)
         self.jitter: dict[str, float] = {}
+        self.slack = max(2, int(round(HIT_SLACK_S * fps)))  # frames
         for pid, rs in self.by_pid.items():
-            js = [jitter_m(r) for r in rs if len(r.frames) > 30]
+            js = [jitter_m(r, fps) for r in rs if len(r.frames) > JITTER_MIN_RUN_S * fps]
             js = [j for j in js if np.isfinite(j)]
             self.jitter[pid] = float(np.median(js)) if js else float("nan")
         self.sole_ok: dict[str, bool] = {pid: self._attach_soles(pid) for pid in self.plants}
@@ -356,10 +362,11 @@ class Footwork:
             self._link_shots()
         # a jump that covers one of the player's own hits belongs to it (jump smash / jump clear)
         hits = sorted((s.frame, s.shot_id, s.hitter) for s in self.events.shots if s.hitter)
+        js = max(3, int(round(JUMP_HIT_SLACK_S * self.fps)))
         for e in self._events:
             if e.kind == "jump" and e.shot_id is None:
                 near = [(abs(f - (e.start_frame + e.frame) / 2), sid) for f, sid, h in hits
-                        if h == e.player_id and e.start_frame - 3 <= f <= e.frame + 3]
+                        if h == e.player_id and e.start_frame - js <= f <= e.frame + js]
                 if near:
                     e.shot_id = min(near)[1]
         self._events.sort(key=lambda e: (e.t_ms, e.player_id))
@@ -406,7 +413,7 @@ class Footwork:
     def _split_step(self, pid: str, opp_shot: ShotEvent) -> None:
         """Did ``pid`` split-step for the opponent's hit ``opp_shot``, and when did they land?"""
         run = self.run_at(pid, opp_shot.frame)
-        if run is None or run.nearest(opp_shot.frame, 2) is None:
+        if run is None or run.nearest(opp_shot.frame, self.slack) is None:
             return
         t_opp = opp_shot.frame / self.fps
         best = None
@@ -441,7 +448,7 @@ class Footwork:
         if run is None:
             return None
         fps = self.fps
-        i_hit = run.nearest(s.frame, 2)
+        i_hit = run.nearest(s.frame, self.slack)
         if i_hit is None:
             return None
         conf = self._conf(pid, 0.8)
@@ -450,8 +457,8 @@ class Footwork:
         hit_pos = run.center[i_hit]
 
         # ---- split step + reaction (needs the opponent's hit just before, inside this run)
-        if prev is not None and run.frames[0] <= prev.frame <= run.frames[-1] - 2:
-            i_opp = run.nearest(prev.frame, 2)
+        if prev is not None and run.frames[0] <= prev.frame <= run.frames[-1] - self.slack:
+            i_opp = run.nearest(prev.frame, self.slack)
             got = self._split.get(prev.shot_id)
             if got is not None and got[0] == pid:
                 out.split_step, out.split_offset_ms = got[1], got[2]
@@ -476,7 +483,7 @@ class Footwork:
                     self._drop_split(prev.shot_id)
                     out.split_step, out.split_offset_ms = "none", None
                 # steps, distance, speed from the opponent's hit to mine
-                steps = self.steps_between(pid, prev.frame, s.frame + 2)
+                steps = self.steps_between(pid, prev.frame, s.frame + self.slack)
                 out.steps = len(steps)
                 seg = run.center[i_opp:i_hit + 1]
                 out.move_m = round(float(np.sum(np.linalg.norm(np.diff(seg, axis=0), axis=1))), 2) if len(seg) > 1 else 0.0
@@ -497,7 +504,7 @@ class Footwork:
 
         # ---- recovery after the hit
         base = base_court(float(hit_pos[1]))
-        j_end = run.nearest(min(end_frame, int(run.frames[-1])), 2)
+        j_end = run.nearest(min(end_frame, int(run.frames[-1])), self.slack)
         if j_end is not None and j_end > i_hit:
             dists = np.linalg.norm(run.center[i_hit:j_end + 1] - base, axis=1)
             inside = np.where(dists <= BASE_RADIUS_M)[0]
@@ -508,7 +515,7 @@ class Footwork:
                     self._add_event(pid, "recovery", int(run.frames[i_hit + k]), f_hit, int(run.frames[i_hit + k]),
                                     run.center[i_hit + k], out.recovery_ms, f"回到中心（击球后 {k / fps:.1f} 秒）",
                                     conf, s.shot_id)
-            if opp_hits_next and int(run.frames[j_end]) >= end_frame - 2 and \
+            if opp_hits_next and int(run.frames[j_end]) >= end_frame - self.slack and \
                     (end_frame - f_hit) / fps <= MAX_RECOVERY_S:
                 out.recovery_gap_m = round(float(dists[-1]), 2)
         out.summary = summarize(out)
@@ -520,7 +527,7 @@ class Footwork:
         lo, hi = max(0, i_hit - w), min(len(run.frames) - 1, i_hit + w)
         # a jump whose flight covers the hit
         for f in self.flights.get(pid, []):
-            if f.run is run and f.i0 - 2 <= i_hit <= f.landing + 2 and \
+            if f.run is run and f.i0 - self.slack <= i_hit <= f.landing + self.slack and \
                     JUMP_MIN_FLIGHT_S <= (f.i1 - f.i0 + 1) / fps <= JUMP_MAX_FLIGHT_S and f.height_m >= JUMP_MIN_HEIGHT_M:
                 return None, "jump"
         both = run.planted[lo:hi + 1].all(axis=1)
@@ -593,7 +600,7 @@ class Footwork:
         out: list[str] = []
         for k, sts in groups:
             f0, f1 = sts[0].start_frame, sts[-1].end_frame
-            i0, i1 = run.nearest(f0, 2), run.nearest(f1, 2)
+            i0, i1 = run.nearest(f0, self.slack), run.nearest(f1, self.slack)
             if i0 is None or i1 is None:
                 continue
             seg = run.center[min(i0, i1):max(i0, i1) + 1]
