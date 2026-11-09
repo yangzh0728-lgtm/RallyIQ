@@ -78,3 +78,29 @@ def test_too_few_shots_and_doubles():
     events, players = _rallies(POWER, doubles=False)
     events = events.model_copy(update={"match_format": "doubles"})
     assert compute_match_stats(events, players, _cal()).scouting == []
+
+
+def test_winners_inferred_from_next_server():
+    from rallyiq.report.scouting import infer_winners
+    spec = [(None, seq) for _, seq in PRESSED]
+    events, _ = _rallies(spec)
+    inferred = infer_winners(events)
+    # every rally but the last is followed by a P1 serve; the last has no next rally
+    assert inferred == {f"r{k}": "P1" for k in range(9)}
+    assert infer_winners(events, max_gap_s=1.0) == {}  # gap between rallies is longer than that
+    stats = compute_match_stats(events, *_stats_args(spec))
+    p2 = {s.target: s for s in stats.scouting}["P2"]
+    assert "按“下一分谁发球”推断" in p2.note
+    assert all(t.confidence != "high" for t in p2.tactics)
+
+
+def test_one_shot_rallies_are_left_out():
+    pickups = [(None, [("P1", "clear", "rear", "C", 0.9)]) for _ in range(30)]
+    stats, _, _ = _stats(PRESSED + pickups)
+    p1 = {s.target: s for s in stats.scouting}["P1"]
+    assert p1.n_shots == 10 * 3  # clear, smash, kill per rally (serves aside); the 30 lone clears are not counted
+
+
+def _stats_args(spec):
+    _, players = _rallies(spec)
+    return players, _cal()

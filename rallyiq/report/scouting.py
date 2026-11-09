@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import math
 from collections import Counter
+from itertools import pairwise
 from statistics import median
 
 from ..contracts import (
@@ -57,6 +58,9 @@ MIN_ZONE_N = 6  # target shots from a zone before it can be called weak
 ZONE_GAP = 15.0  # percentage points above the target's own trouble rate
 ZONE_MIN_RATE = 35.0
 FAR_REACH_M, NEAR_REACH_M = 2.0, 1.2
+MIN_RALLY_SHOTS = 2  # rallies with fewer detected shots are left out (pickups, tosses)
+MAX_INFER_GAP_S = 30.0  # inferred winner: next serve at most this long after the rally's last shot
+SHORT_RALLY_MAX, LONG_RALLY_MIN = 4, 7  # same as stats
 MAX_TACTICS = 6
 
 DEPTH_ZH = {"rear": "后场", "mid": "中场", "front": "网前"}
@@ -70,7 +74,7 @@ ZONE_HAND = {("rear", "left"): "右手持拍时是头顶/反手区", ("rear", "r
 # how to send the ball to a zone
 ZONE_HOW = {
     "rear": "用高远球、推后场、挑底线把球压到他的{z}，逼他从那里出手",
-    "mid": "用平抽、平推、半场球打他的{z}",
+    "mid": "用平抽、平推、半场球打他的{z}（中路就是追身）",
     "front": "用吊球、放网、挡网把球放到他的{z}",
 }
 # you just played a shot and the target mostly answers with this: how to be ready
@@ -124,6 +128,47 @@ def _hand(z: tuple[str, str]) -> str:
     return f"（{ZONE_HAND[z]}）" if z in ZONE_HAND else ""
 
 
+def infer_winners(events: EventsResult, max_gap_s: float = MAX_INFER_GAP_S) -> dict[str, str]:
+    """Rally id -> winner for rallies without an entered winner, from who serves next.
+
+    Rally-point scoring: the winner of a rally serves the next one. Only used when the next rally
+    starts with a classified serve whose hitter is known, within ``max_gap_s`` of this rally's last
+    shot (a long gap may hide a missed rally). On the hand-labelled DJI_0009 clip this matches
+    9 of 10 rallies.
+    """
+    shots = {s.shot_id: s for s in events.shots}
+    seqs = []
+    for r in sorted(events.rallies, key=lambda r: r.start_frame):
+        seq = sorted((shots[i] for i in r.shot_ids if i in shots), key=lambda s: s.t_ms)
+        if seq:
+            seqs.append((r, seq))
+    out: dict[str, str] = {}
+    for (r, seq), (_, nxt) in pairwise(seqs):
+        first = nxt[0]
+        if r.winner is None and first.shot_type in SERVES and first.hitter in OTHER \
+                and 0 <= (first.t_ms - seq[-1].t_ms) / 1000 <= max_gap_s:
+            out[r.rally_id] = first.hitter
+    return out
+
+
+def _win_rates(rallies, pid: str) -> dict[str, tuple[float | None, int]]:
+    """Short / long rally and receive win rates of ``pid`` from rally contexts (inferred winners)."""
+    short = long_ = recv = (0, 0)
+    for r in rallies:
+        if not r or r[0].rally_winner is None:
+            continue
+        won = r[0].rally_winner == pid
+        n = r[-1].idx + 1
+        if n <= SHORT_RALLY_MAX:
+            short = (short[0] + won, short[1] + 1)
+        if n >= LONG_RALLY_MIN:
+            long_ = (long_[0] + won, long_[1] + 1)
+        if r[0].idx == 0 and r[0].side != pid:
+            recv = (recv[0] + won, recv[1] + 1)
+    return {k: ((100.0 * a / b) if b else None, b) for k, (a, b) in
+            (("short", short), ("long", long_), ("receive", recv))}
+
+
 def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: float, metric_ok: bool,
                      styles: list[PlayerStyle], shared: dict[str, Metric | Distribution],
                      confirmed_pct: float | None = None, hitters_unreliable: bool = False,
@@ -133,6 +178,21 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
 
     if events.match_format == "doubles":
         return [], {}, {}
+    # A "rally" of one detected shot is nearly always a pickup or a toss between points: leave it out.
+    known = {x.shot_id for x in events.shots}
+    keep = [r for r in events.rallies if sum(i in known for i in r.shot_ids) >= MIN_RALLY_SHOTS]
+    if len(keep) < len(events.rallies):
+        kept_ids = {i for r in keep for i in r.shot_ids}
+        events = events.model_copy(update={"rallies": keep,
+                                           "shots": [x for x in events.shots if x.shot_id in kept_ids]})
+    decided = sum(r.winner is not None for r in events.rallies)
+    inferred: dict[str, str] = {}
+    if decided < len(events.rallies) / 2:  # few entered winners: add the ones the next serve tells us
+        inferred = infer_winners(events)
+        if inferred:
+            events = events.model_copy(update={"rallies": [
+                r.model_copy(update={"winner": inferred[r.rally_id]}) if r.rally_id in inferred else r
+                for r in events.rallies]})
     rallies = _contexts(events, players, fps)
     last_id = {r[-1].shot.shot_id for r in rallies if r}
     style_of = {s.subject: s for s in styles}
@@ -165,6 +225,10 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
             caps.append("medium")
             notes.append(f"只有 {confirmed_pct:.0f}% 的击球经过人工确认")
         pos_cap = None if metric_ok else "low"
+        win_cap = "medium" if inferred else None  # tactics that rest on rally winners
+        if inferred:
+            notes.append(f"没有标注回合胜负，{len(inferred)} 个回合的胜负按“下一分谁发球”推断，"
+                         "和胜负有关的打法最高只给中等可信度")
 
         if len(own) < MIN_SHOTS:
             out.append(Scouting(target=pid, against=opp, side=side, summary="", tactics=[], n_shots=len(own),
@@ -185,7 +249,9 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
         tactics: list[tuple[float, ScoutTactic]] = []
 
         # ---- 1. zones: where they get into trouble, where they attack from
-        placed = [c for c in own if c.pos is not None]
+        # Placement only: answers to a smash / net kill are passive because of the attack, not the spot
+        # (holding under attack is judged separately from style.hold_pct).
+        placed = [c for c in own if c.pos is not None and c.phase != "defense"]
         base_n = len(placed)
         base_bad = sum(is_trouble(c) for c in placed)
         base_rate = 100.0 * base_bad / base_n if base_n else 0.0
@@ -246,7 +312,7 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
             for z, n in zn.items():
                 att = 100.0 * zatt[z] / n
                 rate = 100.0 * zbad[z] / n
-                if n >= 5 and att >= 40 and rate <= base_rate:
+                if n >= 6 and att >= 50 and rate <= base_rate:
                     strong.append((att * math.sqrt(n), z, n, att))
             strong.sort(reverse=True)
             for score, z, n, att in strong[:1]:
@@ -285,11 +351,13 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
                     how=FORCE[t] + "。",
                     why=f"{pid} 丢掉的 {total_err} 分里，有 {cnt} 分是他自己的{ZH.get(t, t)}结束的"
                         f"（他一共打了 {typed[t]} 拍{ZH.get(t, t)}）。",
-                    evidence=[k_err, f"{pid}.shot_types"], n=cnt, confidence=_cap(_n_conf(total_err, 12, 5), *caps), examples_ms=exs)))
+                    evidence=[k_err, f"{pid}.shot_types"], n=cnt, confidence=_cap(_n_conf(total_err, 12, 5), win_cap, *caps),
+                    examples_ms=exs)))
 
         # ---- 3. moving them
         own_by_id = {c.shot.shot_id: c for c in own}
-        reached = [c for r in rallies for c in r if c.side == opp and c.reach is not None and c.next is not None]
+        reached = [c for r in rallies for c in r if c.side == opp and c.reach is not None and c.next is not None
+                   and c.shot.shot_type not in OPP_ATTACK]
         far = near = far_bad = near_bad = 0
         far_ex: list[int] = []
         for c in reached:  # c.next is the target's reply; judge it as the target's shot
@@ -343,11 +411,23 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
                 why=f"{pid} 拿到主动球时只有 {conv.value:.0f}% 选择进攻（{conv.n} 拍），对高球威胁不大。",
                 evidence=[conv.key], n=conv.n, confidence=_cap(conv.confidence, *caps), examples_ms=[])))
 
-        # ---- 5. rally length, serve / receive (needs entered winners)
+        # ---- 5. rally length, serve / receive (needs entered or inferred winners)
         short, long_ = usable(f"{pid}.win.short_rate_pct"), usable(f"{pid}.win.long_rate_pct")
+        recv = usable(f"{pid}.win.receive_rate_pct")
+        if inferred:  # the stats' win rates only know entered winners: recompute with the inferred ones
+            rates = _win_rates(rallies, pid)
+            got = {}
+            for name, label, n_ok in (("short", f"短回合（≤{SHORT_RALLY_MAX}拍）胜率（含推断胜负）", 10),
+                                      ("long", f"长回合（≥{LONG_RALLY_MIN}拍）胜率（含推断胜负）", 10),
+                                      ("receive", "接发球回合胜率（含推断胜负）", 10)):
+                v, n = rates[name]
+                m = _metric(f"{pid}.scout.win.{name}_pct", label, v, "%", n, n_ok, 4)
+                ms.append(m)
+                got[name] = m if m.value is not None else None
+            short, long_, recv = got["short"], got["long"], got["receive"]
         if short is not None and long_ is not None and abs(short.value - long_.value) >= 20 \
                 and min(short.n, long_.n) >= 3:
-            conf = _cap(_n_conf(min(short.n, long_.n), 10, 4), *caps)
+            conf = _cap(_n_conf(min(short.n, long_.n), 10, 4), win_cap, *caps)
             if long_.value < short.value:
                 tactics.append(((short.value - long_.value) / 2, ScoutTactic(
                     code="long_rallies", title=f"和 {pid} 拖长回合",
@@ -360,13 +440,13 @@ def analyze_scouting(events: EventsResult, players: PlayerTracks | None, fps: fl
                     how="发接发后第一时间抢网、抢攻，不和他多拍相持。",
                     why=f"{pid} 短回合胜率 {short.value:.0f}%（{short.n} 回合），长回合 {long_.value:.0f}%（{long_.n} 回合）。",
                     evidence=[short.key, long_.key], n=long_.n + short.n, confidence=conf, examples_ms=[])))
-        recv = usable(f"{pid}.win.receive_rate_pct")
         if recv is not None and recv.n >= 4 and recv.value < 40:
             tactics.append(((40 - recv.value) / 2, ScoutTactic(
                 code="serve", title=f"发球回合打 {pid} 的接发",
                 how="发球多变：短球贴网为主，偶尔突然发后场，第三拍准备抢攻。",
                 why=f"{pid} 接发球回合只赢了 {recv.value:.0f}%（{recv.n} 回合）。",
-                evidence=[recv.key], n=recv.n, confidence=_cap(_n_conf(recv.n, 10, 4), *caps), examples_ms=[])))
+                evidence=[recv.key], n=recv.n, confidence=_cap(_n_conf(recv.n, 10, 4), win_cap, *caps),
+                examples_ms=[])))
 
         # ---- 6. reply habits: be ready for their next ball
         st = style_of.get(pid)
