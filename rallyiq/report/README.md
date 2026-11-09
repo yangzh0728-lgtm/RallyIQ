@@ -21,6 +21,7 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 | 覆盖与站位 | `Pn.cover.area_m2`、`Pn.cover.ratio_pct`、`Pn.pos.depth_mean_m`、`Pn.pos.depth_zones`、`Pn.pos.lateral_zones` |
 | 节奏 | `match.tempo.interval_mean_s`、`interval_first_half_s/second_half_s`、`match.rally_len.first_half_mean/second_half_mean`；`Pn.tempo.prep_s`（回球准备时间）、`Pn.tempo.given_s`（留给对手的时间） |
 | 比分走势 | `match.score.games`、`match.score.lead_changes`；`Pn.win.longest_run`、`Pn.win.biggest_lead`；`MatchStats.rallies`（逐回合）、`MatchStats.games`（每局比分） |
+| 打法特征 | `Pn.style.*`：击球构成、进攻 / 被动占比、主动转化、连续进攻、抢攻、拉吊突击、防守反击、节奏、调动、直线比例、落点多样性、吻合度等（见下文“打法风格”） |
 | 得失分 | `Pn.win.won/rate_pct`、`short_rate_pct`、`long_rate_pct`、`serve_rate_pct`、`receive_rate_pct`、`own_last_shot_pct`、`lost_own_last_shot_pct`；`Pn.lost.last_shot_types`（失分回合中本人最后一拍的击球类型） |
 
 - 移动只统计回合内、非插值的足点；5 帧滑动中值去抖，速度 > 8 m/s 的跳变视为跟踪错误剔除，间隔 > 0.5 s 不连线。
@@ -45,12 +46,50 @@ effective events + players + calibration ──► stats.compute_match_stats ─
 | `to_opponent` | 对手移动不到 1 米就接到，然后进攻或得分 | 离对手最远的角，用从击球位置打得到的球 |
 
 结果存在 `MatchStats.moments`（`ShotMoment`：视频时间、第几回合第几拍、双方站位和区域、对手移动距离、
-回球、结果、规则建议），每人最多 12 拍（按严重程度挑），按时间排序。发球不评；双打暂不支持。
+回球、结果、规则建议），每人最多 12 拍（按严重程度挑），按时间排序。发球不评。
+双打：“对手”是回这一拍的那位（没有回球时取被跟踪到的那位），目标点用双打边线，选离较近那位对手最远的位置，并多一个候选“中场中路（两人之间）”；胜负按队判断。
 区域名：击球者位置按本人视角，对手位置和目标区域按“从击球者这边看过去”的左右。
 
 教练报告（`CoachReport.shot_advice`）为每一拍写一条 `ShotAdvice`：时间、回合、拍数和站位永远取自
 `ShotMoment`，模型只写 `advice`/`why`；模型漏写或写了不符的时间时改用规则说明（`source = "rules"`）。
 在“人物”里指定了哪位是“我”（`PeopleAssignment.self_player`）时只列本人的球，并用“你”称呼。
+
+## 双打配合（`doubles.py`，不调用模型）
+
+双打时为每队（A = P1+P3，B = P2+P4）分析两人的配合，结果在 `MatchStats.doubles`（`DoublesTeam`），
+数字作为指标：队伍 `A.dbl.*` / `B.dbl.*`，个人 `Pn.dbl.*`，“谁打什么球”为分布 `<队>.dbl.who.*`。
+
+| 内容 | 怎么算 | 指标 |
+| --- | --- | --- |
+| 站位 | 回合内每秒取 10 帧，两人离底线的距离差 ≥ 1.5 m 为前后站位，< 1 m 为左右站位，其余为过渡 | `formation.fb_pct`、`formation.sbs_pct` |
+| 攻防阵型 | 按上一拍推断本队攻防：对手挑球/高远后本队进攻，本队挑球/高远后本队防守；进攻时应前后、防守时应左右 | `formation.attack_fb_pct`、`formation.defense_sbs_pct` |
+| 轮转 | 两段前后站位之间前场换人次数、前后 ↔ 左右切换次数（短于 0.4 s 的段视为抖动并入前段） | `rotation.front_swaps_per_rally`、`rotation.switches_per_rally` |
+| 间距 | 两人平均距离，< 1.2 m（挤在一起）和 > 5 m（中间空当）的时间占比 | `gap.mean_m`、`gap.close_pct`、`gap.wide_pct` |
+| 覆盖 | 两人站过的 0.5 m 格子合计，占双打半场 | `cover.area_m2`、`cover.ratio_pct` |
+| 角色 | 前后站位时在前场的比例 ≥ 65% 前场型，≤ 35% 后场型，其余轮转型 | `Pn.dbl.front_pct` |
+| 分工 | 每人占本队击球 / 杀球 / 网前小球的比例；后/中/前场击球、杀球、网前小球、挑球高远、平抽、发球、接发、左右站位时的中路球、失分回合最后一拍各由谁打 | `Pn.dbl.*_share_pct`、`<队>.dbl.who.*` |
+
+规则观察（`DoublesFinding`，带建议和依据指标）：进攻时站成 / 没站成前后、防守时拉开 / 没拉开左右、两人挤在一起、
+距离过大、前后分工固定、轮转积极、进攻主要靠一人、中路球多由一人接、失分回合最后一拍多由一人击出、一人承担大部分击球。
+离线教练把这些写成观点，问题项变成以队为单位的配合练习；在线教练从 `doubles` 字段和指标引用。
+双打不再按单个球员评“覆盖偏窄 / 多停留在后场”，因为这取决于分工。
+
+## 打法风格（`style.py`，不调用模型）
+
+有击球类型时，为每位单打球员（双打为每队）判断打法风格，结果在 `MatchStats.styles`（`PlayerStyle`），特征作为
+`<Pn>.style.*` 指标（双打 `A.style.*` / `B.style.*`）出现在统计里，教练可以引用。详细的研究依据、特征和规则见
+[`docs/playing-style.md`](../../docs/playing-style.md)。
+
+- **攻防状态**：每一拍按来球判断击球者处于主动 / 中立 / 被动（对手挑球 → 主动，对手杀 / 扑 → 被动），
+  统计每种状态下打了什么、符合推荐打法的比例；逐拍建议的 `ShotMoment.phase` 也带上这个状态。
+- **打法原型匹配**：单打 8 种（强攻压制、速度抢攻、拉吊突击、控制组织、防守反击、多拍消耗、技术欺骗、节奏变化），
+  双打 5 种体系（后场强攻、平抽快挡、网前预判控制、防守转换、混双前封后攻）。每种打法是一组带方向和权重的特征，
+  吻合度 0–100；少于 20 拍为“证据不足”，最高分低于 60 为“均衡型”。
+- **六种战术套路**（单打）：四角调动、网前逼起球、拉吊突击、防守转攻、重复落点陷阱、节奏破坏，统计次数、所在回合胜率、
+  逼对手被动的比例和可回看的视频时间。
+- **回球习惯**：对手打某种球后此人最常见的回球（下一拍预测），用来提示对手的预判点。
+- **建议**（`PlayerStyle.advice`）：执行问题（主动不进攻、被动顶不住、进攻失误多……）、有效 / 无效的套路、学习对象、
+  针对对手打法的克制思路。主动转化低、被动顶不住、进攻失误多也会成为训练重点（`detect_focus`）去检索教学笔记。
 
 ## AI 教练（`coach/`）
 

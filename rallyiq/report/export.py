@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ..contracts import CoachReport, Distribution, MatchStats, Metric
 from .coach.advice import video_link
+from .moments import ZH, timestamp
 
 STATUS = {"ok": "可用", "needs_review": "待复核", "undeterminable": "不可判定"}
 CONF = {"high": "高", "medium": "中", "low": "低"}
@@ -101,6 +102,9 @@ def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: 
                     out.append(f"   ⚠ {w}")
         out.append("")
 
+    out += style_lines(stats)
+    out += doubles_lines(stats)
+
     caveats = coach.caveats if coach else stats.caveats
     if caveats:
         out += ["## 数据说明", ""] + [f"- {c}" for c in caveats] + [""]
@@ -113,3 +117,97 @@ def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: 
         out += [_dist_line(d) for d in p.distributions] + [""]
     out.append(f"_统计指纹 {stats.fingerprint}；状态：可用 / 待复核 / 不可判定，按样本量和标定情况给出。_")
     return "\n".join(out) + "\n"
+
+
+PHASE = {"attack": "主动", "neutral": "中立", "defense": "被动"}
+FINDING = {"strength": "优势", "weakness": "问题", "pattern": "规律"}
+
+DOUBLES_TEAM_KEYS = [
+    ("formation.fb_pct", "前后站位"), ("formation.sbs_pct", "左右站位"), ("formation.attack_fb_pct", "进攻时前后站位"),
+    ("formation.defense_sbs_pct", "防守时左右站位"), ("rotation.front_swaps_per_rally", "每回合前场换人"),
+    ("rotation.switches_per_rally", "每回合攻守站位转换"), ("gap.mean_m", "平均间距"), ("gap.close_pct", "过近"),
+    ("gap.wide_pct", "过远"), ("cover.ratio_pct", "覆盖率"),
+]
+
+
+def _fmt_metric(m) -> str:
+    if m is None or m.value is None:
+        return "—"
+    v = f"{m.value:.0f}" if m.unit in ("%", "m²") else f"{m.value:.1f}"
+    return f"{v}{m.unit or ''}"
+
+
+def doubles_lines(stats: MatchStats) -> list[str]:
+    """The doubles teamwork section: formation, rotation, spacing, roles, who takes which shots, findings."""
+    if not stats.doubles:
+        return []
+    ix = {m.key: m for m in stats.metrics}
+    ix.update({m.key: m for p in stats.players for m in p.metrics})
+    dists = {d.key: d for d in stats.distributions}
+    out = ["## 双打配合", "",
+           "_按两人离底线的距离差判断站位：相差 ≥ 1.5 m 为前后站位，< 1 m 为左右站位；攻防状态按上一拍推断。_", ""]
+    for t in stats.doubles:
+        out += [f"### {t.team} 队（{'+'.join(t.players)}）", ""]
+        meta = f"{STATUS[t.status]} · 可信度 {CONF[t.confidence]}"
+        out += [f"_{meta}{'；' + t.note if t.note else ''}_", ""]
+        out.append("- " + "，".join(f"{label} {_fmt_metric(ix.get(f'{t.team}.dbl.{k}'))}" for k, label in DOUBLES_TEAM_KEYS))
+        for r in t.roles:
+            why = f"（{'，'.join(r.reasons)}）" if r.reasons else ""
+            out.append(f"- {r.player_id}：**{r.label}**{why}")
+        rows = [dists[k] for k in t.division if k in dists and dists[k].n]
+        if rows:
+            p, q = t.players
+            out += ["", f"| 谁打什么球 | {p} | {q} |", "| --- | --- | --- |"]
+            for d in rows:
+                out.append(f"| {d.label.removeprefix('谁打')} | {d.counts.get(p, 0)} | {d.counts.get(q, 0)} |")
+            out.append("")
+        for f in t.findings:
+            out.append(f"- **[{FINDING[f.kind]}] {f.title}**（可信度：{CONF[f.confidence]}）：{f.detail}"
+                       + (f" 建议：{f.advice}" if f.advice else ""))
+        out.append("")
+    return out
+
+
+def style_lines(stats: MatchStats) -> list[str]:
+    """The playing-style section: verdict, style scores, attack/neutral/defense choices, tactics, habits, advice."""
+    if not stats.styles:
+        return []
+    out = ["## 打法风格", "",
+           "_规则原型匹配（未用标注数据训练）：吻合度 0–100，参考区间来自职业单打统计，业余比赛看倾向即可。_", ""]
+    for st in stats.styles:
+        who = st.subject if st.kind == "singles" else f"{st.subject} 队（{'+'.join(st.players)}）"
+        out += [f"### {who}：{st.label}", ""]
+        meta = f"依据 {st.n_shots} 拍已分类击球 · {STATUS[st.status]} · 可信度 {CONF[st.confidence]}"
+        out.append(f"_{meta}{'；' + st.note if st.note else ''}_")
+        out.append("")
+        if st.status == "undeterminable":
+            continue
+        if st.primary is not None:
+            reps = "、".join(r.split(" ")[0] for r in st.primary.representatives)
+            out.append(f"- 最接近：**{st.primary.name}**（{st.primary.name_en}，代表：{reps}），"
+                       f"吻合度 {st.primary.score:.0f}；依据：{'、'.join(st.primary.reasons) or '—'}")
+        ranked = [f"{x.name} {x.score:.0f}" for x in st.scores if x.score is not None]
+        if ranked:
+            out.append(f"- 各打法吻合度：{'，'.join(ranked)}")
+        for ph in st.phases:
+            if not ph.shots:
+                continue
+            mix = "，".join(f"{ZH.get(k, k)} {v}" for k, v in ph.counts.items())
+            rec = f"；符合推荐打法 {ph.recommended_pct:.0f}%" if ph.recommended_pct is not None else ""
+            out.append(f"- {PHASE[ph.phase]}状态 {ph.shots} 拍：{mix}{rec}")
+        used = [t for t in st.tactics if t.uses]
+        if used:
+            out += ["", "| 战术套路 | 次数 | 有胜负 | 赢 | 胜率 | 逼对手被动 | 回看 |", "| --- | --- | --- | --- | --- | --- | --- |"]
+            for t in used:
+                sp = f"{t.success_pct:.0f}%" if t.success_pct is not None else "—"
+                fp = f"{t.forced_pct:.0f}%" if t.forced_pct is not None else "—"
+                out.append(f"| {t.name} | {t.uses} | {t.decided} | {t.won} | {sp} | {fp} | "
+                           f"{'、'.join(timestamp(x) for x in t.examples_ms)} |")
+            out.append("")
+        if st.habits:
+            out.append("- 回球习惯（预测下一拍）：" + "；".join(
+                f"接{ZH.get(h.after, h.after)}时 {h.pct:.0f}% 回{ZH.get(h.reply, h.reply)}（{h.n}/{h.of}）" for h in st.habits))
+        if st.advice:
+            out += ["", "**建议**", ""] + [f"- {a}" for a in st.advice]
+        out.append("")
+    return out

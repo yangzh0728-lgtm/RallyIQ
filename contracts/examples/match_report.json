@@ -527,6 +527,256 @@
             "status": "needs_review",
             "confidence": "low",
             "note": null
+          },
+          {
+            "key": "P1.style.smash_pct",
+            "label": "\u6740\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.net_pct",
+            "label": "\u7f51\u524d\u7403\u5360\u6bd4\uff08\u653e\u7f51/\u52fe\u5bf9\u89d2/\u6251\u7403\uff09",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.clear_pct",
+            "label": "\u9ad8\u8fdc\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.drop_pct",
+            "label": "\u540a\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.clear_drop_pct",
+            "label": "\u62c9\u540a\uff08\u9ad8\u8fdc\u7403+\u540a\u7403\uff09\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.flat_pct",
+            "label": "\u5e73\u62bd\u63a8\u538b\uff08\u5e73\u62bd+\u63a8\u7403\uff09\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.lift_block_pct",
+            "label": "\u6311\u7403+\u6321\u7f51\u5360\u6bd4",
+            "value": 100.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.attack_pct",
+            "label": "\u8fdb\u653b\u6027\u51fb\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.defense_pct",
+            "label": "\u88ab\u52a8\u72b6\u6001\u4e0b\u7684\u51fb\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.convert_pct",
+            "label": "\u4e3b\u52a8\u72b6\u6001\u4e0b\u9009\u62e9\u8fdb\u653b\u7684\u6bd4\u4f8b",
+            "value": 0.0,
+            "unit": "%",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.attack_run",
+            "label": "\u8fde\u7eed\u8fdb\u653b\u5e73\u5747\u62cd\u6570",
+            "value": null,
+            "unit": "\u62cd",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.early_attack_pct",
+            "label": "\u524d\u4e24\u62cd\u5c31\u53d1\u8d77\u8fdb\u653b\u7684\u56de\u5408\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 1,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.build_attack_pct",
+            "label": "\u5148\u62c9\u540a\u4e24\u62cd\u518d\u7a81\u51fb\u7684\u56de\u5408\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 1,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.counter_pct",
+            "label": "\u88ab\u52a8\u540e\u4e24\u62cd\u5185\u8f6c\u5165\u8fdb\u653b\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.hold_pct",
+            "label": "\u88ab\u52a8\u72b6\u6001\u4e0b\u9876\u4f4f\uff08\u6ca1\u6709\u76f4\u63a5\u4e22\u5206\uff09\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.attack_win_pct",
+            "label": "\u8fdb\u653b\u540e\u4e24\u62cd\u5185\u5f97\u5206\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.attack_err_pct",
+            "label": "\u8fdb\u653b\u76f4\u63a5\u5931\u8bef\u4e22\u5206\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.flight_s",
+            "label": "\u51fa\u7403\u5230\u5bf9\u624b\u51fb\u7403\u7684\u4e2d\u4f4d\u65f6\u95f4",
+            "value": 1.0,
+            "unit": "s",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.tempo_cv",
+            "label": "\u51fa\u7403\u5feb\u6162\u53d8\u5316\uff08\u53d8\u5f02\u7cfb\u6570\u00d7100\uff09",
+            "value": 13.3,
+            "unit": null,
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.accel_pct",
+            "label": "\u7a81\u7136\u52a0\u901f\u7684\u51fa\u7403\u5360\u6bd4",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.opp_reach_m",
+            "label": "\u5bf9\u624b\u63a5\u4f60\u7684\u7403\u5e73\u5747\u79fb\u52a8\u8ddd\u79bb",
+            "value": 1.6,
+            "unit": "m",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.corner_pct",
+            "label": "\u628a\u5bf9\u624b\u8c03\u5230\u56db\u89d2\u7684\u6bd4\u4f8b",
+            "value": 0.0,
+            "unit": "%",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.straight_pct",
+            "label": "\u8fb9\u8def\u51fa\u7403\u4e2d\u76f4\u7ebf\u7403\u7684\u6bd4\u4f8b",
+            "value": 100.0,
+            "unit": "%",
+            "n": 1,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.variety",
+            "label": "\u540c\u4e00\u4f4d\u7f6e\u51fa\u7403\u843d\u70b9\u7684\u591a\u6837\u6027\uff080-100\uff09",
+            "value": null,
+            "unit": null,
+            "n": 3,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.forced_pct",
+            "label": "\u903c\u5bf9\u624b\u6311\u7403/\u6321\u7f51\u6216\u76f4\u63a5\u5f97\u5206\u7684\u6bd4\u4f8b",
+            "value": 50.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
           }
         ],
         "distributions": [
@@ -609,6 +859,35 @@
             "status": "needs_review",
             "confidence": "low",
             "note": "\u8fd1\u4f3c\u770b\u4f5c\u5931\u8bef\u6216\u88ab\u538b\u5236\u7684\u90a3\u4e00\u62cd\uff1b\u843d\u70b9\u672a\u8bc6\u522b"
+          },
+          {
+            "key": "P1.style.phases",
+            "label": "\u653b\u9632\u72b6\u6001\uff08\u62cd\u6570\uff1a\u4e3b\u52a8/\u4e2d\u7acb/\u88ab\u52a8\uff09",
+            "counts": {
+              "\u4e3b\u52a8": 3,
+              "\u4e2d\u7acb": 1,
+              "\u88ab\u52a8": 0
+            },
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P1.style.tactics",
+            "label": "\u6218\u672f\u5957\u8def\u4f7f\u7528\u6b21\u6570",
+            "counts": {
+              "\u56db\u89d2\u8c03\u52a8": 0,
+              "\u7f51\u524d\u903c\u8d77\u7403": 0,
+              "\u62c9\u540a\u7a81\u51fb": 0,
+              "\u9632\u5b88\u8f6c\u653b": 0,
+              "\u91cd\u590d\u843d\u70b9\u9677\u9631": 0,
+              "\u8282\u594f\u7834\u574f": 0
+            },
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
           }
         ]
       },
@@ -934,6 +1213,256 @@
             "status": "needs_review",
             "confidence": "low",
             "note": null
+          },
+          {
+            "key": "P2.style.smash_pct",
+            "label": "\u6740\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.net_pct",
+            "label": "\u7f51\u524d\u7403\u5360\u6bd4\uff08\u653e\u7f51/\u52fe\u5bf9\u89d2/\u6251\u7403\uff09",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.clear_pct",
+            "label": "\u9ad8\u8fdc\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.drop_pct",
+            "label": "\u540a\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.clear_drop_pct",
+            "label": "\u62c9\u540a\uff08\u9ad8\u8fdc\u7403+\u540a\u7403\uff09\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.flat_pct",
+            "label": "\u5e73\u62bd\u63a8\u538b\uff08\u5e73\u62bd+\u63a8\u7403\uff09\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.lift_block_pct",
+            "label": "\u6311\u7403+\u6321\u7f51\u5360\u6bd4",
+            "value": 100.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.attack_pct",
+            "label": "\u8fdb\u653b\u6027\u51fb\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.defense_pct",
+            "label": "\u88ab\u52a8\u72b6\u6001\u4e0b\u7684\u51fb\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.convert_pct",
+            "label": "\u4e3b\u52a8\u72b6\u6001\u4e0b\u9009\u62e9\u8fdb\u653b\u7684\u6bd4\u4f8b",
+            "value": 0.0,
+            "unit": "%",
+            "n": 2,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.attack_run",
+            "label": "\u8fde\u7eed\u8fdb\u653b\u5e73\u5747\u62cd\u6570",
+            "value": null,
+            "unit": "\u62cd",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.early_attack_pct",
+            "label": "\u524d\u4e24\u62cd\u5c31\u53d1\u8d77\u8fdb\u653b\u7684\u56de\u5408\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 2,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.build_attack_pct",
+            "label": "\u5148\u62c9\u540a\u4e24\u62cd\u518d\u7a81\u51fb\u7684\u56de\u5408\u5360\u6bd4",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.counter_pct",
+            "label": "\u88ab\u52a8\u540e\u4e24\u62cd\u5185\u8f6c\u5165\u8fdb\u653b\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.hold_pct",
+            "label": "\u88ab\u52a8\u72b6\u6001\u4e0b\u9876\u4f4f\uff08\u6ca1\u6709\u76f4\u63a5\u4e22\u5206\uff09\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.attack_win_pct",
+            "label": "\u8fdb\u653b\u540e\u4e24\u62cd\u5185\u5f97\u5206\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.attack_err_pct",
+            "label": "\u8fdb\u653b\u76f4\u63a5\u5931\u8bef\u4e22\u5206\u7684\u6bd4\u4f8b",
+            "value": null,
+            "unit": "%",
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.flight_s",
+            "label": "\u51fa\u7403\u5230\u5bf9\u624b\u51fb\u7403\u7684\u4e2d\u4f4d\u65f6\u95f4",
+            "value": 1.0,
+            "unit": "s",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.tempo_cv",
+            "label": "\u51fa\u7403\u5feb\u6162\u53d8\u5316\uff08\u53d8\u5f02\u7cfb\u6570\u00d7100\uff09",
+            "value": 0.0,
+            "unit": null,
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.accel_pct",
+            "label": "\u7a81\u7136\u52a0\u901f\u7684\u51fa\u7403\u5360\u6bd4",
+            "value": 0.0,
+            "unit": "%",
+            "n": 1,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.opp_reach_m",
+            "label": "\u5bf9\u624b\u63a5\u4f60\u7684\u7403\u5e73\u5747\u79fb\u52a8\u8ddd\u79bb",
+            "value": 1.7,
+            "unit": "m",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.corner_pct",
+            "label": "\u628a\u5bf9\u624b\u8c03\u5230\u56db\u89d2\u7684\u6bd4\u4f8b",
+            "value": 33.3,
+            "unit": "%",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.straight_pct",
+            "label": "\u8fb9\u8def\u51fa\u7403\u4e2d\u76f4\u7ebf\u7403\u7684\u6bd4\u4f8b",
+            "value": 66.7,
+            "unit": "%",
+            "n": 3,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.variety",
+            "label": "\u540c\u4e00\u4f4d\u7f6e\u51fa\u7403\u843d\u70b9\u7684\u591a\u6837\u6027\uff080-100\uff09",
+            "value": null,
+            "unit": null,
+            "n": 3,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.forced_pct",
+            "label": "\u903c\u5bf9\u624b\u6311\u7403/\u6321\u7f51\u6216\u76f4\u63a5\u5f97\u5206\u7684\u6bd4\u4f8b",
+            "value": 75.0,
+            "unit": "%",
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
           }
         ],
         "distributions": [
@@ -1012,6 +1541,35 @@
             "status": "needs_review",
             "confidence": "low",
             "note": "\u8fd1\u4f3c\u770b\u4f5c\u5931\u8bef\u6216\u88ab\u538b\u5236\u7684\u90a3\u4e00\u62cd\uff1b\u843d\u70b9\u672a\u8bc6\u522b"
+          },
+          {
+            "key": "P2.style.phases",
+            "label": "\u653b\u9632\u72b6\u6001\uff08\u62cd\u6570\uff1a\u4e3b\u52a8/\u4e2d\u7acb/\u88ab\u52a8\uff09",
+            "counts": {
+              "\u4e3b\u52a8": 2,
+              "\u4e2d\u7acb": 2,
+              "\u88ab\u52a8": 0
+            },
+            "n": 4,
+            "status": "needs_review",
+            "confidence": "low",
+            "note": null
+          },
+          {
+            "key": "P2.style.tactics",
+            "label": "\u6218\u672f\u5957\u8def\u4f7f\u7528\u6b21\u6570",
+            "counts": {
+              "\u56db\u89d2\u8c03\u52a8": 0,
+              "\u7f51\u524d\u903c\u8d77\u7403": 0,
+              "\u62c9\u540a\u7a81\u51fb": 0,
+              "\u9632\u5b88\u8f6c\u653b": 0,
+              "\u91cd\u590d\u843d\u70b9\u9677\u9631": 0,
+              "\u8282\u594f\u7834\u574f": 0
+            },
+            "n": 0,
+            "status": "undeterminable",
+            "confidence": "low",
+            "note": null
           }
         ]
       }
@@ -1042,6 +1600,7 @@
         "opponent_reach_m": 1.4,
         "next_shot_type": "lift",
         "outcome": "won",
+        "phase": "attack",
         "issue": "clear_to_rear",
         "problem": "\u5bf9\u624b\u5df2\u7ecf\u5728\u540e\u573a\u5de6\u4fa7\uff0c\u4f60\u8fd8\u6253\u4e86\u4e00\u62cd\u6311\u7403\u5230\u540e\u573a\uff0c\u5bf9\u624b\u56de\u4e86\u6311\u7403",
         "suggested_shot": "drop",
@@ -1077,6 +1636,7 @@
         "opponent_reach_m": null,
         "next_shot_type": null,
         "outcome": "lost",
+        "phase": "attack",
         "issue": "clear_to_rear",
         "problem": "\u5bf9\u624b\u5df2\u7ecf\u5728\u540e\u573a\u53f3\u4fa7\uff0c\u4f60\u8fd8\u6253\u4e86\u4e00\u62cd\u6311\u7403\u5230\u540e\u573a\uff0c\u8fd9\u4e00\u5206\u4e22\u4e86",
         "suggested_shot": "drop",
@@ -1088,6 +1648,417 @@
         "footwork": null
       }
     ],
+    "styles": [
+      {
+        "subject": "P1",
+        "players": [
+          "P1"
+        ],
+        "kind": "singles",
+        "primary": null,
+        "secondary": null,
+        "scores": [
+          {
+            "code": "power_attack",
+            "name": "\u5f3a\u653b\u538b\u5236\u578b",
+            "name_en": "Power Attacking",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u5b89\u8d5b\u9f99 Viktor Axelsen",
+              "\u674e\u6893\u5609 Lee Zii Jia"
+            ]
+          },
+          {
+            "code": "speed_attack",
+            "name": "\u901f\u5ea6\u62a2\u653b\u578b",
+            "name_en": "Speed Attacking",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u674e\u5b97\u4f1f Lee Chong Wei",
+              "\u9a6c\u6797 Carolina Mar\u00edn"
+            ]
+          },
+          {
+            "code": "rally_attack",
+            "name": "\u62c9\u540a\u7a81\u51fb\u578b",
+            "name_en": "Rally-to-Attack",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u6797\u4e39 Lin Dan",
+              "\u77f3\u5b87\u5947 Shi Yuqi"
+            ]
+          },
+          {
+            "code": "control",
+            "name": "\u63a7\u5236\u7ec4\u7ec7\u578b",
+            "name_en": "Control-Based",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u6843\u7530\u8d24\u6597 Kento Momota",
+              "\u9648\u96e8\u83f2 Chen Yufei"
+            ]
+          },
+          {
+            "code": "defensive_counter",
+            "name": "\u9632\u5b88\u53cd\u51fb\u578b",
+            "name_en": "Defensive Counterattack",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u8c0c\u9f99 Chen Long",
+              "\u6606\u62c9\u6b66\u7279 Kunlavut Vitidsarn",
+              "\u5b89\u6d17\u83b9 An Se Young"
+            ]
+          },
+          {
+            "code": "endurance",
+            "name": "\u591a\u62cd\u6d88\u8017\u578b",
+            "name_en": "Endurance / Rally-Based",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u5948\u826f\u5188\u529f\u5927 Kodai Naraoka",
+              "\u5965\u539f\u5e0c\u671b Nozomi Okuhara",
+              "\u5c71\u53e3\u831c Akane Yamaguchi"
+            ]
+          },
+          {
+            "code": "deceptive",
+            "name": "\u6280\u672f\u6b3a\u9a97\u578b",
+            "name_en": "Deceptive / Technical",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u6234\u8d44\u9896 Tai Tzu Ying",
+              "\u56e0\u8fbe\u519c Ratchanok Intanon"
+            ]
+          },
+          {
+            "code": "tempo",
+            "name": "\u8282\u594f\u53d8\u5316\u578b",
+            "name_en": "Tempo Variation",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u5b89\u4e1c\u68ee Anders Antonsen",
+              "\u6797\u4e39 Lin Dan",
+              "\u77f3\u5b87\u5947 Shi Yuqi"
+            ]
+          }
+        ],
+        "label": "\u8bc1\u636e\u4e0d\u8db3",
+        "phases": [
+          {
+            "phase": "attack",
+            "shots": 3,
+            "counts": {
+              "lift": 3
+            },
+            "recommended_pct": 0.0
+          },
+          {
+            "phase": "neutral",
+            "shots": 1,
+            "counts": {
+              "lift": 1
+            },
+            "recommended_pct": 0.0
+          },
+          {
+            "phase": "defense",
+            "shots": 0,
+            "counts": {},
+            "recommended_pct": null
+          }
+        ],
+        "tactics": [
+          {
+            "code": "space_control",
+            "name": "\u56db\u89d2\u8c03\u52a8",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "net_to_attack",
+            "name": "\u7f51\u524d\u903c\u8d77\u7403",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "rally_to_attack",
+            "name": "\u62c9\u540a\u7a81\u51fb",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "defence_to_attack",
+            "name": "\u9632\u5b88\u8f6c\u653b",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "pattern_breaking",
+            "name": "\u91cd\u590d\u843d\u70b9\u9677\u9631",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "tempo_disruption",
+            "name": "\u8282\u594f\u7834\u574f",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          }
+        ],
+        "habits": [],
+        "evidence": [],
+        "advice": [],
+        "n_shots": 4,
+        "status": "undeterminable",
+        "confidence": "low",
+        "note": "\u53ea\u6709 4 \u62cd\u5df2\u5206\u7c7b\u7684\u975e\u53d1\u7403\u51fb\u7403\uff0c\u81f3\u5c11\u9700\u8981 20 \u62cd\u624d\u5224\u65ad\u6253\u6cd5"
+      },
+      {
+        "subject": "P2",
+        "players": [
+          "P2"
+        ],
+        "kind": "singles",
+        "primary": null,
+        "secondary": null,
+        "scores": [
+          {
+            "code": "power_attack",
+            "name": "\u5f3a\u653b\u538b\u5236\u578b",
+            "name_en": "Power Attacking",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u5b89\u8d5b\u9f99 Viktor Axelsen",
+              "\u674e\u6893\u5609 Lee Zii Jia"
+            ]
+          },
+          {
+            "code": "speed_attack",
+            "name": "\u901f\u5ea6\u62a2\u653b\u578b",
+            "name_en": "Speed Attacking",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u674e\u5b97\u4f1f Lee Chong Wei",
+              "\u9a6c\u6797 Carolina Mar\u00edn"
+            ]
+          },
+          {
+            "code": "rally_attack",
+            "name": "\u62c9\u540a\u7a81\u51fb\u578b",
+            "name_en": "Rally-to-Attack",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u6797\u4e39 Lin Dan",
+              "\u77f3\u5b87\u5947 Shi Yuqi"
+            ]
+          },
+          {
+            "code": "control",
+            "name": "\u63a7\u5236\u7ec4\u7ec7\u578b",
+            "name_en": "Control-Based",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u6843\u7530\u8d24\u6597 Kento Momota",
+              "\u9648\u96e8\u83f2 Chen Yufei"
+            ]
+          },
+          {
+            "code": "defensive_counter",
+            "name": "\u9632\u5b88\u53cd\u51fb\u578b",
+            "name_en": "Defensive Counterattack",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u8c0c\u9f99 Chen Long",
+              "\u6606\u62c9\u6b66\u7279 Kunlavut Vitidsarn",
+              "\u5b89\u6d17\u83b9 An Se Young"
+            ]
+          },
+          {
+            "code": "endurance",
+            "name": "\u591a\u62cd\u6d88\u8017\u578b",
+            "name_en": "Endurance / Rally-Based",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u5948\u826f\u5188\u529f\u5927 Kodai Naraoka",
+              "\u5965\u539f\u5e0c\u671b Nozomi Okuhara",
+              "\u5c71\u53e3\u831c Akane Yamaguchi"
+            ]
+          },
+          {
+            "code": "deceptive",
+            "name": "\u6280\u672f\u6b3a\u9a97\u578b",
+            "name_en": "Deceptive / Technical",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u6234\u8d44\u9896 Tai Tzu Ying",
+              "\u56e0\u8fbe\u519c Ratchanok Intanon"
+            ]
+          },
+          {
+            "code": "tempo",
+            "name": "\u8282\u594f\u53d8\u5316\u578b",
+            "name_en": "Tempo Variation",
+            "score": null,
+            "coverage": 0.0,
+            "reasons": [],
+            "representatives": [
+              "\u5b89\u4e1c\u68ee Anders Antonsen",
+              "\u6797\u4e39 Lin Dan",
+              "\u77f3\u5b87\u5947 Shi Yuqi"
+            ]
+          }
+        ],
+        "label": "\u8bc1\u636e\u4e0d\u8db3",
+        "phases": [
+          {
+            "phase": "attack",
+            "shots": 2,
+            "counts": {
+              "lift": 2
+            },
+            "recommended_pct": 0.0
+          },
+          {
+            "phase": "neutral",
+            "shots": 2,
+            "counts": {
+              "lift": 2
+            },
+            "recommended_pct": 0.0
+          },
+          {
+            "phase": "defense",
+            "shots": 0,
+            "counts": {},
+            "recommended_pct": null
+          }
+        ],
+        "tactics": [
+          {
+            "code": "space_control",
+            "name": "\u56db\u89d2\u8c03\u52a8",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "net_to_attack",
+            "name": "\u7f51\u524d\u903c\u8d77\u7403",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "rally_to_attack",
+            "name": "\u62c9\u540a\u7a81\u51fb",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "defence_to_attack",
+            "name": "\u9632\u5b88\u8f6c\u653b",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "pattern_breaking",
+            "name": "\u91cd\u590d\u843d\u70b9\u9677\u9631",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          },
+          {
+            "code": "tempo_disruption",
+            "name": "\u8282\u594f\u7834\u574f",
+            "uses": 0,
+            "decided": 0,
+            "won": 0,
+            "success_pct": null,
+            "forced_pct": null,
+            "examples_ms": []
+          }
+        ],
+        "habits": [],
+        "evidence": [],
+        "advice": [],
+        "n_shots": 4,
+        "status": "undeterminable",
+        "confidence": "low",
+        "note": "\u53ea\u6709 4 \u62cd\u5df2\u5206\u7c7b\u7684\u975e\u53d1\u7403\u51fb\u7403\uff0c\u81f3\u5c11\u9700\u8981 20 \u62cd\u624d\u5224\u65ad\u6253\u6cd5"
+      }
+    ],
+    "doubles": [],
     "rallies": [
       {
         "rally_no": 1,
@@ -1141,7 +2112,9 @@
     ],
     "caveats": [
       "\u53ea\u6709 2/11 \u62cd\u7ecf\u8fc7\u4eba\u5de5\u786e\u8ba4\uff0c\u7edf\u8ba1\u57fa\u4e8e\u81ea\u52a8\u8bc6\u522b\u7ed3\u679c\uff0c\u53ef\u80fd\u6709\u6f0f\u68c0\u6216\u8bef\u68c0\u3002",
-      "\u811a\u6b65\u6570\u636e\u6765\u81ea\u811a\u8e1d\u5173\u952e\u70b9\uff1a\u8fdc\u7aef\u7403\u5458\u6216\u4f4e\u5206\u8fa8\u7387\u753b\u9762\u4e0b\u6b65\u4f10\u7ec6\u8282\u53ea\u4f5c\u53c2\u8003\uff1b\u542f\u52a8\u6b65\u4e0e\u56de\u4f4d\u4ee5\u8bc6\u522b\u51fa\u7684\u51fb\u7403\u65f6\u523b\u4e3a\u51c6\u3002"
+      "\u811a\u6b65\u6570\u636e\u6765\u81ea\u811a\u8e1d\u5173\u952e\u70b9\uff1a\u8fdc\u7aef\u7403\u5458\u6216\u4f4e\u5206\u8fa8\u7387\u753b\u9762\u4e0b\u6b65\u4f10\u7ec6\u8282\u53ea\u4f5c\u53c2\u8003\uff1b\u542f\u52a8\u6b65\u4e0e\u56de\u4f4d\u4ee5\u8bc6\u522b\u51fa\u7684\u51fb\u7403\u65f6\u523b\u4e3a\u51c6\u3002",
+      "\u6709\u7403\u5458\u5df2\u5206\u7c7b\u7684\u51fb\u7403\u4e0d\u8db3 20 \u62cd\uff0c\u6253\u6cd5\u98ce\u683c\u6682\u4e0d\u5224\u65ad\u3002",
+      "\u6253\u6cd5\u98ce\u683c\u7531\u89c4\u5219\u539f\u578b\u5339\u914d\u5f97\u51fa\uff08\u6ca1\u6709\u7528\u6807\u6ce8\u6570\u636e\u8bad\u7ec3\uff09\uff0c\u53c2\u8003\u533a\u95f4\u6765\u81ea\u804c\u4e1a\u5355\u6253\u7edf\u8ba1\uff0c\u4e1a\u4f59\u6bd4\u8d5b\u53ea\u4f5c\u503e\u5411\u53c2\u8003\u3002"
     ]
   },
   "coach": {
@@ -1283,7 +2256,9 @@
     "self_player": null,
     "caveats": [
       "\u53ea\u6709 2/11 \u62cd\u7ecf\u8fc7\u4eba\u5de5\u786e\u8ba4\uff0c\u7edf\u8ba1\u57fa\u4e8e\u81ea\u52a8\u8bc6\u522b\u7ed3\u679c\uff0c\u53ef\u80fd\u6709\u6f0f\u68c0\u6216\u8bef\u68c0\u3002",
-      "\u811a\u6b65\u6570\u636e\u6765\u81ea\u811a\u8e1d\u5173\u952e\u70b9\uff1a\u8fdc\u7aef\u7403\u5458\u6216\u4f4e\u5206\u8fa8\u7387\u753b\u9762\u4e0b\u6b65\u4f10\u7ec6\u8282\u53ea\u4f5c\u53c2\u8003\uff1b\u542f\u52a8\u6b65\u4e0e\u56de\u4f4d\u4ee5\u8bc6\u522b\u51fa\u7684\u51fb\u7403\u65f6\u523b\u4e3a\u51c6\u3002"
+      "\u811a\u6b65\u6570\u636e\u6765\u81ea\u811a\u8e1d\u5173\u952e\u70b9\uff1a\u8fdc\u7aef\u7403\u5458\u6216\u4f4e\u5206\u8fa8\u7387\u753b\u9762\u4e0b\u6b65\u4f10\u7ec6\u8282\u53ea\u4f5c\u53c2\u8003\uff1b\u542f\u52a8\u6b65\u4e0e\u56de\u4f4d\u4ee5\u8bc6\u522b\u51fa\u7684\u51fb\u7403\u65f6\u523b\u4e3a\u51c6\u3002",
+      "\u6709\u7403\u5458\u5df2\u5206\u7c7b\u7684\u51fb\u7403\u4e0d\u8db3 20 \u62cd\uff0c\u6253\u6cd5\u98ce\u683c\u6682\u4e0d\u5224\u65ad\u3002",
+      "\u6253\u6cd5\u98ce\u683c\u7531\u89c4\u5219\u539f\u578b\u5339\u914d\u5f97\u51fa\uff08\u6ca1\u6709\u7528\u6807\u6ce8\u6570\u636e\u8bad\u7ec3\uff09\uff0c\u53c2\u8003\u533a\u95f4\u6765\u81ea\u804c\u4e1a\u5355\u6253\u7edf\u8ba1\uff0c\u4e1a\u4f59\u6bd4\u8d5b\u53ea\u4f5c\u503e\u5411\u53c2\u8003\u3002"
     ],
     "fallback_reason": null,
     "dropped": 0

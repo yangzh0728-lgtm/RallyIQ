@@ -5,6 +5,7 @@ import type {
   CoachReport,
   Distribution,
   EventsResult,
+  GamePhase,
   InsightKind,
   MatchStats,
   Metric,
@@ -13,8 +14,11 @@ import type {
   OverlayData,
   PlayerId,
   PlayerStats,
+  PlayerStyle,
+  ShotType,
   Status,
 } from "./types";
+import { SHOT_TYPE_ZH } from "./strokes";
 
 // ---------------------------------------------------------------- display helpers
 
@@ -92,6 +96,7 @@ export function reportMarkdown(title: string, stats: MatchStats, coach: CoachRep
     }
     out.push("");
   }
+  out.push(...styleMarkdown(stats));
   const caveats = coach?.caveats ?? stats.caveats;
   if (caveats.length) out.push("## 数据说明", "", ...caveats.map((c) => `- ${c}`), "");
   const table = (ms: Metric[]) => [
@@ -102,6 +107,57 @@ export function reportMarkdown(title: string, stats: MatchStats, coach: CoachRep
   out.push("## 全场统计", "", ...table(stats.metrics), "");
   stats.players.forEach((p) => out.push(`## ${p.player_id}`, "", ...table(p.metrics), ""));
   return out.join("\n") + "\n";
+}
+
+// ---------------------------------------------------------------- playing style
+
+export const PHASE_LABEL: Record<GamePhase, string> = { attack: "主动", neutral: "中立", defense: "被动" };
+
+export const shotZh = (t: string): string => SHOT_TYPE_ZH[t as ShotType] ?? t;
+
+export function clock(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${String(m).padStart(2, "0")}:${sec}`;
+}
+
+export function styleWho(st: PlayerStyle): string {
+  return st.kind === "singles" ? st.subject : `${st.subject} 队（${st.players.join("+")}）`;
+}
+
+export function styleMarkdown(stats: MatchStats): string[] {
+  const styles = stats.styles ?? [];
+  if (!styles.length) return [];
+  const out = ["## 打法风格", "", "_规则原型匹配（未用标注数据训练）：吻合度 0–100，参考区间来自职业单打统计，业余比赛看倾向即可。_", ""];
+  for (const st of styles) {
+    out.push(`### ${styleWho(st)}：${st.label}`, "", `_依据 ${st.n_shots} 拍已分类击球 · ${STATUS_LABEL[st.status]}${st.note ? `；${st.note}` : ""}_`, "");
+    if (st.status === "undeterminable") continue;
+    if (st.primary && st.primary.score !== null) {
+      out.push(`- 最接近：**${st.primary.name}**（${st.primary.name_en}），吻合度 ${Math.round(st.primary.score)}；依据：${st.primary.reasons.join("、") || "—"}`);
+    }
+    const ranked = st.scores.filter((x) => x.score !== null).map((x) => `${x.name} ${Math.round(x.score!)}`);
+    if (ranked.length) out.push(`- 各打法吻合度：${ranked.join("，")}`);
+    for (const ph of st.phases) {
+      if (!ph.shots) continue;
+      const mix = Object.entries(ph.counts).map(([k, v]) => `${shotZh(k)} ${v}`).join("，");
+      out.push(`- ${PHASE_LABEL[ph.phase]}状态 ${ph.shots} 拍：${mix}${ph.recommended_pct !== null ? `；符合推荐打法 ${Math.round(ph.recommended_pct)}%` : ""}`);
+    }
+    const used = st.tactics.filter((t) => t.uses);
+    if (used.length) {
+      out.push("", "| 战术套路 | 次数 | 有胜负 | 赢 | 胜率 | 逼对手被动 |", "| --- | --- | --- | --- | --- | --- |");
+      for (const t of used) {
+        const f = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
+        out.push(`| ${t.name} | ${t.uses} | ${t.decided} | ${t.won} | ${f(t.success_pct)} | ${f(t.forced_pct)} |`);
+      }
+      out.push("");
+    }
+    if (st.habits.length) out.push(`- 回球习惯（预测下一拍）：${st.habits.map((h) => `接${shotZh(h.after)}时 ${Math.round(h.pct)}% 回${shotZh(h.reply)}（${h.n}/${h.of}）`).join("；")}`);
+    if (st.advice.length) out.push("", "**建议**", "", ...st.advice.map((a) => `- ${a}`));
+    out.push("");
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- mock (?mock): approximate stats in the browser

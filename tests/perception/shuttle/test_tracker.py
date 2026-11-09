@@ -268,3 +268,24 @@ def test_low_score_flight_is_tracked_when_threshold_is_lowered():
     low, _ = build_track(meta, cands, W, H, "x", tracker_config(None, 0.05))
     assert not default.points
     assert sum(p.source == "detected" for p in low.points) > 80
+
+
+def test_fixed_bright_spot_is_dropped_at_any_score_and_real_flight_survives():
+    """A chink of light scores like a shuttle but never moves; it must not claim frames."""
+    fps, n = 30.0, 120
+    cands = {}
+    for f in range(n):
+        cands[f] = [(1650.0 + 0.2 * (f % 3), 322.0, 0.6)]  # stronger than the flight below
+        if 40 <= f < 70:
+            cands[f].append((300.0 + 20 * (f - 40), 700.0 - 8 * (f - 40), 0.4))
+    res = ShuttleTracker(fps, 1920, 1080).track(cands, n)
+    assert all(p.x < 1000 for p in res.points)
+    assert {p.frame for p in res.points if p.source == "detected"} == set(range(40, 70))
+
+
+def test_slow_apex_is_not_a_static_spot():
+    """A flight that slows at the top of its arc keeps moving, so it stays."""
+    fps, n = 30.0, 60
+    cands = {f: [(400.0 + 6 * f, 300.0 + 0.04 * (f - 30) ** 2, 0.6)] for f in range(n)}
+    res = ShuttleTracker(fps, 1920, 1080).track(cands, n)
+    assert len([p for p in res.points if p.source == "detected"]) == n

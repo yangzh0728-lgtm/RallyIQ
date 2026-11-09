@@ -255,7 +255,7 @@ rallyiq/ingest/                 视频输入评估（机位、帧率、画质、
 rallyiq/memory/                 个人长期档案：只追加的分析事件日志、球员画像与训练复测、对手习惯报告
 rallyiq/review/                 难例收集：人工修正按视频条件分组，找出最弱场景
 rallyiq/pipeline/               阶段注册、任务执行、队列 worker、视频探测、叠加层合成
-rallyiq/report/                 赛后统计与 AI 教练点评（可插拔 LLM，默认本地 Ollama + Qwen）
+rallyiq/report/                 赛后统计、打法风格分析与 AI 教练点评（可插拔 LLM，默认本地 Ollama + Qwen）
 rallyiq/api/                    FastAPI 后端（上传、任务、结果、修正、报告、导出）
 rallyiq/store.py                数据库（db.py：SQLite / PostgreSQL）+ 文件存储（blobs.py：本地 / S3）
 rallyiq/api/auth.py             账号与会话（默认关闭，线上 RALLYIQ_AUTH=on）
@@ -274,6 +274,8 @@ pytest
 ```
 
 主要接口（均在 `/api` 下）：`POST /videos` 上传并自动排队分析；`GET /jobs/{id}` 查看各阶段进度；`GET /videos/{id}/file` 视频（支持 Range）；`GET /videos/{id}/overlay` 叠加层；`GET /videos/{id}/events` 应用修正后的回合与击球；`POST /videos/{id}/corrections` 追加修正（含 `set_shot_type` 改击球类型）；`PUT /videos/{id}/calibration/manual` 点选四角；`PUT /videos/{id}/match_format` 指定单打 / 双打 / 自动并重跑；`GET /videos/{id}/clip?rally_id=…`（或 `start_ms`/`end_ms`）导出回合片段 MP4；`GET /videos/{id}/quality` 视频条件与各项输出可信度；`PUT /videos/{id}/people` 标注谁是我、对手是谁；`POST /videos/{id}/memory/commit` 把确认过的比赛写入档案（`/memory/withdraw` 撤下，均为追加）；`GET /profile`（`?person=`）个人画像、趋势与训练复测；`GET /opponents/{name}` 对手习惯；`GET /people`；`GET /memory/log`；`GET /hard_examples`（`?format=jsonl`）与 `GET /hard_examples/summary` 难例及按条件分组的错误率（命令行：`python -m rallyiq.review export --out hard_examples/`）；`GET /videos/{id}/heatmap`（可按 `player_id` 或双打 `team`）；`GET /videos/{id}/footwork` 脚步分析（触地、步伐、启动步、弓步、起跳、并步/交叉步、回位；装了脚部模型时还有脚尖朝向和脚跟 / 前脚掌着地，见 `rallyiq/footwork/README.md`）；`GET /videos/{id}/export?format=json|csv`；`GET /videos/{id}/report` 赛后统计 + 最近一次教练点评；`POST /videos/{id}/report/coach` 生成 AI 点评；`GET /videos/{id}/report/export?format=md|json`。完整文档见运行后的 `/docs`。
+
+赛后报告还会判断每位球员的**打法风格**（单打 8 种：强攻压制、速度抢攻、拉吊突击、控制组织、防守反击、多拍消耗、技术欺骗、节奏变化；双打 5 种体系），给出每一拍的主动 / 中立 / 被动状态、六种战术套路的使用次数和胜率、对手的回球习惯，以及针对对手打法的建议。全部是本地规则计算，不需要联网或额外模型；依据和规则见 [`docs/playing-style.md`](docs/playing-style.md)。
 
 AI 教练默认用本机免费的开源模型（Ollama + `qwen2.5:7b`：`brew install ollama && ollama serve && ollama pull qwen2.5:7b`），数据不出本机；设置了 `ANTHROPIC_API_KEY` 时可改用 Claude；都不可用时自动改用离线规则模板并在报告中注明。详见 `rallyiq/report/README.md`。
 

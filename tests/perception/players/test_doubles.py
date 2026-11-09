@@ -121,3 +121,60 @@ def test_doubles_change_of_ends_keeps_partners_together():
     assert all(seen[0][k][0] == seen[-1][k][0] for k in seen[0])
     assert {seen[-1][k][2] for k in ("P1", "P3")} == {"far"}
     assert {seen[-1][k][2] for k in ("P2", "P4")} == {"near"}
+
+
+def test_doubles_bystander_at_the_post_does_not_take_a_slot():
+    """Real 0302 clip: an umpire stands still by the left net post, inside the run-off, and takes a team A slot.
+    A near player starts the clip just past the net by the right post, so team B gets them, and they keep that
+    label after walking back to the near half; the far partner then finds no free slot. The still bystander is
+    released and ignored, the opponent sharing team A's half moves to team A, and the far partner is picked up."""
+    n = 450
+
+    def dets(i):
+        pos = _doubles_positions(i / 30)
+        if i < 60:  # walks from the right net post back to the near half
+            t, end = i / 60, np.array(_doubles_positions(2.0)["nr"])
+            pos["nr"] = tuple((1 - t) * np.array([6.6, 6.9]) + t * end)
+        out = [person_at_court(*xy) for k, xy in pos.items() if not (k == "fb" and i < 120)]
+        out.append(person_at_court(-0.85, 6.1))  # umpire by the left post, never moves
+        return out
+
+    def run():
+        return track_players(_frames(n), FakeEstimator([dets(i) for i in range(n)]), lambda f: H_IMG_TO_COURT,
+                             PlayerTrackingConfig(match_format="doubles"))
+
+    res = run()
+    assert not any(p.foot_court[0] < 0 for r in res for p in r.players), "bystander left in the output"
+    for r in res[60:]:
+        for p in r.players:
+            assert p.team == ("A" if p.foot_court[1] < 6.7 else "B"), (r.frame, p.player_id, p.foot_court)
+    # All four players tracked once the guards have kicked in (6 s still + 3 s on the wrong half).
+    assert all(len(r.players) == 4 for r in res[300:])
+
+
+def test_doubles_bystander_guard_tolerates_foot_jitter():
+    """Same scene, but the bystander's foot point jitters like on the real clip: near the net a few pixels of box
+    change move the foot ~0.5 m along the court, and every few frames a looser box puts it 0.6 m off. A raw
+    frame-to-frame stillness test never sees 6 s in a row; the smoothed position does."""
+    n = 600
+    rng = np.random.default_rng(0)
+    jitter = rng.normal(0.0, 0.15, n) + np.where(rng.random(n) < 0.1, 0.6, 0.0)
+
+    def dets(i):
+        pos = _doubles_positions(i / 30)
+        if i < 60:
+            t, end = i / 60, np.array(_doubles_positions(2.0)["nr"])
+            pos["nr"] = tuple((1 - t) * np.array([6.6, 6.9]) + t * end)
+        out = [person_at_court(*xy) for k, xy in pos.items() if not (k == "fb" and i < 120)]
+        out.append(person_at_court(-0.75, 6.1 + 0.4 * i / n + jitter[i]))
+        return out
+
+    res = track_players(_frames(n), FakeEstimator([dets(i) for i in range(n)]), lambda f: H_IMG_TO_COURT,
+                        PlayerTrackingConfig(match_format="doubles"))
+    assert not any(p.foot_court[0] < 0 for r in res for p in r.players), "bystander left in the output"
+    for r in res[60:]:
+        for p in r.players:
+            assert p.team == ("A" if p.foot_court[1] < 6.7 else "B"), (r.frame, p.player_id, p.foot_court)
+    # The bystander never gets a slot (free slots only go to people near the court), so all four players are
+    # tracked as soon as the far back player shows up, without waiting for the guards.
+    assert all(len(r.players) == 4 for r in res[130:])

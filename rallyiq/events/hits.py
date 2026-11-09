@@ -232,11 +232,31 @@ def resolve_sequence(cands: list[Candidate], cfg: EventsConfig) -> list[Candidat
     """Rally-level rules on the time-ordered candidates: alternation, quick repeats, re-attribution."""
     out = _alternating_subset(cands, cfg)
     out = _resolve_quick_repeats(out, cfg)
-    _reattribute(out, cfg)
+    if not _choose_teams(out, cfg):
+        _reattribute(out, cfg)
     if cfg.hitter_fill:
         _fill_hitters(out)
+    if cfg.self_feed_max_gap_ms > 0:
+        out = _drop_self_feeds(out, cfg)
     _check_alternation(out)
     return out
+
+
+def _drop_self_feeds(hits: list[Candidate], cfg: EventsConfig) -> list[Candidate]:
+    """Drop hits inside a run of 3+ consecutive hits by one side with short gaps (see ``self_feed_max_gap_ms``)."""
+    gap = cfg.self_feed_max_gap_ms
+    drop: set[int] = set()
+    for i in range(1, len(hits) - 1):
+        a, b, c = hits[i - 1], hits[i], hits[i + 1]
+        k = _side_key(b)
+        if k is None or _side_key(a) != k or _side_key(c) != k:
+            continue
+        if b.t_ms - a.t_ms > gap or c.t_ms - b.t_ms > gap:
+            continue
+        drop.add(i)
+        if cfg.self_feed_run:
+            drop.update((i - 1, i + 1))
+    return [h for i, h in enumerate(hits) if i not in drop]
 
 
 def _kp(p: PlayerPose, i: int, min_conf: float):
@@ -484,6 +504,65 @@ def _reattribute(hits: list[Candidate], cfg: EventsConfig) -> None:
         k = _other_side_alt(b, ka)
         if k is not None and b.best.score - b.prox[k].score < 2 * cfg.hitter_margin:
             _hand_over(b, k)
+
+
+def _choose_teams(hits: list[Candidate], cfg: EventsConfig) -> bool:
+    """Doubles only: pick the hitting team of every hit in the rally jointly (see
+    ``EventsConfig.doubles_alternation_penalty``) and hand each hit to the closest player of its team.
+
+    Returns False (nothing done) for singles, with the rule disabled, or when the rally does not show two teams.
+    """
+    pen = cfg.doubles_alternation_penalty
+    if pen <= 0 or len(hits) < 2:
+        return False
+    teams = sorted({p.pose.team for c in hits for p in c.prox if p.pose.team})
+    if len(teams) != 2:
+        return False
+    n = len(hits)
+    # e[i][t]: proximity of team t's best player at hit i (0 when nobody of that team is near).
+    e = [
+        [max((p.score for p in c.prox if p.pose.team == t), default=0.0) for t in teams]
+        for c in hits
+    ]
+    score = [list(e[0])]
+    back: list[list[int]] = [[0, 0]]
+    for i in range(1, n):
+        close = hits[i].t_ms - hits[i - 1].t_ms < cfg.doubles_alternation_max_gap_ms
+        row, arg = [], []
+        for t in range(2):
+            opts = [
+                score[i - 1][u] - (pen if close and u == t else 0.0) for u in range(2)
+            ]
+            u = max(range(2), key=lambda k: opts[k])
+            row.append(opts[u] + e[i][t])
+            arg.append(u)
+        score.append(row)
+        back.append(arg)
+    t = max(range(2), key=lambda k: score[-1][k])
+    chosen = [0] * n
+    for i in range(n - 1, -1, -1):
+        chosen[i] = t
+        t = back[i][t]
+    for c, ti in zip(hits, chosen):
+        team = teams[ti]
+        if c.best is not None and c.best.pose.team == team and c.hitter_known:
+            continue
+        mates = [k for k, p in enumerate(c.prox) if p.pose.team == team]
+        if not mates:
+            continue
+        k = min(mates, key=lambda k: (-c.prox[k].score, c.prox[k].distance_rel))
+        had = c.best is not None and c.best.pose.team != team and c.hitter_known
+        c.prox.insert(0, c.prox.pop(k))
+        c.reasons = [
+            r for r in c.reasons if r not in (R_HITTER_AMBIGUOUS, R_TEAMMATE_AMBIGUOUS)
+        ]
+        if c.prox[0].score > 0:
+            c.reasons.append(
+                R_HITTER_FROM_ALTERNATION if had else R_HITTER_FROM_SEQUENCE
+            )
+        else:
+            c.reasons.append(R_HITTER_FROM_SEQUENCE)
+    return True
 
 
 def _fill_hitters(hits: list[Candidate]) -> None:
