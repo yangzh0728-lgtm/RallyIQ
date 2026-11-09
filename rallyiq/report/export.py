@@ -60,6 +60,7 @@ def _flow_lines(stats: MatchStats) -> list[str]:
 def render_markdown(stats: MatchStats, coach: CoachReport | None = None, title: str | None = None,
                     coach_stale: bool = False) -> str:
     out = [f"# {title or '赛后报告'}", ""]
+    out += scouting_lines(stats)
     if coach is not None:
         out += ["## AI 教练点评", ""]
         if coach_stale:
@@ -164,6 +165,29 @@ def doubles_lines(stats: MatchStats) -> list[str]:
         for f in t.findings:
             out.append(f"- **[{FINDING[f.kind]}] {f.title}**（可信度：{CONF[f.confidence]}）：{f.detail}"
                        + (f" 建议：{f.advice}" if f.advice else ""))
+        out.append("")
+    return out
+
+
+def scouting_lines(stats: MatchStats) -> list[str]:
+    """How to beat P1 / P2: a game plan per player, each tactic with its evidence, confidence and replay times."""
+    if not stats.scouting:
+        return []
+    lead = ("_从每位球员陷入被动的区域、失分的拍法、被调动后的表现、回球习惯和攻防状态里找弱点。"
+            "可信度低的先当作观察，回看例子确认后再用。_")
+    out = ["## 怎么打 P1、怎么打 P2", "", lead, ""]
+    for sc in stats.scouting:
+        side = {"far": "，在远端", "near": "，在近端"}.get(sc.side or "", "")
+        out += [f"### 怎么打 {sc.target}（可信度：{CONF[sc.confidence]}{side}）", ""]
+        if sc.summary:
+            out += [f"**{sc.summary}**", ""]
+        if sc.note:
+            out += [f"> {sc.note}", ""]
+        for k, t in enumerate(sc.tactics, 1):
+            ex = f" 回看：{'、'.join(timestamp(x) for x in t.examples_ms)}" if t.examples_ms else ""
+            out.append(f"{k}. **{t.title}**（可信度：{CONF[t.confidence]}）  ")
+            out.append(f"   {t.how}  ")
+            out.append(f"   依据：{t.why}{ex}")
         out.append("")
     return out
 

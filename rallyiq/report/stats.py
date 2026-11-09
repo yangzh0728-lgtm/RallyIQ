@@ -42,6 +42,7 @@ from ..contracts.geometry import SINGLES_INSET
 from .doubles import analyze_doubles, track_issues
 from .flow import flow_metrics, rally_log
 from .moments import shot_moments
+from .scouting import analyze_scouting
 from .style import MIN_SHOTS, analyze_styles, shot_phases
 
 PLAYERS = ("P1", "P2")
@@ -444,6 +445,7 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
     player_stats = [p.model_copy(update={"metrics": [*p.metrics, *flow_players.get(p.player_id, [])]})
                     for p in player_stats]
     styles = []
+    scouting = []
     if shot_types_available:
         phases = shot_phases(events)
         moments = [m.model_copy(update={"phase": phases.get(m.shot_id)}) for m in moments]
@@ -464,11 +466,24 @@ def compute_match_stats(events: EventsResult, players: PlayerTracks | None = Non
         if any(s.status == "undeterminable" and s.n_shots < MIN_SHOTS for s in styles):
             caveats.append(f"有球员已分类的击球不足 {MIN_SHOTS} 拍，打法风格暂不判断。")
         caveats.append("打法风格由规则原型匹配得出（没有用标注数据训练），参考区间来自职业单打统计，业余比赛只作倾向参考。")
+        if events.match_format != "doubles":
+            # How to beat P1 / P2 (rallyiq/report/scouting.py): weaknesses -> direct tactics.
+            shared.update({m.key: m for p in player_stats for m in p.metrics})
+            shared.update({d.key: d for p in player_stats for d in p.distributions})
+            conf_m = next((m for m in metrics if m.key == "match.confirmed_shots_pct"), None)
+            unreliable = any(s.note and s.note.startswith("相邻两拍") for s in styles)
+            scouting, sc_m, sc_d = analyze_scouting(events, players, fps, metric_ok, styles, shared,
+                                                    confirmed_pct=conf_m.value if conf_m else None,
+                                                    hitters_unreliable=unreliable)
+            player_stats = [p.model_copy(update={"metrics": p.metrics + sc_m.get(p.player_id, []),
+                                                 "distributions": p.distributions + sc_d.get(p.player_id, [])})
+                            for p in player_stats]
     return MatchStats(
         video_id=events.video_id, fingerprint=fingerprint(events, players, calibration),
         duration_ms=meta.duration_ms if meta else None, calibration_status=cal_status,
         shot_types_available=shot_types_available, metrics=metrics, distributions=distributions,
         players=player_stats, moments=moments, rallies=lines, games=games, styles=styles, doubles=doubles,
+        scouting=scouting,
         caveats=caveats,
     )
 
