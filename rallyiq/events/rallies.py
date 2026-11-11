@@ -106,9 +106,22 @@ def segment_rallies(
         spans.append(RallySpan(start, j, end_reason))
         i = j + 1
 
+    if cfg.bridge_gap_ms > 0:
+        spans = _bridge(spans, pts, cfg.bridge_gap_ms)
     return [
         s
         for s in spans
         if pts[s.end].t_ms - pts[s.start].t_ms >= cfg.min_rally_ms
         and s.end - s.start + 1 >= cfg.min_rally_points
     ]
+
+
+def _bridge(spans: list[RallySpan], pts: list, gap_ms: float) -> list[RallySpan]:
+    """Join consecutive spans whose gap (last point of one to first of the next) is at most ``gap_ms``."""
+    out: list[RallySpan] = []
+    for sp in spans:
+        if out and pts[sp.start].t_ms - pts[out[-1].end].t_ms <= gap_ms:
+            out[-1] = RallySpan(out[-1].start, sp.end, sp.end_reason)
+        else:
+            out.append(sp)
+    return out

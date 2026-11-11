@@ -21,6 +21,11 @@ class EventsConfig:
     static_ms: float = 600.0  # shuttle (nearly) still this long -> rally over
     static_speed_rel: float = 0.35  # H per second below which the shuttle counts as still
     min_rally_ms: float = 700.0
+    # Join two rallies when the shuttle was unseen between them for at most this long: a tracking
+    # dropout mid-rally (the player hides it, a fast flight is missed) longer than end_gap_ms. 0 disables.
+    # Own footage 0529 (19 hand-labelled rallies): 800 ms cut split rallies 4 -> 1, but added a false hit on
+    # the court24 point set; 1200 ms already joined two real rallies into one. Off until that is solved.
+    bridge_gap_ms: float = 0.0
     min_rally_points: int = 8
 
     # --- hit candidates ---
@@ -77,6 +82,11 @@ class EventsConfig:
     # Drop a rally whose hits (at most this many; none counts too) are all by one side: nobody answered
     # across the net, so it is a catch, pick-up or toss between points. 0 disables.
     one_sided_rally_max_hits: int = 0
+    # Drop a rally with no hit at all that is shorter than this: a pickup, a tap back over the net
+    # or a shuttle rolling on the floor between points. Real serve-and-miss points last longer. 0 disables.
+    # Own footage 0529 (19 labelled rallies): 2500 ms cut false rallies 16 -> 6 and lost none; the two real
+    # rallies without a detected hit lasted 3.3 and 3.4 s. Off by default until checked on other footage.
+    min_no_hit_rally_ms: float = 0.0
 
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all

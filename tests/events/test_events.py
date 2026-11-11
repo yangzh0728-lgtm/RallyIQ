@@ -214,3 +214,37 @@ def test_contract_round_trip_from_demo_perception():
     # every hit with a shuttle path after it is found (the final hit of each demo rally has none)
     s = match_hits([(sh.frame, sh.hitter) for sh in ev.shots], truth)
     assert s.fp == 0 and s.tp >= len(truth) - 2
+
+
+def _drop(shuttle, t0, t1):
+    """The shuttle unseen between t0 and t1 (ms), as after a tracking dropout."""
+    return [ShuttleObs(o.frame, o.t_ms) if t0 <= o.t_ms <= t1 else o for o in shuttle]
+
+
+def test_bridge_gap_joins_a_rally_split_by_a_dropout():
+    v = make_video(n_rallies=2, seed=3, end_modes=["lost", "lost"])
+    want = v.rallies[0]
+    mid = (want.start_ms + want.end_ms) / 2
+    shuttle = _drop(v.shuttle, mid - 700, mid + 700)  # 1.4 s unseen mid-rally, longer than end_gap_ms
+    split = segment_events(shuttle, v.poses)
+    assert len(split) == 3
+    joined = segment_events(shuttle, v.poses, EventsConfig(bridge_gap_ms=2000.0))
+    assert len(joined) == 2  # the dead time between the two real rallies is longer: not bridged
+    assert abs(joined[0].start_ms - want.start_ms) <= 150 and abs(joined[0].end_ms - want.end_ms) <= 250
+
+
+def test_short_rallies_without_hits_can_be_dropped():
+    v = make_video(n_rallies=2, seed=5)
+    base = segment_events(v.shuttle, v.poses)
+    assert all(r.hits for r in base)
+    assert len(segment_events(v.shuttle, v.poses, EventsConfig(min_no_hit_rally_ms=1e9))) == len(base)
+    # a short stretch of moving shuttle between rallies with no hit: a pickup tap, not a rally
+    t0 = v.rallies[0].end_ms + 1800
+    tap = [ShuttleObs(int(t0 / (1000 / 30)) + i, t0 + i * 1000 / 30, 300.0 + i * 12, 520.0 - i * 3, True, 0.8)
+           for i in range(30)]
+    frames = {o.frame for o in tap}
+    shuttle = sorted([o for o in v.shuttle if o.frame not in frames] + tap, key=lambda o: o.frame)
+    with_tap = segment_events(shuttle, v.poses)
+    assert len(with_tap) == len(base) + 1 and sum(not r.hits for r in with_tap) == 1
+    assert len(segment_events(shuttle, v.poses, EventsConfig(min_no_hit_rally_ms=1500.0))) == len(base)
+    assert len(segment_events(shuttle, v.poses, EventsConfig(min_no_hit_rally_ms=500.0))) == len(base) + 1

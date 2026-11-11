@@ -101,6 +101,8 @@ def segment_events(
         from .pose_hits import one_sided
 
         rallies = [r for r in rallies if not one_sided(r, poses, cfg.one_sided_rally_max_hits)]
+    if cfg.min_no_hit_rally_ms > 0:
+        rallies = [r for r in rallies if r.hits or r.end_ms - r.start_ms >= cfg.min_no_hit_rally_ms]
     for rally in rallies:
         _decide_rally(rally, cfg)
     return rallies
