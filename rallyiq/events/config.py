@@ -85,7 +85,9 @@ class EventsConfig:
     # Drop a rally with no hit at all that is shorter than this: a pickup, a tap back over the net
     # or a shuttle rolling on the floor between points. Real serve-and-miss points last longer. 0 disables.
     # Own footage 0529 (19 labelled rallies): 2500 ms cut false rallies 16 -> 6 and lost none; the two real
-    # rallies without a detected hit lasted 3.3 and 3.4 s. Off by default until checked on other footage.
+    # rallies without a detected hit lasted 3.3 and 3.4 s. 0906 side view (5 labelled rallies): no change.
+    # 0302 / 0310 (other gyms): the 5 rallies it dropped were all checked by eye as false. Own-footage batches
+    # set 2500 in their events settings; the code default stays off (broadcast footage is untested).
     min_no_hit_rally_ms: float = 0.0
 
     # --- decisions ---
