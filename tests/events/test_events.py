@@ -248,3 +248,19 @@ def test_short_rallies_without_hits_can_be_dropped():
     assert len(with_tap) == len(base) + 1 and sum(not r.hits for r in with_tap) == 1
     assert len(segment_events(shuttle, v.poses, EventsConfig(min_no_hit_rally_ms=1500.0))) == len(base)
     assert len(segment_events(shuttle, v.poses, EventsConfig(min_no_hit_rally_ms=500.0))) == len(base) + 1
+
+
+def test_landed_then_jump_ends_the_rally():
+    v = make_video(n_rallies=1, seed=3, end_modes=["static"], trailing_ms=4000)
+    want = v.rallies[0]
+    rest = [o for o in v.shuttle if o.t_ms <= want.end_ms + 300 and o.visible]
+    last = rest[-1]
+    # 300 ms on the floor, then the track jumps to a shuttle being tossed around elsewhere (no gap)
+    toss = [ShuttleObs(last.frame + 1 + i, last.t_ms + (1 + i) * 1000 / 30, last.x - 500 + i * 12,
+                       last.y - 200 - i * 4, True, 0.8) for i in range(60)]
+    shuttle = sorted(rest + toss, key=lambda o: o.frame)
+    merged = segment_events(shuttle, v.poses)
+    assert merged[0].end_ms > want.end_ms + 1000  # the floor stop is too short for static_ms
+    landed = segment_events(shuttle, v.poses, EventsConfig(landed_ms=150.0, landed_jump_rel=40.0))
+    assert abs(landed[0].end_ms - want.end_ms) <= 250
+    assert all(r.start_ms > want.end_ms + 250 for r in landed[1:])  # the toss never starts on the floor

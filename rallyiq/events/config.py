@@ -19,6 +19,14 @@ class EventsConfig:
     # --- rally segmentation ---
     end_gap_ms: float = 1200.0  # shuttle unseen this long -> rally over
     static_ms: float = 600.0  # shuttle (nearly) still this long -> rally over
+    # ... or it fell, stayed within 0.1 player heights for at least landed_ms, and the next observation jumps
+    # away faster than landed_jump_rel player heights per second (the track moves to another object or the
+    # shuttle is picked up and thrown), at least 1 s into the rally. 0 disables. Own footage (24 labelled
+    # rallies): 150 ms removes the one merge (0006 244-257 s) and cuts the median end error 0.41 -> 0.30 s,
+    # same for 100-250 ms and jump 40-60; no change on either point set. Combined with
+    # min_no_hit_rally_ms=2500 it exposes a real 1.3 s rally without a detected hit, which is then dropped.
+    landed_ms: float = 0.0
+    landed_jump_rel: float = 60.0
     static_speed_rel: float = 0.35  # H per second below which the shuttle counts as still
     min_rally_ms: float = 700.0
     # Join two rallies when the shuttle was unseen between them for at most this long: a tracking

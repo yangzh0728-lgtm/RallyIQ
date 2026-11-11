@@ -55,6 +55,34 @@ def _moves(track: Track, k: int, cfg: EventsConfig, scale_at: ScaleFn) -> bool:
     return dist(a.xy, b.xy) / dt >= cfg.static_speed_rel * scale_at(a.frame, a.xy)
 
 
+def _landed_at(track: Track, j: int, cfg: EventsConfig, scale_at: ScaleFn) -> int | None:
+    """If point j + 1 jumps away implausibly fast (``landed_jump_rel`` player heights per second: the tracker
+    moved to another object, or the shuttle was picked up and thrown) right after the shuttle sat still for
+    at least ``landed_ms``, return the index where it stopped (the landing). Off when ``landed_ms`` is 0."""
+    pts = track.points
+    if cfg.landed_ms <= 0 or j + 1 >= len(pts):
+        return None
+    a, b = pts[j], pts[j + 1]
+    dt = (b.t_ms - a.t_ms) / 1000.0
+    if dt <= 0 or dist(a.xy, b.xy) / dt < cfg.landed_jump_rel * scale_at(a.frame, a.xy):
+        return None
+    # Walk back while the shuttle stayed within a tenth of a player height of where it was before the jump
+    # (the static flags look ahead, so they see the jump), for at most a second.
+    radius = 0.1 * scale_at(a.frame, a.xy)
+    s = j
+    while s > 0 and a.t_ms - pts[s - 1].t_ms <= 1000.0 and pts[s].t_ms - pts[s - 1].t_ms < cfg.end_gap_ms:
+        if dist(pts[s - 1].xy, a.xy) > radius:
+            break
+        s -= 1
+    if a.t_ms - pts[s].t_ms < cfg.landed_ms:
+        return None
+    # It fell onto the spot (image y grew over the ~200 ms before), unlike a serve held still in the hand.
+    k = track.index_at_or_after(pts[s].t_ms - 200.0)
+    if k >= s or pts[s].xy[1] - pts[k].xy[1] < 0.25 * scale_at(pts[s].frame, pts[s].xy):
+        return None
+    return s
+
+
 def segment_rallies(
     track: Track, cfg: EventsConfig, scale_at: ScaleFn, video_end_ms: float
 ) -> list[RallySpan]:
@@ -79,6 +107,7 @@ def segment_rallies(
             start += 1
         i = max(i, start)
         end_reason = None
+        resume = 0
         j = i
         while True:
             if j == n - 1:
@@ -91,6 +120,12 @@ def segment_rallies(
             if pts[j + 1].t_ms - pts[j].t_ms >= cfg.end_gap_ms:
                 end_reason = RallyEndReason.SHUTTLE_LOST
                 break
+            landed = _landed_at(track, j, cfg, scale_at)
+            if landed is not None and pts[landed].t_ms - pts[i].t_ms >= 1000.0:
+                end_reason = RallyEndReason.SHUTTLE_STATIC
+                resume = j + 1  # look for the next rally after the jump, not on the floor
+                j = landed
+                break
             if static[j + 1]:
                 # Is this a sustained stop, or a slow moment (e.g. lob apex)?
                 k = j + 1
@@ -101,10 +136,16 @@ def segment_rallies(
                     end_reason = RallyEndReason.SHUTTLE_STATIC
                     j = j + 1  # the first still point is where it landed
                     break
+                landed = _landed_at(track, k - 1, cfg, scale_at)  # the jump right after the stop
+                if landed is not None and pts[landed].t_ms - pts[i].t_ms >= 1000.0:
+                    end_reason = RallyEndReason.SHUTTLE_STATIC
+                    resume = k
+                    j = landed
+                    break
                 j = k - 1  # brief slow-down, keep going
             j += 1
         spans.append(RallySpan(start, j, end_reason))
-        i = j + 1
+        i = max(j + 1, resume)
 
     if cfg.bridge_gap_ms > 0:
         spans = _bridge(spans, pts, cfg.bridge_gap_ms)
