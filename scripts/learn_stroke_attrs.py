@@ -42,6 +42,7 @@ from rallyiq.strokes import shot_features  # noqa: E402
 from rallyiq.strokes.taxonomy import from_shuttleset  # noqa: E402
 
 HEADS = ("hand", "contact", "direction")
+HEAD_FEATURES = {"hand": DT.HAND_HEAD_FEATURES}  # heads not listed use every feature
 CENTRE_MARGIN = 0.08
 
 
@@ -125,13 +126,18 @@ def load(data: Path, set_dir: Path, tol_frames: float) -> list[dict]:
     return out
 
 
+def _cols(head: str) -> list[int]:
+    names = DT.attr_names()
+    return [names.index(n) for n in HEAD_FEATURES.get(head, names)]
+
+
 def fit(rows: list[dict], head: str):
     from sklearn.ensemble import HistGradientBoostingClassifier
 
     rs = [r for r in rows if r[head] is not None]
     return HistGradientBoostingClassifier(max_iter=100, learning_rate=0.08, max_leaf_nodes=15, min_samples_leaf=10,
                                           l2_regularization=1.0, class_weight="balanced", random_state=0).fit(
-        np.vstack([r["x"] for r in rs]), [r[head] for r in rs])
+        np.vstack([r["x"] for r in rs])[:, _cols(head)], [r[head] for r in rs])
 
 
 def score(model, rows: list[dict], head: str) -> dict:
@@ -139,7 +145,7 @@ def score(model, rows: list[dict], head: str) -> dict:
     if not rs:
         return {"n": 0}
     y = np.asarray([r[head] for r in rs], dtype=object)
-    p = model.predict(np.vstack([r["x"] for r in rs]))
+    p = model.predict(np.vstack([r["x"] for r in rs])[:, _cols(head)])
     classes = sorted(set(y))
     recall = {c: float(np.mean(p[y == c] == c)) for c in classes}
     return {"n": len(y), "accuracy": float(np.mean(p == y)), "balanced": float(np.mean(list(recall.values()))),
@@ -172,7 +178,8 @@ def main(argv: list[str] | None = None) -> int:
     models = {h: fit(train, h) for h in HEADS}
     res = {h: score(models[h], test, h) for h in HEADS} if test else {}
     spec = {"kind": "stroke_attrs", "name": DT.ATTRS_NAME, "features": list(DT.attr_names()),
-            "heads": {h: export_hgb(m) for h, m in models.items()}, "pace": pace_reference(train),
+            "heads": {h: export_hgb(m) for h, m in models.items()},
+            "head_features": {h: list(f) for h, f in HEAD_FEATURES.items()}, "pace": pace_reference(train),
             "meta": {"trained_on": {"shots": len(train), "matches": len({r["group"] for r in train})},
                      "test": {h: {k: v for k, v in s.items() if k != "recall"} for h, s in res.items()}}}
     out = a.out.expanduser()

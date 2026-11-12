@@ -49,15 +49,20 @@ from ..contracts import (
 from ..gbt import GBT
 from .features import StrokeFeatures, _kp, _Players, body_span
 
-ATTRS_NAME = "attrs_v1"
+ATTRS_NAME = "attrs_v2"
 BUNDLED = Path(__file__).with_name("models") / "stroke_attrs.json"
 
 FAMILY = {"short_serve": "serve", "long_serve": "serve", "cross_net": "net_shot"}
 SERVES = ("short_serve", "long_serve")
 SUBTYPE = {"cross_net": "cross_court_net_shot", "short_serve": "short_serve", "long_serve": "long_serve"}
 
-HAND_FEATURES = ("right_off", "near_wrist_right", "wrist_gap", "facing", "l_wrist_h", "r_wrist_h")
-DOM_FEATURES = ("dom_off", "near_wrist_dom", "dom_gap", "right_handed")
+HAND_FEATURES = ("right_off", "near_wrist_right", "wrist_gap", "facing", "l_wrist_h", "r_wrist_h", "rw_off", "lw_off")
+DOM_FEATURES = ("dom_off", "near_wrist_dom", "dom_gap", "right_handed", "dom_wrist_off")
+# The hand head reads only where the wrists and the shuttle are relative to the body (plus contact
+# height). The full feature set scores a little higher on broadcast ShuttleSet, but its pose-window
+# and court features depend on the camera and pushed it to "backhand" on low phone/DJI footage.
+HAND_HEAD_FEATURES = ("rw_off", "lw_off", "dom_wrist_off", "right_handed", "facing", "l_wrist_h", "r_wrist_h",
+                      "contact_h", "right_off")
 MIN_KP = 0.3
 OVERHEAD_H = 1.2  # contact_h above which a shot counts as overhead (handedness votes)
 
@@ -81,8 +86,10 @@ INTENT_ZH = {
 
 
 # ------------------------------------------------------------------ features
-def _hand_row(p, contact: tuple[float, float] | None) -> list[float]:
-    """Where the shuttle is relative to the hitter's body, in the hitter's own left/right."""
+def _hand_row(p, contact: tuple[float, float] | None, side: str | None = None) -> list[float]:
+    """Where the shuttle and each wrist are relative to the hitter's body, in the hitter's own
+    left/right. The wrist offsets need no shuttle: a forehand keeps the racket wrist on the racket
+    side of the hips, a backhand brings it across the body."""
     out = dict.fromkeys(HAND_FEATURES, math.nan)
     if p is None:
         return list(out.values())
@@ -98,6 +105,13 @@ def _hand_row(p, contact: tuple[float, float] | None) -> list[float]:
         cx = sum(q[0] for q in hips) / len(hips) if hips else (ls[0] + rs[0]) / 2.0
         if contact:
             out["right_off"] = (contact[0] - cx) * axis / span
+        # players face the net, so their court half fixes their left/right more reliably than
+        # the shoulders do (side-on, the shoulders overlap and their order is noise)
+        sa = {"near": 1.0, "far": -1.0}.get(side or "", axis)
+        if rw:
+            out["rw_off"] = (rw[0] - cx) * sa / span
+        if lw:
+            out["lw_off"] = (lw[0] - cx) * sa / span
     if lw:
         out["l_wrist_h"] = (ankle_y - lw[1]) / span
     if rw:
@@ -126,7 +140,8 @@ def _dom_rows(hand: np.ndarray, contact_h: np.ndarray, hitters: Sequence[str | N
             out[k, 3] = 0.0
             continue
         nw = h[1]
-        out[k] = [h[0] * d, (nw if d > 0 else 1.0 - nw) if not np.isnan(nw) else np.nan, h[2] * d, d]
+        wo = h[HAND_FEATURES.index("rw_off")] if d > 0 else -h[HAND_FEATURES.index("lw_off")]
+        out[k] = [h[0] * d, (nw if d > 0 else 1.0 - nw) if not np.isnan(nw) else np.nan, h[2] * d, d, wo]
     return out
 
 
@@ -171,7 +186,7 @@ def attr_matrix(
                          if (b := se.near(s.t_ms, 120.0)) is not None and b.player_id == s.hitter), None)
         if side is not None:
             pose[k] = PH.window_features(ser[side], s.t_ms, frame_ms)
-        hand[k] = _hand_row(p, tuple(s.shuttle_px) if s.shuttle_px else None)
+        hand[k] = _hand_row(p, tuple(s.shuttle_px) if s.shuttle_px else None, side)
     ci = FEATURES_V2.index("contact_h")
     dom = _dom_rows(hand, np.nan_to_num(X_v2[:, ci], nan=-1.0) if n else np.zeros(0), hitters)
     return np.hstack([X_v2, pose, hand, dom]) if n else np.zeros((0, len(attr_names())))
@@ -187,13 +202,17 @@ class AttrModel:
         if tuple(spec["features"]) != attr_names():
             raise ValueError("stroke attribute model was trained on different features; retrain it")
         self.heads = {k: GBT(v) for k, v in spec["heads"].items()}
+        names = attr_names()
+        cols = spec.get("head_features", {})
+        self.cols = {k: [names.index(n) for n in cols[k]] if k in cols else None for k in self.heads}
         self.pace = {k: tuple(v) for k, v in spec.get("pace", {}).items()}  # family -> (p33, p67) m/s
         self.meta = spec.get("meta", {})
 
     def predict(self, X: np.ndarray) -> dict[str, list[tuple[str, float]]]:
         out = {}
         for k, m in self.heads.items():
-            P = m.predict_proba(X) if len(X) else np.zeros((0, len(m.classes)))
+            cols = self.cols[k]
+            P = m.predict_proba(X if cols is None else X[:, cols]) if len(X) else np.zeros((0, len(m.classes)))
             out[k] = [(str(m.classes[i]), float(row[i])) for row in P for i in [int(np.argmax(row))]]
         return out
 

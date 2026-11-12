@@ -15,7 +15,7 @@ from .geometry import far_court_roi, image_net_y
 from .match_format import FORMATS, FormatConfig, FormatDecision, decide_format
 from .models import PersonDetection, PlayerFrameResult
 from .pose import PoseEstimator
-from .postprocess import drop_offcourt_runs, fill_short_gaps
+from .postprocess import apply_relabels, drop_offcourt_runs, fill_short_gaps
 from .sides import SideConfig, stabilise_sides
 from .tracker import DoublesTracker, PlayerTracker, SinglesTracker, TrackerConfig
 
@@ -175,6 +175,8 @@ def track_players(
         if tracker is not None or len(pending) >= cfg.format_probe_frames:
             flush()
     flush()
+    if tracker is not None:
+        apply_relabels(out, tracker.relabels)
     drop_offcourt_runs(out, cfg.filter.play_area, min_inside_frac=cfg.min_inside_frac)
     out.side_switches = stabilise_sides(out, cfg.sides)
     gap = cfg.max_interp_gap // max(cfg.stride, 1)

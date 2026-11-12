@@ -161,6 +161,8 @@ def _overview(stats: dict, rallies: list[dict]) -> str:
     tile("平均回合时长", "match.rally_dur.mean_s", "s")
     tile("实际对打时间占比", "match.rally_time_pct", "%")
     won = {p["player_id"]: _metrics(p).get(f"{p['player_id']}.win.won") for p in stats.get("players", [])}
+    if stats.get("doubles"):  # partners share the team's record: show A : B
+        won = {team: won.get(pid) for team, pid in (("A 队", "P1"), ("B 队", "P2"))}
     if any(w and w.get("value") is not None for w in won.values()):
         score = " : ".join(_num(w.get("value")) if w else "—" for w in won.values())
         tiles.append(f'<div class="tile"><div class="tile-v">{_e(score)}</div>'
@@ -396,6 +398,81 @@ def _styles(stats: dict) -> str:
                     "规则匹配，不是训练出来的模型：分数表示与每种打法原型的接近程度（0–100）。")
 
 
+DOUBLES_TILES = [("formation.attack_fb_pct", "进攻时前后站位"), ("formation.defense_sbs_pct", "防守时左右站位"),
+                 ("rotation.front_swaps_per_rally", "每回合前场换人"), ("rotation.switches_per_rally", "每回合攻守站位转换"),
+                 ("gap.mean_m", "两人平均间距"), ("gap.close_pct", "两人过近"), ("gap.wide_pct", "两人过远"),
+                 ("cover.ratio_pct", "覆盖双打半场")]
+FINDING_KIND = {"strength": "优势", "weakness": "问题", "pattern": "规律"}
+
+
+def _doubles(stats: dict) -> str:
+    """Per pair: formation split, attack/defense formation, rotation, spacing, roles, who took which shots."""
+    teams = stats.get("doubles") or []
+    if not teams:
+        return ""
+    m = _metrics(stats)
+    for p in stats.get("players", []):
+        m.update(_metrics(p))
+    dists = _dists(stats)
+    cards = []
+    for t in teams:
+        team, (p, q) = t.get("team"), t.get("players", ["", ""])
+        cls = _player_cls(team)
+        note = f'<p class="note">{_e(t["note"])}</p>' if t.get("note") else ""
+        fb, sbs = m.get(f"{team}.dbl.formation.fb_pct", {}), m.get(f"{team}.dbl.formation.sbs_pct", {})
+        split = ""
+        if fb.get("value") is not None and sbs.get("value") is not None:
+            mid = max(0.0, 100 - fb["value"] - sbs["value"])
+            segs = [("前后", fb["value"], "s0"), ("过渡", mid, "s2"), ("左右", sbs["value"], "s1")]
+            bar = "".join(f'<span class="seg {c}" style="width:{v:.1f}%" title="{k} {v:.0f}%">{k if v >= 12 else ""}</span>'
+                          for k, v, c in segs if v > 0)
+            keys = "".join(f'<span class="key"><i class="sw {c}"></i>{k} {v:.0f}%</span>' for k, v, c in segs)
+            split = (f'<h4>站位时间（{fb.get("n", 0)} 个采样）</h4><div class="stack">{bar}</div>'
+                     f'<div class="legend">{keys}</div>')
+        tiles = []
+        for k, label in DOUBLES_TILES:
+            mm = m.get(f"{team}.dbl.{k}")
+            if not mm or mm.get("value") is None:
+                continue
+            tip = f' title="{_e(mm.get("note"))}"' if mm.get("note") else ""
+            tiles.append(f'<div class="tile"{tip}><div class="tile-v">{_e(_num(mm["value"], mm.get("unit")))}</div>'
+                         f'<div class="tile-k">{_e(label)}</div></div>')
+        tile_html = f'<div class="tiles">{"".join(tiles)}</div>' if tiles else ""
+        roles = "".join(
+            f'<li><b>{_e(r.get("player_id"))}</b>：{_e(r.get("label"))}'
+            + (f'<span class="muted">（{_e("，".join(r.get("reasons", [])))}）</span>' if r.get("reasons") else "")
+            + "</li>" for r in t.get("roles", []))
+        role_html = f'<h4>分工</h4><ul class="small">{roles}</ul>' if roles else ""
+        rows = []
+        for key in t.get("division", []):
+            d = dists.get(key)
+            if not d or not d.get("n"):
+                continue
+            a, b, n = d["counts"].get(p, 0), d["counts"].get(q, 0), d["n"]
+            rows.append(f'<tr><th>{_e(d["label"].removeprefix("谁打"))}</th>'
+                        f'<td class="num">{a}<div class="small muted">{100 * a / n:.0f}%</div></td>'
+                        f'<td class="num">{b}<div class="small muted">{100 * b / n:.0f}%</div></td></tr>')
+        div_html = ""
+        if rows:
+            div_html = (f'<h4>谁打什么球</h4><div class="table-wrap"><table><thead><tr><th>球</th>'
+                        f'<th class="num">{_e(p)}</th><th class="num">{_e(q)}</th></tr></thead>'
+                        f'<tbody>{"".join(rows)}</tbody></table></div>')
+        fl = []
+        for f in t.get("findings", []):
+            kind = f.get("kind")
+            adv = f'<p><b>建议：</b>{_e(f["advice"])}</p>' if f.get("advice") else ""
+            fl.append(f'<li class="insight {_e(kind)}"><span class="kind">{_e(FINDING_KIND.get(kind, kind))}</span>'
+                      f'<div><b>{_e(f.get("title"))}</b> {_badge(None, f.get("confidence"))}<p>{_e(f.get("detail"))}</p>'
+                      f'{adv}</div></li>')
+        find_html = f'<h4>观察与建议</h4><ul class="insights">{"".join(fl)}</ul>' if fl else ""
+        cards.append(f'<div class="card"><h3><span class="who {cls}">{_e(team)} 队</span> {_e(p)} + {_e(q)} '
+                     f'{_badge(t.get("status"), t.get("confidence"))}</h3>{note}{split}{tile_html}{role_html}'
+                     f'{div_html}{find_html}</div>')
+    return _section("doubles", "双打配合", f'<div class="grid2">{"".join(cards)}</div>',
+                    "按两人离底线的距离差判断：相差 ≥ 1.5 米为前后站位（进攻阵型），< 1 米为左右站位（防守阵型）；"
+                    "进攻 / 防守按上一拍推断（对手挑球后本方进攻，本方挑球后本方防守）。")
+
+
 def _footwork(stats: dict) -> str:
     players = stats.get("players", [])
     per = {p["player_id"]: {k.split(".footwork.", 1)[1]: m for k, m in _metrics(p).items() if ".footwork." in k}
@@ -621,6 +698,7 @@ def render_html(report: dict | Any, events: dict | Any | None = None, players: d
         _rallies(stats, rallies, shots_by_id),
         _shot_types(stats, shots),
         _styles(stats),
+        _doubles(stats),
         _footwork(stats),
         _heatmaps(players, shots, spans),
         _shot_advice(coach, stats),
@@ -636,7 +714,7 @@ def render_html(report: dict | Any, events: dict | Any | None = None, players: d
 
 def _nav() -> str:
     links = [("overview", "概览"), ("coach", "教练点评"), ("score", "比分"), ("rallies", "回合"), ("shots", "击球"), ("style", "风格"),
-             ("footwork", "脚步"), ("heatmap", "热区"), ("moments", "逐拍"), ("details", "数据")]
+             ("doubles", "双打"), ("footwork", "脚步"), ("heatmap", "热区"), ("moments", "逐拍"), ("details", "数据")]
     return '<nav>' + "".join(f'<a href="#{a}">{b}</a>' for a, b in links) + "</nav>"
 
 

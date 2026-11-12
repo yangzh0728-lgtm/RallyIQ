@@ -106,3 +106,38 @@ def test_classify_attaches_detail_and_retype_keeps_measured_layers():
     assert r.family == "smash" and r.hand == d.hand and r.contact == d.contact and r.pace is None
     assert r.role.value == "attacking" and r.description_zh.startswith("反手杀球")
     assert DT.retype(d, None) is None and DT.retype(None, "smash") is None
+
+
+def _pose(rw_x: float, side: str | None, shoulders_flipped: bool = False):
+    from types import SimpleNamespace
+
+    kp = [[0.0, 0.0, 0.0] for _ in range(17)]
+    kp[0] = [100.0, 0.0, 1.0]                                   # nose
+    ls, rs = (110.0, 90.0) if shoulders_flipped else (90.0, 110.0)
+    kp[5], kp[6] = [ls, 20.0, 1.0], [rs, 20.0, 1.0]             # shoulders
+    kp[11], kp[12] = [95.0, 55.0, 1.0], [105.0, 55.0, 1.0]      # hips, centre x = 100
+    kp[9], kp[10] = [80.0, 40.0, 1.0], [rw_x, 40.0, 1.0]        # wrists
+    kp[15], kp[16] = [95.0, 100.0, 1.0], [105.0, 100.0, 1.0]    # ankles
+    return SimpleNamespace(keypoints=kp, bbox=[80.0, 0.0, 120.0, 100.0], side=side)
+
+
+def test_wrist_offsets_follow_the_court_side():
+    ri = DT.HAND_FEATURES.index("rw_off")
+    near_fh = DT._hand_row(_pose(130.0, "near"), None, "near")
+    assert near_fh[ri] > 0.25                                    # racket wrist out on the right: forehand side
+    assert DT._hand_row(_pose(85.0, "near"), None, "near")[ri] < 0  # wrist across the body: backhand side
+    # side-on, the shoulder order is noise: the court side decides the player's left/right
+    assert DT._hand_row(_pose(130.0, "near", shoulders_flipped=True), None, "near")[ri] > 0.25
+    # facing the camera from the far half, image-left is the player's right
+    assert DT._hand_row(_pose(70.0, "far"), None, "far")[ri] > 0.25
+    # unknown side: fall back to the shoulders
+    assert DT._hand_row(_pose(130.0, None), None, None)[ri] > 0.25
+
+
+def test_hand_head_reads_its_own_columns():
+    m = DT.get_model()
+    names = DT.attr_names()
+    assert [names[i] for i in m.cols["hand"]] == list(DT.HAND_HEAD_FEATURES)
+    assert m.cols["contact"] is None and m.cols["direction"] is None
+    dom = DT._dom_rows(np.array([[0.3, 1.0, 0.2, 0.1, 0.9, 1.6, 0.4, -0.2]]), np.array([1.5]), ["P1"])
+    assert dom[0, DT.DOM_FEATURES.index("dom_wrist_off")] == 0.4  # right-handed: the right wrist

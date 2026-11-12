@@ -10,6 +10,7 @@ import numpy as np
 
 from .geometry import PlayArea, court_side
 from .models import PlayerFrameResult, PlayerState
+from .tracker import TEAM_OF
 
 
 def _lerp(a: np.ndarray | None, b: np.ndarray | None, t: float) -> np.ndarray | None:
@@ -69,6 +70,10 @@ def drop_offcourt_runs(
     min_frames: int = 3,
     min_outside_frac: float = 0.6,
     min_median_outside_m: float = 0.5,
+    still_min_frames: int = 90,
+    still_outside_frac: float = 0.8,
+    still_outside_m: float = 0.3,
+    still_extent_m: float = 1.0,
     min_inside_frac: float = 0.0,
     inside_margin_m: float = 0.3,
 ) -> int:
@@ -78,33 +83,79 @@ def drop_offcourt_runs(
     Per-frame filtering is soft near the margin so a lunge past the run-off is
     not lost. A person on the next court can sit in that soft band for a long
     time though, and over a whole run the difference is clear: our players
-    spend nearly all their time inside. Returns the number of runs dropped.
+    spend nearly all their time inside.
 
-    ``min_inside_frac`` (0 = off): also drop runs inside the court lines (plus ``inside_margin_m``) for less
-    than this share of their frames. People standing at the sideline or behind a post (spectators, a
-    coach, the next court's players waiting) stay within the run-off margin, so the rule above keeps them;
-    our players are inside the lines most of the time.
+    A bystander right next to the court (an umpire or spectator by the net post)
+    sits inside the run-off margins, so a second test drops runs that stay still
+    (``still_extent_m`` across, 5th-95th percentile) outside the court lines
+    themselves for at least ``still_min_frames`` observations.
+
+    ``min_inside_frac`` (0 = off): also drop runs inside the court lines (plus
+    ``inside_margin_m``) for less than this share of their frames. People who move
+    about at the sideline or behind a post (spectators, a coach, the next court's
+    players waiting) stay within the run-off margin and are not still, so the rules
+    above keep them; our players are inside the lines most of the time.
+    Returns the number of runs dropped.
     """
     area = play_area or PlayArea()
-    lines = PlayArea(margin_side=inside_margin_m, margin_end=inside_margin_m)
-    runs: dict[tuple[str, int], list[float]] = {}
-    inside: dict[tuple[str, int], list[bool]] = {}
+    lines = PlayArea(margin_side=0.0, margin_end=0.0)
+    inside_lines = PlayArea(margin_side=inside_margin_m, margin_end=inside_margin_m)
+    runs: dict[tuple[str, int], list[np.ndarray]] = {}
     for f in frames:
         for p in f.players:
             if p.player_id is None or p.interpolated or p.foot_court is None:
                 continue
-            runs.setdefault((p.player_id, p.track_id), []).append(area.distance_outside(p.foot_court))
-            inside.setdefault((p.player_id, p.track_id), []).append(lines.distance_outside(p.foot_court) == 0.0)
+            runs.setdefault((p.player_id, p.track_id), []).append(np.asarray(p.foot_court, dtype=np.float64))
     bad = set()
-    for key, d in runs.items():
-        if len(d) < min_frames:
+    for key, pts in runs.items():
+        if len(pts) < min_frames:
             continue
-        arr = np.asarray(d)
+        arr = np.asarray([area.distance_outside(xy) for xy in pts])
         if (arr > 0).mean() >= min_outside_frac and float(np.median(arr)) >= min_median_outside_m:
             bad.add(key)
-        elif min_inside_frac > 0 and float(np.mean(inside[key])) < min_inside_frac:
+            continue
+        if min_inside_frac > 0:
+            inside = np.mean([inside_lines.distance_outside(xy) == 0.0 for xy in pts])
+            if float(inside) < min_inside_frac:
+                bad.add(key)
+                continue
+        if len(pts) < still_min_frames:
+            continue
+        xy = np.asarray(pts)
+        out = np.asarray([lines.distance_outside(q) for q in xy])
+        extent = np.percentile(xy, 95, axis=0) - np.percentile(xy, 5, axis=0)
+        if (out >= still_outside_m).mean() >= still_outside_frac and np.all(extent < still_extent_m):
             bad.add(key)
     if bad:
         for f in frames:
             f.players = [p for p in f.players if (p.player_id, p.track_id) not in bad]
     return len(bad)
+
+
+def apply_relabels(frames: list[PlayerFrameResult], relabels: dict[int, str]) -> int:
+    """Rename whole tracks the tracker moved to another slot (``PlayerTracker.relabels``).
+
+    Frames emitted before the move carry the old id; afterwards the track's
+    earlier frames follow it. Where that leaves two people with one id in a
+    frame, the moved track wins (the slot's earlier holder was a bystander or
+    was lost). Returns the number of observations renamed.
+    """
+    if not relabels:
+        return 0
+    n = 0
+    for f in frames:
+        for p in f.players:
+            new = relabels.get(p.track_id)
+            if new is not None and p.player_id != new:
+                p.player_id = new
+                p.team = TEAM_OF.get(new, p.team)
+                n += 1
+        ids = [p.player_id for p in f.players]
+        if len(ids) != len(set(ids)):
+            keep: dict[str, PlayerState] = {}
+            for p in f.players:
+                cur = keep.get(p.player_id)
+                if cur is None or (p.track_id in relabels and cur.track_id not in relabels):
+                    keep[p.player_id] = p
+            f.players = list(keep.values())
+    return n

@@ -74,8 +74,9 @@ class OfflineProvider:
                                             "跑动多可能意味着被对手调动，结合胜负数据判断是否处于被动。",
                                      evidence=[hi.key, lo.key], confidence=_weakest(hi.confidence, lo.confidence)))
 
+        doubles = bool(stats.doubles)  # positions and coverage are judged per pair (report.doubles), not per player
         for pid in ("P1", "P2"):
-            depth = dist(f"{pid}.pos.depth_zones")
+            depth = None if doubles else dist(f"{pid}.pos.depth_zones")
             if depth is not None:
                 zone, cnt = max(depth.counts.items(), key=lambda kv: kv[1])
                 share = 100 * cnt / depth.n
@@ -88,7 +89,7 @@ class OfflineProvider:
                                              why=f"{pid} 回合中大部分时间位于后场，前场覆盖可能不足。",
                                              evidence=[depth.key], retest_metric=f"{pid}.pos.depth_mean_m"))
 
-            cover = m(f"{pid}.cover.ratio_pct")
+            cover = None if doubles else m(f"{pid}.cover.ratio_pct")
             if cover is not None and cover.value < 45:
                 insights.append(dict(kind="weakness", player_id=pid, title=f"{pid} 场地覆盖偏窄",
                                      detail=f"{pid} 只到达了单打半场约 {_fmt(cover.value)}% 的区域{_hedge(cover)}。",
@@ -117,6 +118,9 @@ class OfflineProvider:
                                      evidence=[lost_own.key], confidence=lost_own.confidence))
 
         insights += _style_insights(stats, idx)
+        dbl_insights, dbl_training = _doubles_insights(stats, idx)
+        insights += dbl_insights
+        training = dbl_training + training
 
         if not stats.shot_types_available:
             insights.append(dict(kind="data_quality", player_id=None, title="暂不评价技术动作",
@@ -161,6 +165,23 @@ def _knowledge_training(knowledge) -> list[dict]:
             sources=[{"note_id": i, "drill": d["name"] if d and i == ids[0] else None} for i in ids[:2]],
         ))
     return out
+
+
+def _doubles_insights(stats: MatchStats, idx: dict) -> tuple[list[dict], list[dict]]:
+    """Doubles teamwork findings (``report.doubles``) as insights; weaknesses with advice become drills."""
+    insights, training = [], []
+    for t in stats.doubles:
+        for f in t.findings:
+            ev = [k for k in f.evidence if k in idx]
+            if not ev:
+                continue
+            tip = f"建议：{f.advice}" if f.advice else ""
+            insights.append(dict(kind=f.kind, player_id=None, title=f"{t.team}队 {f.title}",
+                                 detail=f"{f.detail}{tip}", evidence=ev, confidence=f.confidence))
+            if f.kind == "weakness" and f.advice and f.confidence != "low" and len(training) < 2:
+                training.append(dict(player_id=None, drill=f"{t.team}队配合：{f.advice}",
+                                     why=f"{f.title}：{f.detail}", evidence=ev, retest_metric=ev[0]))
+    return insights, training
 
 
 def _style_insights(stats: MatchStats, idx: dict) -> list[dict]:
