@@ -1,6 +1,6 @@
-"""Stroke-type accuracy against hand labels (``evaluation/labels/dji0009_stroke_types.json``).
+"""Stroke-type accuracy against hand labels (``evaluation/stroke_labels/dji0009_stroke_types.json``).
 
-    python scripts/eval_stroke_types.py events.json [strokes.json] [--labels evaluation/labels/....json]
+    python scripts/eval_stroke_types.py events.json [strokes.json] [--labels evaluation/stroke_labels/....json]
 
 ``events.json`` gives the hits (time, hitter); types come from ``strokes.json`` when given, else from
 ``shot_type`` in the events. A label matches the nearest predicted hit within 0.3 s. Prints accuracy
@@ -14,7 +14,7 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
-LABELS = Path(__file__).resolve().parents[1] / "evaluation" / "labels" / "dji0009_stroke_types.json"
+LABELS = Path(__file__).resolve().parents[1] / "evaluation" / "stroke_labels" / "dji0009_stroke_types.json"
 
 
 def main() -> None:
