@@ -86,7 +86,7 @@ def load_rallies(set_dir: Path) -> list[dict]:
     return out
 
 
-def examples(rallies, rng=None, pos_noise=0.0, flip=0.0):
+def examples(rallies, rng=None, pos_noise=0.0, flip=0.0, drop_loc=0.0):
     fl = defaultdict(list)
     for r in rallies:
         s = r["strokes"]
@@ -100,6 +100,8 @@ def examples(rallies, rng=None, pos_noise=0.0, flip=0.0):
             loc = st["loc"]
             if loc is not None and rng is not None and pos_noise:
                 loc = (loc[0] + rng.normal(0, pos_noise), loc[1] + rng.normal(0, pos_noise))
+            if loc is not None and rng is not None and rng.random() < drop_loc:
+                loc = None  # our far player often has no court position at the hit
             locs.append(loc)
             h = np.nan if st["high"] is None else st["high"]
             if rng is not None and not np.isnan(h):
@@ -134,6 +136,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path)
     ap.add_argument("--pos-noise", type=float, default=0.4)
     ap.add_argument("--flip", type=float, default=0.12)
+    ap.add_argument("--drop-loc", type=float, default=0.0, help="share of hitter positions dropped in training (0.15 and 0.3 were worse on DJI_0009)")
     ap.add_argument("--iters", type=int, default=150)
     ap.add_argument("--leaves", type=int, default=15)
     ap.add_argument("--seq-weight", type=float, default=1.0)
@@ -144,7 +147,7 @@ def main(argv=None) -> int:
     from rallyiq.gbt import export_hgb
 
     rallies = load_rallies(a.set_dir)
-    X, y, g, ridx = examples(rallies, np.random.default_rng(0), a.pos_noise, a.flip)
+    X, y, g, ridx = examples(rallies, np.random.default_rng(0), a.pos_noise, a.flip, a.drop_loc)
     classes = sorted(set(y.tolist()))  # scikit-learn orders classes this way
     print(f"{len(rallies)} rallies, {len(y)} strokes, {len(set(g))} matches")
 
@@ -177,7 +180,7 @@ def main(argv=None) -> int:
                 "seq_weight": a.seq_weight,
                 "meta": {"source": "ShuttleSet (CoachAI-Projects, MIT)", "strokes": len(y), "matches": len(set(g)),
                          "cv_acc": round(float(acc), 3), "cv_acc_seq": round(float(acc_seq), 3),
-                         "pos_noise_m": a.pos_noise, "contact_flip": a.flip, "counts": dict(Counter(y.tolist()))}}
+                         "pos_noise_m": a.pos_noise, "drop_loc": a.drop_loc, "contact_flip": a.flip, "counts": dict(Counter(y.tolist()))}}
         a.out.write_text(json.dumps(spec, separators=(",", ":")), encoding="utf-8")
         print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)")
     return 0

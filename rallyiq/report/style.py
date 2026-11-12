@@ -265,10 +265,16 @@ def contact_of(s: ShotEvent) -> str | None:
     return d.contact.value if d is not None and d.contact is not None else None
 
 
+def _robust_cv(values: list[float]) -> float:
+    q1, med, q3 = np.percentile(values, [25, 50, 75])
+    return 100 * float((q3 - q1) / 1.349 / med) if med > 0 else 0.0
+
+
 def type_confirmed(s: ShotEvent) -> bool:
-    """The shot type was set by a person, or the classifier was confident enough to mark it ok
-    (a type with no stroke record at all came from outside the classifier and is taken as given)."""
-    return s.stroke is None or s.stroke.source == "human" or s.stroke.status == "ok"
+    """The shot type was set or checked by a person (a type with no stroke record at all came from outside
+    the classifier and is taken as given). The classifier's own "ok" does not count: on DJI_0009 only 21 of
+    29 "ok" types were right."""
+    return s.stroke is None or s.stroke.source == "human"
 
 
 def is_attack(shot_type: str | None, phase: str) -> bool:
@@ -430,7 +436,10 @@ def features(rallies: list[list[_Ctx]], subject: str, doubles: bool = False) -> 
     # tempo
     flights = [c.flight for c in mine if c.flight is not None]
     f["flight_s"] = (float(median(flights)) if flights else None, len(flights))
-    f["tempo_cv"] = (100 * float(np.std(flights) / np.mean(flights)) if len(flights) >= 2 else None, len(flights))
+    # Robust spread (interquartile range / 1.349, i.e. the standard deviation for normal data, over the median):
+    # one spurious or missed hit halves or doubles a flight, and the plain std / mean let a few of those
+    # make a player look like a tempo changer (DJI_0009 far player: 64 on auto hits, 41 on true hits).
+    f["tempo_cv"] = (_robust_cv(flights) if len(flights) >= 4 else None, len(flights))
     acc_hits, acc_n = 0, 0
     for r in rallies:
         gaps: list[float] = []
