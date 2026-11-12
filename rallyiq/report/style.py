@@ -52,7 +52,7 @@ from ..contracts import (
     team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
-from .moments import FRONT_M, REAR_M, ZH, _Positions, own_half
+from .moments import FRONT_M, REAR_M, ZH, _Positions, own_half, timestamp
 
 SERVES = {"short_serve", "long_serve"}
 OPP_ATTACK = {"smash", "net_kill"}
@@ -75,7 +75,9 @@ PHASE_ADVICE = {
 }
 
 MIN_SHOTS = 20  # classified non-serve shots below which no style is given
-MIN_BASIS = 5  # a feature needs at least this many samples to count
+MIN_BASIS = 8  # a feature needs at least this many samples to count toward a style
+REASON_MIN_N = 10  # ...and this many to be quoted as a reason for the verdict
+MIN_CONFIRMED_TYPES = 0.5  # share of a player's shot types that must be confirmed for more than "low" confidence
 SHRINK_K = 10  # small samples are pulled toward "typical": match = 0.5 + (m - 0.5) * n / (n + SHRINK_K)
 MIN_ALTERNATION = 0.8  # singles: share of consecutive hits by different players below which hitters look wrong
 UNUSABLE_ALTERNATION = 0.6  # below this the hitters are close to random: no style verdict at all
@@ -246,13 +248,27 @@ class _Ctx:
     mate_pos: tuple[float, float] | None = None  # doubles: partner at this hit
 
 
-def phase_of(incoming: str | None, incoming_phase: str | None) -> str:
-    """Hitter's state from the ball they receive."""
+def phase_of(incoming: str | None, incoming_phase: str | None, own_contact: str | None = None) -> str:
+    """Hitter's state from the ball they receive. ``own_contact`` ("high" / "low", from the stroke
+    detail) is where the hitter actually met it: a lift that is only reached late and below the net
+    is not an attacking chance (amateurs often take a lift low at the back), so it stays neutral."""
     if incoming in OPP_ATTACK:
         return "defense"
     if incoming == "lift" or (incoming == "clear" and incoming_phase == "defense"):
-        return "attack"
+        return "neutral" if own_contact == "low" else "attack"
     return "neutral"
+
+
+def contact_of(s: ShotEvent) -> str | None:
+    """"high" / "low" contact from the stroke detail (model or human), None when unknown."""
+    d = s.stroke.detail if s.stroke is not None else None
+    return d.contact.value if d is not None and d.contact is not None else None
+
+
+def type_confirmed(s: ShotEvent) -> bool:
+    """The shot type was set by a person, or the classifier was confident enough to mark it ok
+    (a type with no stroke record at all came from outside the classifier and is taken as given)."""
+    return s.stroke is None or s.stroke.source == "human" or s.stroke.status == "ok"
 
 
 def is_attack(shot_type: str | None, phase: str) -> bool:
@@ -267,7 +283,7 @@ def shot_phases(events: EventsResult) -> dict[str, str]:
         seq = sorted((shots_by_id[i] for i in rally.shot_ids if i in shots_by_id), key=lambda s: s.frame)
         prev, prev_phase = None, None
         for s in seq:
-            ph = phase_of(prev.shot_type if prev is not None else None, prev_phase)
+            ph = phase_of(prev.shot_type if prev is not None else None, prev_phase, contact_of(s))
             if s.hitter is not None:
                 out[s.shot_id] = ph
             prev, prev_phase = s, ph
@@ -288,7 +304,7 @@ def _contexts(events: EventsResult, players: PlayerTracks | None, fps: float) ->
         prev_phase = None
         for i, s in enumerate(seq):
             prev = seq[i - 1] if i > 0 else None
-            phase = phase_of(prev.shot_type if prev is not None else None, prev_phase)
+            phase = phase_of(prev.shot_type if prev is not None else None, prev_phase, contact_of(s))
             prev_phase = phase
             side = side_of(s.hitter)
             if side is None:
@@ -458,6 +474,24 @@ def features(rallies: list[list[_Ctx]], subject: str, doubles: bool = False) -> 
     return f
 
 
+# Shots behind a share feature, so a reason can point at moments to re-watch.
+_EXAMPLE_TYPES = {"smash_pct": {"smash"}, "net_pct": NET, "clear_pct": {"clear"}, "drop_pct": {"drop"},
+                  "clear_drop_pct": {"clear", "drop"}, "flat_pct": FLAT, "lift_block_pct": {"lift", "block"}}
+
+
+def feature_examples(rallies: list[list[_Ctx]], subject: str, limit: int = 3) -> dict[str, list[int]]:
+    """feature -> times (ms) of a few shots that make it up (share features and attack / defense shares)."""
+    own = [c for r in rallies for c in r if c.side == subject and c.shot.shot_type
+           and c.shot.shot_type not in SERVES]
+    out: dict[str, list[int]] = {}
+    for name, kinds in _EXAMPLE_TYPES.items():
+        out[name] = [c.shot.t_ms for c in own if c.shot.shot_type in kinds][:limit]
+    out["attack_pct"] = [c.shot.t_ms for c in own if c.attack][:limit]
+    out["defense_pct"] = [c.shot.t_ms for c in own if c.phase == "defense"][:limit]
+    out["convert_pct"] = [c.shot.t_ms for c in own if c.phase == "attack" and not c.attack][:limit]
+    return {k: v for k, v in out.items() if v}
+
+
 def _doubles_features(own: list[_Ctx]) -> dict[str, tuple[float | None, int]]:
     form = []  # (front_back, side_by_side, phase, front player)
     for c in own:
@@ -592,8 +626,10 @@ def _fmt(v: float, unit: str | None) -> str:
 
 
 def match_prototype(p: Prototype, values: dict[str, tuple[float | None, int, str, str | None]],
-                    doubles: bool = False) -> StyleScore:
-    """``values``: feature -> (value, n, label, unit). Weighted mean of how typical each feature is."""
+                    doubles: bool = False, examples: dict[str, list[int]] | None = None) -> StyleScore:
+    """``values``: feature -> (value, n, label, unit). Weighted mean of how typical each feature is.
+    Reasons quote only features measured on at least ``REASON_MIN_N`` samples, with the sample size
+    and (``examples``: feature -> shot times) a few moments to re-watch."""
     total_w = sum(abs(w) for w in p.weights.values())
     got, wsum, parts = 0.0, 0.0, []
     # Unmeasurable features count as "typical" (0.5): a prototype is not matched on its easy features alone.
@@ -607,8 +643,10 @@ def match_prototype(p: Prototype, values: dict[str, tuple[float | None, int, str
         m = 0.5 + (m - 0.5) * n / (n + SHRINK_K)  # a handful of samples cannot make a style
         got += abs(w) * m
         wsum += abs(w)
-        if m >= 0.6:
-            parts.append((abs(w) * m, f"{label} {_fmt(v, unit)}（{'偏高' if w > 0 else '偏低'}）"))
+        if m >= 0.6 and n >= REASON_MIN_N:
+            ex = (examples or {}).get(name) if w > 0 else None
+            see = f"；回看 {'、'.join(timestamp(t) for t in ex)}" if ex else ""
+            parts.append((abs(w) * m, f"{label} {_fmt(v, unit)}（{'偏高' if w > 0 else '偏低'}，{n} 个样本{see}）"))
     coverage = wsum / total_w if total_w else 0.0
     score = round(100 * (got + 0.5 * (total_w - wsum)) / total_w, 1) if wsum and coverage >= MIN_COVERAGE else None
     parts.sort(key=lambda t: -t[0])
@@ -744,7 +782,8 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
             m = shared.get(tmpl.format(s=s))
             if m is not None and m.value is not None and m.status != "undeterminable":
                 values[name] = (m.value, m.n, m.label, m.unit)
-        scores = sorted((match_prototype(p, values, doubles) for p in protos),
+        examples = feature_examples(rallies, s)
+        scores = sorted((match_prototype(p, values, doubles, examples) for p in protos),
                         key=lambda x: -(x.score if x.score is not None else -1))
         primary, second, label = _verdict(scores, own_n)
         status, conf = _conf(own_n, 80, MIN_SHOTS)
@@ -754,6 +793,14 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
             status, conf = "undeterminable", "low"
             primary, second, label = None, None, "证据不足（击球者识别不可靠）"
         elif bad_hitters:  # hits are misattributed: every per-player feature is suspect
+            status, conf = "needs_review", "low"
+        own_shots = [c.shot for r in rallies for c in r if c.side == s and c.shot.shot_type
+                     and c.shot.shot_type not in SERVES]
+        confirmed = sum(type_confirmed(x) for x in own_shots)
+        unconfirmed_types = bool(own_shots) and confirmed / len(own_shots) < MIN_CONFIRMED_TYPES
+        if unconfirmed_types and status != "undeterminable":
+            # The style is built on shot types; on amateur footage the classifier gets about half of them
+            # wrong (DJI_0009: 26 of 58 hand-labelled shots), so unconfirmed types cannot carry more.
             status, conf = "needs_review", "low"
         if primary is not None:
             ms.append(_metric(f"{s}.style.match_score", f"与{primary.name}原型的吻合度", primary.score, None,
@@ -769,6 +816,7 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
         evidence += [SHARED[f][0].format(s=s) for f in sorted(used_feats & set(SHARED)) if f in values]
         pre[s] = dict(feats=feats, phases=phases, used=used, scores=scores, primary=primary, second=second,
                       label=label, status=status, conf=conf, n=own_n, evidence=evidence,
+                      types=(confirmed, len(own_shots)) if unconfirmed_types else None,
                       habits=habits(rallies, s))
 
     styles = []
@@ -782,14 +830,19 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
         advice = _advice(s, "doubles" if doubles else "singles", p["primary"], p["feats"], p["phases"], p["used"],
                          opp_style if o["primary"] is not None else None, o["habits"], by_code) \
             if p["status"] != "undeterminable" else []
-        note = None
+        notes = []
         if p["status"] == "undeterminable" and not no_hitters:
-            note = f"只有 {p['n']} 拍已分类的非发球击球，至少需要 {MIN_SHOTS} 拍才判断打法"
+            notes.append(f"只有 {p['n']} 拍已分类的非发球击球，至少需要 {MIN_SHOTS} 拍才判断打法")
         elif bad_hitters:
-            note = (f"相邻两拍由不同球员击出的只有 {100 * alternation[0]:.0f}%（单打应接近 100%），"
-                    "击球者识别可能有误，打法判断只作参考；在工作台修正击球者后会更准")
+            notes.append(f"相邻两拍由不同球员击出的只有 {100 * alternation[0]:.0f}%（单打应接近 100%），"
+                         "击球者识别可能有误，打法判断只作参考；在工作台修正击球者后会更准")
         elif not metric_ok:
-            note = "球场标定未确认，与站位相关的特征（调动距离、直线/斜线、四角）只作参考"
+            notes.append("球场标定未确认，与站位相关的特征（调动距离、直线/斜线、四角）只作参考")
+        if p["types"] is not None and p["status"] != "undeterminable":
+            done, total = p["types"]
+            notes.append(f"打法主要看击球类型，但 {total} 拍里只有 {done} 拍的类型经过确认；自动识别的类型在业余比赛视频上"
+                         "大约一半会错（杀球、高远球常被认成吊球、挑球），所以只给“低”可信度，在工作台改正击球类型后会更准")
+        note = "；".join(notes) or None
         styles.append(PlayerStyle(
             subject=s, players=(["P1", "P3"] if s == "A" else ["P2", "P4"]) if doubles else [s],
             kind="doubles" if doubles else "singles", primary=p["primary"], secondary=p["second"],
