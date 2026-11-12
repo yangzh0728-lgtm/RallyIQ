@@ -68,6 +68,8 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; }
   /* Reserve the scrollbar's space: otherwise a panel whose content grows past the height during playback
      gains a scrollbar, narrows, re-wraps, shrinks, loses it again, and the whole workbench shakes. */
   scrollbar-gutter: stable; }
+/* Same height inside and outside a rally, so the panels below do not jump at every rally boundary. */
+.rally-panel { min-height: 151px; }
 .wb-left { border-right: 1px solid var(--line); }
 .wb-right { border-left: 1px solid var(--line); }
 .wb-center { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 10px; gap: 8px; }
