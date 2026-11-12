@@ -64,7 +64,10 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; }
 
 /* Workbench: three columns + bottom timeline */
 .wb { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; grid-template-rows: minmax(0, 1fr) auto; height: calc(100vh - 45px); }
-.wb-left, .wb-right { overflow-y: auto; background: var(--panel); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; }
+.wb-left, .wb-right { overflow-y: auto; background: var(--panel); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; 
+  /* Reserve the scrollbar's space: otherwise a panel whose content grows past the height during playback
+     gains a scrollbar, narrows, re-wraps, shrinks, loses it again, and the whole workbench shakes. */
+  scrollbar-gutter: stable; }
 .wb-left { border-right: 1px solid var(--line); }
 .wb-right { border-left: 1px solid var(--line); }
 .wb-center { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 10px; gap: 8px; }
