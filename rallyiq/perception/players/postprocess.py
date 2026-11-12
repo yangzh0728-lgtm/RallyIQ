@@ -69,6 +69,8 @@ def drop_offcourt_runs(
     min_frames: int = 3,
     min_outside_frac: float = 0.6,
     min_median_outside_m: float = 0.5,
+    min_inside_frac: float = 0.0,
+    inside_margin_m: float = 0.3,
 ) -> int:
     """Track-level court lock: remove whole runs (same ``player_id`` and
     ``track_id``) that mostly stand outside the target play area.
@@ -77,20 +79,30 @@ def drop_offcourt_runs(
     not lost. A person on the next court can sit in that soft band for a long
     time though, and over a whole run the difference is clear: our players
     spend nearly all their time inside. Returns the number of runs dropped.
+
+    ``min_inside_frac`` (0 = off): also drop runs inside the court lines (plus ``inside_margin_m``) for less
+    than this share of their frames. People standing at the sideline or behind a post (spectators, a
+    coach, the next court's players waiting) stay within the run-off margin, so the rule above keeps them;
+    our players are inside the lines most of the time.
     """
     area = play_area or PlayArea()
+    lines = PlayArea(margin_side=inside_margin_m, margin_end=inside_margin_m)
     runs: dict[tuple[str, int], list[float]] = {}
+    inside: dict[tuple[str, int], list[bool]] = {}
     for f in frames:
         for p in f.players:
             if p.player_id is None or p.interpolated or p.foot_court is None:
                 continue
             runs.setdefault((p.player_id, p.track_id), []).append(area.distance_outside(p.foot_court))
+            inside.setdefault((p.player_id, p.track_id), []).append(lines.distance_outside(p.foot_court) == 0.0)
     bad = set()
     for key, d in runs.items():
         if len(d) < min_frames:
             continue
         arr = np.asarray(d)
         if (arr > 0).mean() >= min_outside_frac and float(np.median(arr)) >= min_median_outside_m:
+            bad.add(key)
+        elif min_inside_frac > 0 and float(np.mean(inside[key])) < min_inside_frac:
             bad.add(key)
     if bad:
         for f in frames:
