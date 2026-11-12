@@ -127,6 +127,23 @@ class EventsConfig:
     # ShuttleSet test clips rule hit F1 64.5 -> 63.0%, and no DJI_0009 non-hit sits on a filled-in point.
     require_observed_contact: bool = False
 
+    # --- singles: hitter side decoded over the rally (sides.py) ---
+    # Confident candidates (>= side_decode_min_conf) get near/far from a two-state Viterbi: proximity votes
+    # gain * (far score - near score), consecutive hits prefer different sides (same_p, or same_p_long after
+    # a gap over side_decode_long_gap_ms). The far player on a rear camera often has no pose at contact and
+    # loses the proximity contest; DJI_0009 had 13 of 26 far hits given to the near player.
+    # Measured (off -> on): DJI_0009 hits found 31 -> 36 of 58, right side 28 -> 34 (false hits 35 -> 45,
+    # mostly dead time); own footage (6 videos, 153 sure hits) found 86 -> 89, false 51 -> 54; ShuttleSet
+    # test clips hit F1 80.2 -> 80.3%, right side 174 -> 177.
+    side_decode: bool = True
+    side_decode_min_conf: float = 0.6
+    side_decode_gain: float = 8.0
+    side_decode_gain_missing: float = 3.0
+    side_decode_same_p: float = 0.08
+    side_decode_same_p_long: float = 0.35
+    side_decode_long_gap_ms: float = 2000.0
+    side_decode_search_frames: int = 60
+
     occlusion_gap_ms: float = 150.0  # no observation this close around a hit -> occluded
     long_exchange_ms: float = 2600.0  # no hit for this long inside a rally -> maybe missed one
     default_player_height_px: float = 200.0
