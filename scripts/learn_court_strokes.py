@@ -23,8 +23,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from rallyiq.strokes import court as CM  # noqa: E402
-from rallyiq.strokes.taxonomy import from_shuttleset  # noqa: E402
+import itertools
+
+from rallyiq.strokes import court as CM
+from rallyiq.strokes.taxonomy import from_shuttleset
 
 UNIT_M = 13.4 / 660  # ShuttleSet homographies map the doubles court to x 25..325, y 150..810
 
@@ -36,6 +38,11 @@ def _f(v):
         return None
 
 
+def _rows(path: Path) -> list[dict]:
+    with open(path, encoding="utf-8") as fh:
+        return list(csv.DictReader(fh))
+
+
 def _secs(t: str) -> int:
     h, m, s = (int(x) for x in t.split(":"))
     return h * 3600 + m * 60 + s
@@ -43,9 +50,9 @@ def _secs(t: str) -> int:
 
 def load_rallies(set_dir: Path) -> list[dict]:
     homs = {r["video"]: np.asarray(ast.literal_eval(r["homography_matrix"]), float)
-            for r in csv.DictReader(open(set_dir / "homography.csv", encoding="utf-8"))}
+            for r in _rows(set_dir / "homography.csv")}
     out = []
-    for m in csv.DictReader(open(set_dir / "match.csv", encoding="utf-8")):
+    for m in _rows(set_dir / "match.csv"):
         H = homs.get(m["video"])
         if H is None:
             continue
@@ -57,7 +64,7 @@ def load_rallies(set_dir: Path) -> list[dict]:
             return ((p[0] / p[2] - 25) * UNIT_M, (p[1] / p[2] - 150) * UNIT_M)
 
         for sc in sorted((set_dir / m["video"]).glob("set*.csv")):
-            R = [r for r in csv.DictReader(open(sc, encoding="utf-8")) if r.get("rally") and _f(r.get("frame_num"))]
+            R = [r for r in _rows(sc) if r.get("rally") and _f(r.get("frame_num"))]
             est = [_f(r["frame_num"]) / _secs(r["time"]) for r in R if r.get("time") and _secs(r["time"]) > 0]
             if not est:
                 continue
@@ -65,7 +72,7 @@ def load_rallies(set_dir: Path) -> list[dict]:
             by = defaultdict(list)
             for r in R:
                 by[int(float(r["rally"]))].append(r)
-            for rid, rs in by.items():
+            for rs in by.values():
                 rs.sort(key=lambda r: _f(r["frame_num"]))
                 strokes = []
                 for r in rs:
@@ -83,7 +90,7 @@ def examples(rallies, rng=None, pos_noise=0.0, flip=0.0):
     fl = defaultdict(list)
     for r in rallies:
         s = r["strokes"]
-        fl[r["match"]] += [b["t_ms"] - a["t_ms"] for a, b in zip(s, s[1:])]
+        fl[r["match"]] += [b["t_ms"] - a["t_ms"] for a, b in itertools.pairwise(s)]
     med = {k: statistics.median(v) for k, v in fl.items() if v}
     X, y, g, ridx = [], [], [], []
     for i, r in enumerate(rallies):
@@ -115,7 +122,7 @@ def sequence_stats(rallies, classes):
         s = [st["type"] for st in r["strokes"]]
         if s and s[0] in ix:
             S0[ix[s[0]]] += 1
-        for a, b in zip(s, s[1:]):
+        for a, b in itertools.pairwise(s):
             if a in ix and b in ix:
                 A[ix[a], ix[b]] += 1
     return S0 / S0.sum(), A / A.sum(1, keepdims=True)
@@ -168,7 +175,7 @@ def main(argv=None) -> int:
                 "depth_quantiles": [round(float(v), 4) for v in np.quantile(depths[~np.isnan(depths)], np.linspace(0.05, 0.95, 19))],
                 "start": start.round(5).tolist(), "trans": trans.round(5).tolist(), "prior": prior.round(5).tolist(),
                 "seq_weight": a.seq_weight,
-                "meta": {"source": "ShuttleSet (CoachAI-Projects, MIT)", "strokes": int(len(y)), "matches": len(set(g)),
+                "meta": {"source": "ShuttleSet (CoachAI-Projects, MIT)", "strokes": len(y), "matches": len(set(g)),
                          "cv_acc": round(float(acc), 3), "cv_acc_seq": round(float(acc_seq), 3),
                          "pos_noise_m": a.pos_noise, "contact_flip": a.flip, "counts": dict(Counter(y.tolist()))}}
         a.out.write_text(json.dumps(spec, separators=(",", ":")), encoding="utf-8")

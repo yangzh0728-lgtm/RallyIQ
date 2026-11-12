@@ -23,6 +23,7 @@ The backend returns per-shot probabilities, so ``classify``'s review policy is u
 
 from __future__ import annotations
 
+import itertools
 import json
 import math
 from collections.abc import Callable, Sequence
@@ -113,7 +114,7 @@ def video_features(events: EventsResult, high: dict[str, float], ref_quantiles: 
     by: dict[str | None, list] = {}
     for s in sorted(events.shots, key=lambda s: s.frame):
         by.setdefault(s.rally_id, []).append(s)
-    gaps = [b.t_ms - a.t_ms for rid, rs in by.items() if rid is not None for a, b in zip(rs, rs[1:])]
+    gaps = [b.t_ms - a.t_ms for rid, rs in by.items() if rid is not None for a, b in itertools.pairwise(rs)]
     med = float(np.median(gaps)) if gaps else 900.0
     ids, rows, rids = [], [], []
     for rid, rs in by.items():
