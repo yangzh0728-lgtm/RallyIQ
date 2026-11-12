@@ -292,6 +292,13 @@ class FrameReader:
         return fr
 
 
+def hit_tag(near_hits: list[dict]) -> str:
+    """Status-bar tag for a nearby hit. Pre-annotations may leave ``side`` empty (unknown hitter)."""
+    if not near_hits:
+        return ""
+    return f"  HIT {near_hits[0].get('side') or '?'}"
+
+
 def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | None, stride: int,
             check: Path | None = None) -> int:
     import cv2  # 只有界面需要 OpenCV
@@ -369,7 +376,7 @@ def run_gui(clip_id: str, clips_dir: Path, labels_dir: Path, prefill: Path | Non
             unsure = f"  {'?CHECK ' + kind if s.frame in uncertain_set else ''}{s.uncertain_done()}/{len(s.uncertain)}"
         bar = (f"[{s.mode}] frame {s.frame}/{s.n - 1}{unsure}  t={s.t()}ms  {doc['status']}  "
                f"hits={len(doc['hits'])} rallies={len(doc['rallies'])} shuttle={len(doc['shuttle'])}"
-               f"{'  IN-RALLY' if in_rally else ''}{'  HIT ' + near_hits[0]['side'] if near_hits else ''}  {msg}")
+               f"{'  IN-RALLY' if in_rally else ''}{hit_tag(near_hits)}  {msg}")
         cv2.rectangle(img, (0, 0), (img.shape[1], 28), (0, 0, 0), -1)
         cv2.putText(img, bar, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, colors[s.mode], 1, cv2.LINE_AA)
         cv2.imshow(win, img)

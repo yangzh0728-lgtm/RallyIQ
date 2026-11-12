@@ -19,8 +19,21 @@ class EventsConfig:
     # --- rally segmentation ---
     end_gap_ms: float = 1200.0  # shuttle unseen this long -> rally over
     static_ms: float = 600.0  # shuttle (nearly) still this long -> rally over
+    # ... or it fell, stayed within 0.1 player heights for at least landed_ms, and the next observation jumps
+    # away faster than landed_jump_rel player heights per second (the track moves to another object or the
+    # shuttle is picked up and thrown), at least 1 s into the rally. 0 disables. Own footage (24 labelled
+    # rallies): 150 ms removes the one merge (0006 244-257 s) and cuts the median end error 0.41 -> 0.30 s,
+    # same for 100-250 ms and jump 40-60; no change on either point set. Combined with
+    # min_no_hit_rally_ms=2500 it exposes a real 1.3 s rally without a detected hit, which is then dropped.
+    landed_ms: float = 0.0
+    landed_jump_rel: float = 60.0
     static_speed_rel: float = 0.35  # H per second below which the shuttle counts as still
     min_rally_ms: float = 700.0
+    # Join two rallies when the shuttle was unseen between them for at most this long: a tracking
+    # dropout mid-rally (the player hides it, a fast flight is missed) longer than end_gap_ms. 0 disables.
+    # Own footage 0529 (19 hand-labelled rallies): 800 ms cut split rallies 4 -> 1, but added a false hit on
+    # the court24 point set; 1200 ms already joined two real rallies into one. Off until that is solved.
+    bridge_gap_ms: float = 0.0
     min_rally_points: int = 8
 
     # --- hit candidates ---
@@ -63,6 +76,27 @@ class EventsConfig:
     # "off" (default), "auto" (bundled models/pose_hits.json) or a JSON path. Adds the serve and the
     # missed hit between two same-side hits from the players' swing when the shuttle was not seen.
     pose_hits: str = "off"
+    # Drop a shuttle-based hit when the bundled pose model (models/pose_hits.json) sees no swing by the
+    # hitter (or, hitter unknown, by anyone) within ``swing_veto_window_ms`` of it: the max ``p_swing`` there
+    # is below this. Own footage from a low camera behind the court: the shuttle of a neighbouring court or
+    # one carried between points turns near a player who is walking, racket down. 0 disables.
+    swing_veto: float = 0.0
+    swing_veto_window_ms: float = 250.0
+    swing_veto_model: str = "auto"  # "auto" = bundled pose model, or a JSON path
+    swing_veto_keep_wrist_v: float = 0.0  # ... unless a wrist still moved this fast (body spans/s); 0 = unused
+    swing_veto_keep_serve: bool = False  # ... never drop a rally's first hit
+    # ... never drop a hit answered by (or answering) the other side within this many ms; 0 = unused
+    swing_veto_keep_exchange_ms: float = 0.0
+    # Drop a rally whose hits (at most this many; none counts too) are all by one side: nobody answered
+    # across the net, so it is a catch, pick-up or toss between points. 0 disables.
+    one_sided_rally_max_hits: int = 0
+    # Drop a rally with no hit at all that is shorter than this: a pickup, a tap back over the net
+    # or a shuttle rolling on the floor between points. Real serve-and-miss points last longer. 0 disables.
+    # Own footage 0529 (19 labelled rallies): 2500 ms cut false rallies 16 -> 6 and lost none; the two real
+    # rallies without a detected hit lasted 3.3 and 3.4 s. 0906 side view (5 labelled rallies): no change.
+    # 0302 / 0310 (other gyms): the 5 rallies it dropped were all checked by eye as false. Own-footage batches
+    # set 2500 in their events settings; the code default stays off (broadcast footage is untested).
+    min_no_hit_rally_ms: float = 0.0
 
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all

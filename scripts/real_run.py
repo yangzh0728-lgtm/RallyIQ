@@ -10,6 +10,11 @@ For each ``<clip_id>.mp4`` (+ ``.meta.json`` written by ``evaluation.tools.extra
    which ``evaluation.tools.label_tool --prefill`` uses as the starting point for labeling;
 3. compute label-free statistics per module (coverage, detection rate, counts, speed).
 
+Fixed-camera clips can carry ``court_points`` in their meta.json (from ``court_points`` in
+``evaluation/own_clips.yaml``): named court-line intersections in clip pixels. They are fitted
+into a manual calibration for the whole clip, which replaces automatic calibration, the same way
+the web app's 4-corner override does. Use this when auto calibration locks onto the wrong court.
+
 When reviewed labels exist in ``evaluation/labels/`` the real benchmark is run as well and
 its markdown is appended. Without labels the report only shows how much each module
 produced, which is NOT accuracy; the report says so.
@@ -18,8 +23,10 @@ produced, which is NOT accuracy; the report says so.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import logging
+import math
 import shutil
 import statistics
 import sys
@@ -30,10 +37,24 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from evaluation import benchmark, from_contracts, schema  # noqa: E402
-from rallyiq.contracts import STAGES  # noqa: E402
-from rallyiq.pipeline.runner import run_job  # noqa: E402
-from rallyiq.store import Store  # noqa: E402
+from evaluation import benchmark, from_contracts, schema
+from rallyiq.contracts import (
+    STAGES,
+    CalibrationSegment,
+    CourtCalibration,
+    CourtKeypoint,
+)
+from rallyiq.contracts.geometry import (
+    COURT_CORNERS_M,
+    apply_homography,
+    fit_homography,
+    invert_homography,
+)
+from rallyiq.pipeline.runner import (
+    MANUAL_CALIBRATION,
+    run_job,
+)
+from rallyiq.store import Store
 
 DEFAULT_CLIPS = Path.home() / "rallyiq-data" / "bwf" / "clips"
 DEFAULT_OUT = Path.home() / "rallyiq-data" / "runs" / "latest"
@@ -42,6 +63,14 @@ DEFAULT_OUT = Path.home() / "rallyiq-data" / "runs" / "latest"
 def _load(art: Path, name: str) -> dict[str, Any] | None:
     p = art / f"{name}.json"
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+
+def _stride(frames: list[dict[str, Any]]) -> int:
+    """The frame step pose ran at (players_stride), read back from the frame numbers."""
+    step = 0
+    for a, b in itertools.pairwise(frames):
+        step = math.gcd(step, b["frame"] - a["frame"])
+    return max(step, 1)
 
 
 def clip_stats(art: Path) -> dict[str, Any]:
@@ -71,9 +100,11 @@ def clip_stats(art: Path) -> dict[str, Any]:
 
         both = sum(1 for f in frames if all_in(f))
         far = sum(1 for f in frames if any(p.get("side") == "far" and not p.get("interpolated") for p in f["players"]))
+        # With players_stride > 1 pose runs on every n-th frame only, so the share is over those frames.
+        n_pose = (n - 1) // _stride(frames) + 1
         out["players_model"] = pl.get("model")
-        out["players_both_frac"] = round(both / n, 3)
-        out["players_far_frac"] = round(far / n, 3)
+        out["players_both_frac"] = round(min(both / n_pose, 1.0), 3)
+        out["players_far_frac"] = round(min(far / n_pose, 1.0), 3)
         if cal_frames:
             # Close-ups and replays have no court, so nobody can be placed there:
             # the share over calibrated frames is the number that shows misses.
@@ -104,6 +135,51 @@ def clip_stats(art: Path) -> dict[str, Any]:
     return out
 
 
+def court_lookup() -> dict[str, tuple[float, float]]:
+    """Court coordinates (m) of every name usable in ``court_points``: line intersections + outer corners."""
+    from rallyiq.perception.calibration import court_model as cm
+
+    names = {k.name: k.xy for k in cm.keypoints()}
+    return names | {f"{k}_corner": v for k, v in cm.CORNERS.items()}
+
+
+def manual_calibration(video_id: str, points: dict[str, list[float]], frame_count: int,
+                       neighbours: list[list[float]] | None = None) -> CourtCalibration:
+    """One manual segment for the whole clip from >= 4 named image points (fixed camera).
+
+    ``neighbours``: other courts in the same hall as [dx, dy] offsets (metres, our court
+    frame) of their near-left corner. They become ``other_courts`` so the court lock can
+    reject shuttles and people on them; without them a low camera puts much of the hall
+    inside our court's air box.
+    """
+    lookup = court_lookup()
+    unknown = sorted(set(points) - set(lookup))
+    if unknown:
+        raise ValueError(f"unknown court point names: {unknown}")
+    if len(points) < 4:
+        raise ValueError("court_points needs at least 4 points")
+    names = list(points)
+    img = [list(map(float, points[n])) for n in names]
+    court = [list(lookup[n]) for n in names]
+    # fit court -> image so the least-squares error is in pixels, where the points were measured;
+    # fitting image -> court lets a 1 px slip on the squashed far court bend the whole near court
+    to_img = fit_homography(court, img)
+    h = invert_homography(to_img)
+    resid = [((cx - px) ** 2 + (cy - py) ** 2) ** 0.5
+             for (cx, cy), (px, py) in zip(img, apply_homography(to_img, court))]
+    corners = apply_homography(to_img, COURT_CORNERS_M)
+    others = [apply_homography(to_img, [[x + dx, y + dy] for x, y in COURT_CORNERS_M])
+              for dx, dy in (neighbours or [])]
+    seg = CalibrationSegment(
+        start_frame=0, end_frame=max(frame_count - 1, 0), homography=h, image_corners=corners,
+        other_courts=others,
+        keypoints=[CourtKeypoint(name=n, image=i, court=c) for n, i, c in zip(names, img, court)],
+        reprojection_error_px=round(max(resid), 2), method="manual", confidence=1.0, status="ok",
+        notes=[f"fixed camera: {len(names)} court points from own_clips.yaml"],
+    )
+    return CourtCalibration(video_id=video_id, segments=[seg])
+
+
 def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path, on_progress=None) -> dict[str, Any]:
     meta_p = clip.with_suffix(".meta.json")
     cmeta = json.loads(meta_p.read_text(encoding="utf-8")) if meta_p.exists() else {}
@@ -111,6 +187,10 @@ def run_clip(store: Store, clip: Path, config: dict[str, Any], preds: Path, on_p
     video_id, dest = store.create_video(clip.name, clip.suffix)
     shutil.copyfile(clip, dest)
     store.register_video(video_id, clip.name, dest)
+    if cmeta.get("court_points"):
+        n = int(cmeta.get("frame_count") or round(cmeta["duration_ms"] / 1000 * cmeta["fps"]))
+        store.save_artifact(video_id, MANUAL_CALIBRATION, manual_calibration(video_id, cmeta["court_points"], n,
+                                                                       cmeta.get("neighbour_courts")))
     job = store.create_job(video_id, list(STAGES))
 
     t0 = time.monotonic()
@@ -181,6 +261,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--stride", type=int, default=1, help="players: pose every n-th frame")
     ap.add_argument("--parallel", choices=("auto", "on", "off"), default="auto",
                     help="run shuttle detection alongside players (auto: only when the shuttle model has a GPU)")
+    ap.add_argument("--match-format", choices=("auto", "singles", "doubles"), help="players: match format")
+    ap.add_argument("--events", nargs="*", default=[], metavar="KEY=VALUE",
+                    help="events settings, e.g. swing_veto=0.1 swing_veto_keep_exchange_ms=2700")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
@@ -190,6 +273,12 @@ def main(argv: list[str] | None = None) -> int:
     store = Store(out / "data")
     config: dict[str, Any] = {"players_stride": a.stride, "players_far_boost": a.far_boost,
                               "parallel_stages": a.parallel}
+    if a.match_format:
+        config["match_format"] = a.match_format
+    if a.events:
+        from scripts.diag_tracklets import parse_settings
+
+        config["events"] = parse_settings(a.events)
 
     clips = sorted(p for p in a.clips.expanduser().glob("*.mp4")
                    if not p.name.startswith("._") and (not a.only or p.stem in a.only))

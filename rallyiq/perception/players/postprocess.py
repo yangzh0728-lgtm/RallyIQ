@@ -74,6 +74,8 @@ def drop_offcourt_runs(
     still_outside_frac: float = 0.8,
     still_outside_m: float = 0.3,
     still_extent_m: float = 1.0,
+    min_inside_frac: float = 0.0,
+    inside_margin_m: float = 0.3,
 ) -> int:
     """Track-level court lock: remove whole runs (same ``player_id`` and
     ``track_id``) that mostly stand outside the target play area.
@@ -86,11 +88,18 @@ def drop_offcourt_runs(
     A bystander right next to the court (an umpire or spectator by the net post)
     sits inside the run-off margins, so a second test drops runs that stay still
     (``still_extent_m`` across, 5th-95th percentile) outside the court lines
-    themselves for at least ``still_min_frames`` observations. Returns the
-    number of runs dropped.
+    themselves for at least ``still_min_frames`` observations.
+
+    ``min_inside_frac`` (0 = off): also drop runs inside the court lines (plus
+    ``inside_margin_m``) for less than this share of their frames. People who move
+    about at the sideline or behind a post (spectators, a coach, the next court's
+    players waiting) stay within the run-off margin and are not still, so the rules
+    above keep them; our players are inside the lines most of the time.
+    Returns the number of runs dropped.
     """
     area = play_area or PlayArea()
     lines = PlayArea(margin_side=0.0, margin_end=0.0)
+    inside_lines = PlayArea(margin_side=inside_margin_m, margin_end=inside_margin_m)
     runs: dict[tuple[str, int], list[np.ndarray]] = {}
     for f in frames:
         for p in f.players:
@@ -105,6 +114,11 @@ def drop_offcourt_runs(
         if (arr > 0).mean() >= min_outside_frac and float(np.median(arr)) >= min_median_outside_m:
             bad.add(key)
             continue
+        if min_inside_frac > 0:
+            inside = np.mean([inside_lines.distance_outside(xy) == 0.0 for xy in pts])
+            if float(inside) < min_inside_frac:
+                bad.add(key)
+                continue
         if len(pts) < still_min_frames:
             continue
         xy = np.asarray(pts)

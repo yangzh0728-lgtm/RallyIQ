@@ -303,3 +303,82 @@ def recover(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: Pose
             changed += len(added)
     return changed
 
+
+
+# -------------------------------------------------------------------- veto
+def swing_evidence(series: dict[str, SideSeries], t_ms: float, side: str | None, model: PoseHitModel,
+                   window_ms: float, frame_ms: float) -> tuple[float, float]:
+    """``(p_swing, wrist_v_max)`` of ``side`` (both sides when None) within ``window_ms`` of ``t_ms``:
+    the pose model's best swing probability and the fastest wrist (body spans per second)."""
+    sides = [series[side]] if side is not None and side in series else list(series.values())
+    step = max(frame_ms, 20.0)
+    best_p, best_v = 0.0, 0.0
+    iv = FEATURES.index("wrist_v_max")
+    for s_ in sides:
+        if not s_.bodies:
+            continue
+        ts = np.arange(t_ms - window_ms, t_ms + window_ms + 1e-6, step)
+        X = np.asarray([window_features(s_, float(t), frame_ms) for t in ts], float)
+        best_p = max(best_p, float(model.predict(X).max()))
+        v = X[:, iv]
+        if np.isfinite(v).any():
+            best_v = max(best_v, float(np.nanmax(v)))
+    return best_p, best_v
+
+
+def veto(rallies: list[RallySegment], poses: Sequence[PoseFrame], model: PoseHitModel | None,
+         threshold: float, window_ms: float = 250.0, frame_ms: float | None = None,
+         keep_wrist_v: float = 0.0, keep_serve: bool = False, keep_exchange_ms: float = 0.0) -> int:
+    """Drop shuttle-based hits nobody swings at: max ``p_swing`` of the hitter's side within
+    ``window_ms`` below ``threshold``, unless its wrist still moved at ``keep_wrist_v`` body spans
+    per second or more (0: not used), it is a rally's first hit and ``keep_serve``, or it is part
+    of an exchange: the hit before or after it, within ``keep_exchange_ms`` (0: not used), is by the
+    other side. A catch, a toss or a shuttle carried between points has no answer from across the
+    net; a short net stroke or a serve the pose model barely sees does. Returns how many were
+    dropped."""
+    if model is None or threshold <= 0 or not rallies or not poses:
+        return 0
+    if frame_ms is None:
+        ts = [p.t_ms for p in poses[:50]]
+        fr = [p.frame for p in poses[:50]]
+        frame_ms = (ts[-1] - ts[0]) / (fr[-1] - fr[0]) if len(ts) > 1 and fr[-1] > fr[0] else 40.0
+    series = side_series(poses)
+    dropped = 0
+    for r in rallies:
+        keep = []
+        sides = [_side_of(h, series) for h in r.hits]
+        for k, h in enumerate(r.hits):
+            if h.source == SOURCE or (keep_serve and k == 0):
+                keep.append(h)
+                continue
+            if keep_exchange_ms > 0 and sides[k] is not None and any(
+                    0 <= j < len(r.hits) and sides[j] is not None and sides[j] != sides[k]
+                    and abs(r.hits[j].t_ms - h.t_ms) <= keep_exchange_ms for j in (k - 1, k + 1)):
+                keep.append(h)
+                continue
+            p, wv = swing_evidence(series, h.t_ms, sides[k], model, window_ms, frame_ms)
+            h.scores["p_swing"], h.scores["wrist_v_max"] = round(p, 3), round(wv, 3)
+            if p >= threshold or (keep_wrist_v > 0 and wv >= keep_wrist_v):
+                keep.append(h)
+            else:
+                dropped += 1
+        if len(keep) != len(r.hits):
+            r.hits = keep
+            for k, h in enumerate(r.hits, start=1):
+                h.index_in_rally = k
+                h.hit_id = f"{r.rally_id}_S{k:02d}"
+    return dropped
+
+
+def one_sided(rally: RallySegment, poses: Sequence[PoseFrame], max_hits: int,
+              series: dict[str, SideSeries] | None = None) -> bool:
+    """A "rally" whose hits (at most ``max_hits``) are all by one side, or that has none: between
+    points a player catches the shuttle, picks it up, taps it to themselves or tosses it to the
+    other side, and nobody across the net answers. A real rally needs a reply."""
+    if not rally.hits:
+        return True
+    if len(rally.hits) > max_hits:
+        return False
+    series = series if series is not None else side_series(poses)
+    sides = {_side_of(h, series) for h in rally.hits} - {None}
+    return len(sides) <= 1

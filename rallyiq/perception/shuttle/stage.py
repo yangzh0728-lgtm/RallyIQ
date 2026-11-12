@@ -9,6 +9,9 @@
 * ``roi``: ``"off"`` (default) or ``"auto"``: crop to the calibrated court plus the air
   above it, which enlarges small far-court shuttles. Experimental until measured.
 * ``tracker``: overrides for ``TrackerConfig`` fields.
+* ``reuse_candidates``: re-track the raw peaks saved by an earlier run of this video
+  (``<work_dir>/shuttle_candidates.json``) instead of running the network again. For
+  re-running the court lock / tracker after a calibration fix; ignored when no file.
 * ``court_lock``: ``"auto"`` (default) or ``"off"``. When several courts are in view,
   keep only trajectories over the target court: the air box above the calibrated
   court (or, without calibration, the band spanned by the tracked players), with a
@@ -26,6 +29,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from collections.abc import Callable, Sequence
 from dataclasses import fields
 from pathlib import Path
@@ -33,7 +37,7 @@ from pathlib import Path
 from ...contracts import CourtCalibration, FrameGap, PlayerTracks, ShuttlePoint, ShuttleTrack, VideoMeta
 from ...pipeline.context import StageContext, demo_mode
 from ..target_court import PlayerProximity, PlayerSpanRegion, SegmentRegions
-from .tracker import Candidate, RegionFn, ShuttleTracker, SupportFn, TrackerConfig
+from .tracker import Candidate, RegionFn, RestFn, ShuttleTracker, SupportFn, TrackerConfig
 
 log = logging.getLogger("rallyiq.shuttle")
 
@@ -51,7 +55,10 @@ def tracker_config(overrides: dict | None, peak_threshold: float | None = None) 
     for k, v in (overrides or {}).items():
         if k not in names:
             raise ValueError(f"unknown shuttle tracker setting {k!r}")
-        setattr(cfg, k, type(getattr(cfg, k))(v))
+        kind = type(getattr(cfg, k))
+        if kind is bool and isinstance(v, str):
+            v = v.strip().lower() in ("1", "true", "yes", "on")
+        setattr(cfg, k, kind(v))
     return cfg
 
 
@@ -83,6 +90,124 @@ def court_lock(
     return region, support, mode
 
 
+# Racket contact, in body heights of the player's box: a wrist this close to the shuttle,
+# while the wrist moves at least this fast (a swing, not a hand hanging at the side).
+CONTACT_REACH_BODIES = 0.45
+SWING_BODIES_PER_S = 1.0
+SWING_WINDOW_S = 0.2
+HELD_REACH_BODIES = 0.15
+# A far player is small: the racket meets the shuttle within this share of the frame
+# height however small the box (detections at a far racket sit a few px off).
+CONTACT_MIN_FRAME_FRAC = 0.035
+_WRISTS = (9, 10)  # COCO-17 left / right wrist
+_MIN_KP_CONF = 0.3
+
+
+class RacketContact:
+    """Where our players' rackets can meet the shuttle, from the wrist keypoints.
+
+    ``contact`` is true near a wrist of P1/P2 that is swinging around that frame (the
+    box-based reach covers half the image for a big near player, so a neighbour court's
+    shuttle passing behind them looked ours). ``held`` is true right at a wrist (a
+    shuttle in hand before a serve sits still without being a scene feature). Players
+    without wrist keypoints fall back to the box reach for ``contact``.
+    """
+
+    def __init__(self, players: PlayerTracks | None, fps: float, frame_height: float = 1080.0):
+        self.fps = float(fps)
+        self.min_reach = CONTACT_MIN_FRAME_FRAC * float(frame_height)
+        self.win = max(1, round(SWING_WINDOW_S * self.fps))
+        # frame -> [(pid, h, box, wrists)]
+        self.by_frame: dict[int, list] = {}
+        self.wrists: dict[str, dict[int, dict[int, tuple[float, float]]]] = {}  # pid -> frame -> wrist
+        for fr in (players.frames if players else []):
+            rows = []
+            for p in fr.players:
+                if p.player_id not in ("P1", "P2"):
+                    continue
+                x1, y1, x2, y2 = p.bbox
+                h = max(y2 - y1, 1.0)
+                wd = {i: (k[0], k[1]) for i, k in enumerate(p.keypoints)
+                      if i in _WRISTS and len(k) > 2 and k[2] >= _MIN_KP_CONF}
+                ws = list(wd.values())
+                rows.append((p.player_id, h, (x1, y1, x2, y2), ws))
+                self.wrists.setdefault(p.player_id, {})[fr.frame] = wd
+            if rows:
+                self.by_frame[fr.frame] = rows
+        self._swing: dict[tuple[str, int], float] = {}
+
+    def __bool__(self) -> bool:
+        return bool(self.by_frame)
+
+    def swing(self, pid: str, frame: int, h: float) -> float:
+        """Fastest wrist speed (body heights per second) within ``win`` frames."""
+        key = (pid, frame)
+        if key not in self._swing:
+            track = self.wrists.get(pid, {})
+            best = 0.0
+            for f in range(frame - self.win, frame + self.win + 1):
+                a, b = track.get(f - 1), track.get(f)
+                for i in (a.keys() & b.keys()) if a and b else ():
+                    best = max(best, math.dist(a[i], b[i]))
+            self._swing[key] = best * self.fps / h
+        return self._swing[key]
+
+    def contact(self, frame: int, x: float, y: float) -> bool:
+        for pid, h, (x1, y1, x2, y2), ws in self.by_frame.get(frame, ()):
+            if ws:
+                reach = max(CONTACT_REACH_BODIES * h, self.min_reach)
+                if (any(math.dist(w, (x, y)) <= reach for w in ws)
+                        and self.swing(pid, frame, h) >= SWING_BODIES_PER_S):
+                    return True
+            elif (x1 - CONTACT_REACH_BODIES * h <= x <= x2 + CONTACT_REACH_BODIES * h
+                  and y1 - CONTACT_REACH_BODIES * h <= y <= y1 + 0.6 * h):
+                return True
+        return False
+
+    def held(self, frame: int, x: float, y: float) -> bool:
+        return any(math.dist(w, (x, y)) <= HELD_REACH_BODIES * h
+                   for _, h, _, ws in self.by_frame.get(frame, ()) for w in ws)
+
+
+# Box-based racket reach (body heights) for the "box" contact test.
+STRICT_REACH_BODIES = 0.45
+
+
+def contact_tests(players: PlayerTracks | None, meta: VideoMeta, mode: str = "box") -> tuple[SupportFn | None, SupportFn | None]:
+    """``(contact, held)`` for the tracker. ``mode`` "box": a band of 0.45 body heights
+    around P1/P2's box (scored best on own footage); "wrist": a swinging wrist."""
+    rc = RacketContact(players, meta.fps, meta.height)
+    held = rc.held if rc else None
+    if mode == "wrist":
+        return (rc.contact if rc else None), held
+    if mode != "box":
+        raise ValueError(f"unknown shuttle contact test {mode!r}")
+    prox = PlayerProximity(players, reach_bodies=STRICT_REACH_BODIES)
+    return (prox.near if prox else None), held
+
+
+def rest_area(calibration: CourtCalibration | None, players: PlayerTracks | None) -> RestFn | None:
+    """Where a still shuttle of ours can be: on the target court's floor (with run-off)
+    or in a target player's box above the knees (held; a pile on the floor next to a
+    player's feet is not in hand). ``None`` without a calibration."""
+    regions = SegmentRegions(calibration)
+    if not regions:
+        return None
+    boxes: dict[int, list] = {}
+    for fr in (players.frames if players else []):
+        boxes[fr.frame] = [p.bbox for p in fr.players if p.player_id in ("P1", "P2")]
+
+    def rest(frame: int, x: float, y: float) -> bool:
+        for x1, y1, x2, y2 in boxes.get(frame, ()):
+            m = 0.1 * (y2 - y1)
+            if x1 - m <= x <= x2 + m and y1 - m <= y <= y1 + 0.7 * (y2 - y1):
+                return True
+        r = regions.for_frame(frame)
+        return r is not None and r.floor_outside_m([x, y]) == 0.0
+
+    return rest
+
+
 def build_track(
     meta: VideoMeta,
     candidates: dict[int, Sequence[Candidate]],
@@ -92,6 +217,9 @@ def build_track(
     config: TrackerConfig | None = None,
     region: RegionFn | None = None,
     support: SupportFn | None = None,
+    rest: RestFn | None = None,
+    strict: SupportFn | None = None,
+    held: SupportFn | None = None,
 ) -> tuple[ShuttleTrack, dict[int, int]]:
     """Run the tracker and convert to the contract. Also returns the selected
     candidate index per frame (for the raw-candidates file)."""
@@ -103,7 +231,8 @@ def build_track(
         )
     # Coordinates are in decoded-frame px; scale if the decoder's size differs from the probe.
     sx, sy = meta.width / width, meta.height / height
-    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support)
+    tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support, rest=rest,
+                             strict_support=strict, held=held)
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in candidates.items()}
     res = tracker.track(scaled, frame_count)
     if tracker.rejected_foreign:
@@ -154,6 +283,19 @@ def save_candidates(path: Path, candidates: dict[int, Sequence[Candidate]], sele
     path.write_text(json.dumps(doc, separators=(",", ":")))
 
 
+def load_candidates(path: Path) -> tuple[dict[int, list[Candidate]], tuple[int, int], str | None]:
+    """Inverse of ``save_candidates``: ``(candidates, frame_size, detector)``."""
+    doc = json.loads(Path(path).read_text())
+    cands = {int(f): [tuple(c) for c in v["candidates"]] for f, v in doc.get("frames", {}).items()}
+    return cands, tuple(doc["frame_size"]), doc.get("detector")
+
+
+def _reuse_path(ctx: StageContext) -> Path | None:
+    cfg = dict(ctx.config.get("shuttle") or {})
+    p = Path(ctx.work_dir) / CANDIDATES_FILE
+    return p if cfg.get("reuse_candidates") and p.exists() else None
+
+
 class Cancelled(Exception):
     """Raised inside a background detection when the job no longer needs it."""
 
@@ -199,7 +341,7 @@ def prefetch(ctx: StageContext, report, cancel) -> "Callable[[], tuple] | None":
     or ``None`` when there is nothing worth starting (demo mode, no weights, or no
     accelerator, where both stages would fight for the same CPU cores).
     """
-    if demo_mode(ctx):
+    if demo_mode(ctx) or _reuse_path(ctx) is not None:
         return None
     got = _detector(ctx)
     if got is None:
@@ -243,20 +385,30 @@ def run(ctx: StageContext) -> ShuttleTrack:
 
     cfg = dict(ctx.config.get("shuttle") or {})
     started = ctx.prefetched.pop("shuttle", None)
+    reuse = _reuse_path(ctx)
     if started is not None:
         detector, det_cfg, candidates, size = started()
+    elif reuse is not None:
+        got = _detector(ctx)
+        if got is None:
+            return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
+        detector, det_cfg = got
+        candidates, size, _ = load_candidates(reuse)
+        log.info("shuttle: re-tracking %d frames of saved candidates", len(candidates))
     else:
         got = _detector(ctx)
         if got is None:
             return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
         detector, det_cfg = got
         candidates, size = _detect(ctx, detector, lambda p: ctx.report(0.95 * p))
-    region = support = None
+    region = support = rest = strict = held = None
     if cfg.get("court_lock", "auto") != "off":
         region, support, mode = court_lock(ctx.calibration, ctx.players)
+        rest = rest_area(ctx.calibration, ctx.players)
+        strict, held = contact_tests(ctx.players, meta, cfg.get("contact", "box"))
         log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
-                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support)
+                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support, rest, strict, held)
     save_candidates(Path(ctx.work_dir) / CANDIDATES_FILE, candidates, selected, detector.name, size)
     ctx.report(1.0)
     return track

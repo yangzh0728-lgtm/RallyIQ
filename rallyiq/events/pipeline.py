@@ -87,10 +87,22 @@ def segment_events(
             hits=hits,
         )
         rallies.append(rally)
+    if cfg.swing_veto > 0:
+        from .pose_hits import get_model, veto
+
+        veto(rallies, poses, get_model(cfg.swing_veto_model), cfg.swing_veto, cfg.swing_veto_window_ms,
+             frame_ms=fps_ms, keep_wrist_v=cfg.swing_veto_keep_wrist_v, keep_serve=cfg.swing_veto_keep_serve,
+             keep_exchange_ms=cfg.swing_veto_keep_exchange_ms)
     if cfg.pose_hits != "off":
         from .pose_hits import get_model, recover
 
         recover(rallies, poses, get_model(cfg.pose_hits), frame_ms=fps_ms)
+    if cfg.one_sided_rally_max_hits > 0:
+        from .pose_hits import one_sided
+
+        rallies = [r for r in rallies if not one_sided(r, poses, cfg.one_sided_rally_max_hits)]
+    if cfg.min_no_hit_rally_ms > 0:
+        rallies = [r for r in rallies if r.hits or r.end_ms - r.start_ms >= cfg.min_no_hit_rally_ms]
     for rally in rallies:
         _decide_rally(rally, cfg)
     return rallies
