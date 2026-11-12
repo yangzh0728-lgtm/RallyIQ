@@ -841,7 +841,7 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
         if p["types"] is not None and p["status"] != "undeterminable":
             done, total = p["types"]
             notes.append(f"打法主要看击球类型，但 {total} 拍里只有 {done} 拍的类型经过确认；自动识别的类型在业余比赛视频上"
-                         "大约一半会错（杀球、高远球常被认成吊球、挑球），所以只给“低”可信度，在工作台改正击球类型后会更准")
+                         "仍有约三分之一会错（放网、挑球常和推球混淆），所以只给“低”可信度，在工作台改正击球类型后会更准")
         note = "；".join(notes) or None
         styles.append(PlayerStyle(
             subject=s, players=(["P1", "P3"] if s == "A" else ["P2", "P4"]) if doubles else [s],
