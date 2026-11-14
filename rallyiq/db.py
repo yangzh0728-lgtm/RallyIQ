@@ -96,12 +96,31 @@ class Database:
 
     def executescript(self, script: str) -> None:
         with self._lock:
-            if self.dialect == "sqlite":
+            # sqlite3's executescript commits a pending transaction first, so inside one run statement by statement
+            if self.dialect == "sqlite" and not getattr(self._local_tx, "active", False):
                 self._conn.executescript(script)
             else:
                 for stmt in (s.strip() for s in script.split(";")):
                     if stmt:
                         self._execute(stmt, ())
+
+    # Any constant shared by every RallyIQ process; names the advisory lock that serialises schema setup.
+    _SCHEMA_LOCK = 0x5241_4C59
+
+    @contextmanager
+    def schema_lock(self) -> Iterator[None]:
+        """Run schema setup (``CREATE ... IF NOT EXISTS``, added columns) one process at a time.
+
+        On PostgreSQL two processes creating the same table at once both pass ``IF NOT EXISTS`` and one fails
+        with a unique violation on ``pg_type`` (the API and a worker starting together on a fresh database).
+        A transaction-scoped advisory lock makes the second wait and then find the tables there. On SQLite the
+        race is in ``add_columns`` (read the columns, then add the missing ones); ``BEGIN IMMEDIATE`` takes the
+        write lock up front. DDL is transactional on both, so setup is also all or nothing.
+        """
+        with self.transaction():
+            if self.dialect == "postgres":
+                self._execute("SELECT pg_advisory_xact_lock(?)", (self._SCHEMA_LOCK,))
+            yield
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
