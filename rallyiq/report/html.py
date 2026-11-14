@@ -342,6 +342,30 @@ def _layers(shots: list[dict]) -> str:
             f'<tbody>{"".join(rows)}</tbody></table></div></div>')
 
 
+def _scouting(stats: dict) -> str:
+    """How to beat P1 / P2: one card per player with a game plan and numbered tactics."""
+    items = stats.get("scouting") or []
+    if not items:
+        return ""
+    cards = []
+    for sc in items:
+        pid = sc.get("target", "")
+        side = {"far": "远端", "near": "近端"}.get(sc.get("side") or "")
+        rows = []
+        for t in sc.get("tactics", []):
+            ex = "、".join(_ms(x) for x in t.get("examples_ms", []))
+            rows.append(f'<li><b>{_e(t.get("title"))}</b> {_badge(None, t.get("confidence"))}<p>{_e(t.get("how"))}</p>'
+                        f'<p class="small muted">依据：{_e(t.get("why"))}' + (f"　回看：{_e(ex)}" if ex else "") + "</p></li>")
+        note = f'<p class="note">{_e(sc["note"])}</p>' if sc.get("note") else ""
+        plan = f'<p class="summary">{_e(sc["summary"])}</p>' if sc.get("summary") else ""
+        cards.append(f'<div class="card"><h3>怎么打 <span class="who {_player_cls(pid)}">{_e(pid)}</span> '
+                     f'{_badge(None, sc.get("confidence"))}' + (f' <span class="small muted">{side}</span>' if side else "")
+                     + f'</h3>{plan}{note}<ol class="training">{"".join(rows)}</ol></div>')
+    return _section("scout", "怎么打 P1、怎么打 P2", f'<div class="grid2">{"".join(cards)}</div>',
+                    "从每位球员陷入被动的区域、失分的拍法、被调动后的表现、回球习惯和攻防状态里找弱点，直接写成打法；"
+                    "可信度低的先当作观察，回看例子确认后再用。")
+
+
 def _styles(stats: dict) -> str:
     styles = stats.get("styles") or []
     if not styles:
@@ -693,6 +717,7 @@ def render_html(report: dict | Any, events: dict | Any | None = None, players: d
         _header(stats, title, video_name, generated),
         _nav(),
         _overview(stats, rallies),
+        _scouting(stats),
         _coach(coach, bool(report.get("coach_stale"))),
         _score_flow(stats),
         _rallies(stats, rallies, shots_by_id),
@@ -713,7 +738,7 @@ def render_html(report: dict | Any, events: dict | Any | None = None, players: d
 
 
 def _nav() -> str:
-    links = [("overview", "概览"), ("coach", "教练点评"), ("score", "比分"), ("rallies", "回合"), ("shots", "击球"), ("style", "风格"),
+    links = [("overview", "概览"), ("scout", "怎么打"), ("coach", "教练点评"), ("score", "比分"), ("rallies", "回合"), ("shots", "击球"), ("style", "风格"),
              ("doubles", "双打"), ("footwork", "脚步"), ("heatmap", "热区"), ("moments", "逐拍"), ("details", "数据")]
     return '<nav>' + "".join(f'<a href="#{a}">{b}</a>' for a, b in links) + "</nav>"
 

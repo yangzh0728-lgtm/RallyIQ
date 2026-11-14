@@ -42,6 +42,12 @@ SYSTEM_PROMPT = """你是 RallyIQ 的羽毛球单打教练助手。你会收到�
 - status 为 undeterminable 或 label 为“证据不足”时不要判断打法；score 低于 60 表示没有明显倾向（均衡型），不要硬套某种打法。
 - 打法是倾向而不是定论：参考区间来自职业单打统计，业余比赛只作参考，措辞用“接近”“偏向”。
 
+怎么打 P1、怎么打 P2（统计里的 scouting 字段，单打才有）：
+- 每位球员一条：target 是要打败的球员，side 为 far 表示在远端（离镜头远，识别误差更大），summary 是规则给出的一句话打法，tactics 是逐条打法（title 一句话、how 场上怎么做、why 数据依据、evidence 指标 key、confidence、examples_ms 可回看的视频时间）。
+- 数字在 <Pn>.scout.*（各区域击球数 / 陷入被动的击球数、跑动远近后陷入被动的比例、对某种来球的回球分布）以及 tactics 里引用的其它指标里。
+- 必须为每位有 tactics 的球员各写至少一条 tactic 观点，player_id 填被针对的球员，标题写成“怎么打 Pn：……”，detail 直接说该怎么打（往哪个区域打、逼他打什么球、什么时候提前准备），并说明依据和样本量。可以合并、改写规则的 tactics，但不要编造没有依据的弱点。
+- confidence 为 low 的打法写成“初步看”“可以先试试”，并提醒回看例子确认；side 为 far 时说明远端球员的识别误差更大。
+
 双打配合（统计里的 doubles 字段，只有双打才有）：
 - 每队一条：roles（每人是前场型 / 后场型 / 轮转型，front_pct 为前后站位时在前场的比例）、division（“谁打什么球”分布的 key）、findings（规则找出的优势 / 问题 / 规律，带 advice 和 evidence）。
 - 数字在 A.dbl.* / B.dbl.*（站位、轮转、间距、覆盖）、<Pn>.dbl.*（每人在前场的比例、占本队击球 / 杀球 / 网前球的比例）和 <队>.dbl.who.*（谁打了哪类球）里，引用时 evidence 写这些 key。

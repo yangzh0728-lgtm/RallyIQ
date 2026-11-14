@@ -135,6 +135,9 @@ kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-w
 .style-card { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 6px; }
 .style-card h3 { margin: 8px 0 2px; font-size: 13px; }
 .style-card ul { margin: 0; padding-left: 18px; }
+.scout-summary { font-weight: 600; }
+.scout-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.scout-list li .row { gap: 6px; }
 .style-label { font-weight: 600; color: var(--accent); }
 .style-scores .dist-row { grid-template-columns: 110px 1fr 40px; }
 .style-tactics { border-collapse: collapse; width: 100%; }
