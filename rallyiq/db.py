@@ -50,8 +50,8 @@ class Database:
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
             self._conn: Any = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
             self._conn.row_factory = sqlite3.Row
-            self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA busy_timeout=5000")
+            self._set_wal()
         elif url.startswith(("postgres://", "postgresql://")):
             self.dialect = "postgres"
             try:
@@ -65,6 +65,22 @@ class Database:
             self._connect_pg()
         else:
             raise ValueError(f"unsupported RALLYIQ_DATABASE_URL {url!r}")
+
+    def _set_wal(self, wait_s: float = 5.0) -> None:
+        """Switch to WAL. Switching needs an exclusive lock and SQLite answers "database is locked" at once,
+        without the busy handler, while another process opening the same new file holds it: retry briefly.
+        The mode is stored in the file, so it only has to succeed once."""
+        import time
+
+        deadline = time.monotonic() + wait_s
+        while True:
+            try:
+                self._conn.execute("PRAGMA journal_mode=WAL")
+                return
+            except sqlite3.OperationalError as e:
+                if "locked" not in str(e) or time.monotonic() > deadline:
+                    raise
+                time.sleep(0.02)
 
     def _connect_pg(self) -> None:
         self._conn = self._psycopg.connect(self.url, autocommit=True, row_factory=self._dict_row)
