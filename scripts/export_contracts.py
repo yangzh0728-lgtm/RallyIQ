@@ -96,7 +96,7 @@ def examples() -> dict[str, object]:
         x, y, conf = p.keypoints[k]  # demo ankles: heel a little behind and below, toe in front
         return [x, y, conf], [round(x - 3, 1), round(y + 5, 1), conf], [round(x + 9, 1), round(y + 3, 1), conf]
 
-    feet = c.FootLandmarks(video_id=meta.video_id, model="blazepose-full:feet.tflite", frames=[
+    feet = c.FootLandmarks(video_id=meta.video_id, model="blazepose-heavy:feet.tflite", frames=[
         c.FeetFrame(frame=pf.frame, t_ms=pf.t_ms, players=[
             c.PlayerFeet(player_id=p.player_id, track_id=p.track_id,
                          ankle=[foot(p, 15)[0], foot(p, 16)[0]], heel=[foot(p, 15)[1], foot(p, 16)[1]],

@@ -2,7 +2,7 @@
 # Download every model the analysis worker needs into $WEIGHTS_DIR (default ./weights):
 #   pose.onnx               RTMO (Apache-2.0), variant $POSE_VARIANT = rtmo-s | rtmo-m
 #   shuttle/heatmap.pt      shuttle heatmap checkpoint (MIT, rallyiq/perception/shuttle/LICENSE-THIRD-PARTY)
-#   feet.tflite             heel / toe landmarks: BlazePose GHUM "full" from the MediaPipe wheel on PyPI (Apache-2.0)
+#   feet.tflite             heel / toe landmarks: BlazePose GHUM "heavy" from MediaPipe's model bucket (Apache-2.0)
 # Used by docker/worker.Dockerfile; scripts/mac_e2e.sh does the same for a local Mac.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -26,17 +26,24 @@ if [ ! -s "$WEIGHTS_DIR/pose.onnx" ]; then
 fi
 echo "pose: $WEIGHTS_DIR/pose.onnx"
 
-# The MediaPipe Linux wheel carries the landmark model as a plain file; only that file is kept (the
-# model is the same on every platform, so the wheel's platform is pinned and nothing is installed).
-FEET_SHA256=e9a5c5cb17f736fafd4c2ec1da3b3d331d6edbe8a0d32395855aeb2cdfd64b9f
-if [ ! -s "$WEIGHTS_DIR/feet.tflite" ]; then
+# Heel / toe: the landmark model inside MediaPipe's "pose landmarker heavy" bundle (BlazePose GHUM heavy,
+# Apache-2.0, 27 MB). It replaces the "full" model older versions of this script put in feet.tflite: on
+# amateur video its heel and toe points wander a third less (rallyiq/footwork/README.md).
+FEET_URL="https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task"
+FEET_SHA256=a0fe0e6cbaeb36b6075fe520cfca38b0e212b258b6c4c6caf407c7ef5e3ff55c
+if ! python - "$WEIGHTS_DIR/feet.tflite" "$FEET_SHA256" <<'EOF'
+import hashlib, sys
+try:
+    sys.exit(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest() != sys.argv[2])
+except OSError:
+    sys.exit(1)
+EOF
+then
   tmp="$(mktemp -d)"
-  python -m pip download -q --no-deps --only-binary=:all: --platform manylinux_2_28_x86_64 \
-    --python-version 3.12 "mediapipe==0.10.21" -d "$tmp"
-  python - "$tmp" "$WEIGHTS_DIR/feet.tflite" "$FEET_SHA256" <<'EOF'
-import glob, hashlib, sys, zipfile
-whl = glob.glob(sys.argv[1] + "/mediapipe-*.whl")[0]
-data = zipfile.ZipFile(whl).read("mediapipe/modules/pose_landmark/pose_landmark_full.tflite")
+  curl -fL --retry 3 -o "$tmp/pose.task" "$FEET_URL"
+  python - "$tmp/pose.task" "$WEIGHTS_DIR/feet.tflite" "$FEET_SHA256" <<'EOF'
+import hashlib, sys, zipfile
+data = zipfile.ZipFile(sys.argv[1]).read("pose_landmarks_detector.tflite")
 if hashlib.sha256(data).hexdigest() != sys.argv[3]:
     sys.exit("feet.tflite: unexpected checksum")
 open(sys.argv[2], "wb").write(data)

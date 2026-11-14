@@ -10,6 +10,7 @@ from rallyiq import contracts as c
 from rallyiq.footwork import Footwork
 from rallyiq.footwork.tracks import apply_h
 from rallyiq.perception.feet.stage import detect_feet, wanted_frames
+from rallyiq.report.coach.advice import detect_focus
 from rallyiq.report.stats import compute_match_stats
 
 from test_footwork import FPS, HINV, Script, ankle_px, calibration, events, opponent, scale_at, shot, tracks
@@ -160,6 +161,9 @@ def test_stats_report_landings_only_with_feet():
     without = compute_match_stats(ev, pt, calibration(n), None)
     keys = {m.key: m for p in with_feet.players for m in p.metrics}
     assert keys["P1.footwork.heel_first_pct"].value == pytest.approx(50)
+    # landing calls are right about 7 times in 10 on real video: always shown as "needs review", never a focus
+    assert keys["P1.footwork.heel_first_pct"].status == "needs_review"
+    assert not [f for f in detect_focus(with_feet) if f.id.endswith(("heel_steps", "lunge_heel"))]
     assert not any(m.key.endswith("heel_first_pct") for p in without.players for m in p.metrics)
     assert with_feet.fingerprint != without.fingerprint
 

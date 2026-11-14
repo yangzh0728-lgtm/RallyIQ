@@ -58,7 +58,7 @@ export function FootworkPanel({ footwork, error, players, rally, rallyNo, select
               </span>
               {s.landingsJudged > 0 && (
                 <>
-                  <span className="muted" title="移动中每一步落地时脚的哪一部分先着地（由脚跟和脚尖关键点判断）">着地方式</span>
+                  <span className="muted" title="移动中每一步落地时脚的哪一部分先着地（由脚跟和脚尖关键点判断；人工核对约 7 成准确，只作参考）">着地方式（参考）</span>
                   <span className="mono">
                     前脚掌 {s.forefootPct}% · 脚跟 {s.heelFirstPct}%
                   </span>
@@ -74,7 +74,7 @@ export function FootworkPanel({ footwork, error, players, rally, rallyNo, select
             <b>这一拍</b>
             <span className="muted">
               {shot.player_id} · 启动步{SPLIT_ZH[shot.split_step]}
-              {shot.lunge_landing ? ` · 弓步${LANDING_ZH[shot.lunge_landing]}` : ""}
+              {shot.lunge_landing ? ` · 弓步看上去${LANDING_ZH[shot.lunge_landing]}` : ""}
             </span>
           </div>
           <div>{shot.summary || "这一拍没有可用的脚步数据"}</div>

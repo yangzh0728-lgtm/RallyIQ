@@ -707,7 +707,7 @@ LANDING_ZH = {"heel": "脚跟先着地", "forefoot": "前脚掌先着地", "flat
 def _lunge_form(f: ShotFootwork) -> str:
     parts = []
     if f.lunge_landing is not None:
-        parts.append(LANDING_ZH[f.lunge_landing])
+        parts.append(f"看上去{LANDING_ZH[f.lunge_landing]}")  # hedged: about 7 in 10 landing calls are right
     if f.lunge_toe_off_deg is not None:
         parts.append(f"脚尖偏离跨步方向 {f.lunge_toe_off_deg:.0f}°" if f.lunge_toe_off_deg > LUNGE_TOE_OFF_DEG
                      else "脚尖对准跨步方向")

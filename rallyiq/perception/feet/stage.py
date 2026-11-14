@@ -95,7 +95,7 @@ def run(ctx: StageContext) -> FootLandmarks:
     players = ctx.players
     if players is None or not players.frames or demo_mode(ctx) or str(ctx.config.get("feet", "auto")).lower() == "off":
         return empty
-    from .model import MODEL_NAME, FootLandmarker, find_foot_model, runtime_available
+    from .model import FootLandmarker, find_foot_model, model_name, runtime_available
 
     path = find_foot_model(ctx.config.get("foot_model"))
     if not path or not runtime_available():
@@ -111,4 +111,4 @@ def run(ctx: StageContext) -> FootLandmarks:
     found = detect_feet(frames, players, lm, wanted, ctx.report, meta.frame_count)
     import os
 
-    return FootLandmarks(video_id=meta.video_id, model=f"{MODEL_NAME}:{os.path.basename(path)}", frames=found)
+    return FootLandmarks(video_id=meta.video_id, model=f"{model_name(path)}:{os.path.basename(path)}", frames=found)

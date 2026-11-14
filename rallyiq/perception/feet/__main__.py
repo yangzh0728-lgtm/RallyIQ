@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from ...contracts import EventsResult, FootLandmarks, PlayerTracks
-from .model import MODEL_NAME, FootLandmarker
+from .model import FootLandmarker, model_name
 from .stage import detect_feet, iter_selected, wanted_frames
 
 
@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> None:
     lm = FootLandmarker(args.model)
     t0 = time.time()
     found = detect_feet(iter_selected(args.video, wanted), players, lm, wanted)
-    res = FootLandmarks(video_id=players.video_id, model=f"{MODEL_NAME}:{Path(lm.path).name}", frames=found)
+    res = FootLandmarks(video_id=players.video_id, model=f"{model_name(lm.path)}:{Path(lm.path).name}", frames=found)
     Path(args.out).write_text(res.model_dump_json())
     print(f"{len(found)} frames with feet in {time.time() - t0:.1f}s -> {args.out}")
 

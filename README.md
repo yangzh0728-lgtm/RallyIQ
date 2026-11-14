@@ -62,7 +62,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e '.[calibration,players,shuttle,feet]'
 
 # 2. 模型权重 → weights/pose.onnx（RTMO 姿态，Apache-2.0）、weights/shuttle/heatmap.pt（羽毛球检测，MIT）
-#    和 weights/feet.tflite（脚跟 / 脚尖，BlazePose，Apache-2.0，可选）
+#    和 weights/feet.tflite（脚跟 / 脚尖，BlazePose heavy，Apache-2.0，可选；旧的 full 模型会被自动换掉）
 bash scripts/fetch_weights.sh            # POSE_VARIANT=rtmo-m 换更大的姿态模型（远端球员更准、更慢）
 
 # 3. 网页界面

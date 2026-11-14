@@ -1,11 +1,12 @@
-"""Foot landmark model: BlazePose GHUM "full" landmarks (MediaPipe, Apache-2.0) run on one player box.
+"""Foot landmark model: BlazePose GHUM landmarks (MediaPipe, Apache-2.0) run on one player box.
 
 The model takes a 256x256 RGB crop around one person and returns 33 body landmarks; RallyIQ keeps the
 ankles (27, 28), heels (29, 30) and foot tips (31, 32). It is a TFLite file run with LiteRT
-(``pip install ai-edge-litert``, Apache-2.0); about 8 ms per player on a laptop CPU.
+(``pip install ai-edge-litert``, Apache-2.0).
 
-``scripts/fetch_weights.sh`` extracts the file from the MediaPipe wheel on PyPI into
-``weights/feet.tflite``; ``$RALLYIQ_FOOT_MODEL`` overrides the path.
+``scripts/fetch_weights.sh`` puts the "heavy" variant in ``weights/feet.tflite`` (about 20 ms per player
+on a laptop CPU). The "full" variant (about 8 ms) has the same inputs and outputs and still works, but on
+amateur video its heel and toe points wander a third more. ``$RALLYIQ_FOOT_MODEL`` overrides the path.
 """
 
 from __future__ import annotations
@@ -15,10 +16,15 @@ from pathlib import Path
 
 import numpy as np
 
-MODEL_NAME = "blazepose-full"
+MODEL_NAME = "blazepose"
 INPUT = 256
 MARGIN = 0.25  # box padding on each side, as a share of the longer box side
 ANKLES, HEELS, TOES = (27, 28), (29, 30), (31, 32)
+
+
+def model_name(path: str) -> str:
+    """``blazepose-heavy`` / ``blazepose-full`` (told apart by size: about 27 MB vs 6 MB), for the artifact."""
+    return f"{MODEL_NAME}-{'heavy' if os.path.getsize(path) > 15_000_000 else 'full'}"
 
 
 def find_foot_model(explicit: str | None = None) -> str | None:

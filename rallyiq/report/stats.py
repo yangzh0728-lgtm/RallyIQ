@@ -50,6 +50,7 @@ from .style import MIN_SHOTS, analyze_styles, shot_phases
 log = logging.getLogger("rallyiq.report")
 
 PLAYERS = ("P1", "P2")
+LANDING_NOTE = "由脚跟和脚尖关键点判断，30fps 业余视频上人工核对约 7 成判断正确"
 DOUBLES_PLAYERS = ("P1", "P3", "P2", "P4")
 
 # Movement filtering.
@@ -288,17 +289,18 @@ def _footwork_stats(pid: str, fw: Footwork, spans: list[tuple[int, int]], metric
         judged = [st.landing for st in fw.steps_of(pid)
                   if st.landing is not None and _span_of(st.end_frame, spans, starts) is not None]
         lc = Counter(judged)
+        # landings are always "needs review": checked by eye on 30 fps amateur video, about 7 in 10 calls are right
         m.append(_metric(f"{pid}.footwork.heel_first_pct", "移动中脚跟先着地的比例", _pct(lc.get("heel", 0), len(judged)),
-                         "%", len(judged), 40, 15, degrade, "脚跟先着地时重心偏后，下一步起动慢；弓步除外"))
+                         "%", len(judged), 40, 15, True, "只作参考：脚跟先着地时重心偏后，下一步起动慢；弓步除外"))
         d.append(_dist(f"{pid}.footwork.landings", "移动中的着地方式（次数）",
                        {"前脚掌先着地": lc.get("forefoot", 0), "全脚掌": lc.get("flat", 0), "脚跟先着地": lc.get("heel", 0)},
-                       40, 15, degrade, "由脚跟和脚尖关键点判断"))
+                       40, 15, True, f"只作参考：{LANDING_NOTE}"))
         lunges = [x for x in shots if x.finish == "lunge"]
         landed = [x.lunge_landing for x in lunges if x.lunge_landing is not None]
         offs = [x.lunge_toe_off_deg for x in lunges if x.lunge_toe_off_deg is not None]
         m.append(_metric(f"{pid}.footwork.lunge_heel_first_pct", "弓步脚跟先着地的比例",
-                         _pct(sum(v == "heel" for v in landed), len(landed)), "%", len(landed), 10, 3, degrade,
-                         "弓步应脚跟先着地、再过渡到全脚掌"))
+                         _pct(sum(v == "heel" for v in landed), len(landed)), "%", len(landed), 10, 3, True,
+                         "只作参考：弓步应脚跟先着地、再过渡到全脚掌"))
         m.append(_metric(f"{pid}.footwork.lunge_toe_off_deg", "弓步脚尖偏离跨步方向（中位数）",
                          float(median(offs)) if offs else None, "°", len(offs), 10, 3, degrade,
                          "0° = 脚尖正对跨步方向；偏得多时膝盖容易扭转", digits=0))

@@ -1,7 +1,7 @@
 {
   "schema_version": "0.2.0",
   "video_id": "vid_example",
-  "model": "blazepose-full:feet.tflite",
+  "model": "blazepose-heavy:feet.tflite",
   "frames": [
     {
       "frame": 30,
