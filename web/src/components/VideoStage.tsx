@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PlaybackClock } from "../lib/clock";
 import { CALIB_ORDER_HINT, courtAt, courtsAfterSwitch, drawOverlay, frameIndexAt, otherCourtAt, type Layers } from "../lib/overlay";
+import type { FootIndex } from "../lib/footwork";
 import { colorOf } from "../lib/players";
 import type { OverlayData, Point } from "../lib/types";
 
@@ -14,9 +15,11 @@ interface Props {
   /** Click one of the other courts in view to analyse it instead. */
   choosingCourt?: boolean;
   onCourtChosen?: (corners: Point[], othersAfter: Point[][]) => void;
+  /** Footprints and footwork actions to draw (null until loaded). */
+  feet?: FootIndex | null;
 }
 
-export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCalibrated, choosingCourt = false, onCourtChosen }: Props) {
+export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCalibrated, choosingCourt = false, onCourtChosen, feet = null }: Props) {
   const { width: vw, height: vh } = overlay.video;
   const outer = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -55,10 +58,10 @@ export function VideoStage({ overlay, videoUrl, clock, layers, calibrating, onCa
     c.width = Math.round(size.w * dpr);
     c.height = Math.round(size.h * dpr);
     const ctx = c.getContext("2d")!;
-    const draw = () => drawOverlay(ctx, overlay, clock.ms, layers, colorOf, calibrating ? calib : null, choosingCourt);
+    const draw = () => drawOverlay(ctx, overlay, clock.ms, layers, colorOf, calibrating ? calib : null, choosingCourt, feet);
     draw();
     return clock.subscribe(draw);
-  }, [overlay, clock, layers, size, calibrating, calib, choosingCourt]);
+  }, [overlay, clock, layers, size, calibrating, calib, choosingCourt, feet]);
 
   const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();

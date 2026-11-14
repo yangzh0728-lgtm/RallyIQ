@@ -177,7 +177,43 @@ def detect_focus(stats: MatchStats) -> list[Focus]:
                              f"{pid} 每回合跑动 {per_rally.value:.1f} 米，对手 {o.value:.1f} 米，可能常被调动",
                              [per_rally.key, o.key], aspects=["footwork", "split_step", "tactics"],
                              retest_metric=per_rally.key, confidence=_weakest(per_rally.confidence, o.confidence)))
-        # 5. attack / defense execution (playing-style features)
+        # 5. footwork (脚步): split step, recovery to base, first move
+        split = m(f"{pid}.footwork.split_step_pct")
+        on_time = m(f"{pid}.footwork.split_on_time_pct")
+        if split is not None and split.n >= 8 and split.value < 40:
+            out.append(Focus(f"{pid}.split_step", pid, f"{pid} 对手击球时很少做启动步（{_fmt(split.value)}%）",
+                             [split.key], aspects=["split_step", "footwork"], retest_metric=split.key,
+                             confidence=split.confidence))
+        elif on_time is not None and split is not None and on_time.n >= 8 and on_time.value < 0.6 * split.value:
+            off = m(f"{pid}.footwork.split_offset_ms")
+            when = ("偏早" if off is not None and off.value < -100 else "偏晚" if off is not None and off.value > 300
+                    else "不稳定")
+            ev = [on_time.key] + ([off.key] if off else [])
+            out.append(Focus(f"{pid}.split_timing", pid, f"{pid} 启动步时机{when}（合适的只占 {_fmt(on_time.value)}%）",
+                             ev, aspects=["split_step", "footwork"], retest_metric=on_time.key,
+                             confidence=on_time.confidence))
+        rec = m(f"{pid}.footwork.recovered_pct")
+        if rec is not None and rec.n >= 6 and rec.value < 50:
+            gap = m(f"{pid}.footwork.recovery_gap_m")
+            ev = [rec.key] + ([gap.key] if gap else [])
+            out.append(Focus(f"{pid}.recovery", pid, f"{pid} 击球后回位慢：对手出手前回到中心的只有 {_fmt(rec.value)}%",
+                             ev, aspects=["footwork", "physical"], retest_metric=rec.key, confidence=rec.confidence))
+        react = m(f"{pid}.footwork.reaction_ms")
+        if react is not None and react.n >= 6 and react.value >= 350:
+            out.append(Focus(f"{pid}.reaction", pid, f"{pid} 对手击球后起动偏慢（中位数 {_fmt(react.value)} ms）",
+                             [react.key], aspects=["split_step", "footwork"], retest_metric=react.key,
+                             confidence=react.confidence))
+
+        # how the feet land (heel / forefoot / flat) is not a focus: on 30 fps amateur video only about 7 in 10
+        # landing calls are right (rallyiq/footwork/README.md), too few to tell a player to change it
+        toe_off = m(f"{pid}.footwork.lunge_toe_off_deg")
+        if toe_off is not None and toe_off.n >= 2 and toe_off.value > 45:
+            ev = [toe_off.key]
+            out.append(Focus(f"{pid}.lunge_toe", pid,
+                             f"{pid} 弓步时脚尖没有对准跨步方向（偏 {_fmt(toe_off.value)}°），膝盖容易扭转",
+                             ev, aspects=["footwork", "physical"], retest_metric=toe_off.key, confidence=toe_off.confidence))
+
+        # 6. attack / defense execution (playing-style features)
         conv = m(f"{pid}.style.convert_pct")
         if conv is not None and conv.n >= 8 and conv.value < 45:
             out.append(Focus(f"{pid}.convert", pid,

@@ -178,6 +178,7 @@ def ground_shot_advice(raw: list, moments: list[ShotMoment], self_player: str | 
             situation=_situation(m, self_player),
             advice=advice if use_model else f"{m.problem}。建议：{m.suggestion}。",
             why=(why or m.why) if use_model else m.why,
-            confidence=m.confidence, source="model" if use_model else "rules", warnings=warnings,
+            confidence=m.confidence, source="model" if use_model else "rules",
+            footwork=(m.footwork.summary or None) if m.footwork is not None else None, warnings=warnings,
         ))
     return out

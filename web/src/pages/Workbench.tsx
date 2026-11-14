@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CorrectionPanel, StatusPill } from "../components/CorrectionPanel";
+import { FootworkPanel } from "../components/FootworkPanel";
 import { HeatmapPanel } from "../components/HeatmapPanel";
 import { JobDetail, useJob } from "../components/JobProgress";
 import { MiniMap } from "../components/MiniMap";
@@ -12,9 +13,10 @@ import { PlaybackClock } from "../lib/clock";
 import { rallyAt } from "../lib/corrections";
 import { CORNER_NAMES } from "../lib/court";
 import { download, exportCsv, exportJson } from "../lib/export";
+import { FootIndex } from "../lib/footwork";
 import { courtAt, DEFAULT_LAYERS, frameIndexAt, type Layers } from "../lib/overlay";
 import { colorOf, labelOf } from "../lib/players";
-import { playerIdsFor, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
+import { playerIdsFor, type Correction, type CorrectionOp, type EventsResult, type FootworkResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
 
 export function Workbench({ videoId, startMs = null }: { videoId: string; startMs?: number | null }) {
   const [video, setVideo] = useState<Video | null>(null);
@@ -96,6 +98,26 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
       (e: Error) => setError(e.message),
     );
   }, [video.video_id]);
+
+  // Footwork is linked to the effective hits, so reload it whenever the events change (corrections).
+  const [footwork, setFootwork] = useState<FootworkResult | null>(null);
+  const [footworkError, setFootworkError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!events) return;
+    let live = true;
+    api.getFootwork(video.video_id).then(
+      (f) => {
+        if (!live) return;
+        setFootwork(f);
+        setFootworkError(null);
+      },
+      (e: Error) => live && setFootworkError(e.message),
+    );
+    return () => {
+      live = false;
+    };
+  }, [video.video_id, events]);
+  const footIndex = useMemo(() => (footwork ? new FootIndex(footwork) : null), [footwork]);
 
   const duration = overlay?.video.duration_ms;
   const clock = useMemo(() => (duration ? new PlaybackClock(duration) : null), [duration]);
@@ -376,6 +398,7 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
               ["shuttle", "羽毛球"],
               ["court", "球场线"],
               ["bbox", "检测框"],
+              ["feet", "脚步"],
             ] as const
           ).map(([k, label]) => (
             <label key={k}>
@@ -404,11 +427,20 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
             </span>
           </span>
         </div>
-        <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} choosingCourt={choosingCourt} onCourtChosen={onCalibrated} />
+        <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} choosingCourt={choosingCourt} onCourtChosen={onCalibrated} feet={footIndex} />
       </section>
 
       <aside className="wb-right">
         <MiniMap overlay={overlay} clock={clock} />
+        <FootworkPanel
+          footwork={footwork}
+          error={footworkError}
+          players={playerIdsFor(overlay.match_format)}
+          rally={rally}
+          rallyNo={rally ? rallyNo(rally.rally_id) : null}
+          selectedShotId={selShot}
+          clock={clock}
+        />
         <CorrectionPanel
           rally={rally}
           rallyNo={rally ? rallyNo(rally.rally_id) : null}
@@ -464,6 +496,7 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
           selectedShotId={selShot}
           fps={fps}
           rallyNo={rallyNo}
+          footwork={layers.feet ? footwork?.events : undefined}
           onSelectRally={(id) => {
             const r = events.rallies.find((x) => x.rally_id === id);
             if (r) clock.seek(r.start_ms);

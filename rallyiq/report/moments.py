@@ -19,6 +19,16 @@ Rules (``issue`` codes):
 * ``attack_off_balance``: smash / kill / drive from a stretched position (rear corner) that lost
   the rally: a high clear to the deep middle buys time to recover.
 
+Footwork rules (need ``footwork``, see ``rallyiq.footwork``), used when no shot-choice rule fired:
+
+* ``slow_recovery``: after the shot the hitter was still far from the base when the opponent hit
+  next, and the opponent then attacked or won the rally.
+* ``late_start``: no split step (or a late one) on the opponent's previous hit and a slow first
+  move, and this shot then got punished.
+
+Every moment also carries the hitter's ``footwork`` for that shot (split step, steps, lunge, recovery)
+when it is known, so the advice can say how the hitter got there.
+
 Doubles: the "opponent" is the one who replied (else whichever opponent was tracked); targets
 use the doubles sidelines and the open spot is the one farthest from the nearer of the two
 opponents, with the gap between them as an extra candidate. Outcomes are judged by team.
@@ -42,6 +52,7 @@ from ..contracts import (
     team_of,
 )
 from ..contracts.geometry import SINGLES_INSET
+from ..footwork import BASE_RADIUS_M, Footwork
 from ..strokes.detail import short_label
 
 ZH = {
@@ -205,8 +216,12 @@ def _conf(shot: ShotEvent, metric_ok: bool) -> str:
     return c
 
 
+SLOW_RECOVERY_M = 1.5  # still this far from base when the opponent hit
+SLOW_REACTION_MS = 350
+
+
 def shot_moments(events: EventsResult, players: PlayerTracks | None, fps: float = 30.0,
-                 metric_ok: bool = True) -> list[ShotMoment]:
+                 metric_ok: bool = True, footwork: Footwork | None = None) -> list[ShotMoment]:
     """Shots to change, at most ``MAX_PER_PLAYER`` per player (most severe), in video order."""
     if players is None or not any(s.shot_type for s in events.shots):
         return []
@@ -255,13 +270,19 @@ def shot_moments(events: EventsResult, players: PlayerTracks | None, fps: float 
                 next_type = None
             outcome = _outcome(rally.winner, team_of(s.hitter) if doubles else s.hitter, last, i)
             punished = outcome == "lost" or next_type in ATTACKS
+            fw = footwork.shot(s.shot_id) if footwork is not None else None
             m = _rule(s, h_dep, o_view_lat, o_dep, reach, next_type, outcome, punished, others)
+            if m is None and fw is not None:
+                m = _footwork_rule(s, fw, h_dep, o_view_lat, o_dep, next_type, outcome, punished)
             if m is None:
                 continue
             issue, problem, target, why, severity = m
             hz, oz = zone(h_lat, h_dep), zone(o_view_lat, o_dep)
             det = s.stroke.detail if s.stroke else None
-            sugg = (f"改打{ZH[target.shot]}到对方{target.zone}" if target else "先打高远球到对方后场中路，争取回位时间")
+            if issue in FOOTWORK_ISSUES:
+                sugg = FOOTWORK_SUGGESTION[issue]
+            else:
+                sugg = (f"改打{ZH[target.shot]}到对方{target.zone}" if target else "先打高远球到对方后场中路，争取回位时间")
             found.append(ShotMoment(
                 moment_id="", shot_id=s.shot_id, rally_id=rally.rally_id, rally_no=rno, shot_no=i + 1, t_ms=s.t_ms,
                 player_id=s.hitter, shot_type=s.shot_type, hitter_zone=hz,
@@ -270,9 +291,11 @@ def shot_moments(events: EventsResult, players: PlayerTracks | None, fps: float 
                 opponent_id=opp, opponent_zone=oz, opponent_pos=[round(o_lat, 2), round(o_dep, 2)],
                 opponent_reach_m=None if reach is None else round(reach, 1), next_shot_type=next_type,
                 outcome=outcome, issue=issue, problem=problem,
-                suggested_shot=target.shot if target else "clear", target_zone=target.zone if target else "后场中路",
+                suggested_shot=(target.shot if target else None if issue in FOOTWORK_ISSUES else "clear"),
+                target_zone=target.zone if target else None if issue in FOOTWORK_ISSUES else "后场中路",
                 suggestion=sugg, why=why, severity=round(severity, 2),
-                confidence=_conf(s, metric_ok),
+                confidence=_conf(s, metric_ok) if issue not in FOOTWORK_ISSUES else _fw_conf(s, metric_ok, fw),
+                footwork=fw,
             ))
     keep: list[ShotMoment] = []
     for pid in pids:
@@ -336,4 +359,41 @@ def _rule(s: ShotEvent, h_dep: float, o_view_lat: float, o_dep: float, reach: fl
         return ("to_opponent", f"{me}打到了对手身边（对手在{opp_zone}，{moved}就接到）{tail}",
                 tgt, (f"球路没有调动对手，对手有时间准备下一拍；离对手最远的是{tgt.zone}，"
                      f"从你的位置打{ZH[tgt.shot]}能到。"), 1.0 + bonus)
+    return None
+
+
+# --------------------------------------------------------------------------- footwork rules
+
+FOOTWORK_ISSUES = {"slow_recovery", "late_start"}
+FOOTWORK_SUGGESTION = {
+    "slow_recovery": "击球后马上回中心，在对手出手前站好并做启动步",
+    "late_start": "对手击球的一瞬间做启动步（双脚轻跳、落地即蹬出），第一步朝来球方向",
+}
+
+
+def _fw_conf(s: ShotEvent, metric_ok: bool, fw) -> str:
+    c = _conf(s, metric_ok)
+    if fw is not None and fw.confidence < 0.5:
+        c = {"high": "medium", "medium": "low", "low": "low"}[c]
+    return c
+
+
+def _footwork_rule(s: ShotEvent, fw, h_dep: float, o_view_lat: float, o_dep: float, next_type: str | None,
+                   outcome: str, punished: bool):
+    """(issue, problem, target, why, severity) for a footwork problem on this shot, or None."""
+    me = ZH.get(s.shot_type, s.shot_type)
+    reply = _reply(next_type, outcome)
+    tail = f"，{reply}" if reply else ""
+    bonus = (1.0 if outcome == "lost" else 0.0) + (0.5 if next_type in ATTACKS else 0.0)
+    if fw.recovery_gap_m is not None and fw.recovery_gap_m >= SLOW_RECOVERY_M and punished:
+        return ("slow_recovery", f"打完这拍{me}没有及时回位，对手出手时你离中心还有 {fw.recovery_gap_m:.1f} 米{tail}",
+                None, (f"回位慢，对手只要把球打到你离开的那一侧就能调动你；中心离四个角都差不多远，"
+                      f"站在中心半径 {BASE_RADIUS_M:.0f} 米以内，下一拍到哪个角都来得及。"), 1.2 + bonus)
+    late = fw.split_step in ("none", "late")
+    slow = fw.reaction_ms is not None and fw.reaction_ms >= SLOW_REACTION_MS
+    if late and slow and (punished or fw.finish == "lunge"):
+        what = "没有做启动步" if fw.split_step == "none" else f"启动步落地晚了（对手击球后 {fw.split_offset_ms} ms）"
+        return ("late_start", f"对手击球时{what}，{fw.reaction_ms} ms 后才起动去接这拍{me}{tail}",
+                None, ("启动步让你在对手出手的瞬间处在可以向任何方向蹬地的状态；起动晚了，"
+                      "到位时只能被动击球，球路选择也会变少。"), 1.0 + bonus)
     return None

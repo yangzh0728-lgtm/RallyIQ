@@ -1372,6 +1372,19 @@
           "title": "Source",
           "type": "string"
         },
+        "footwork": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the hitter's footwork on this shot (from the moment)",
+          "title": "Footwork"
+        },
         "warnings": {
           "items": {
             "type": "string"
@@ -1395,6 +1408,225 @@
         "source"
       ],
       "title": "ShotAdvice",
+      "type": "object"
+    },
+    "ShotFootwork": {
+      "additionalProperties": false,
+      "description": "The hitter's footwork for one shot: from the opponent's previous hit to this hit, and the recovery after it.",
+      "properties": {
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "split_step": {
+          "default": "unknown",
+          "enum": [
+            "on_time",
+            "early",
+            "late",
+            "none",
+            "unknown"
+          ],
+          "title": "Split Step",
+          "type": "string"
+        },
+        "split_offset_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "split-step landing minus the opponent's hit",
+          "title": "Split Offset Ms"
+        },
+        "reaction_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "opponent's hit to the first move towards this shot",
+          "title": "Reaction Ms"
+        },
+        "steps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "steps from the opponent's hit to this hit",
+          "title": "Steps"
+        },
+        "move_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mid-feet distance covered to reach the shot",
+          "title": "Move M"
+        },
+        "peak_speed_mps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Speed Mps"
+        },
+        "pattern": {
+          "description": "actions used to reach the shot, in order",
+          "items": {
+            "enum": [
+              "split_step",
+              "lunge",
+              "jump",
+              "chasse",
+              "cross_step",
+              "run",
+              "recovery"
+            ],
+            "type": "string"
+          },
+          "title": "Pattern",
+          "type": "array"
+        },
+        "finish": {
+          "default": "unknown",
+          "enum": [
+            "lunge",
+            "jump",
+            "planted",
+            "unknown"
+          ],
+          "title": "Finish",
+          "type": "string"
+        },
+        "stance_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "distance between the feet at the hit",
+          "title": "Stance M"
+        },
+        "lunge_landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: how the front foot landed",
+          "title": "Lunge Landing"
+        },
+        "lunge_toe_off_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: angle between the front foot and the direction of the lunge step (0 = toe points where the step went)",
+          "title": "Lunge Toe Off Deg"
+        },
+        "recovery_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "this hit to back within the base radius; null = never",
+          "title": "Recovery Ms"
+        },
+        "recovery_gap_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "distance from base when the opponent hit next",
+          "title": "Recovery Gap M"
+        },
+        "summary": {
+          "default": "",
+          "description": "one Chinese sentence",
+          "title": "Summary",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shot_id",
+        "player_id",
+        "t_ms",
+        "confidence"
+      ],
+      "title": "ShotFootwork",
       "type": "object"
     },
     "ShotMoment": {
@@ -1677,6 +1909,18 @@
           ],
           "title": "Confidence",
           "type": "string"
+        },
+        "footwork": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShotFootwork"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the hitter's footwork into and out of this shot"
         }
       },
       "required": [

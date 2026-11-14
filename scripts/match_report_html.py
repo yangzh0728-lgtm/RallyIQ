@@ -71,7 +71,8 @@ def from_store(video_id: str, data: str | None, use_coach: bool):
     events, _ = apply_corrections(merge_strokes(raw, store.load_artifact(video_id, "strokes", c.StrokesResult)),
                                   store.list_corrections(video_id), meta)
     players = store.load_artifact(video_id, "players", c.PlayerTracks)
-    stats = compute_match_stats(events, players, store.load_artifact(video_id, "calibration", c.CourtCalibration), meta)
+    stats = compute_match_stats(events, players, store.load_artifact(video_id, "calibration", c.CourtCalibration), meta,
+                                store.load_artifact(video_id, "feet", c.FootLandmarks))
     coach, stale = _coach(stats, store.load_artifact(video_id, "coach", c.CoachReport), use_coach)
     v = store.get_video(video_id)
     return c.MatchReport(stats=stats, coach=coach, coach_stale=stale), events, players, v.filename if v else video_id
