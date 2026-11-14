@@ -4,8 +4,9 @@ Contract: ``run(ctx) -> StrokesResult`` using ``ctx.events``, ``ctx.shuttle`` an
 ``ctx.players``. Options in ``ctx.config["strokes"]``:
 
 * ``classifier``: ``"auto"`` (default: bundled ``models/strokes_v3.json``, numpy only, combined with
-  the court model ``models/strokes_court_v1.json`` and rally smoothing of ``court.py``; ``court: false``
-  or ``sequence: false`` turn those off; the rules if no model is there), ``"rules"``, ``"bst"`` (see ``bst.py``) or ``"sklearn"`` (see ``learned.py``); a
+  the court model ``models/strokes_court_v1.json`` of ``court.py``; ``court: false`` turns that off,
+  ``sequence: true`` adds its rally smoothing, off by default because it hurts on detected hits;
+  the rules if no model is there), ``"rules"``, ``"bst"`` (see ``bst.py``) or ``"sklearn"`` (see ``learned.py``); a
   model backend that cannot load falls back to the rules with a warning unless ``require_model: true``;
 * ``sklearn``: ``{"model": "/path/to/strokes.json"}`` (or ``.joblib``; trained by ``scripts/learn_strokes.py``);
 * ``bst``: BST settings (``repo``, ``weights``, ``model_name``, ``pose_style``, ``seq_len``);
@@ -68,7 +69,7 @@ def run(ctx: StageContext) -> StrokesResult:
                 court = None
                 log.warning("bundled court stroke model unusable (%s)", e)
             if court is not None:
-                model = CM.make_model_fn(model, court, attrs, meta.fps, seq=bool(opts.get("sequence", True)))
+                model = CM.make_model_fn(model, court, attrs, meta.fps, seq=bool(opts.get("sequence", False)))
                 name = f"{name}+{CM.NAME}" if name else CM.NAME
     elif cfg.classifier == "bst":
         from .bst import BSTConfig, BSTUnavailable, make_model_fn

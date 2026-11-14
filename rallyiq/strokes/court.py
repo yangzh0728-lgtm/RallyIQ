@@ -16,7 +16,9 @@ across cameras:
 * **Sequence decoding.** Stroke types follow each other (a lift is answered from the back court,
   a smash by a block or lift...). The two models' probabilities are combined (geometric mean) and
   smoothed with a hybrid HMM (ShuttleSet transition counts, forward-backward), so each shot's
-  candidates take its neighbours into account.
+  candidates take its neighbours into account. Off by default (stage option ``sequence``): on hits
+  found by the detector, missed and extra hits break the chain, and a rally's first detected hit is
+  often not the serve. Held-out ShuttleSet clips: 69.6% without, 60.2% with.
 
 The backend returns per-shot probabilities, so ``classify``'s review policy is unchanged.
 """
