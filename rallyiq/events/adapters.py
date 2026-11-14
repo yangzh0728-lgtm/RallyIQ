@@ -36,26 +36,66 @@ def shuttle_from_contract(track: Optional[ShuttleTrack]) -> list[ShuttleObs]:
     ]
 
 
+# A track whose feet stay outside the court lines and barely move over the whole video is a
+# bystander (umpire, coach, spectator at the net post), not a player, even inside the run-off
+# margin where the player filter keeps people at full score. own_20260302_06 doubles: a spectator
+# at the left net post (x -0.87..-0.72 m, y 6.4..6.7 m) took the far player's hits whenever they
+# hid behind it.
+BYSTANDER_MIN_FRAMES = 300
+BYSTANDER_MIN_OUTSIDE_SHARE = 0.9
+BYSTANDER_MAX_SPREAD_M = 1.0
+COURT_W, COURT_L = 6.1, 13.4
+
+
+def bystander_ids(tracks: Optional[PlayerTracks]) -> set[str]:
+    """Player ids that never play: feet outside the lines in nearly every frame and a tiny footprint
+    (10th-90th percentile spread under ``BYSTANDER_MAX_SPREAD_M`` along both court axes)."""
+    pos: dict[str, list[tuple[float, float]]] = {}
+    for pf in (tracks.frames if tracks is not None else []):
+        for d in pf.players:
+            if d.player_id and d.foot_court:
+                pos.setdefault(d.player_id, []).append((float(d.foot_court[0]), float(d.foot_court[1])))
+    out = set()
+    for pid, xy in pos.items():
+        if len(xy) < BYSTANDER_MIN_FRAMES:
+            continue
+        outside = sum(1 for x, y in xy if not (0.0 <= x <= COURT_W and 0.0 <= y <= COURT_L)) / len(xy)
+        if outside < BYSTANDER_MIN_OUTSIDE_SHARE:
+            continue
+        if all(_spread(sorted(v)) < BYSTANDER_MAX_SPREAD_M for v in zip(*xy)):
+            out.add(pid)
+    return out
+
+
+def _spread(v: list[float]) -> float:
+    """10th to 90th percentile range of sorted values."""
+    return v[min(len(v) - 1, int(0.9 * len(v)))] - v[int(0.1 * len(v))]
+
+
 def poses_from_contract(tracks: Optional[PlayerTracks]) -> list[PoseFrame]:
     if tracks is None:
         return []
     doubles = tracks.match_format == "doubles"
+    skip = bystander_ids(tracks)
     frames = []
     for pf in tracks.frames:
         players = []
         for d in pf.players:
             if d.on_court is False:
                 continue  # spectators, umpire, players on the next court
+            by = d.player_id in skip
             players.append(
                 PlayerPose(
                     # Unresolved identities still count for proximity, but are
                     # never reported as a hitter (see ``events_to_contract``).
-                    player_id=d.player_id or f"track{d.track_id}",
+                    # A bystander keeps its place for proximity (a far player hidden behind it still
+                    # yields a hit) under an id that is never reported, with no side or team.
+                    player_id=f"bystander{d.player_id}" if by else (d.player_id or f"track{d.track_id}"),
                     keypoints=[Keypoint(k[0], k[1], k[2]) for k in d.keypoints],
-                    side=d.side,
+                    side=None if by else d.side,
                     foot_court_xy=tuple(d.foot_court) if d.foot_court else None,
                     # Singles alternates by player, doubles by team.
-                    team=(d.team or team_of(d.player_id)) if doubles else None,
+                    team=(d.team or team_of(d.player_id)) if doubles and not by else None,
                 )
             )
         frames.append(PoseFrame(pf.frame, float(pf.t_ms), players))
