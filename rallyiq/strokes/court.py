@@ -1,4 +1,4 @@
-"""Court-level stroke model + rally sequence decoding (``court_v1``).
+"""Court-level stroke model + rally sequence decoding (``court_v2``).
 
 Why: the video model (``strokes_v3``) reads image cues learned on broadcast footage and gets about
 half of the strokes wrong on amateur rear-camera video. This module adds two things that transfer
@@ -13,7 +13,11 @@ across cameras:
 * **Depth alignment.** Foot positions of the far player come out too deep on low cameras (a 13 px
   error is >1 m there). Before the court model, each side's hitter depths in this video are
   quantile-mapped onto the ShuttleSet hitter-depth distribution (unsupervised, no labels).
-* **Sequence decoding.** Stroke types follow each other (a lift is answered from the back court,
+* **Missed hits.** Our hit detector misses 20-40% of the hits on amateur video, which breaks the
+  sequence features. ``court_v2`` is trained on copies of ShuttleSet with 0, 15 and 30% of the hits
+  removed: with 30% missing it gets 69% of the remaining shots right instead of 61%, with no loss on
+  full rallies.
+* **Sequence decoding** (off in ``court_v2``: ``seq_weight`` 0). Stroke types follow each other (a lift is answered from the back court,
   a smash by a block or lift...). The two models' probabilities are combined (geometric mean) and
   smoothed with a hybrid HMM (ShuttleSet transition counts, forward-backward), so each shot's
   candidates take its neighbours into account.
@@ -36,8 +40,8 @@ import numpy as np
 from ..contracts import EventsResult, PlayerTracks, ShuttleTrack
 from .features import NET_Y_M, StrokeFeatures
 
-NAME = "court_v1"
-BUNDLED = Path(__file__).with_name("models") / "strokes_court_v1.json"
+NAME = "court_v2"
+BUNDLED = Path(__file__).with_name("models") / "strokes_court_v2.json"
 MAX_DEPTH_M = 7.5
 CENTER_X_M = 3.05
 
@@ -210,7 +214,7 @@ def make_model_fn(video_fn, court: CourtModel, attrs, fps: float, seq: bool = Tr
             if have.any():
                 G = np.sqrt(np.clip(P[have], 1e-6, None) * np.clip(V[have], 1e-6, None))
                 P[have] = G / G.sum(1, keepdims=True)
-        if seq:
+        if seq and court.seq_weight > 0:  # the smoothing assumes no hit is missing in between
             rid_arr = np.asarray([str(r) for r in rids], dtype=object)
             for r in dict.fromkeys(rids):
                 if r is None:

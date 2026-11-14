@@ -4,7 +4,7 @@ Contract: ``run(ctx) -> StrokesResult`` using ``ctx.events``, ``ctx.shuttle`` an
 ``ctx.players``. Options in ``ctx.config["strokes"]``:
 
 * ``classifier``: ``"auto"`` (default: bundled ``models/strokes_v3.json``, numpy only, combined with
-  the court model ``models/strokes_court_v1.json`` and rally smoothing of ``court.py``; ``court: false``
+  the court model ``models/strokes_court_v2.json`` of ``court.py`` (its rally smoothing is off in v2); ``court: false``
   or ``sequence: false`` turn those off; the rules if no model is there), ``"rules"``, ``"bst"`` (see ``bst.py``) or ``"sklearn"`` (see ``learned.py``); a
   model backend that cannot load falls back to the rules with a warning unless ``require_model: true``;
 * ``sklearn``: ``{"model": "/path/to/strokes.json"}`` (or ``.joblib``; trained by ``scripts/learn_strokes.py``);

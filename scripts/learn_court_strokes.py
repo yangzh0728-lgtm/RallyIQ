@@ -1,11 +1,14 @@
 """Train the court-level stroke model (rallyiq/strokes/court.py) on the ShuttleSet annotation.
 
-    python scripts/learn_court_strokes.py <CoachAI-Projects>/ShuttleSet/set --out rallyiq/strokes/models/strokes_court_v1.json
+    python scripts/learn_court_strokes.py <CoachAI-Projects>/ShuttleSet/set --out rallyiq/strokes/models/strokes_court_v2.json
 
 No video is needed: ShuttleSet gives, for every stroke of 44 singles matches, the type, the hit frame,
 the hitter position (image pixels + one court homography per match) and whether the contact was
 above the net. Training adds position noise and contact flips so the model tolerates the errors of
-our own measurements. Reports grouped (by match) 5-fold CV with and without sequence smoothing.
+our own measurements. Our hit detector also misses hits (DJI_0009: 19-41% of them), which breaks the
+sequence features (flight time, previous/next shot), so training mixes copies of the data with 0, 15
+and 30% of the hits dropped (``--drop-hit``). Reports grouped (by match) 5-fold CV, with and without
+sequence smoothing, on full rallies and on rallies with 30% of the hits missing.
 """
 
 from __future__ import annotations
@@ -86,7 +89,7 @@ def load_rallies(set_dir: Path) -> list[dict]:
     return out
 
 
-def examples(rallies, rng=None, pos_noise=0.0, flip=0.0, drop_loc=0.0):
+def examples(rallies, rng=None, pos_noise=0.0, flip=0.0, drop_loc=0.0, drop_hit=0.0):
     fl = defaultdict(list)
     for r in rallies:
         s = r["strokes"]
@@ -95,6 +98,8 @@ def examples(rallies, rng=None, pos_noise=0.0, flip=0.0, drop_loc=0.0):
     X, y, g, ridx = [], [], [], []
     for i, r in enumerate(rallies):
         s = r["strokes"]
+        if rng is not None and drop_hit:
+            s = [st for st in s if rng.random() >= drop_hit]  # hits our detector misses
         locs, high = [], []
         for st in s:
             loc = st["loc"]
@@ -137,9 +142,12 @@ def main(argv=None) -> int:
     ap.add_argument("--pos-noise", type=float, default=0.4)
     ap.add_argument("--flip", type=float, default=0.12)
     ap.add_argument("--drop-loc", type=float, default=0.0, help="share of hitter positions dropped in training (0.15 and 0.3 were worse on DJI_0009)")
+    ap.add_argument("--drop-hit", type=float, nargs="+", default=[0.0, 0.15, 0.3],
+                    help="one training copy per value, with that share of the hits removed from each rally")
     ap.add_argument("--iters", type=int, default=150)
     ap.add_argument("--leaves", type=int, default=15)
-    ap.add_argument("--seq-weight", type=float, default=1.0)
+    ap.add_argument("--seq-weight", type=float, default=0.0,
+                    help="rally smoothing at run time (0 = off: it costs ~6 points once hits are missed)")
     a = ap.parse_args(argv)
     from sklearn.ensemble import HistGradientBoostingClassifier as HGB
     from sklearn.model_selection import GroupKFold
@@ -147,27 +155,37 @@ def main(argv=None) -> int:
     from rallyiq.gbt import export_hgb
 
     rallies = load_rallies(a.set_dir)
-    X, y, g, ridx = examples(rallies, np.random.default_rng(0), a.pos_noise, a.flip, a.drop_loc)
+    parts = [examples(rallies, np.random.default_rng(i), a.pos_noise, a.flip, a.drop_loc, d)
+             for i, d in enumerate(a.drop_hit)]
+    X = np.vstack([p[0] for p in parts])
+    y, g = np.concatenate([p[1] for p in parts]), np.concatenate([p[2] for p in parts])
     classes = sorted(set(y.tolist()))  # scikit-learn orders classes this way
-    print(f"{len(rallies)} rallies, {len(y)} strokes, {len(set(g))} matches")
+    print(f"{len(rallies)} rallies, {len(parts[0][1])} strokes, {len(set(g))} matches, {len(a.drop_hit)} training copies")
 
     def fit(Xt, yt):
         return HGB(max_iter=a.iters, learning_rate=0.1, max_leaf_nodes=a.leaves, l2_regularization=1.0,
                    random_state=0).fit(Xt, yt)
 
-    P = np.zeros((len(y), len(classes)))
-    for tr, te in GroupKFold(5).split(X, y, g):
-        m = fit(X[tr], y[tr])
-        P[te] = m.predict_proba(X[te])[:, [list(m.classes_).index(c) for c in classes]]
     start, trans = sequence_stats(rallies, classes)
-    prior = np.asarray([np.mean(y == c) for c in classes])
-    acc = np.mean(np.asarray(classes)[P.argmax(1)] == y)
-    S = P.copy()
-    for i in np.unique(ridx):
-        k = ridx == i
-        S[k] = CM.smooth(P[k], start, trans, prior, a.seq_weight)
-    acc_seq = np.mean(np.asarray(classes)[S.argmax(1)] == y)
-    print(f"grouped 5-fold CV accuracy: {acc:.3f} per shot, {acc_seq:.3f} with rally smoothing")
+    prior = np.asarray([np.mean(parts[0][1] == c) for c in classes])
+    evals = {"full rallies": examples(rallies, np.random.default_rng(101), a.pos_noise, a.flip, a.drop_loc, 0.0),
+             "30% hits missing": examples(rallies, np.random.default_rng(102), a.pos_noise, a.flip, a.drop_loc, 0.3)}
+    matches = np.unique(g)
+    cv = {}
+    for name, (Xv, yv, gv, rv) in evals.items():
+        P = np.zeros((len(yv), len(classes)))
+        for _, te_m in GroupKFold(5).split(matches, matches, matches):
+            held = matches[te_m]
+            m = fit(X[~np.isin(g, held)], y[~np.isin(g, held)])
+            te = np.isin(gv, held)
+            P[te] = m.predict_proba(Xv[te])[:, [list(m.classes_).index(c) for c in classes]]
+        S = P.copy()
+        for i in np.unique(rv):
+            k = rv == i
+            S[k] = CM.smooth(P[k], start, trans, prior, 1.0)
+        cv[name] = (float(np.mean(np.asarray(classes)[P.argmax(1)] == yv)), float(np.mean(np.asarray(classes)[S.argmax(1)] == yv)))
+        print(f"grouped 5-fold CV, {name}: {cv[name][0]:.3f} per shot, {cv[name][1]:.3f} with rally smoothing")
+    acc, acc_seq = cv["full rallies"]
 
     if a.out:
         m = fit(X, y)
@@ -178,9 +196,11 @@ def main(argv=None) -> int:
                 "depth_quantiles": [round(float(v), 4) for v in np.quantile(depths[~np.isnan(depths)], np.linspace(0.05, 0.95, 19))],
                 "start": start.round(5).tolist(), "trans": trans.round(5).tolist(), "prior": prior.round(5).tolist(),
                 "seq_weight": a.seq_weight,
-                "meta": {"source": "ShuttleSet (CoachAI-Projects, MIT)", "strokes": len(y), "matches": len(set(g)),
+                "meta": {"source": "ShuttleSet (CoachAI-Projects, MIT)", "strokes": len(parts[0][1]), "matches": len(set(g)),
                          "cv_acc": round(float(acc), 3), "cv_acc_seq": round(float(acc_seq), 3),
-                         "pos_noise_m": a.pos_noise, "drop_loc": a.drop_loc, "contact_flip": a.flip, "counts": dict(Counter(y.tolist()))}}
+                         "cv_acc_missing30": round(cv["30% hits missing"][0], 3),
+                         "cv_acc_missing30_seq": round(cv["30% hits missing"][1], 3), "drop_hit": a.drop_hit,
+                         "pos_noise_m": a.pos_noise, "drop_loc": a.drop_loc, "contact_flip": a.flip, "counts": dict(Counter(parts[0][1].tolist()))}}
         a.out.write_text(json.dumps(spec, separators=(",", ":")), encoding="utf-8")
         print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)")
     return 0

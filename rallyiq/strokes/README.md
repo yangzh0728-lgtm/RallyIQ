@@ -155,17 +155,21 @@ ShuttleSet 的 CSV 把“过渡切球”写成“過度切球”，之前的映�
 现在两种写法都映射到 `drop`，`learn_strokes.py --shuttleset` 直接从 CSV 读类型。按修正后的标签重测，
 当时的默认模型在 6 场留出比赛（189 拍）上是 65.1%（上面的表都按修正后的标签测）。
 
-### 场地坐标模型 + 回合序列平滑（`court.py`，默认开启）
+### 场地坐标模型（`court.py`，默认开启）
 
-`auto` 现在把 `strokes_v3` 和场地坐标模型 `models/strokes_court_v1.json` 合并（几何平均），再按回合做序列平滑：
+`auto` 现在把 `strokes_v3` 和场地坐标模型 `models/strokes_court_v2.json` 合并（几何平均）：
 
 - 场地坐标模型只看任何标定过的机位都量得一样的东西：击球人和接球人站位（米）、飞行时间（除以本视频的中位数，业余节奏慢也能对上）、本拍/上一拍/下一拍击球点高低（`detail.py` 的 contact 头）、回合中第几拍。用 ShuttleSet 全部标注训练（44 场、35,009 拍，不需要视频），训练时加 0.4 米站位噪声和 12% 高低翻转。按场分组 5 折：77.5%。
 - 远端深度校正：低机位下远端球员的脚点会偏深 1 米多；评分前把本视频每一侧的击球人深度按分位数对齐到 ShuttleSet 的分布（无监督，不用标注）。
-- 序列平滑：ShuttleSet 的前后拍转移次数做混合 HMM，前向后向求每拍的边缘概率（挑球后面多半是后场高点、杀球后面多半是挡网或挑球）。输出仍是每拍概率，复核策略不变。
+- 漏拍（court_v2）：自动击球检测会漏掉 20–40% 的击球，前后拍特征（飞行时间、上一拍/下一拍）随之错位。训练时把 ShuttleSet 复制三份，分别随机去掉 0%、15%、30% 的击球。按场分组 5 折、漏掉 30% 击球时：court_v1（带平滑）58.7% → court_v2 68.5%；完整回合 77.4% → 77.2%。
+- 序列平滑（court_v2 默认关闭，`seq_weight` 0）：ShuttleSet 的前后拍转移次数做混合 HMM，前向后向求每拍的边缘概率（挑球后面多半是后场高点、杀球后面多半是挡网或挑球）。输出仍是每拍概率，复核策略不变。
+
+  场地模型本身已经用了前后拍特征，平滑只在完整回合上多 0.2 个点；一旦中间漏了拍，转移概率就是错的，漏 30% 时反而掉 6–10 个点（按长间隔断链、按漏拍改转移矩阵都试过，都不如不平滑）。
 
 在 sam 的 DJI_0009 三分钟片段（58 拍人工核对，击球点用标注）：`gbt_v3` 单独 26/58，合并后 37/58；35 拍“确定”的标注上 19 → 26。`court: false` / `sequence: false` 可以关掉。
+court_v1 → court_v2（2026-11-14，同一套评测；58 拍上 ±3 拍属于重训随机波动）：标注击球 32 → 30，自动击球（学习打分）13/34 → 16/34，自动击球（规则打分）24/47 → 24/47。
 
-重新训练：`python scripts/learn_court_strokes.py <CoachAI-Projects>/ShuttleSet/set --out rallyiq/strokes/models/strokes_court_v1.json`
+重新训练：`python scripts/learn_court_strokes.py <CoachAI-Projects>/ShuttleSet/set --out rallyiq/strokes/models/strokes_court_v2.json`
 
 ## 分层描述（`detail.py`，`StrokeInfo.detail`）
 
