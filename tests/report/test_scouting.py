@@ -104,3 +104,34 @@ def test_one_shot_rallies_are_left_out():
 def _stats_args(spec):
     _, players = _rallies(spec)
     return players, _cal()
+
+
+def test_warm_up_rally_is_left_out_of_style_and_tactics():
+    drill = [("P1", "clear", "rear", "C", 1.2) if k % 2 == 0 else ("P2", "clear", "rear", "C", 1.2)
+             for k in range(40)]
+    stats, _, _ = _stats([(None, drill), *PRESSED])
+    assert any("热身或练习" in c for c in stats.caveats)
+    p1 = {s.target: s for s in stats.scouting}["P1"]
+    assert p1.n_shots == 10 * 3  # the 20 drill clears of P1 are not counted
+    assert stats.rallies and len(stats.rallies) == 11  # the rally log still shows it
+
+
+def test_rally_is_cut_at_a_long_pause():
+    from rallyiq.report.scouting import split_at_gaps
+    # a point, then 6 s of nobody hitting while P1 gets ready, then the next serve, all in one detected rally
+    seq = [("P1", "short_serve", "mid", "C", 0.9), ("P2", "push", "front", "C", 0.6),
+           ("P1", "clear", "rear", "L", 6.0), ("P1", "short_serve", "mid", "C", 0.9),
+           ("P2", "net_shot", "front", "C", 0.6)]
+    events, _ = _rallies([("P1", seq)])
+    parts = split_at_gaps(events).rallies
+    assert [len(r.shot_ids) for r in parts] == [3, 2]
+    assert [r.winner for r in parts] == [None, "P1"] and parts[1].rally_id == "r0~1"
+
+
+def test_first_shot_counts_as_the_serve():
+    # every rally opens with a shot labelled "block" from P2's mid court: that is the serve, not a weakness
+    spec = [("P2", [("P2", "block", "mid", "C", 0.9), ("P1", "lift", "front", "C", 1.2),
+                    ("P2", "smash", "rear", "C", 0.5), ("P1", "block", "mid", "C", 0.8)]) for _ in range(12)]
+    stats, _, _ = _stats(spec)
+    p2 = {s.target: s for s in stats.scouting}["P2"]
+    assert not any(t.code == "zone_weak" and "中场" in t.title for t in p2.tactics)
