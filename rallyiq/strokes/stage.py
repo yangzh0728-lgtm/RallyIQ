@@ -3,8 +3,10 @@
 Contract: ``run(ctx) -> StrokesResult`` using ``ctx.events``, ``ctx.shuttle`` and
 ``ctx.players``. Options in ``ctx.config["strokes"]``:
 
-* ``classifier``: ``"auto"`` (default: bundled ``models/strokes_v3.json``, numpy only; the rules if
-  it is missing), ``"rules"``, ``"bst"`` (see ``bst.py``) or ``"sklearn"`` (see ``learned.py``); a
+* ``classifier``: ``"auto"`` (default: bundled ``models/strokes_v3.json``, numpy only, combined with
+  the court model ``models/strokes_court_v1.json`` of ``court.py``; ``court: false`` turns that off,
+  ``sequence: true`` adds its rally smoothing, off by default because it hurts on detected hits;
+  the rules if no model is there), ``"rules"``, ``"bst"`` (see ``bst.py``) or ``"sklearn"`` (see ``learned.py``); a
   model backend that cannot load falls back to the rules with a warning unless ``require_model: true``;
 * ``sklearn``: ``{"model": "/path/to/strokes.json"}`` (or ``.joblib``; trained by ``scripts/learn_strokes.py``);
 * ``bst``: BST settings (``repo``, ``weights``, ``model_name``, ``pose_style``, ``seq_len``);
@@ -39,6 +41,15 @@ def run(ctx: StageContext) -> StrokesResult:
     cfg = _config(opts)
     ctx.report(0.1)
 
+    detail, attrs = bool(opts.get("detail", True)), None
+    if detail or cfg.classifier == "auto":
+        from .detail import get_model as get_attrs
+
+        try:
+            attrs = get_attrs()
+        except (ValueError, KeyError) as e:
+            log.warning("bundled stroke attribute model unusable (%s); rules-only detail", e)
+
     model = name = None
     if cfg.classifier == "auto":
         from .learned import BUNDLED, GBT_NAME, SklearnUnavailable
@@ -49,6 +60,17 @@ def run(ctx: StageContext) -> StrokesResult:
                 model, name = make_learned_fn(BUNDLED), GBT_NAME
             except (SklearnUnavailable, ValueError, KeyError) as e:
                 log.warning("bundled stroke model unusable (%s); using %s", e, RULES_NAME)
+        if opts.get("court", True):
+            from . import court as CM
+
+            try:
+                court = CM.get_model()
+            except (ValueError, KeyError) as e:
+                court = None
+                log.warning("bundled court stroke model unusable (%s)", e)
+            if court is not None:
+                model = CM.make_model_fn(model, court, attrs, meta.fps, seq=bool(opts.get("sequence", False)))
+                name = f"{name}+{CM.NAME}" if name else CM.NAME
     elif cfg.classifier == "bst":
         from .bst import BSTConfig, BSTUnavailable, make_model_fn
 
@@ -78,14 +100,6 @@ def run(ctx: StageContext) -> StrokesResult:
     elif cfg.classifier != "rules":
         raise ValueError(f"unknown strokes classifier {cfg.classifier!r}")
 
-    detail, attrs = bool(opts.get("detail", True)), None
-    if detail:
-        from .detail import get_model as get_attrs
-
-        try:
-            attrs = get_attrs()
-        except (ValueError, KeyError) as e:
-            log.warning("bundled stroke attribute model unusable (%s); rules-only detail", e)
     result = classify(events, ctx.shuttle, ctx.players, meta.fps, cfg, model=model, model_name=name,
                       detail=detail, attrs=attrs)
     ctx.report(0.95)
