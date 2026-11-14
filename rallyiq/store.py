@@ -135,10 +135,11 @@ class Store:
         (self.root / "videos").mkdir(parents=True, exist_ok=True)
         self.db = Database(db_url or database_url(self.root))
         self.blobs: BlobStore = blobs or blob_store_from_env(self.root)
-        self.db.executescript(SCHEMA)
-        self.db.add_columns("videos", VIDEO_COLUMNS)
-        self.db.add_columns("jobs", JOB_COLUMNS)
-        self.db.q("CREATE INDEX IF NOT EXISTS videos_owner ON videos(owner_id, created_at)")
+        with self.db.schema_lock():
+            self.db.executescript(SCHEMA)
+            self.db.add_columns("videos", VIDEO_COLUMNS)
+            self.db.add_columns("jobs", JOB_COLUMNS)
+            self.db.q("CREATE INDEX IF NOT EXISTS videos_owner ON videos(owner_id, created_at)")
 
     def _q(self, sql: str, args: tuple = ()) -> list[Row]:
         return self.db.q(sql, args)

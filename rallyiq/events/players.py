@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import statistics
+from bisect import bisect_left
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
@@ -15,6 +16,7 @@ from .types import (
     KP_R_ELBOW,
     KP_R_SHOULDER,
     KP_R_WRIST,
+    Keypoint,
     PlayerPose,
     PoseFrame,
 )
@@ -35,6 +37,7 @@ class Proximity:
     distance_rel: float  # distance in player heights
     used_wrist: bool  # False when only the shoulders were visible
     pose: PlayerPose
+    filled: bool = False  # the player was missing at this frame; pose bridged from nearby frames
 
 
 class PoseIndex:
@@ -50,6 +53,12 @@ class PoseIndex:
         self.median_height = {pid: statistics.median(hs) for pid, hs in heights.items()}
         all_h = [h for hs in heights.values() for h in hs]
         self.global_height = statistics.median(all_h) if all_h else cfg.default_player_height_px
+        # Per player: frames where they were seen, for bridging a player missing at a hit (``player_gap_fill_ms``).
+        self.seen: dict[str, list[tuple[int, float, PlayerPose]]] = {}
+        for f in sorted(frames, key=lambda f: f.frame):
+            for p in f.players:
+                self.seen.setdefault(p.player_id, []).append((f.frame, f.t_ms, p))
+        self._seen_frames = {pid: [x[0] for x in xs] for pid, xs in self.seen.items()}
 
     @property
     def empty(self) -> bool:
@@ -112,17 +121,54 @@ class PoseIndex:
                 best, best_d = p, d
         return self.height_of(best) if best is not None else self.global_height
 
+    def bridged(self, player_id: str, frame: int, t_ms: float) -> Optional[PlayerPose]:
+        """``player_id``'s pose at ``frame`` interpolated from the closest frames before and after where the
+        player was seen, both within ``cfg.player_gap_fill_ms`` of ``t_ms``. None when the player was not seen
+        on both sides of the gap that closely (a player who left the view is not invented)."""
+        lim = self.cfg.player_gap_fill_ms
+        fr = self._seen_frames.get(player_id)
+        if lim <= 0 or not fr:
+            return None
+        i = bisect_left(fr, frame)
+        if i == 0 or i >= len(fr):
+            return None
+        (fa, ta, a), (fb, tb, b) = self.seen[player_id][i - 1], self.seen[player_id][i]
+        if t_ms - ta > lim or tb - t_ms > lim or fb <= fa:
+            return None
+        s = (frame - fa) / (fb - fa)
+        n = min(len(a.keypoints), len(b.keypoints))
+        kps = [
+            Keypoint(
+                a.keypoints[k].x + s * (b.keypoints[k].x - a.keypoints[k].x),
+                a.keypoints[k].y + s * (b.keypoints[k].y - a.keypoints[k].y),
+                min(a.keypoints[k].confidence, b.keypoints[k].confidence),
+            )
+            for k in range(n)
+        ]
+        near = a if s < 0.5 else b
+        return PlayerPose(player_id, kps, near.side, near.foot_court_xy, near.team)
+
     def proximities(self, frame: int, shuttle_xy: Vec, search: Optional[int] = None) -> list[Proximity]:
         """Every player's proximity to the shuttle at ``frame``, best first.
 
         ``search``: how many frames around ``frame`` to look for a pose (default ``cfg.pose_search_frames``).
+        A player of the video missing from that pose frame but seen shortly before and after it is bridged
+        (``bridged``) and enters with ``filled=True`` and at least ``cfg.player_gap_fill_floor`` as its score.
         """
         pf = self.frame_near(frame, search)
         if pf is None:
             return []
         out = []
         local = self.scale_at(frame, shuttle_xy) if self.cfg.hitter_scale == "mixed" else None
-        for p in pf.players:
+        present = {p.player_id for p in pf.players}
+        filled: list[PlayerPose] = []
+        if self.cfg.player_gap_fill_ms > 0:
+            for pid in self.seen:
+                if pid not in present:
+                    bp = self.bridged(pid, pf.frame, pf.t_ms)
+                    if bp is not None:
+                        filled.append(bp)
+        for p in [*pf.players, *filled]:
             pts, used_wrist = self.racket_points(p)
             if not pts:
                 continue
@@ -133,6 +179,9 @@ class PoseIndex:
             score = max(0.0, 1.0 - d_rel / self.cfg.max_hitter_dist_rel)
             if not used_wrist:
                 score *= 0.6
-            out.append(Proximity(p.player_id, score, d_rel, used_wrist, p))
+            is_fill = p.player_id not in present
+            if is_fill:
+                score = max(score, self.cfg.player_gap_fill_floor)
+            out.append(Proximity(p.player_id, score, d_rel, used_wrist, p, is_fill))
         out.sort(key=lambda x: -x.score)
         return out

@@ -38,6 +38,19 @@ class EventsConfig:
     racket_extension: float = 0.7  # racket head ~ wrist + k * (wrist - elbow)
     min_kp_conf: float = 0.3
     pose_search_frames: int = 3  # look this many frames around a hit for a pose
+    # A player missing from the pose frame at a hit but seen within this many ms before AND after it is bridged
+    # (keypoints interpolated between the two sightings) and competes for the hit. On a low camera the far player
+    # is often hidden behind the near one for 1-2 s (DJI_0009: far player missing in 23% of frames); without the
+    # bridge the near player is the only candidate hitter, so the far player's hits go to the near player, break
+    # alternation and are dropped as self-feeds. 0 disables.
+    # DJI_0009 30 fps (58 hand-labelled hits, scripts/hitter_eval.py), rules: hits found with the right hitter
+    # 32 -> 39, hit recall 64 -> 78%, precision 79 -> 78%, alternation 62 -> 71%; learned v2: 28 -> 29, precision
+    # 86 -> 82%, alternation 58 -> 73%. 800 ms: 37 (rules); 3000 ms: 39.
+    player_gap_fill_ms: float = 1500.0
+    # Proximity a bridged player gets at least: a hidden player's interpolated wrists say little about where the
+    # racket was, so the alternation rules need them as a candidate. 0 (no floor): 34 of 58 on DJI_0009 (rules);
+    # 0.2 and 0.3: 39; 0.45: 36-37.
+    player_gap_fill_floor: float = 0.2
     landing_window_ms: float = 250.0  # direction change this close to a static end is a landing
 
     # Broadcasts cut to close-ups and replays between rallies; shuttle-like blobs and large people there make
