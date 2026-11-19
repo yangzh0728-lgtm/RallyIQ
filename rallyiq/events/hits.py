@@ -225,6 +225,10 @@ def detect_hits(
         if needed and (scorer is None or serve.confidence >= cfg.min_candidate_conf):
             out.insert(0, serve)
 
+    if cfg.side_decode:
+        from .sides import decode_sides
+
+        decode_sides(out, track, poses, cfg)
     return resolve_sequence(out, cfg)
 
 

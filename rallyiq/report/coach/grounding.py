@@ -28,8 +28,9 @@ from .advice import ground_sources
 
 _RANK = {"low": 0, "medium": 1, "high": 2}
 _NUM = re.compile(r"(?<![A-Za-z_])\d+(?:\.\d+)?")
-# Numbers that are labels rather than measurements: player names, zone names, list markers.
-_LABEL_TOKENS = re.compile(r"P[12]|第\s*\d+|\d+\s*[\.、)）](?=\D)|[≤≥<>]\s*\d+")
+# Numbers that are labels rather than measurements: player names, zone names, list markers, and
+# video times to re-watch (01:05).
+_LABEL_TOKENS = re.compile(r"\d{1,2}:\d{2}(?::\d{2})?|P[12]|第\s*\d+|\d+\s*[\.、)）](?=\D)|[≤≥<>]\s*\d+")
 
 
 def _usable(e: Metric | Distribution) -> bool:

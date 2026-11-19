@@ -168,7 +168,7 @@ def test_bundled_model_is_the_default(tmp_path: Path):
 
     ctx = StageContext(video_id=vid, video_path=dest, work_dir=tmp_path, store=store, meta=meta, config={})
     res = run(ctx)
-    assert res.classifier == L.GBT_NAME and len(res.shots) == len(v.events.shots)
+    assert res.classifier.startswith(L.GBT_NAME) and len(res.shots) == len(v.events.shots)
     ctx.config["strokes"] = {"classifier": "rules"}
     assert run(ctx).classifier == "rules_v1"
 

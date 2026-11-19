@@ -1,0 +1,395 @@
+{
+ "video": "DJI_0009 3-minute clip (DJI_0009_3min_60fps.mp4 / the 30 fps cut; same timeline)",
+ "what": "Shot type of each of the 58 hits that sam confirmed on 2026-11-08 (hits, hitters, rally winners). Types labelled by Claude from 60 fps frame grids on 2026-11-12; sam has not reviewed the types yet. side: far = black shirt, near = red shirt. confidence: sure / likely / unsure.",
+ "shots": [
+  {
+   "t_ms": 20800,
+   "side": "near",
+   "shot_type": "long_serve",
+   "confidence": "likely",
+   "note": "flick/high serve, P1 overhead at far baseline after 0.77s"
+  },
+  {
+   "t_ms": 21567,
+   "side": "far",
+   "shot_type": "clear",
+   "confidence": "sure",
+   "note": "overhead from rear, went out over left sideline"
+  },
+  {
+   "t_ms": 28867,
+   "side": "near",
+   "shot_type": "short_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 29633,
+   "side": "far",
+   "shot_type": "push",
+   "confidence": "likely",
+   "note": "P1 at front, flat to P2 mid-court in 0.57s"
+  },
+  {
+   "t_ms": 30200,
+   "side": "near",
+   "shot_type": "drop",
+   "confidence": "likely",
+   "note": "P2 head-height contact, falls to P1 front court"
+  },
+  {
+   "t_ms": 31300,
+   "side": "far",
+   "shot_type": "net_shot",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 32067,
+   "side": "near",
+   "shot_type": "lift",
+   "confidence": "sure",
+   "note": "lunge at net, high to rear"
+  },
+  {
+   "t_ms": 33667,
+   "side": "far",
+   "shot_type": "clear",
+   "confidence": "likely",
+   "note": "overhead, high, P2 overhead at mid-rear"
+  },
+  {
+   "t_ms": 34733,
+   "side": "near",
+   "shot_type": "drop",
+   "confidence": "sure",
+   "note": "overhead, falls to P1 front court"
+  },
+  {
+   "t_ms": 35733,
+   "side": "far",
+   "shot_type": "net_shot",
+   "confidence": "likely"
+  },
+  {
+   "t_ms": 36900,
+   "side": "near",
+   "shot_type": "net_shot",
+   "confidence": "sure",
+   "note": "winner"
+  },
+  {
+   "t_ms": 42333,
+   "side": "near",
+   "shot_type": "short_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 43033,
+   "side": "far",
+   "shot_type": "lift",
+   "confidence": "sure",
+   "note": "cross-court lift from front-left"
+  },
+  {
+   "t_ms": 44433,
+   "side": "near",
+   "shot_type": "cross_net",
+   "confidence": "unsure",
+   "note": "low lunge, cross-court, P1 takes it near the net"
+  },
+  {
+   "t_ms": 45467,
+   "side": "far",
+   "shot_type": "push",
+   "confidence": "sure",
+   "note": "winner on P2 right sideline"
+  },
+  {
+   "t_ms": 60200,
+   "side": "far",
+   "shot_type": "short_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 61067,
+   "side": "near",
+   "shot_type": "net_shot",
+   "confidence": "likely",
+   "note": "a bit high, P1 intercepts at net"
+  },
+  {
+   "t_ms": 61467,
+   "side": "far",
+   "shot_type": "push",
+   "confidence": "likely",
+   "note": "from net, went long/out"
+  },
+  {
+   "t_ms": 71300,
+   "side": "near",
+   "shot_type": "long_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 72933,
+   "side": "far",
+   "shot_type": "drop",
+   "confidence": "sure",
+   "note": "overhead mid-court, cross drop to P2 front-left"
+  },
+  {
+   "t_ms": 73933,
+   "side": "near",
+   "shot_type": "lift",
+   "confidence": "unsure",
+   "note": "low at front-left, P1 receives deep"
+  },
+  {
+   "t_ms": 74500,
+   "side": "far",
+   "shot_type": "drive",
+   "confidence": "unsure",
+   "note": "flat to P2 shoulder height mid-court"
+  },
+  {
+   "t_ms": 75200,
+   "side": "near",
+   "shot_type": "push",
+   "confidence": "unsure",
+   "note": "shoulder-height, to P1 front"
+  },
+  {
+   "t_ms": 75933,
+   "side": "far",
+   "shot_type": "lift",
+   "confidence": "sure",
+   "note": "high to P2 rear"
+  },
+  {
+   "t_ms": 76800,
+   "side": "near",
+   "shot_type": "clear",
+   "confidence": "likely",
+   "note": "overhead from rear"
+  },
+  {
+   "t_ms": 77867,
+   "side": "far",
+   "shot_type": "drop",
+   "confidence": "sure",
+   "note": "to P2 front-left lunge"
+  },
+  {
+   "t_ms": 78733,
+   "side": "near",
+   "shot_type": "net_shot",
+   "confidence": "unsure",
+   "note": "low at front-left"
+  },
+  {
+   "t_ms": 79600,
+   "side": "far",
+   "shot_type": "net_shot",
+   "confidence": "unsure"
+  },
+  {
+   "t_ms": 80667,
+   "side": "near",
+   "shot_type": "push",
+   "confidence": "unsure",
+   "note": "waist-height, winner into P1 court"
+  },
+  {
+   "t_ms": 97833,
+   "side": "near",
+   "shot_type": "short_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 98867,
+   "side": "far",
+   "shot_type": "net_shot",
+   "confidence": "sure",
+   "note": "winner, P2 dives"
+  },
+  {
+   "t_ms": 119333,
+   "side": "far",
+   "shot_type": "short_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 119767,
+   "side": "near",
+   "shot_type": "lift",
+   "confidence": "sure",
+   "note": "serve return lifted deep"
+  },
+  {
+   "t_ms": 121300,
+   "side": "far",
+   "shot_type": "clear",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 122167,
+   "side": "near",
+   "shot_type": "smash",
+   "confidence": "sure",
+   "note": "jump smash, 0.57s"
+  },
+  {
+   "t_ms": 122733,
+   "side": "far",
+   "shot_type": "lift",
+   "confidence": "sure",
+   "note": "defensive lift after smash"
+  },
+  {
+   "t_ms": 123733,
+   "side": "near",
+   "shot_type": "clear",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 125700,
+   "side": "far",
+   "shot_type": "drop",
+   "confidence": "likely",
+   "note": "to P2 front-right"
+  },
+  {
+   "t_ms": 126467,
+   "side": "near",
+   "shot_type": "lift",
+   "confidence": "sure",
+   "note": "cross-court from right lunge"
+  },
+  {
+   "t_ms": 127700,
+   "side": "far",
+   "shot_type": "drop",
+   "confidence": "likely",
+   "note": "cross to P2 right"
+  },
+  {
+   "t_ms": 128433,
+   "side": "near",
+   "shot_type": "net_shot",
+   "confidence": "unsure",
+   "note": "low lunge right"
+  },
+  {
+   "t_ms": 128900,
+   "side": "far",
+   "shot_type": "push",
+   "confidence": "unsure",
+   "note": "from net to P2 front-mid head height"
+  },
+  {
+   "t_ms": 129733,
+   "side": "near",
+   "shot_type": "net_shot",
+   "confidence": "sure",
+   "note": "winner at P1 net"
+  },
+  {
+   "t_ms": 141900,
+   "side": "far",
+   "shot_type": "short_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 142200,
+   "side": "near",
+   "shot_type": "lift",
+   "confidence": "sure",
+   "note": "serve return deep"
+  },
+  {
+   "t_ms": 143233,
+   "side": "far",
+   "shot_type": "clear",
+   "confidence": "sure",
+   "note": "around-the-head, jump"
+  },
+  {
+   "t_ms": 144533,
+   "side": "near",
+   "shot_type": "smash",
+   "confidence": "sure",
+   "note": "jump smash"
+  },
+  {
+   "t_ms": 145133,
+   "side": "far",
+   "shot_type": "lift",
+   "confidence": "likely",
+   "note": "defensive, half-high"
+  },
+  {
+   "t_ms": 146067,
+   "side": "near",
+   "shot_type": "clear",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 147600,
+   "side": "far",
+   "shot_type": "smash",
+   "confidence": "likely",
+   "note": "fast, to P2 mid-left low"
+  },
+  {
+   "t_ms": 148300,
+   "side": "near",
+   "shot_type": "lift",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 149767,
+   "side": "far",
+   "shot_type": "smash",
+   "confidence": "likely",
+   "note": "to P2 right sideline, 7 cm out"
+  },
+  {
+   "t_ms": 158333,
+   "side": "near",
+   "shot_type": "short_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 159000,
+   "side": "far",
+   "shot_type": "net_shot",
+   "confidence": "likely"
+  },
+  {
+   "t_ms": 159533,
+   "side": "near",
+   "shot_type": "net_shot",
+   "confidence": "sure",
+   "note": "did not cross the net"
+  },
+  {
+   "t_ms": 163967,
+   "side": "far",
+   "shot_type": "long_serve",
+   "confidence": "sure",
+   "note": "high serve, not returned"
+  },
+  {
+   "t_ms": 174700,
+   "side": "near",
+   "shot_type": "long_serve",
+   "confidence": "sure"
+  },
+  {
+   "t_ms": 175867,
+   "side": "far",
+   "shot_type": "smash",
+   "confidence": "sure",
+   "note": "winner"
+  }
+ ]
+}
