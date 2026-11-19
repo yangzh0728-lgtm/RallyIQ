@@ -468,8 +468,8 @@ class OverlayData(Contract):
 # ------------------------------------------------------------------- jobs & videos
 
 
-StageName = Literal["probe", "calibration", "players", "shuttle", "events", "strokes", "overlay"]
-STAGES: list[str] = ["probe", "calibration", "players", "shuttle", "events", "strokes", "overlay"]
+StageName = Literal["probe", "calibration", "players", "shuttle", "events", "strokes", "feet", "overlay"]
+STAGES: list[str] = ["probe", "calibration", "players", "shuttle", "events", "strokes", "feet", "overlay"]
 
 JobState = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 
@@ -522,6 +522,147 @@ class HeatmapData(Contract):
     counts: list[list[int]] = Field(description="counts[iy][ix]; cell (ix, iy) covers x in [ix*cell, (ix+1)*cell)")
     samples: int
 
+
+
+# ------------------------------------------------------------------------ footwork
+
+
+FootSide = Literal["left", "right"]
+FootworkKind = Literal["split_step", "lunge", "jump", "chasse", "cross_step", "run", "recovery"]
+SplitStepTiming = Literal["on_time", "early", "late", "none", "unknown"]
+FootLanding = Literal["heel", "forefoot", "flat"]
+
+
+class PlayerFeet(Contract):
+    """Heel and toe of one player in one frame, from the foot landmark model (index 0 = left, 1 = right
+    as the model labels them; footwork re-pairs them with the ankle tracks by the model's own ankles)."""
+
+    player_id: PlayerId | None = None
+    track_id: int
+    ankle: list[Keypoint] = Field(min_length=2, max_length=2, description="the foot model's ankles [x, y, conf]")
+    heel: list[Keypoint] = Field(min_length=2, max_length=2)
+    toe: list[Keypoint] = Field(min_length=2, max_length=2, description="tip of the shoe (foot index)")
+
+
+class FeetFrame(Contract):
+    frame: int = Field(ge=0)
+    t_ms: int = Field(ge=0)
+    players: list[PlayerFeet] = Field(default_factory=list)
+
+
+class FootLandmarks(Contract):
+    """Stage ``feet`` output: heel and toe keypoints of every tracked player during the rallies, from a
+    single-person landmark model run on each player's box (BlazePose GHUM, Apache-2.0). Empty when the
+    model is not installed; footwork then falls back to the ankles."""
+
+    schema_version: str = SCHEMA_VERSION
+    video_id: str
+    model: str | None = Field(default=None, description="foot model name@version; null = not run")
+    frames: list[FeetFrame] = Field(default_factory=list)
+
+
+class FootContact(Contract):
+    """One foot planted on the floor (从落地到离地), found from the ankle keypoint.
+
+    ``image`` is the median ground point of the foot in px; ``court`` the same point in court metres
+    (null without a homography)."""
+
+    player_id: PlayerId
+    foot: FootSide
+    start_frame: int = Field(ge=0)
+    end_frame: int = Field(ge=0, description="inclusive")
+    t_ms: int = Field(ge=0)
+    end_ms: int = Field(ge=0)
+    image: Point2
+    court: Point2 | None = None
+    heel_image: Point2 | None = Field(default=None, description="heel px while flat (needs the feet stage)")
+    toe_image: Point2 | None = Field(default=None, description="toe px while flat")
+    toe_dir_deg: float | None = Field(default=None, description="foot direction in the player's own half: "
+                                      "0 = towards the net, +90 = to the player's right; null = not measurable")
+    landing: FootLanding | None = Field(default=None, description="which part touched down first: heel (脚跟), "
+                                        "forefoot (前脚掌) or flat; null = not judged")
+
+
+class FootStep(Contract):
+    """A foot moving from one contact to the next (离地到落地) by at least the step threshold."""
+
+    player_id: PlayerId
+    foot: FootSide
+    start_frame: int = Field(ge=0, description="lift-off")
+    end_frame: int = Field(ge=0, description="landing")
+    t_ms: int = Field(ge=0, description="landing time")
+    length_m: float = Field(ge=0)
+    from_court: Point2
+    to_court: Point2
+    landing: FootLanding | None = Field(default=None, description="how the foot landed at the end of the step")
+
+
+class FootworkEvent(Contract):
+    """A footwork action: split step (启动步), lunge (弓步), jump (起跳), chassé (并步), cross step (交叉步),
+    running steps (跑动) or recovery to base (回位)."""
+
+    event_id: str
+    player_id: PlayerId
+    kind: FootworkKind
+    frame: int = Field(ge=0, description="landing / key frame")
+    t_ms: int = Field(ge=0)
+    start_frame: int = Field(ge=0)
+    end_frame: int = Field(ge=0)
+    court: Point2 | None = Field(default=None, description="where it happened (mid-feet), court metres")
+    value: float | None = Field(default=None, description="split step: ms from the opponent's hit; lunge: stance m; "
+                                "jump: height m; chasse/cross_step/run: metres covered; recovery: ms")
+    shot_id: str | None = Field(default=None, description="split step: the opponent's hit it answers; otherwise "
+                                "the player's own hit it prepared (lunge, steps) or followed (recovery)")
+    label: str = Field(description="Chinese display text")
+    confidence: Confidence
+
+
+class ShotFootwork(Contract):
+    """The hitter's footwork for one shot: from the opponent's previous hit to this hit, and the recovery after it."""
+
+    shot_id: str
+    player_id: PlayerId
+    t_ms: int = Field(ge=0)
+    split_step: SplitStepTiming = "unknown"
+    split_offset_ms: int | None = Field(default=None, description="split-step landing minus the opponent's hit")
+    reaction_ms: int | None = Field(default=None, description="opponent's hit to the first move towards this shot")
+    steps: int | None = Field(default=None, description="steps from the opponent's hit to this hit")
+    move_m: float | None = Field(default=None, description="mid-feet distance covered to reach the shot")
+    peak_speed_mps: float | None = None
+    pattern: list[FootworkKind] = Field(default_factory=list, description="actions used to reach the shot, in order")
+    finish: Literal["lunge", "jump", "planted", "unknown"] = "unknown"
+    stance_m: float | None = Field(default=None, description="distance between the feet at the hit")
+    lunge_landing: FootLanding | None = Field(default=None, description="lunge: how the front foot landed")
+    lunge_toe_off_deg: float | None = Field(default=None, description="lunge: angle between the front foot and "
+                                            "the direction of the lunge step (0 = toe points where the step went)")
+    recovery_ms: int | None = Field(default=None, description="this hit to back within the base radius; null = never")
+    recovery_gap_m: float | None = Field(default=None, description="distance from base when the opponent hit next")
+    summary: str = Field(default="", description="one Chinese sentence")
+    confidence: Confidence
+
+
+class PlayerFootworkQuality(Contract):
+    player_id: PlayerId
+    tracked_pct: float | None = Field(description="rally frames with both ankles tracked")
+    jitter_m: float | None = Field(description="typical planted-foot noise in metres (higher = less reliable)")
+    status: Status
+
+
+class FootworkResult(Contract):
+    """``GET /api/videos/{id}/footwork``: foot contacts, steps and footwork actions from the ankle keypoints
+    projected onto the court, linked to the effective hits. Computed on demand (no model is called)."""
+
+    schema_version: str = SCHEMA_VERSION
+    video_id: str
+    fingerprint: str
+    base: Point2 = Field(description="base position (lateral, depth) in each player's own-half frame")
+    base_radius_m: float
+    contacts: list[FootContact] = Field(default_factory=list)
+    steps: list[FootStep] = Field(default_factory=list)
+    events: list[FootworkEvent] = Field(default_factory=list)
+    shots: list[ShotFootwork] = Field(default_factory=list)
+    quality: list[PlayerFootworkQuality] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
 
 
 # -------------------------------------------------------------------------- report
@@ -719,6 +860,7 @@ class ShotMoment(Contract):
     why: str
     severity: float = Field(ge=0)
     confidence: MetricConfidence
+    footwork: ShotFootwork | None = Field(default=None, description="the hitter's footwork into and out of this shot")
 
 
 class RallyLine(Contract):
@@ -834,6 +976,7 @@ class ShotAdvice(Contract):
     why: str
     confidence: MetricConfidence
     source: Literal["model", "rules"] = Field(description="model = written by the coach provider; rules = rule text")
+    footwork: str | None = Field(default=None, description="the hitter's footwork on this shot (from the moment)")
     warnings: list[str] = Field(default_factory=list)
 
 

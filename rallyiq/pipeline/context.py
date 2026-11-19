@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..contracts import CourtCalibration, EventsResult, PlayerTracks, ShuttleTrack, StrokesResult, VideoMeta
+from ..contracts import CourtCalibration, EventsResult, FootLandmarks, PlayerTracks, ShuttleTrack, StrokesResult, VideoMeta
 from ..store import Store
 
 
@@ -16,7 +16,7 @@ class StageContext:
     """Passed to ``run(ctx)`` of every stage.
 
     Upstream artifacts are loaded lazily: ``ctx.calibration`` / ``ctx.players`` /
-    ``ctx.shuttle`` / ``ctx.events`` / ``ctx.strokes`` return the saved model or ``None``.
+    ``ctx.shuttle`` / ``ctx.events`` / ``ctx.strokes`` / ``ctx.feet`` return the saved model or ``None``.
     Call ``ctx.report(0.0..1.0)`` to publish progress for the web UI.
     """
 
@@ -52,6 +52,10 @@ class StageContext:
     @property
     def strokes(self) -> StrokesResult | None:
         return self._load("strokes", StrokesResult)
+
+    @property
+    def feet(self) -> FootLandmarks | None:
+        return self._load("feet", FootLandmarks)
 
     def require_meta(self) -> VideoMeta:
         if self.meta is None:

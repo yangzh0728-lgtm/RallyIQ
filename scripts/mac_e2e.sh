@@ -82,7 +82,7 @@ say "3/6 Python 环境 .venv"
 source .venv/bin/activate
 python -m pip install -q --upgrade pip
 extras="dev"
-for e in players vision shuttle calibration; do
+for e in players feet vision shuttle calibration; do
   python - "$e" <<'EOF' && extras="$extras,$e" || true
 import sys, tomllib
 sys.exit(0 if sys.argv[1] in tomllib.load(open("pyproject.toml", "rb"))["project"].get("optional-dependencies", {}) else 1)

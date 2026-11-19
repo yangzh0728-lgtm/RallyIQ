@@ -1,0 +1,736 @@
+{
+  "$defs": {
+    "FootContact": {
+      "additionalProperties": false,
+      "description": "One foot planted on the floor (\u4ece\u843d\u5730\u5230\u79bb\u5730), found from the ankle keypoint.\n\n``image`` is the median ground point of the foot in px; ``court`` the same point in court metres\n(null without a homography).",
+      "properties": {
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "foot": {
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Foot",
+          "type": "string"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "end_frame": {
+          "description": "inclusive",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "image": {
+          "description": "[x, y]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Image",
+          "type": "array"
+        },
+        "court": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Court"
+        },
+        "heel_image": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "heel px while flat (needs the feet stage)",
+          "title": "Heel Image"
+        },
+        "toe_image": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "toe px while flat",
+          "title": "Toe Image"
+        },
+        "toe_dir_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "foot direction in the player's own half: 0 = towards the net, +90 = to the player's right; null = not measurable",
+          "title": "Toe Dir Deg"
+        },
+        "landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "which part touched down first: heel (\u811a\u8ddf), forefoot (\u524d\u811a\u638c) or flat; null = not judged",
+          "title": "Landing"
+        }
+      },
+      "required": [
+        "player_id",
+        "foot",
+        "start_frame",
+        "end_frame",
+        "t_ms",
+        "end_ms",
+        "image"
+      ],
+      "title": "FootContact",
+      "type": "object"
+    },
+    "FootStep": {
+      "additionalProperties": false,
+      "description": "A foot moving from one contact to the next (\u79bb\u5730\u5230\u843d\u5730) by at least the step threshold.",
+      "properties": {
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "foot": {
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Foot",
+          "type": "string"
+        },
+        "start_frame": {
+          "description": "lift-off",
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "end_frame": {
+          "description": "landing",
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "t_ms": {
+          "description": "landing time",
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "length_m": {
+          "minimum": 0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "from_court": {
+          "description": "[x, y]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "From Court",
+          "type": "array"
+        },
+        "to_court": {
+          "description": "[x, y]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "To Court",
+          "type": "array"
+        },
+        "landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "how the foot landed at the end of the step",
+          "title": "Landing"
+        }
+      },
+      "required": [
+        "player_id",
+        "foot",
+        "start_frame",
+        "end_frame",
+        "t_ms",
+        "length_m",
+        "from_court",
+        "to_court"
+      ],
+      "title": "FootStep",
+      "type": "object"
+    },
+    "FootworkEvent": {
+      "additionalProperties": false,
+      "description": "A footwork action: split step (\u542f\u52a8\u6b65), lunge (\u5f13\u6b65), jump (\u8d77\u8df3), chass\u00e9 (\u5e76\u6b65), cross step (\u4ea4\u53c9\u6b65),\nrunning steps (\u8dd1\u52a8) or recovery to base (\u56de\u4f4d).",
+      "properties": {
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "split_step",
+            "lunge",
+            "jump",
+            "chasse",
+            "cross_step",
+            "run",
+            "recovery"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "frame": {
+          "description": "landing / key frame",
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "court": {
+          "anyOf": [
+            {
+              "description": "[x, y]",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "where it happened (mid-feet), court metres",
+          "title": "Court"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "split step: ms from the opponent's hit; lunge: stance m; jump: height m; chasse/cross_step/run: metres covered; recovery: ms",
+          "title": "Value"
+        },
+        "shot_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "split step: the opponent's hit it answers; otherwise the player's own hit it prepared (lunge, steps) or followed (recovery)",
+          "title": "Shot Id"
+        },
+        "label": {
+          "description": "Chinese display text",
+          "title": "Label",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "event_id",
+        "player_id",
+        "kind",
+        "frame",
+        "t_ms",
+        "start_frame",
+        "end_frame",
+        "label",
+        "confidence"
+      ],
+      "title": "FootworkEvent",
+      "type": "object"
+    },
+    "PlayerFootworkQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "tracked_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "rally frames with both ankles tracked",
+          "title": "Tracked Pct"
+        },
+        "jitter_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "typical planted-foot noise in metres (higher = less reliable)",
+          "title": "Jitter M"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        }
+      },
+      "required": [
+        "player_id",
+        "tracked_pct",
+        "jitter_m",
+        "status"
+      ],
+      "title": "PlayerFootworkQuality",
+      "type": "object"
+    },
+    "ShotFootwork": {
+      "additionalProperties": false,
+      "description": "The hitter's footwork for one shot: from the opponent's previous hit to this hit, and the recovery after it.",
+      "properties": {
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "player_id": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Player Id",
+          "type": "string"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "split_step": {
+          "default": "unknown",
+          "enum": [
+            "on_time",
+            "early",
+            "late",
+            "none",
+            "unknown"
+          ],
+          "title": "Split Step",
+          "type": "string"
+        },
+        "split_offset_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "split-step landing minus the opponent's hit",
+          "title": "Split Offset Ms"
+        },
+        "reaction_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "opponent's hit to the first move towards this shot",
+          "title": "Reaction Ms"
+        },
+        "steps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "steps from the opponent's hit to this hit",
+          "title": "Steps"
+        },
+        "move_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mid-feet distance covered to reach the shot",
+          "title": "Move M"
+        },
+        "peak_speed_mps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Speed Mps"
+        },
+        "pattern": {
+          "description": "actions used to reach the shot, in order",
+          "items": {
+            "enum": [
+              "split_step",
+              "lunge",
+              "jump",
+              "chasse",
+              "cross_step",
+              "run",
+              "recovery"
+            ],
+            "type": "string"
+          },
+          "title": "Pattern",
+          "type": "array"
+        },
+        "finish": {
+          "default": "unknown",
+          "enum": [
+            "lunge",
+            "jump",
+            "planted",
+            "unknown"
+          ],
+          "title": "Finish",
+          "type": "string"
+        },
+        "stance_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "distance between the feet at the hit",
+          "title": "Stance M"
+        },
+        "lunge_landing": {
+          "anyOf": [
+            {
+              "enum": [
+                "heel",
+                "forefoot",
+                "flat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: how the front foot landed",
+          "title": "Lunge Landing"
+        },
+        "lunge_toe_off_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "lunge: angle between the front foot and the direction of the lunge step (0 = toe points where the step went)",
+          "title": "Lunge Toe Off Deg"
+        },
+        "recovery_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "this hit to back within the base radius; null = never",
+          "title": "Recovery Ms"
+        },
+        "recovery_gap_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "distance from base when the opponent hit next",
+          "title": "Recovery Gap M"
+        },
+        "summary": {
+          "default": "",
+          "description": "one Chinese sentence",
+          "title": "Summary",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "shot_id",
+        "player_id",
+        "t_ms",
+        "confidence"
+      ],
+      "title": "ShotFootwork",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "ok",
+        "needs_review",
+        "undeterminable"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``GET /api/videos/{id}/footwork``: foot contacts, steps and footwork actions from the ankle keypoints\nprojected onto the court, linked to the effective hits. Computed on demand (no model is called).",
+  "properties": {
+    "schema_version": {
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "fingerprint": {
+      "title": "Fingerprint",
+      "type": "string"
+    },
+    "base": {
+      "description": "base position (lateral, depth) in each player's own-half frame",
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Base",
+      "type": "array"
+    },
+    "base_radius_m": {
+      "title": "Base Radius M",
+      "type": "number"
+    },
+    "contacts": {
+      "items": {
+        "$ref": "#/$defs/FootContact"
+      },
+      "title": "Contacts",
+      "type": "array"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/FootStep"
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/FootworkEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "shots": {
+      "items": {
+        "$ref": "#/$defs/ShotFootwork"
+      },
+      "title": "Shots",
+      "type": "array"
+    },
+    "quality": {
+      "items": {
+        "$ref": "#/$defs/PlayerFootworkQuality"
+      },
+      "title": "Quality",
+      "type": "array"
+    },
+    "caveats": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Caveats",
+      "type": "array"
+    }
+  },
+  "required": [
+    "video_id",
+    "fingerprint",
+    "base",
+    "base_radius_m"
+  ],
+  "title": "FootworkResult",
+  "type": "object"
+}

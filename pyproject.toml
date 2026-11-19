@@ -20,6 +20,7 @@ dependencies = [
 vision = ["opencv-python>=4.9"]
 calibration = ["opencv-python>=4.9"]  # court calibration (opencv-python-headless also works)
 players = ["opencv-python>=4.9", "onnxruntime>=1.17"]
+feet = ["opencv-python>=4.9", "ai-edge-litert>=1.2"]  # heel / toe landmarks for footwork (stage feet, optional)
 shuttle = ["torch>=2.2", "opencv-python>=4.9"]
 # Online deployment: PostgreSQL + S3-compatible object storage (docs/deploy.md).
 server = ["psycopg[binary]>=3.1", "boto3>=1.34"]

@@ -3,8 +3,9 @@ import type { PlaybackClock } from "../lib/clock";
 import { formatMs } from "../lib/corrections";
 import { useClockMs, useClockPlaying } from "../lib/useClock";
 import { colorOf } from "../lib/players";
+import { FOOTWORK_MARK, KEY_KINDS } from "../lib/footwork";
 import { SHOT_TYPE_COLOR, SHOT_TYPE_ZH, typeLabel } from "../lib/strokes";
-import type { Rally, ShotEvent } from "../lib/types";
+import type { FootworkEvent, Rally, ShotEvent } from "../lib/types";
 
 interface Props {
   durationMs: number;
@@ -17,6 +18,8 @@ interface Props {
   onSelectShot: (id: string) => void;
   rallyNo: (id: string) => number;
   fps: number;
+  /** Footwork actions (split step, lunge, jump) shown as a row under the shots. */
+  footwork?: FootworkEvent[];
 }
 
 const RATES = [0.25, 0.5, 1, 2];
@@ -114,6 +117,23 @@ export function Timeline(p: Props) {
                 {SHOT_TYPE_ZH[s.shot_type!]}
               </span>
             ))}
+        {(p.footwork ?? [])
+          .filter((e) => KEY_KINDS.includes(e.kind) && inView(e.t_ms))
+          .map((e) => (
+            <span
+              key={e.event_id}
+              className={`tl-foot ${e.kind}`}
+              style={{ left: pct(e.t_ms), color: colorOf(e.player_id), opacity: 0.45 + 0.55 * e.confidence }}
+              title={`${formatMs(e.t_ms)} · ${e.player_id} · ${e.label}`}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                p.clock.pause();
+                p.clock.seek(Math.max(0, e.t_ms - 400));
+              }}
+            >
+              {FOOTWORK_MARK[e.kind]}
+            </span>
+          ))}
         {inView(t) && <div className="tl-head" style={{ left: pct(t) }} />}
       </div>
     </div>

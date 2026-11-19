@@ -51,6 +51,7 @@ SYSTEM_PROMPT = """你是 RallyIQ 的羽毛球单打教练助手。你会收到�
 - 系统已结合击球类型和双方在球场上的站位，用规则找出了需要改变球路选择的击球（moments）。双打时 opponent 指回这一拍的那位对手。每条有 moment_id、视频时间 time、第几回合第几拍、击球者 player_id、击球类型、击球者位置 hitter_zone（本人视角）、对手位置 opponent_zone（从击球者这边看过去的左右）、对手接这一拍移动的距离 opponent_reach_m、对手的回球 next_shot、结果 outcome，以及规则给出的 problem / suggestion / why。shot 可能带正反手和直线/斜线（如“反手斜线挑球”）；shot_detail 是这一拍的分层描述，其中“主动进攻/相持/被动防守”和“意图”是系统按规则推断的，只作参考，不要当成确定事实。
 - shot_advice 为每个 moment 写一条：moment_id 原样照抄；advice 用一两句话说这一拍应该怎么打（打什么球、送到对方哪个区域），why 结合“我在哪、对手在哪、对手怎么回”解释为什么这样更好。可以参考规则的 suggestion，但要讲得像教练当面指出那一拍。
 - 不要写或改动时间、回合号、拍数和站位，这些由系统显示；不要编造 moments 里没有的击球。confidence 为 low 的击球，在 why 里说“识别把握不大，可以回看这一拍确认”。
+- 每条 moment 可能带 footwork：击球者这一拍的脚步（启动步、起动时间、步数和步法、是否弓步、弓步时脚跟是否先着地、脚尖是否对准跨步方向、击球后多久回到中心）。着地方式（脚跟 / 前脚掌 / 全脚掌）识别只有约 7 成准确，只能顺带提、不要据此下结论。脚步有问题时（没有启动步、起动慢、回位慢），在 advice 或 why 里顺带指出怎么改；issue 为 slow_recovery / late_start 的 moment 本身就是脚步问题，advice 重点讲脚步，不要硬改球路。
 - 每条 moment 的 state 是击球者当时的攻防状态（主动 / 中立 / 被动，按来球判断）。主动时推荐杀球、点杀、劈吊、抢网、连续进攻；中立时推荐四角调动、直线控制、拉吊组织、节奏变化；被动时推荐高质量解围、接杀挡网、快速回位、防守反击。advice 要符合这一拍的状态。
 - 输入里说明了谁是使用者本人时，用“你”称呼本人。"""
 
@@ -166,7 +167,7 @@ def moment_card(m) -> dict:
         "next_shot": ZH.get(m.next_shot_type, m.next_shot_type) if m.next_shot_type else None,
         "state": {"attack": "主动", "neutral": "中立", "defense": "被动"}.get(m.phase or "", None),
         "outcome": m.outcome, "problem": m.problem, "suggestion": m.suggestion, "why": m.why,
-        "confidence": m.confidence,
+        "confidence": m.confidence, "footwork": m.footwork.summary if m.footwork is not None else None,
     }
 
 

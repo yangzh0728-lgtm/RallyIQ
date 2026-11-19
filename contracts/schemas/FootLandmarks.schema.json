@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "FeetFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "frame": {
+          "minimum": 0,
+          "title": "Frame",
+          "type": "integer"
+        },
+        "t_ms": {
+          "minimum": 0,
+          "title": "T Ms",
+          "type": "integer"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerFeet"
+          },
+          "title": "Players",
+          "type": "array"
+        }
+      },
+      "required": [
+        "frame",
+        "t_ms"
+      ],
+      "title": "FeetFrame",
+      "type": "object"
+    },
+    "PlayerFeet": {
+      "additionalProperties": false,
+      "description": "Heel and toe of one player in one frame, from the foot landmark model (index 0 = left, 1 = right\nas the model labels them; footwork re-pairs them with the ankle tracks by the model's own ankles).",
+      "properties": {
+        "player_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "track_id": {
+          "title": "Track Id",
+          "type": "integer"
+        },
+        "ankle": {
+          "description": "the foot model's ankles [x, y, conf]",
+          "items": {
+            "description": "[x, y, conf]",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Ankle",
+          "type": "array"
+        },
+        "heel": {
+          "items": {
+            "description": "[x, y, conf]",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Heel",
+          "type": "array"
+        },
+        "toe": {
+          "description": "tip of the shoe (foot index)",
+          "items": {
+            "description": "[x, y, conf]",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Toe",
+          "type": "array"
+        }
+      },
+      "required": [
+        "track_id",
+        "ankle",
+        "heel",
+        "toe"
+      ],
+      "title": "PlayerFeet",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Stage ``feet`` output: heel and toe keypoints of every tracked player during the rallies, from a\nsingle-person landmark model run on each player's box (BlazePose GHUM, Apache-2.0). Empty when the\nmodel is not installed; footwork then falls back to the ankles.",
+  "properties": {
+    "schema_version": {
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "video_id": {
+      "title": "Video Id",
+      "type": "string"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "foot model name@version; null = not run",
+      "title": "Model"
+    },
+    "frames": {
+      "items": {
+        "$ref": "#/$defs/FeetFrame"
+      },
+      "title": "Frames",
+      "type": "array"
+    }
+  },
+  "required": [
+    "video_id"
+  ],
+  "title": "FootLandmarks",
+  "type": "object"
+}

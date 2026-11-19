@@ -10,7 +10,7 @@ EXAMPLES = Path(__file__).resolve().parents[2] / "contracts" / "examples"
 MODELS = {
     "video_meta": c.VideoMeta, "calibration": c.CourtCalibration, "players": c.PlayerTracks,
     "shuttle": c.ShuttleTrack, "events": c.EventsResult, "events_effective": c.EventsResult,
-    "overlay": c.OverlayData, "job": c.Job,
+    "overlay": c.OverlayData, "job": c.Job, "feet": c.FootLandmarks,
 }
 
 

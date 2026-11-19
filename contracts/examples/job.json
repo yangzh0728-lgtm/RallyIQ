@@ -52,6 +52,14 @@
       "error": null
     },
     {
+      "name": "feet",
+      "state": "pending",
+      "progress": 0.0,
+      "started_at": null,
+      "finished_at": null,
+      "error": null
+    },
+    {
       "name": "overlay",
       "state": "pending",
       "progress": 0.0,

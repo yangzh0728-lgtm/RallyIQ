@@ -255,6 +255,57 @@ describe("switching the analysed court", () => {
   });
 });
 
+import { FootIndex, mockFootwork, shoeShape, summarize } from "./footwork";
+
+describe("footwork", () => {
+  it("finds planted and recently lifted contacts around a frame", () => {
+    const fw = {
+      schema_version: "0.2.0", video_id: "v", fingerprint: "x", base: [3.05, 3.6] as [number, number], base_radius_m: 1,
+      contacts: [
+        { player_id: "P1" as const, foot: "left" as const, start_frame: 10, end_frame: 20, t_ms: 333, end_ms: 667, image: [100, 200] as [number, number], court: null },
+        { player_id: "P1" as const, foot: "right" as const, start_frame: 40, end_frame: 60, t_ms: 1333, end_ms: 2000, image: [140, 200] as [number, number], court: null },
+      ],
+      steps: [], events: [], quality: [], caveats: [],
+      shots: [
+        { shot_id: "s1", player_id: "P1" as const, t_ms: 0, split_step: "on_time" as const, split_offset_ms: 150, reaction_ms: 200, steps: 2, move_m: 1, peak_speed_mps: 2, pattern: [], finish: "planted" as const, stance_m: 0.6, recovery_ms: 500, recovery_gap_m: 0.5, summary: "", confidence: 0.8 },
+        { shot_id: "s2", player_id: "P1" as const, t_ms: 0, split_step: "none" as const, split_offset_ms: null, reaction_ms: 400, steps: 3, move_m: 2, peak_speed_mps: 2, pattern: [], finish: "lunge" as const, stance_m: 1.3, recovery_ms: null, recovery_gap_m: 1.8, summary: "", confidence: 0.8 },
+      ],
+    };
+    const idx = new FootIndex(fw);
+    expect(idx.near(15, 10).map((c) => c.foot)).toEqual(["left"]);
+    expect(idx.near(28, 10).map((c) => c.foot)).toEqual(["left"]); // lifted 8 frames ago: still a footprint
+    expect(idx.near(45, 10).map((c) => c.foot)).toEqual(["right"]);
+    const s = summarize(fw, "P1");
+    expect(s.splitPct).toBe(50);
+    expect(s.onTimePct).toBe(50);
+    expect(s.recoveredPct).toBe(50);
+    expect(s.reactionMs).toBe(300);
+  });
+
+  it("mock footwork follows the mock analysis", () => {
+    const m = generateMock("vid_fw", { durationMs: 20_000 });
+    const fw = mockFootwork(m.overlay, m.events);
+    expect(fw.contacts.length).toBeGreaterThan(10);
+    expect(fw.events.some((e) => e.kind === "split_step")).toBe(true);
+    expect(fw.shots.length).toBe(m.events.shots.filter((s) => s.hitter).length);
+  });
+
+  it("draws a shoe along heel -> toe and counts landings", () => {
+    const base = { player_id: "P1" as const, foot: "right" as const, start_frame: 0, end_frame: 5, t_ms: 0, end_ms: 167, image: [100, 200] as [number, number], court: null };
+    expect(shoeShape(base, 1)).toBeNull();
+    const s = shoeShape({ ...base, heel_image: [100, 200], toe_image: [130, 200] }, 1)!;
+    expect(s.cx).toBe(115);
+    expect(s.angle).toBeCloseTo(0);
+    expect(s.half).toBe(18);
+    const step = (landing: "heel" | "forefoot" | "flat" | null) => ({ player_id: "P1" as const, foot: "left" as const, start_frame: 0, end_frame: 1, t_ms: 0, length_m: 0.5, from_court: [0, 0] as [number, number], to_court: [0, 0.5] as [number, number], landing });
+    const fw = { schema_version: "0.2.0", video_id: "v", fingerprint: "x", base: [3.05, 3.6] as [number, number], base_radius_m: 1, contacts: [], events: [], shots: [], quality: [], caveats: [], steps: [step("heel"), step("forefoot"), step("flat"), step("forefoot"), step(null)] };
+    const sum = summarize(fw, "P1");
+    expect(sum.landingsJudged).toBe(4);
+    expect(sum.heelFirstPct).toBe(25);
+    expect(sum.forefootPct).toBe(50);
+  });
+});
+
 describe("retypeDetail", () => {
   // expected texts produced by rallyiq.strokes.detail.retype on the same input
   const d = {

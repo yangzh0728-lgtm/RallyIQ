@@ -15,6 +15,7 @@ from rallyiq import contracts as c
 from rallyiq.api.corrections import apply_corrections
 from rallyiq.ingest import assess_quality
 from rallyiq.contracts.geometry import project_boundary_lines, project_court_lines
+from rallyiq.footwork import analyze_footwork
 from rallyiq.pipeline import demo
 from rallyiq.pipeline.overlay import COCO17_SKELETON
 from rallyiq.report import compute_match_stats
@@ -28,7 +29,7 @@ SCHEMAS = [
     c.StrokesResult,
     c.CorrectionIn, c.Correction, c.OverlayData, c.OverlayFrame, c.Job, c.Video, c.HeatmapData,
     c.MatchFormatSetting,
-    c.MatchStats, c.CoachReport, c.MatchReport,
+    c.MatchStats, c.CoachReport, c.MatchReport, c.FootworkResult, c.FootLandmarks,
     c.VideoQuality, c.HardExample, c.HardExampleSummary,
     c.PeopleAssignment, c.AnalysisEvent, c.PlayerProfile, c.OpponentReport,
 ]
@@ -77,7 +78,7 @@ def examples() -> dict[str, object]:
                         c.StageRun(name="calibration", state="succeeded", progress=1.0, started_at=ts, finished_at=ts),
                         c.StageRun(name="players", state="running", progress=0.42, started_at=ts),
                         c.StageRun(name="shuttle"), c.StageRun(name="events"), c.StageRun(name="strokes"),
-                        c.StageRun(name="overlay")])
+                        c.StageRun(name="feet"), c.StageRun(name="overlay")])
     doubles = demo.demo_players(long_meta, cal, "doubles")
     doubles_events = demo.demo_events(long_meta, doubles)
     # report: winners entered for every rally, coach from the offline rule provider
@@ -88,8 +89,23 @@ def examples() -> dict[str, object]:
     coach = build_report(OfflineProvider().generate(stats), stats, OfflineProvider()).model_copy(
         update={"created_at": ts})
     report = c.MatchReport(stats=stats, coach=coach)
+    fw = analyze_footwork(effective, players, demo.demo_calibration(long_meta), long_meta.fps)
+    fw = fw.model_copy(update={"fingerprint": "0123456789abcdef", "contacts": fw.contacts[:4], "steps": fw.steps[:3],
+                               "events": fw.events[:4], "shots": fw.shots[:3]})
+    def foot(p: c.PlayerDetection, k: int) -> tuple[list[float], list[float], list[float]]:
+        x, y, conf = p.keypoints[k]  # demo ankles: heel a little behind and below, toe in front
+        return [x, y, conf], [round(x - 3, 1), round(y + 5, 1), conf], [round(x + 9, 1), round(y + 3, 1), conf]
+
+    feet = c.FootLandmarks(video_id=meta.video_id, model="blazepose-heavy:feet.tflite", frames=[
+        c.FeetFrame(frame=pf.frame, t_ms=pf.t_ms, players=[
+            c.PlayerFeet(player_id=p.player_id, track_id=p.track_id,
+                         ankle=[foot(p, 15)[0], foot(p, 16)[0]], heel=[foot(p, 15)[1], foot(p, 16)[1]],
+                         toe=[foot(p, 15)[2], foot(p, 16)[2]]) for p in pf.players])
+        for pf in players.frames[30:32]])
     return {
         "match_report": report,
+        "feet": feet,
+        "footwork": fw,
         "quality": assess_quality(long_meta, demo.demo_calibration(long_meta), players, shuttle, events,
                                   {"brightness": 118.0, "sharpness": 240.0, "frames": 12}, fingerprint_inputs="example"),
         "players_doubles": doubles.model_copy(update={"frames": doubles.frames[30:31]}),

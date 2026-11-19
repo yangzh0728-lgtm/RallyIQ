@@ -261,6 +261,19 @@
           "title": "Source",
           "type": "string"
         },
+        "footwork": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the hitter's footwork on this shot (from the moment)",
+          "title": "Footwork"
+        },
         "warnings": {
           "items": {
             "type": "string"

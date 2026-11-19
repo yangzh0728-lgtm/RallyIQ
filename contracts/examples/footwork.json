@@ -1,0 +1,300 @@
+{
+  "schema_version": "0.2.0",
+  "video_id": "vid_example",
+  "fingerprint": "0123456789abcdef",
+  "base": [
+    3.05,
+    3.6
+  ],
+  "base_radius_m": 1.0,
+  "contacts": [
+    {
+      "player_id": "P2",
+      "foot": "left",
+      "start_frame": 8,
+      "end_frame": 32,
+      "t_ms": 267,
+      "end_ms": 1067,
+      "image": [
+        1094.3,
+        387.1
+      ],
+      "court": [
+        4.41,
+        11.402
+      ],
+      "heel_image": null,
+      "toe_image": null,
+      "toe_dir_deg": null,
+      "landing": null
+    },
+    {
+      "player_id": "P2",
+      "foot": "right",
+      "start_frame": 8,
+      "end_frame": 32,
+      "t_ms": 267,
+      "end_ms": 1067,
+      "image": [
+        1131.0,
+        387.1
+      ],
+      "court": [
+        4.781,
+        11.402
+      ],
+      "heel_image": null,
+      "toe_image": null,
+      "toe_dir_deg": null,
+      "landing": null
+    },
+    {
+      "player_id": "P1",
+      "foot": "left",
+      "start_frame": 31,
+      "end_frame": 47,
+      "t_ms": 1033,
+      "end_ms": 1567,
+      "image": [
+        1155.3,
+        713.4
+      ],
+      "court": [
+        4.38,
+        3.629
+      ],
+      "heel_image": null,
+      "toe_image": null,
+      "toe_dir_deg": null,
+      "landing": null
+    },
+    {
+      "player_id": "P1",
+      "foot": "right",
+      "start_frame": 31,
+      "end_frame": 47,
+      "t_ms": 1033,
+      "end_ms": 1567,
+      "image": [
+        1224.4,
+        713.4
+      ],
+      "court": [
+        4.849,
+        3.629
+      ],
+      "heel_image": null,
+      "toe_image": null,
+      "toe_dir_deg": null,
+      "landing": null
+    }
+  ],
+  "steps": [
+    {
+      "player_id": "P2",
+      "foot": "left",
+      "start_frame": 33,
+      "end_frame": 94,
+      "t_ms": 3133,
+      "length_m": 3.63,
+      "from_court": [
+        4.41,
+        11.402
+      ],
+      "to_court": [
+        1.328,
+        9.493
+      ],
+      "landing": null
+    },
+    {
+      "player_id": "P2",
+      "foot": "right",
+      "start_frame": 33,
+      "end_frame": 94,
+      "t_ms": 3133,
+      "length_m": 3.65,
+      "from_court": [
+        4.781,
+        11.402
+      ],
+      "to_court": [
+        1.671,
+        9.493
+      ],
+      "landing": null
+    },
+    {
+      "player_id": "P1",
+      "foot": "left",
+      "start_frame": 48,
+      "end_frame": 108,
+      "t_ms": 3600,
+      "length_m": 3.41,
+      "from_court": [
+        4.38,
+        3.629
+      ],
+      "to_court": [
+        1.285,
+        2.192
+      ],
+      "landing": null
+    }
+  ],
+  "events": [
+    {
+      "event_id": "fw1",
+      "player_id": "P1",
+      "kind": "recovery",
+      "frame": 57,
+      "t_ms": 1900,
+      "start_frame": 30,
+      "end_frame": 57,
+      "court": [
+        4.04,
+        3.71
+      ],
+      "value": 900.0,
+      "shot_id": "s0001",
+      "label": "\u56de\u5230\u4e2d\u5fc3\uff08\u51fb\u7403\u540e 0.9 \u79d2\uff09",
+      "confidence": 0.42
+    },
+    {
+      "event_id": "fw2",
+      "player_id": "P2",
+      "kind": "cross_step",
+      "frame": 94,
+      "t_ms": 3133,
+      "start_frame": 33,
+      "end_frame": 94,
+      "court": [
+        1.52,
+        9.61
+      ],
+      "value": 3.17,
+      "shot_id": "h0003",
+      "label": "\u4ea4\u53c9\u6b65 1 \u6b65\uff0c\u79fb\u52a8 3.2 \u7c73",
+      "confidence": 0.3
+    },
+    {
+      "event_id": "fw3",
+      "player_id": "P2",
+      "kind": "chasse",
+      "frame": 94,
+      "t_ms": 3133,
+      "start_frame": 33,
+      "end_frame": 94,
+      "court": [
+        1.52,
+        9.61
+      ],
+      "value": 3.17,
+      "shot_id": "h0003",
+      "label": "\u5e76\u6b65 1 \u6b65\uff0c\u79fb\u52a8 3.2 \u7c73",
+      "confidence": 0.3
+    },
+    {
+      "event_id": "fw4",
+      "player_id": "P2",
+      "kind": "recovery",
+      "frame": 127,
+      "t_ms": 4233,
+      "start_frame": 100,
+      "end_frame": 127,
+      "court": [
+        2.12,
+        9.49
+      ],
+      "value": 900.0,
+      "shot_id": "h0003",
+      "label": "\u56de\u5230\u4e2d\u5fc3\uff08\u51fb\u7403\u540e 0.9 \u79d2\uff09",
+      "confidence": 0.39
+    }
+  ],
+  "shots": [
+    {
+      "shot_id": "s0001",
+      "player_id": "P1",
+      "t_ms": 1000,
+      "split_step": "unknown",
+      "split_offset_ms": null,
+      "reaction_ms": null,
+      "steps": null,
+      "move_m": null,
+      "peak_speed_mps": null,
+      "pattern": [],
+      "finish": "planted",
+      "stance_m": 0.47,
+      "lunge_landing": null,
+      "lunge_toe_off_deg": null,
+      "recovery_ms": 900,
+      "recovery_gap_m": null,
+      "summary": "",
+      "confidence": 0.42
+    },
+    {
+      "shot_id": "s0002",
+      "player_id": "P1",
+      "t_ms": 2000,
+      "split_step": "unknown",
+      "split_offset_ms": null,
+      "reaction_ms": null,
+      "steps": null,
+      "move_m": null,
+      "peak_speed_mps": null,
+      "pattern": [],
+      "finish": "unknown",
+      "stance_m": null,
+      "lunge_landing": null,
+      "lunge_toe_off_deg": null,
+      "recovery_ms": 0,
+      "recovery_gap_m": 1.73,
+      "summary": "\u5bf9\u624b\u51fa\u624b\u65f6\u79bb\u4e2d\u5fc3\u8fd8\u6709 1.7 \u7c73",
+      "confidence": 0.42
+    },
+    {
+      "shot_id": "h0003",
+      "player_id": "P2",
+      "t_ms": 3333,
+      "split_step": "none",
+      "split_offset_ms": null,
+      "reaction_ms": 0,
+      "steps": 2,
+      "move_m": 1.71,
+      "peak_speed_mps": 1.9,
+      "pattern": [
+        "cross_step",
+        "chasse"
+      ],
+      "finish": "planted",
+      "stance_m": 0.34,
+      "lunge_landing": null,
+      "lunge_toe_off_deg": null,
+      "recovery_ms": 900,
+      "recovery_gap_m": null,
+      "summary": "\u5bf9\u624b\u51fb\u7403\u65f6\u6ca1\u6709\u770b\u5230\u542f\u52a8\u6b65\uff08\u53cc\u811a\u5c0f\u8df3\uff09\uff0c\u5bf9\u624b\u51fb\u7403\u65f6\u5df2\u7ecf\u5728\u671d\u6765\u7403\u65b9\u5411\u79fb\u52a8\uff0c2 \u6b65\u79fb\u52a8 1.7 \u7c73\uff08\u4ea4\u53c9\u6b65\u3001\u5e76\u6b65\uff09",
+      "confidence": 0.39
+    }
+  ],
+  "quality": [
+    {
+      "player_id": "P1",
+      "tracked_pct": 100.0,
+      "jitter_m": 0.101,
+      "status": "needs_review"
+    },
+    {
+      "player_id": "P2",
+      "tracked_pct": 100.0,
+      "jitter_m": 0.106,
+      "status": "needs_review"
+    }
+  ],
+  "caveats": [
+    "P1 \u811a\u90e8\u5b9a\u4f4d\u8bef\u5dee\u8f83\u5927\uff08\u7ea6 0.10 \u7c73\uff09\uff0c\u6b65\u4f10\u7ec6\u8282\u53ea\u4f5c\u53c2\u8003\u3002",
+    "P2 \u811a\u90e8\u5b9a\u4f4d\u8bef\u5dee\u8f83\u5927\uff08\u7ea6 0.11 \u7c73\uff09\uff0c\u6b65\u4f10\u7ec6\u8282\u53ea\u4f5c\u53c2\u8003\u3002",
+    "\u6ca1\u6709\u811a\u8ddf / \u811a\u5c16\u5173\u952e\u70b9\uff08\u811a\u90e8\u6a21\u578b\u672a\u8fd0\u884c\uff09\uff0c\u53ea\u7528\u8e1d\u70b9\u5206\u6790\uff0c\u811a\u5c16\u671d\u5411\u548c\u7740\u5730\u65b9\u5f0f\u65e0\u6cd5\u5224\u65ad\u3002",
+    "\u542f\u52a8\u6b65\u65f6\u95f4\u4ee5\u8bc6\u522b\u51fa\u7684\u5bf9\u624b\u51fb\u7403\u65f6\u523b\u4e3a\u51c6\uff1b\u51fb\u7403\u65f6\u523b\u6216\u51fb\u7403\u8005\u8bc6\u522b\u9519\u8bef\u4f1a\u5f71\u54cd\u7ed3\u679c\u3002"
+  ]
+}
