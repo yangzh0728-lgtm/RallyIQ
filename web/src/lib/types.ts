@@ -349,6 +349,30 @@ export interface PlayerStyle {
   note: string | null;
 }
 
+export interface ScoutTactic {
+  code: string;
+  title: string;
+  how: string;
+  why: string;
+  evidence: string[];
+  n: number;
+  confidence: MetricConfidence;
+  examples_ms: number[];
+}
+
+/** How to play against one singles player: their weaknesses turned into direct tactics. */
+export interface Scouting {
+  target: PlayerId;
+  against: PlayerId | null;
+  side: "near" | "far" | null;
+  summary: string;
+  tactics: ScoutTactic[];
+  n_shots: number;
+  status: Status;
+  confidence: MetricConfidence;
+  note: string | null;
+}
+
 export interface MatchStats {
   schema_version: string;
   video_id: string;
@@ -360,6 +384,8 @@ export interface MatchStats {
   distributions: Distribution[];
   players: PlayerStats[];
   styles?: PlayerStyle[];
+  /** Singles: how to beat P1 / P2 (absent in reports from older versions). */
+  scouting?: Scouting[];
   /** Rally log in time order (absent in reports from older versions). */
   rallies?: RallyLine[];
   /** Games rebuilt from the entered rally winners (21 points, win by 2, cap 30). */

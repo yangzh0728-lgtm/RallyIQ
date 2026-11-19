@@ -614,6 +614,14 @@
           "title": "Doubles",
           "type": "array"
         },
+        "scouting": {
+          "description": "singles: how to beat each player (tactics from their weaknesses)",
+          "items": {
+            "$ref": "#/$defs/Scouting"
+          },
+          "title": "Scouting",
+          "type": "array"
+        },
         "rallies": {
           "description": "rally log in time order",
           "items": {
@@ -1247,6 +1255,177 @@
         "pct"
       ],
       "title": "ReplyHabit",
+      "type": "object"
+    },
+    "ScoutTactic": {
+      "additionalProperties": false,
+      "description": "One direct instruction for beating a player, with the numbers behind it.",
+      "properties": {
+        "code": {
+          "description": "zone_weak | zone_strong | stroke_errors | move | pressure | let_attack | safe_lift | long_rallies | short_rallies | serve | habit | style",
+          "title": "Code",
+          "type": "string"
+        },
+        "title": {
+          "description": "the instruction in a few words, e.g. '\u538b P1 \u7684\u5de6\u540e\u573a'",
+          "title": "Title",
+          "type": "string"
+        },
+        "how": {
+          "description": "what to do on court",
+          "title": "How",
+          "type": "string"
+        },
+        "why": {
+          "description": "the data behind it, in plain words",
+          "title": "Why",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "metric / distribution keys",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "n": {
+          "description": "sample size the tactic rests on",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "examples_ms": {
+          "description": "video times of up to 3 examples, to replay",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Examples Ms",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "title",
+        "how",
+        "why",
+        "n",
+        "confidence"
+      ],
+      "title": "ScoutTactic",
+      "type": "object"
+    },
+    "Scouting": {
+      "additionalProperties": false,
+      "description": "How to play against one singles player (``target``): their weaknesses turned into tactics.",
+      "properties": {
+        "target": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "against": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "who the tactics are for (the other player)",
+          "title": "Against"
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "near",
+                "far"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "end of the court relative to the camera",
+          "title": "Side"
+        },
+        "summary": {
+          "description": "one-line game plan",
+          "title": "Summary",
+          "type": "string"
+        },
+        "tactics": {
+          "description": "most useful first; low confidence last",
+          "items": {
+            "$ref": "#/$defs/ScoutTactic"
+          },
+          "title": "Tactics",
+          "type": "array"
+        },
+        "n_shots": {
+          "description": "classified non-serve shots of the target",
+          "minimum": 0,
+          "title": "N Shots",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "target",
+        "summary",
+        "n_shots",
+        "status",
+        "confidence"
+      ],
+      "title": "Scouting",
       "type": "object"
     },
     "ShotAdvice": {

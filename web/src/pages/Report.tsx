@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 import { download } from "../lib/export";
 import { colorOf } from "../lib/players";
 import { clock, CONF_LABEL, evidenceText, fmtValue, indexStats, KIND_LABEL, PHASE_LABEL, reportMarkdown, shotZh, STATUS_LABEL, styleWho, videoLink, type Evidence } from "../lib/report";
-import type { CoachReport, Distribution, MatchReport, Metric, PlayerStyle, Video } from "../lib/types";
+import type { CoachReport, Distribution, MatchReport, Metric, PlayerStyle, Scouting, Video } from "../lib/types";
 
 export function Report({ videoId }: { videoId: string }) {
   const [video, setVideo] = useState<Video | null>(null);
@@ -95,6 +95,21 @@ export function Report({ videoId }: { videoId: string }) {
           </button>
         )}
       </div>
+
+      {(stats.scouting?.length ?? 0) > 0 && (
+        <section className="card">
+          <h2>怎么打 P1、怎么打 P2</h2>
+          <div className="muted small">
+            从每位球员陷入被动的区域、失分的拍法、被调动后的表现、回球习惯和攻防状态里找弱点，直接写成打法。
+            每条都标了可信度和依据，点时间可以回看例子；可信度低的先当作观察，回看确认后再用。
+          </div>
+          <div className="report-players">
+            {stats.scouting!.map((sc) => (
+              <ScoutCard key={sc.target} sc={sc} videoId={videoId} idx={idx} onJump={jump} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="card">
         <div className="row" style={{ marginBottom: 8 }}>
@@ -342,6 +357,48 @@ function DistBars({ d, focus, color }: { d: Distribution; focus: string | null; 
             </span>
           </div>
         ))}
+    </div>
+  );
+}
+
+function ScoutCard({ sc, videoId, idx, onJump }: { sc: Scouting; videoId: string; idx: Map<string, Evidence>; onJump: (k: string) => void }) {
+  const side = sc.side === "far" ? "远端" : sc.side === "near" ? "近端" : null;
+  return (
+    <div className="style-card" style={{ borderTop: `3px solid ${colorOf(sc.target)}` }}>
+      <div className="row">
+        <b>怎么打 {sc.target}</b>
+        {side && <span className="muted small">{sc.target} 在{side}</span>}
+        <span className="spacer" />
+        <span className={`pill ${sc.confidence === "low" ? "needs_review" : sc.status}`}>{CONF_LABEL[sc.confidence]}</span>
+      </div>
+      {sc.summary && <div className="scout-summary">{sc.summary}</div>}
+      {sc.note && <div className="small" style={{ color: "var(--warn)" }}>{sc.note}</div>}
+      <ol className="scout-list">
+        {sc.tactics.map((t) => (
+          <li key={t.code + t.title}>
+            <div className="row">
+              <b>{t.title}</b>
+              <span className="spacer" />
+              <span className={`pill ${t.confidence === "low" ? "needs_review" : "ok"}`}>{CONF_LABEL[t.confidence]}</span>
+            </div>
+            <div className="small">{t.how}</div>
+            <div className="muted small">依据：{t.why}</div>
+            <div className="row evidence">
+              {t.examples_ms.map((ms) => (
+                <a key={ms} className="chip mono" href={`#/videos/${encodeURIComponent(videoId)}?t=${ms}`}>
+                  {clock(ms)}
+                </a>
+              ))}
+              {t.evidence.map((k) => (
+                <button key={k} className="chip" title={idx.get(k) ? evidenceText(idx.get(k)!) : k} onClick={() => onJump(k)}>
+                  {idx.get(k)?.label ?? k}
+                </button>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ol>
+      {sc.tactics.length === 0 && <div className="muted small">{sc.note ?? "没有找到明显可利用的弱点。"}</div>}
     </div>
   );
 }

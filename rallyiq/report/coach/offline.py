@@ -117,6 +117,7 @@ class OfflineProvider:
                                             f"（{lost_own.n} 回合），可能是主动失误偏多{_hedge(lost_own)}。",
                                      evidence=[lost_own.key], confidence=lost_own.confidence))
 
+        insights += _scouting_insights(stats, idx)
         insights += _style_insights(stats, idx)
         dbl_insights, dbl_training = _doubles_insights(stats, idx)
         insights += dbl_insights
@@ -164,6 +165,21 @@ def _knowledge_training(knowledge) -> list[dict]:
             key_points=list(note.get("coach_cues") or note.get("key_points") or [])[:4],
             sources=[{"note_id": i, "drill": d["name"] if d and i == ids[0] else None} for i in ids[:2]],
         ))
+    return out
+
+
+def _scouting_insights(stats: MatchStats, idx: dict) -> list[dict]:
+    """How to beat each player (``report.scouting``): the game plan and the firmest tactics as ``tactic`` insights."""
+    out = []
+    for sc in stats.scouting:
+        for t in [t for t in sc.tactics if t.code != "style"][:3]:  # the style counter-plan is in _style_insights
+            ev = [k for k in t.evidence if k in idx]
+            if not ev:
+                continue
+            hedge = "" if t.confidence != "low" else "初步看，先回看例子确认再用。"
+            side = "（远端球员，识别误差更大）" if sc.side == "far" and t.confidence != "high" else ""
+            out.append(dict(kind="tactic", player_id=sc.target, title=f"怎么打 {sc.target}：{t.title}",
+                            detail=f"{t.how}依据：{t.why}{side}{hedge}", evidence=ev, confidence=t.confidence))
     return out
 
 

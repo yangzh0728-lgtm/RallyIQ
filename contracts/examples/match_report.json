@@ -1807,6 +1807,30 @@
       }
     ],
     "doubles": [],
+    "scouting": [
+      {
+        "target": "P1",
+        "against": "P2",
+        "side": null,
+        "summary": "",
+        "tactics": [],
+        "n_shots": 4,
+        "status": "undeterminable",
+        "confidence": "low",
+        "note": "P1 \u53ea\u6709 4 \u62cd\u5df2\u5206\u7c7b\u7684\u975e\u53d1\u7403\u51fb\u7403\uff0c\u81f3\u5c11\u9700\u8981 20 \u62cd\u624d\u7ed9\u6218\u672f"
+      },
+      {
+        "target": "P2",
+        "against": "P1",
+        "side": null,
+        "summary": "",
+        "tactics": [],
+        "n_shots": 4,
+        "status": "undeterminable",
+        "confidence": "low",
+        "note": "P2 \u53ea\u6709 4 \u62cd\u5df2\u5206\u7c7b\u7684\u975e\u53d1\u7403\u51fb\u7403\uff0c\u81f3\u5c11\u9700\u8981 20 \u62cd\u624d\u7ed9\u6218\u672f"
+      }
+    ],
     "rallies": [
       {
         "rally_no": 1,

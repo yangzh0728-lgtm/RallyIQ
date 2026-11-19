@@ -641,6 +641,34 @@ class PlayerStyle(Contract):
     note: str | None = None
 
 
+class ScoutTactic(Contract):
+    """One direct instruction for beating a player, with the numbers behind it."""
+
+    code: str = Field(description="zone_weak | zone_strong | stroke_errors | move | pressure | let_attack | safe_lift | "
+                                  "long_rallies | short_rallies | serve | habit | style")
+    title: str = Field(description="the instruction in a few words, e.g. '压 P1 的左后场'")
+    how: str = Field(description="what to do on court")
+    why: str = Field(description="the data behind it, in plain words")
+    evidence: list[str] = Field(default_factory=list, description="metric / distribution keys")
+    n: int = Field(ge=0, description="sample size the tactic rests on")
+    confidence: MetricConfidence
+    examples_ms: list[int] = Field(default_factory=list, description="video times of up to 3 examples, to replay")
+
+
+class Scouting(Contract):
+    """How to play against one singles player (``target``): their weaknesses turned into tactics."""
+
+    target: PlayerId
+    against: PlayerId | None = Field(default=None, description="who the tactics are for (the other player)")
+    side: Literal["near", "far"] | None = Field(default=None, description="end of the court relative to the camera")
+    summary: str = Field(description="one-line game plan")
+    tactics: list[ScoutTactic] = Field(default_factory=list, description="most useful first; low confidence last")
+    n_shots: int = Field(ge=0, description="classified non-serve shots of the target")
+    status: Status
+    confidence: MetricConfidence
+    note: str | None = None
+
+
 class DoublesRole(Contract):
     """Where one doubles player plays: mostly at the front, mostly at the back, or rotating."""
 
@@ -774,6 +802,8 @@ class MatchStats(Contract):
         default_factory=list, description="playing style per player (singles) or team (doubles); needs stroke types")
     doubles: list[DoublesTeam] = Field(
         default_factory=list, description="doubles only: formation, rotation, spacing, roles and shot division per team")
+    scouting: list[Scouting] = Field(
+        default_factory=list, description="singles: how to beat each player (tactics from their weaknesses)")
     rallies: list[RallyLine] = Field(default_factory=list, description="rally log in time order")
     games: list[GameScore] = Field(default_factory=list, description="games reconstructed from entered winners")
     caveats: list[str] = Field(default_factory=list)

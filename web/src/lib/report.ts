@@ -73,6 +73,7 @@ export function evidenceText(e: Evidence): string {
 /** Client-side Markdown export (mock mode); the backend renders its own. */
 export function reportMarkdown(title: string, stats: MatchStats, coach: CoachReport | null, stale: boolean): string {
   const out: string[] = [`# ${title}`, ""];
+  out.push(...scoutingMarkdown(stats));
   if (coach) {
     out.push("## AI 教练点评", "");
     if (stale) out.push("> 注意：这份点评生成后数据又有修正，内容可能已过时。", "");
@@ -125,6 +126,24 @@ export function clock(ms: number): string {
 
 export function styleWho(st: PlayerStyle): string {
   return st.kind === "singles" ? st.subject : `${st.subject} 队（${st.players.join("+")}）`;
+}
+
+export function scoutingMarkdown(stats: MatchStats): string[] {
+  const all = stats.scouting ?? [];
+  if (!all.length) return [];
+  const out = ["## 怎么打 P1、怎么打 P2", "", "_从每位球员陷入被动的区域、失分的拍法、被调动后的表现、回球习惯和攻防状态里找弱点。可信度低的先当作观察，回看例子确认后再用。_", ""];
+  for (const sc of all) {
+    const side = sc.side === "far" ? "，在远端" : sc.side === "near" ? "，在近端" : "";
+    out.push(`### 怎么打 ${sc.target}（${CONF_LABEL[sc.confidence]}${side}）`, "");
+    if (sc.summary) out.push(`**${sc.summary}**`, "");
+    if (sc.note) out.push(`> ${sc.note}`, "");
+    sc.tactics.forEach((t, k) => {
+      const ex = t.examples_ms.length ? ` 回看：${t.examples_ms.map(clock).join("、")}` : "";
+      out.push(`${k + 1}. **${t.title}**（${CONF_LABEL[t.confidence]}）  `, `   ${t.how}  `, `   依据：${t.why}${ex}`);
+    });
+    out.push("");
+  }
+  return out;
 }
 
 export function styleMarkdown(stats: MatchStats): string[] {
