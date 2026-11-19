@@ -178,3 +178,48 @@ def test_doubles_bystander_guard_tolerates_foot_jitter():
     # The bystander never gets a slot (free slots only go to people near the court), so all four players are
     # tracked as soon as the far back player shows up, without waiting for the guards.
     assert all(len(r.players) == 4 for r in res[130:])
+
+
+def _state(pid, tid, xy):
+    from rallyiq.perception.players.models import PlayerState
+    from rallyiq.perception.players.tracker import TEAM_OF
+
+    z = np.zeros(2)
+    return PlayerState(player_id=pid, track_id=tid, side=None, bbox=np.zeros(4), keypoints=np.zeros((17, 3)),
+                       foot_px=z, foot_court=np.asarray(xy, dtype=float), on_court=True, confidence=0.9,
+                       team=TEAM_OF[pid])
+
+
+def test_doubles_tracks_on_the_wrong_teams_half_change_team():
+    """Full-length 2026-09-06 0615 run: a far player held P3 (team A) for minutes while P4 (team B) was also far,
+    then after a reshuffle a near player held P4 to the end. Partners share a half, so each long track moves to
+    the other team's free id; a player stepping over the net for a moment and a real change of ends stay put."""
+    from rallyiq.perception.players.models import PlayerFrameResult
+    from rallyiq.perception.players.postprocess import enforce_team_halves
+
+    frames = []
+    for f in range(0, 1200, 2):
+        t = f / 30
+        near_l, near_r = (1.5 + 0.3 * np.sin(t), 3.5), (4.5, 3.0 + 0.4 * np.cos(t))
+        far_f, far_b = (3.0, 9.0 + 0.3 * np.sin(t)), (3.2 + 0.5 * np.cos(t), 11.5)
+        if f < 600:  # far_f wrongly in team A; near_r not tracked; near_l steps over the net once
+            ps = [_state("P1", 1, near_l if not 300 <= f < 330 else (1.5, 7.6)), _state("P3", 2, far_f),
+                  _state("P4", 3, far_b)]
+        else:  # reshuffle: near_r tracked as P4 (team B), far_f now P2
+            ps = [_state("P1", 1, near_l), _state("P4", 4, near_r), _state("P2", 5, far_f), _state("P3", 6, far_b)]
+        frames.append(PlayerFrameResult(f, f * 1000 / 30, ps))
+    assert enforce_team_halves(frames, []) == 3
+    for fr in frames:
+        assert len({p.player_id for p in fr.players}) == len(fr.players)
+        for p in fr.players:
+            if abs(p.foot_court[1] - 6.7) > 0.6 and p.track_id != 1:
+                assert p.team == ("A" if p.foot_court[1] < 6.7 else "B"), (fr.frame, p.player_id, p.track_id)
+    assert {p.player_id for fr in frames for p in fr.players if p.track_id == 1} == {"P1"}
+
+    # Teams that changed ends between games are not touched.
+    swapped = [PlayerFrameResult(f, f * 1000 / 30, [_state("P1", 1, (2.0, 3.0 if f < 600 else 10.0)),
+                                                     _state("P3", 2, (4.0, 3.0 if f < 600 else 10.0)),
+                                                     _state("P2", 3, (2.0, 10.0 if f < 600 else 3.0)),
+                                                     _state("P4", 4, (4.0, 10.0 if f < 600 else 3.0))])
+               for f in range(0, 1200, 2)]
+    assert enforce_team_halves(swapped, [600]) == 0

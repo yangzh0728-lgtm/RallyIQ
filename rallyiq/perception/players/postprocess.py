@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 
 from .geometry import PlayArea, court_side
-from .models import PlayerFrameResult, PlayerState
+from .models import NET_Y_M, PlayerFrameResult, PlayerState
 from .tracker import TEAM_OF
 
 
@@ -145,3 +145,126 @@ def apply_relabels(frames: list[PlayerFrameResult], relabels: dict[int, str]) ->
                     keep[p.player_id] = p
             f.players = list(keep.values())
     return n
+
+
+SWAP_TEAM = {"P1": ("P2", "P4"), "P3": ("P2", "P4"), "P2": ("P1", "P3"), "P4": ("P1", "P3")}
+
+
+def enforce_team_halves(
+    frames: list[PlayerFrameResult],
+    switches: list[int],
+    min_obs: int = 60,
+    wrong_frac: float = 0.8,
+    net_margin_m: float = 0.6,
+    max_overlap: float = 0.05,
+) -> int:
+    """Doubles: move whole tracks that spend their life on the other team's half to that team.
+
+    The online tracker only repairs a team when it has a free slot at the right moment, and the side
+    stabiliser swaps whole teams, so a single player given the wrong team can keep that label for a long
+    time (2026-09-06 0615, full length: a far player held a team A slot for ~4 minutes, then a near player
+    held a team B slot to the end). Partners always share a half, so over a track's lifetime its half says
+    its team: a track (``player_id``, ``track_id``) with at least ``min_obs`` observations, ``wrong_frac`` of
+    them on the half the other team holds at the time (``switches`` from :func:`stabilise_sides`; feet
+    within ``net_margin_m`` of the net don't count), takes the other team's id that is free over its frames
+    (at most ``max_overlap`` of them taken; there the existing holder stays). Which team holds which half is
+    the majority of all observations between two changes of ends. Returns the number of tracks moved.
+    """
+    order = sorted(frames, key=lambda f: f.frame)
+    if not order:
+        return 0
+    bounds = sorted(switches)
+
+    def segment(frame: int) -> int:
+        return sum(frame >= s for s in bounds)
+
+    def near(p: PlayerState) -> bool | None:
+        if p.interpolated or p.foot_court is None or p.player_id not in TEAM_OF:
+            return None
+        y = float(p.foot_court[1])
+        if not np.isfinite(y) or abs(y - NET_Y_M) < net_margin_m:
+            return None
+        return y < NET_Y_M
+
+    # Which team holds the near half in each segment between changes of ends.
+    votes: dict[int, int] = {}
+    for f in order:
+        for p in f.players:
+            h = near(p)
+            if h is not None:
+                k = segment(f.frame)
+                votes[k] = votes.get(k, 0) + (1 if h == (TEAM_OF[p.player_id] == "A") else -1)
+    a_near = {k: v >= 0 for k, v in votes.items()}
+
+    runs: dict[tuple[str, int], list[PlayerState]] = {}
+    run_frames: dict[tuple[str, int], set[int]] = {}
+    wrong: dict[tuple[str, int], list[int]] = {}
+    for f in order:
+        for p in f.players:
+            if p.player_id not in TEAM_OF:
+                continue
+            key = (p.player_id, p.track_id)
+            runs.setdefault(key, []).append(p)
+            run_frames.setdefault(key, set()).add(f.frame)
+            h = near(p)
+            if h is not None:
+                w = wrong.setdefault(key, [0, 0])
+                team_near = a_near.get(segment(f.frame), True) == (TEAM_OF[p.player_id] == "A")
+                w[0] += h != team_near
+                w[1] += 1
+    label = {k: k[0] for k in runs}
+    long_runs = [k for k in runs if len(run_frames[k]) >= min_obs // 4]  # what can block a move
+
+    def is_wrong(k: tuple[str, int]) -> bool:
+        bad, decided = wrong.get(k, (0, 0))
+        return decided >= min_obs and bad >= wrong_frac * decided
+
+    def overlap(k: tuple[str, int], pid: str, skip: tuple[str, int] | None = None) -> int:
+        return sum(len(run_frames[k] & run_frames[o]) for o in runs if o not in (k, skip) and label[o] == pid)
+
+    moved_keys: set[tuple[str, int]] = set()
+    for key in sorted(runs, key=lambda k: -len(runs[k])):
+        if key in moved_keys or not is_wrong(key):
+            continue
+        n = len(run_frames[key])
+        done = False
+        for target in sorted(SWAP_TEAM[label[key]], key=lambda t: overlap(key, t)):
+            if overlap(key, target) <= max_overlap * n:
+                label[key] = target
+                moved_keys.add(key)
+                done = True
+                break
+        if done:
+            continue
+        # Both of the other team's ids are taken: swap with a track of theirs that is on our half.
+        for other in long_runs:
+            if other in moved_keys or not is_wrong(other) or label[other] not in SWAP_TEAM[label[key]]:
+                continue
+            if not run_frames[key] & run_frames[other]:
+                continue
+            mine, theirs = label[key], label[other]
+            if (overlap(key, theirs, other) <= max_overlap * n
+                    and overlap(other, mine, key) <= max_overlap * len(run_frames[other])):
+                label[key], label[other] = theirs, mine
+                moved_keys.update((key, other))
+                break
+
+    for key in moved_keys:
+        target = label[key]
+        clash = set()
+        for o in runs:
+            if o != key and label[o] == target:
+                clash |= run_frames[key] & run_frames[o]
+        for p in runs[key]:
+            p.player_id = target
+            p.team = TEAM_OF[target]
+        if clash:  # the id's other holder stays there
+            ids = {id(p) for p in runs[key]}
+            for f in order:
+                if f.frame in clash:
+                    f.players = [p for p in f.players if id(p) not in ids]
+    moved = len(moved_keys)
+    if moved:
+        for f in frames:
+            f.players.sort(key=lambda p: p.player_id or "")
+    return moved

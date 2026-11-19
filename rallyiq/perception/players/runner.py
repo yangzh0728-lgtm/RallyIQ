@@ -15,7 +15,7 @@ from .geometry import far_court_roi, image_net_y
 from .match_format import FORMATS, FormatConfig, FormatDecision, decide_format
 from .models import PersonDetection, PlayerFrameResult
 from .pose import PoseEstimator
-from .postprocess import apply_relabels, drop_offcourt_runs, fill_short_gaps
+from .postprocess import apply_relabels, drop_offcourt_runs, enforce_team_halves, fill_short_gaps
 from .sides import SideConfig, stabilise_sides
 from .tracker import DoublesTracker, PlayerTracker, SinglesTracker, TrackerConfig
 
@@ -175,6 +175,8 @@ def track_players(
         apply_relabels(out, tracker.relabels)
     drop_offcourt_runs(out, cfg.filter.play_area)
     out.side_switches = stabilise_sides(out, cfg.sides)
+    if out.match_format == "doubles":
+        enforce_team_halves(out, out.side_switches)
     gap = cfg.max_interp_gap // max(cfg.stride, 1)
     if gap > 0:
         fill_short_gaps(out, gap)
