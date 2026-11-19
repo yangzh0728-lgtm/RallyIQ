@@ -123,7 +123,7 @@ export function CorrectionPanel(p: Props) {
 
   return (
     <>
-      <div className="panel">
+      <div className="panel rally-panel">
         <div className="row">
           <h3 style={{ margin: 0 }}>{r ? `回合 ${p.rallyNo}` : "当前不在回合内"}</h3>
           {r && <StatusPill status={r.status} source={r.source} />}

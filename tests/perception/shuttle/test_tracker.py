@@ -6,9 +6,11 @@ import pytest
 from rallyiq.contracts import ShuttleTrack, VideoMeta
 from rallyiq.perception.shuttle.heatmap import extract_peaks
 from rallyiq.perception.shuttle.stage import build_track, segments_for, tracker_config
-from rallyiq.perception.shuttle.tracker import ShuttleTracker
+from rallyiq.perception.shuttle.tracker import ShuttleTracker, TrackerConfig
 
 W, H = 1920, 1080
+# The flight-by-flight court lock (off by default; it lost real clears on own footage).
+FLIGHTS = TrackerConfig(flight_split=True, contact_gate="ends", chain=True, sure_points=3)
 
 
 def flight(f0, f1, a, b, apex, fps=30.0):
@@ -289,3 +291,173 @@ def test_slow_apex_is_not_a_static_spot():
     cands = {f: [(400.0 + 6 * f, 300.0 + 0.04 * (f - 30) ** 2, 0.6)] for f in range(n)}
     res = ShuttleTracker(fps, 1920, 1080).track(cands, n)
     assert len([p for p in res.points if p.source == "detected"]) == n
+
+
+def test_still_strong_object_over_shared_air_is_dropped():
+    from rallyiq.perception.shuttle.tracker import ShuttleTracker
+
+    # 1 s at 30 fps: a strong still blob (a shuttle lying on a neighbour's floor) where our
+    # air space overlaps another court's (weight 0.6), always next to our player.
+    cands = {f: [(500.0, 400.0, 0.9)] for f in range(30)}
+    shared = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 0.6, support=lambda f, x, y: True)
+    assert not shared.track(cands, 30).points
+    ours = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 1.0, support=lambda f, x, y: True)
+    assert ours.track(cands, 30).points  # a shuttle lying on our own court is kept
+
+
+def test_saved_candidates_round_trip(tmp_path):
+    from rallyiq.perception.shuttle.stage import load_candidates, save_candidates
+
+    cands = {3: [(10.5, 20.25, 0.9), (30.0, 40.0, 0.3)], 7: [(1.0, 2.0, 0.5)]}
+    save_candidates(tmp_path / "c.json", cands, {3: 0}, "det@1", (1920, 1080))
+    got, size, det = load_candidates(tmp_path / "c.json")
+    assert got == cands and size == (1920, 1080) and det == "det@1"
+
+
+def test_still_object_kept_only_where_a_shuttle_can_rest():
+    from rallyiq.perception.shuttle.tracker import ShuttleTracker
+
+    cands = {f: [(500.0, 400.0, 0.9)] for f in range(30)}  # strong, never moves
+    on_floor = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 1.0, rest=lambda f, x, y: True)
+    assert on_floor.track(cands, 30).points  # lying on our court / held by our player
+    duct = ShuttleTracker(30, 1920, 1080, region=lambda f, x, y: 1.0, support=lambda f, x, y: True,
+                          rest=lambda f, x, y: False)
+    assert not duct.track(cands, 30).points  # a duct tip in our air space, near a big near player
+    flying = {f: [(500.0 + 20 * f, 400.0 - 5 * f, 0.9)] for f in range(30)}
+    assert duct.track(flying, 30).points  # moving shuttles are not judged by rest at all
+
+
+def test_blinking_fixed_feature_is_dropped_and_crossing_flight_survives():
+    """A duct tip fires on two frames in three, jittering a few px: too unsteady for the
+    static-spot test, but it sits in the same cells far longer than a shuttle can."""
+    rng = np.random.default_rng(5)
+    fps, n = 30.0, 300
+    cands = {f: [] for f in range(n)}
+    for f in range(n):
+        if f % 3:
+            cands[f].append((620.0 + rng.normal(0, 4), 436.0 + rng.normal(0, 4), 0.7))
+    shot = flight(100, 130, (300, 800), (1200, 300), 200)
+    for f, (x, y) in shot.items():
+        cands[f].append((x, y, 0.5))
+    tr = ShuttleTracker(fps, W, H)
+    got = by_frame(tr.track(cands, n))
+    assert tr.hot_cell(620, 436) in tr.hot_cells
+    assert set(got) <= set(shot)  # the feature claims no frame of its own
+    assert sum(1 for f in shot if f in got) == len(shot)  # where the flight crosses it, it is filled
+
+
+def test_shared_air_trajectory_needs_racket_reach_not_just_a_big_player_nearby():
+    shot = as_candidates(flight(0, 30, (300, 300), (700, 250), 150))
+    loose = lambda f, x, y: True  # noqa: E731  (everything is near the huge near player)
+    shared = lambda f, x, y: 0.6  # noqa: E731
+    far_from_racket = ShuttleTracker(30, W, H, region=shared, support=loose, strict_support=lambda f, x, y: False)
+    assert not far_from_racket.track(shot, 31).points
+    assert far_from_racket.log[-1][-1] == "ambiguous"
+    hit = ShuttleTracker(30, W, H, region=shared, support=loose, strict_support=lambda f, x, y: f == 0)
+    assert hit.track(shot, 31).points  # leaves our player's racket: ours
+    ours = ShuttleTracker(30, W, H, region=lambda f, x, y: 1.0, support=loose, strict_support=lambda f, x, y: False)
+    assert ours.track(shot, 31).points  # only shared air asks for racket reach
+
+
+def test_rest_area_counts_a_held_shuttle_but_not_a_pile_at_the_feet():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from evaluation.multicourt import make_scene
+    from rallyiq.contracts import PlayerFrame, PlayerTracks
+    from rallyiq.perception.shuttle.stage import rest_area
+
+    cal = make_scene("broadcast", "side_by_side", frames=10).calibration
+    tracks = PlayerTracks.model_validate({"video_id": "v", "frames": [{
+        "frame": 0, "t_ms": 0.0,
+        "players": [{"player_id": "P1", "track_id": 1, "bbox": [40.0, 20.0, 100.0, 220.0], "confidence": 0.9}],
+    }]})
+    assert isinstance(tracks.frames[0], PlayerFrame)
+    rest = rest_area(cal, tracks)
+    assert rest(0, 70, 90)  # in hand, chest height (off any floor we own)
+    assert not rest(0, 70, 210)  # at the feet: a pile on the floor next to the player
+    assert rest(0, 960, 600)  # on our court's floor
+
+
+def _players(frames):
+    from rallyiq.contracts import PlayerTracks
+
+    return PlayerTracks.model_validate({"video_id": "v", "frames": [
+        {"frame": f, "t_ms": f * 33, "players": [
+            {"player_id": "P1", "track_id": 1, "bbox": [800.0, 400.0, 1100.0, 1000.0], "confidence": 0.9,
+             "keypoints": [[0.0, 0.0, 0.0]] * 9 + [list(w) + [0.9], [1100.0, 700.0, 0.9]] + [[0.0, 0.0, 0.0]] * 6}]}
+        for f, w in frames.items()]})
+
+
+def test_racket_contact_needs_a_swinging_wrist_nearby():
+    from rallyiq.perception.shuttle.stage import RacketContact
+
+    hanging = RacketContact(_players({f: (820.0, 700.0) for f in range(30)}), 30)
+    assert not hanging.contact(15, 830, 600)  # right next to the box, but the arm hangs still
+    assert hanging.held(15, 822, 702)
+    swing = RacketContact(_players({f: (820.0 + 40 * f, 500.0) for f in range(30)}), 30)  # 2 h/s
+    w = (820.0 + 40 * 15, 500.0)
+    assert swing.contact(15, w[0] + 100, w[1] - 150)  # racket head above the wrist
+    assert not swing.contact(15, w[0] + 600, w[1])  # far beyond racket length
+    assert not swing.held(15, w[0] + 100, w[1] - 150)
+
+
+def test_shared_air_support_is_only_checked_where_a_trajectory_ends_or_turns():
+    shot = as_candidates(flight(0, 30, (300, 300), (700, 250), 150))
+    shared = lambda f, x, y: 0.6  # noqa: E731
+    mid_flight = ShuttleTracker(30, W, H, FLIGHTS, region=shared, support=lambda f, x, y: True,
+                                strict_support=lambda f, x, y: f == 15)
+    assert not mid_flight.track(shot, 31).points  # a player's racket brushed past it mid flight
+    at_end = ShuttleTracker(30, W, H, FLIGHTS, region=shared, support=lambda f, x, y: True,
+                            strict_support=lambda f, x, y: f == 30)
+    assert at_end.track(shot, 31).points
+
+
+def _air(sure_above_y):
+    """Our air only above ``sure_above_y`` (high in the image), shared below."""
+    return lambda f, x, y: 1.0 if y < sure_above_y else 0.6
+
+
+def test_one_linked_tracklet_is_judged_flight_by_flight():
+    # Our clear peaks high (air that is only ours), then the linker runs straight on into
+    # a neighbour's shuttle crossing at mid height: a sharp turn, no racket of ours.
+    ours = flight(0, 20, (900, 500), (700, 300), 300)
+    theirs = {f: (700 - 25 * (f - 20), 300 + 12 * (f - 20)) for f in range(21, 45)}
+    cands = as_candidates(ours | theirs)
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=_air(200), support=lambda f, x, y: True,
+                        strict_support=lambda f, x, y: False)
+    got = by_frame(tr.track(cands, 45))
+    assert sum(1 for f in ours if f in got) >= len(ours) - 1
+    assert not any(f in got and got[f].source == "detected" for f in range(24, 45))
+
+
+def test_flight_that_runs_onto_a_duct_tip_loses_only_the_duct_part():
+    shot = {f: (300 + 20 * f, 700 - 9 * f) for f in range(0, 15)}  # ends at (580, 574)
+    duct = {f: (600 + (f % 2), 560.0) for f in range(15, 45)}
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
+                        strict_support=lambda f, x, y: f == 0, rest=lambda f, x, y: False)
+    got = by_frame(tr.track(as_candidates(shot | duct), 45))
+    assert sum(1 for f in shot if f in got) >= len(shot) - 1
+    assert not any(f in got for f in range(18, 45))
+
+
+def test_racket_contact_found_behind_where_detection_resumes():
+    # Hit at frame 10 at (500, 600); the shuttle is first detected 4 frames later.
+    shot = {f: (500 + 30 * (f - 10), 600 - 40 * (f - 10)) for f in range(14, 30)}
+    at_racket = lambda f, x, y: f == 10 and math.dist((x, y), (500, 600)) < 40  # noqa: E731
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=lambda f, x, y: 0.6, support=lambda f, x, y: True,
+                        strict_support=at_racket)
+    assert tr.track(as_candidates(shot), 30).points
+
+
+def test_shared_air_flight_carrying_on_from_ours_across_a_gap_is_kept():
+    # Our shuttle in air that is only ours, lost for 5 frames, then on in shared air in
+    # the same direction: the same flight, though no racket of ours touches that part.
+    path = {f: (400 + 20 * f, 150 + 15 * f) for f in range(0, 40)}
+    cands = as_candidates({f: xy for f, xy in path.items() if not 15 <= f < 20})
+    tr = ShuttleTracker(30, W, H, FLIGHTS, region=_air(380), support=lambda f, x, y: True,
+                        strict_support=lambda f, x, y: False)
+    got = by_frame(tr.track(cands, 40))
+    assert sum(1 for f in range(20, 40) if f in got) >= 19
+    assert any(v == "chained" for *_, v in tr.log)

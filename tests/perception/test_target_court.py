@@ -142,3 +142,16 @@ def test_court_lock_report_on_saved_run(tmp_path):
     s = r["shuttle"]
     assert s["lock_mode"] == "calibration"
     assert s["removed_points"] > 20 and s["removed_over_other_court"] > 0.5 * s["removed_points"]
+
+
+def test_drop_offcourt_runs_min_inside_frac_drops_sideline_spectators():
+    frames = []
+    for f in range(40):
+        frames.append(PlayerFrameResult(f, f * 33.3, [
+            _state("P1", 0, W / 2, 3.0),  # our player, inside the lines
+            _state("P2", 1, W - 0.6, 10.0 if f % 4 else 13.9),  # our far player: inside, out the back now and then
+            _state("P3", 2, -0.6, 8.0),  # spectator standing just outside the sideline, within the run-off
+        ]))
+    assert drop_offcourt_runs(frames) == 0  # within the 1 m run-off: the old rule keeps everyone
+    assert drop_offcourt_runs(frames, min_inside_frac=0.25) == 1
+    assert all(sorted(p.player_id for p in f.players) == ["P1", "P2"] for f in frames)

@@ -71,6 +71,39 @@ def test_pipeline_option(tmp_path):
     assert PH.get_model("off") is None and PH.get_model(str(tmp_path / "missing.json")) is None
 
 
+def test_swing_veto_drops_hits_nobody_swings_at(tmp_path):
+    v, rallies = _rallies(3)
+    n = sum(len(r.hits) for r in rallies)
+    assert n and PH.veto(rallies, v.poses, PH.PoseHitModel(_const(5.0)), 0.3, frame_ms=1000.0 / v.fps) == 0
+    assert all("p_swing" in h.scores for r in rallies for h in r.hits)
+    assert PH.veto(rallies, v.poses, PH.PoseHitModel(_const(-5.0)), 0.3, frame_ms=1000.0 / v.fps) == n
+    assert not any(r.hits for r in rallies)
+    p = tmp_path / "no_swing.json"
+    p.write_text(json.dumps(_const(-5.0)))
+    cfg = replace(EventsConfig(), hit_scorer="off", swing_veto=0.3, swing_veto_model=str(p))
+    assert not any(r.hits for r in segment_events(v.shuttle, v.poses, cfg))
+    kept = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_serve=True))
+    assert all(len(r.hits) == 1 for r in kept if r.hits) and any(r.hits for r in kept)
+    rally = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_exchange_ms=5000.0))
+    assert sum(len(r.hits) for r in rally) > 0  # synthetic rallies alternate sides: an exchange
+    moving = segment_events(v.shuttle, v.poses, replace(cfg, swing_veto_keep_wrist_v=1e-6))
+    assert sum(len(r.hits) for r in moving) > 0  # synthetic players move their wrists
+
+
+def test_one_sided_rallies_are_dropped():
+    v, rallies = _rallies(4)
+    assert all(not PH.one_sided(r, v.poses, 3) for r in rallies if len({h.hitter_id for h in r.hits}) > 1)
+    r = rallies[0]
+    near = r.hits[0].hitter_id
+    r.hits = [h for h in r.hits if h.hitter_id == near][:2]
+    assert PH.one_sided(r, v.poses, 3)
+    assert not PH.one_sided(r, v.poses, 1)  # more hits than the limit: left alone
+    cfg = replace(EventsConfig(), hit_scorer="off", one_sided_rally_max_hits=3)
+    base = segment_events(v.shuttle, v.poses, replace(cfg, one_sided_rally_max_hits=0))
+    assert len(segment_events(v.shuttle, v.poses, cfg)) == sum(
+        1 for r in base if not PH.one_sided(r, v.poses, 3))
+
+
 def test_export_matches_sklearn():
     pytest.importorskip("sklearn")
     from sklearn.ensemble import HistGradientBoostingClassifier
