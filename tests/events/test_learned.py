@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from rallyiq.events.config import EventsConfig
-from rallyiq.events.learned import FEATURES, HitScorer, get_scorer
+from rallyiq.events.learned import ALL_FEATURES, FEATURES, HitScorer, get_scorer
 from rallyiq.events.pipeline import segment_events
 from rallyiq.events.synthetic import make_video
 
@@ -59,7 +59,7 @@ def test_train_and_use_scorer(tmp_path):
         c.collect(EventsConfig(), 3)
     X = np.vstack([c.X for c in clips])
     y = np.concatenate([c.y for c in clips])
-    assert X.shape[1] == len(FEATURES) and 0 < y.sum() < len(y)
+    assert X.shape[1] == len(ALL_FEATURES) and 0 < y.sum() < len(y)
     spec = LH.fit_mlp(X, y, hidden=8, l2=1e-3, epochs=300)
     p = HitScorer(spec).predict(X)
     assert ((p > 0.5) == (y > 0.5)).mean() > 0.8

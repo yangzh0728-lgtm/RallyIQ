@@ -39,7 +39,7 @@ def read(d: Path, name: str):
     return None
 
 
-def labels(root: Path) -> list[dict]:
+def labels(root: Path, trusted: tuple[str, ...] = TRUSTED, stroke_sure_only: bool = False) -> list[dict]:
     rows: list[dict] = []
     if (root / "labels_compact.csv").exists():
         with open(root / "labels_compact.csv", encoding="utf-8") as fh:
@@ -60,16 +60,22 @@ def labels(root: Path) -> list[dict]:
                 for v in o:
                     walk(v, video)
         walk(data)
-    return [r for r in rows if str(r.get("status", "")).split("/")[0] in TRUSTED and r.get("stroke")]
+    return [r for r in rows if str(r.get("status", "")).split("/")[0] in trusted and r.get("stroke")
+            and (not stroke_sure_only or r.get("stroke_sure") in (True, "True", "true", "1"))]
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("root", type=Path)
     ap.add_argument("--window-ms", type=float, default=300)
+    ap.add_argument("--trusted", nargs="+", default=list(TRUSTED),
+                    help="statuses counted (amateur_v1.json: reviewed_sure reviewed_unsure)")
+    ap.add_argument("--stroke-sure-only", action="store_true", help="only labels whose stroke_sure is true")
+    ap.add_argument("--rerun-events", metavar="JSON", help="re-run the events stage with these EventsConfig overrides "
+                    "(e.g. '{\"hit_scorer\": \"m.json\", \"swing_veto\": 0.1}') instead of reading events.json")
     a = ap.parse_args()
     root = a.root.expanduser()
-    labs = labels(root)
+    labs = labels(root, tuple(a.trusted), a.stroke_sure_only)
     v1 = json.loads(subprocess.check_output(["git", "-C", str(ROOT), "show", "cbbac7c:rallyiq/strokes/models/strokes_court_v1.json"]))
     models = {"court_v1 + smoothing (before)": CM.CourtModel(v1), "court_v2 (after)": CM.CourtModel(json.loads(CM.BUNDLED.read_text()))}
     attrs, vid = get_attrs(), video_model(BUNDLED)
@@ -86,6 +92,20 @@ def main() -> int:
         sh, pl = read(d, "shuttle"), read(d, "players")
         sh = ShuttleTrack.model_validate(sh) if sh else None
         pl = PlayerTracks.model_validate(pl) if pl else None
+        if a.rerun_events:
+            from dataclasses import replace as _replace
+
+            from rallyiq.contracts import CourtCalibration
+            from rallyiq.events.adapters import calibration_segments, events_to_contract, poses_from_contract, shuttle_from_contract
+            from rallyiq.events.config import EventsConfig
+            from rallyiq.events.pipeline import off_court_views, segment_events
+            cfg = _replace(EventsConfig(), **json.loads(a.rerun_events))
+            cal = read(d, "calibration")
+            cal = CourtCalibration.model_validate(cal) if cal else None
+            off = off_court_views(calibration_segments(cal), cfg.court_view_min_share) if cfg.mask_off_court_views else []
+            rallies = segment_events(shuttle_from_contract(sh), poses_from_contract(pl), cfg,
+                                     video_end_ms=float(probe["duration_ms"]), off_court=off)
+            events = events_to_contract(probe["video_id"], rallies, pl.match_format if pl else "singles")
         fps = float(probe.get("fps") or 30.0)
         vl = [r for r in labs if r["video"] == video]
         line = [f"{video}: {len(vl)} labels"]
