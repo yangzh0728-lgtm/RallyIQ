@@ -1,0 +1,139 @@
+{
+ "video": "DJI_0009",
+ "image": "calib_0529/dji0009_middle.png",
+ "image_size": [
+  1920,
+  1080
+ ],
+ "note": "image_from_court maps court metres (x across 0..6.1 from the left doubles sideline, y along 0..13.4 from the near baseline) to pixels. Fitted to the 19 hand-measured line intersections in named9.json (fit median 1.3 px). Far baseline corners are extrapolated from the near half and far short-service line.",
+ "image_from_court": [
+  [
+   314.7390099127838,
+   270.01932856363567,
+   19.63983256800016
+  ],
+  [
+   -0.08809844835584324,
+   150.84068376109664,
+   1025.505491366378
+  ],
+  [
+   0.0011310056989925368,
+   0.2809884437686892,
+   1.0
+  ]
+ ],
+ "court_from_image": [
+  [
+   0.003201916606548397,
+   0.00616766133750978,
+   -6.387855676553688
+  ],
+  [
+   -2.90998751009356e-05,
+   -0.007338605012534833,
+   7.526351255998029
+  ],
+  [
+   4.555342688770041e-06,
+   0.002055087541783085,
+   -1.1075930255048816
+  ]
+ ],
+ "doubles_corners_px": {
+  "near_left": [
+   19.6,
+   1025.5
+  ],
+  "near_right": [
+   1926.3,
+   1017.9
+  ],
+  "far_right": [
+   1164.6,
+   638.3
+  ],
+  "far_left": [
+   763.4,
+   639.4
+  ]
+ },
+ "points_px": {
+  "near_baseline/left_doubles_sideline": [
+   18.1,
+   1026.2
+  ],
+  "near_baseline/left_singles_sideline": [
+   164.4,
+   1025.6
+  ],
+  "near_baseline/centre_line": [
+   976.4,
+   1021.7
+  ],
+  "near_baseline/right_singles_sideline": [
+   1782.3,
+   1017.9
+  ],
+  "near_baseline/right_doubles_sideline": [
+   1926.0,
+   1017.2
+  ],
+  "near_doubles_long_service/left_doubles_sideline": [
+   186.3,
+   938.8
+  ],
+  "near_doubles_long_service/left_singles_sideline": [
+   306.2,
+   938.5
+  ],
+  "near_doubles_long_service/centre_line": [
+   972.8,
+   936.5
+  ],
+  "near_doubles_long_service/right_singles_sideline": [
+   1639.6,
+   934.5
+  ],
+  "near_doubles_long_service/right_doubles_sideline": [
+   1758.9,
+   934.1
+  ],
+  "near_short_service/left_doubles_sideline": [
+   555.6,
+   747.0
+  ],
+  "near_short_service/left_singles_sideline": [
+   618.2,
+   746.9
+  ],
+  "near_short_service/centre_line": [
+   964.8,
+   746.3
+  ],
+  "near_short_service/right_singles_sideline": [
+   1316.6,
+   745.6
+  ],
+  "near_short_service/right_doubles_sideline": [
+   1379.6,
+   745.5
+  ],
+  "far_short_service/left_doubles_sideline": [
+   688.3,
+   678.0
+  ],
+  "far_short_service/left_singles_sideline": [
+   730.3,
+   678.0
+  ],
+  "far_short_service/right_singles_sideline": [
+   1199.6,
+   677.3
+  ],
+  "far_short_service/right_doubles_sideline": [
+   1242.2,
+   677.2
+  ]
+ }
+}

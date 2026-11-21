@@ -46,7 +46,7 @@ from rallyiq.events import hits as H  # noqa: E402
 from rallyiq.events.adapters import (calibration_segments, events_to_contract, poses_from_contract,  # noqa: E402
                                     shuttle_from_contract)
 from rallyiq.events.config import EventsConfig  # noqa: E402
-from rallyiq.events.learned import BUNDLED, FEATURES, HitScorer  # noqa: E402
+from rallyiq.events.learned import ALL_FEATURES, BUNDLED, FEATURES, HitScorer  # noqa: E402
 from rallyiq.events.pipeline import off_court_views, segment_events  # noqa: E402
 
 PLAYER_IDS = {"P1", "P2", "P3", "P4"}
@@ -71,7 +71,7 @@ class Clip:
         cal = CourtCalibration.model_validate_json(cp.read_text(encoding="utf-8")) if cp.exists() else None
         self.cal_segments = calibration_segments(cal)
         self.rallies: list[dict[str, Any]] = []
-        self.X = np.zeros((0, len(FEATURES)))
+        self.X = np.zeros((0, len(ALL_FEATURES)))
         self.y = np.zeros(0)
 
     def t_label(self, frame: int) -> float:
@@ -101,7 +101,7 @@ class Clip:
                 by_id[rid]["cands"].append(e)
             X.append(x)
         self.rallies = list(by_id.values())
-        self.X = np.asarray(X, float).reshape(-1, len(FEATURES))
+        self.X = np.asarray(X, float).reshape(-1, len(ALL_FEATURES))
         # positives: nearest candidate to each labelled hit, within tolerance (one-to-one)
         tol = tol_frames * 1000.0 / self.fps + 1e-6
         ts = [None] * len(sink)
@@ -232,8 +232,11 @@ def score(clips: list[Clip], hits_by_clip: dict[str, list[dict]], tol_frames: in
 
 # ------------------------------------------------------------------ model
 def fit_mlp(X: np.ndarray, y: np.ndarray, hidden: int, l2: float, seed: int = 0, epochs: int = 1500,
-            lr: float = 0.01) -> dict[str, Any]:
-    """Full-batch Adam on mean BCE + l2; returns a learned.HitScorer spec."""
+            lr: float = 0.01, features: tuple[str, ...] = FEATURES, w: np.ndarray | None = None) -> dict[str, Any]:
+    """Full-batch Adam on (weighted) mean BCE + l2 on the ``features`` columns of ``X`` (rows in
+    ``ALL_FEATURES`` order); returns a learned.HitScorer spec."""
+    if X.shape[1] == len(ALL_FEATURES) and len(features) != len(ALL_FEATURES):
+        X = X[:, [ALL_FEATURES.index(n) for n in features]]
     rng = np.random.default_rng(seed)
     mean, std = X.mean(0), X.std(0) + 1e-6
     Z = (X - mean) / std
@@ -253,7 +256,7 @@ def fit_mlp(X: np.ndarray, y: np.ndarray, hidden: int, l2: float, seed: int = 0,
                 h = np.tanh(h)
             acts.append(h)
         p = 1 / (1 + np.exp(-acts[-1][:, 0]))
-        g = ((p - y) / n)[:, None]
+        g = ((p - y) / n if w is None else (p - y) * w / w.sum())[:, None]
         grads = [None] * len(P)
         for k in range(len(P) - 2, -1, -2):
             a_in = acts[k // 2]
@@ -266,7 +269,7 @@ def fit_mlp(X: np.ndarray, y: np.ndarray, hidden: int, l2: float, seed: int = 0,
             v[i] = 0.999 * v[i] + 0.001 * g_ ** 2
             P[i] = p_ - lr * (m[i] / (1 - 0.9 ** t)) / (np.sqrt(v[i] / (1 - 0.999 ** t)) + 1e-8)
     layers = [[P[k].tolist(), P[k + 1].tolist()] for k in range(0, len(P), 2)]
-    return {"features": list(FEATURES), "mean": mean.tolist(), "std": std.tolist(), "layers": layers,
+    return {"features": list(features), "mean": mean.tolist(), "std": std.tolist(), "layers": layers,
             "hidden": hidden, "l2": l2}
 
 

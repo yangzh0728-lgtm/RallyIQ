@@ -105,6 +105,9 @@ def test_phase_rules():
     assert phase_of("clear", "defense") == "attack"
     assert phase_of("clear", "neutral") == "neutral"
     assert phase_of(None, None) == "neutral"
+    # a lift met late and below the net is no attacking chance
+    assert phase_of("lift", None, "low") == "neutral" and phase_of("lift", None, "high") == "attack"
+    assert phase_of("smash", None, "high") == "defense"
     assert is_attack("smash", "neutral") and is_attack("drop", "attack") and not is_attack("drop", "neutral")
 
 
@@ -218,6 +221,11 @@ def test_prototype_scoring():
     assert match_prototype(p, ten).score == pytest.approx(75.0, abs=0.1)
     few = {"smash_pct": (25.0, 50, "", "%")}
     assert match_prototype(p, few).score is None  # under half of the weight measurable
+    # a feature from a handful of samples may count, but is never quoted as a reason
+    eight = {**{k: (v[0], 100, "", None) for k, v in hi.items()}, "smash_pct": (25.0, 8, "杀球占比", "%")}
+    assert not any(r.startswith("杀球占比") for r in match_prototype(p, eight).reasons)
+    with_ex = match_prototype(p, hi, examples={"smash_pct": [61_000, 125_500]})
+    assert with_ex.reasons[0].endswith("回看 01:01、02:05）")
     tiny = {k: (v[0], 2, "", None) for k, v in hi.items()}
     assert match_prototype(p, tiny).score is None  # samples too small
     assert len(SINGLES_STYLES) == 8 and len(DOUBLES_SYSTEMS) == 5
@@ -298,3 +306,19 @@ def test_random_hitters_give_no_verdict():
         assert st.status == "undeterminable" and st.primary is None and st.advice == []
         assert st.label == "证据不足（击球者识别不可靠）"
     assert not any(m.key.endswith("style.match_score") for p in stats.players for m in p.metrics)
+
+
+def test_unconfirmed_stroke_types_lower_confidence():
+    events, players = _rallies(POWER)
+    auto = c.StrokeInfo(shot_type="smash", confidence=0.4, status="needs_review", source="model")
+    shots = [s.model_copy(update={"stroke": auto.model_copy(update={"shot_type": s.shot_type})}) for s in events.shots]
+    stats = compute_match_stats(events.model_copy(update={"shots": shots}), players, _cal())
+    p1 = next(s for s in stats.styles if s.subject == "P1")
+    assert p1.primary.code == "power_attack" and p1.confidence == "low"
+    assert "只有 0 拍的类型经过确认" in p1.note
+    # once a person has checked the types the confidence comes back
+    human = [s.model_copy(update={"stroke": s.stroke.model_copy(update={"source": "human", "status": "ok"})})
+             for s in shots]
+    stats = compute_match_stats(events.model_copy(update={"shots": human}), players, _cal())
+    p1 = next(s for s in stats.styles if s.subject == "P1")
+    assert p1.confidence == "medium" and (p1.note is None or "经过确认" not in p1.note)

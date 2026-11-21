@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     weights = find_weights(a.weights)
     if weights is None:
         raise SystemExit("no starting weights found (see rallyiq/perception/shuttle/README.md)")
-    manifest = schema.load_manifest(MANIFEST)
+    manifest = schema.load_manifests(MANIFEST, schema.OWN_MANIFEST)
     tr, va, skipped = select(a.labels, a.clips.expanduser(), manifest, a.include_draft, a.train, a.val, a.split_clip)
     for s in skipped:
         print(f"skip {s}")

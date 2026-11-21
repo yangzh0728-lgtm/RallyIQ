@@ -189,6 +189,8 @@ def detect_hits(
 
     scorer = get_scorer(cfg.hit_scorer)
     no_pose = poses.empty
+    # the pose-swing features cost a pose-model pass per candidate: only when collecting or the scorer uses them
+    swing = collect is not None or (scorer is not None and scorer.uses_swing)
     out: list[Candidate] = []
     for c in picked:
         rule_conf, landing, rejected = _decide(c, track, span, cfg, no_pose)
@@ -198,7 +200,7 @@ def detect_hits(
             rejected = True
             c.confidence = 0.0
         if scorer is not None or collect is not None:
-            x = features(c, track, span, poses, cfg, rule_conf, landing, no_pose)
+            x = features(c, track, span, poses, cfg, rule_conf, landing, no_pose, swing=swing)
             if collect is not None:
                 collect.append((x, c))
             if scorer is not None:
@@ -214,7 +216,7 @@ def detect_hits(
         serve = _inferred_serve(track, span, poses, cfg, fps_ms)
     if serve is not None:
         if scorer is not None or collect is not None:
-            x = features(serve, track, span, poses, cfg, serve.confidence, False, no_pose)
+            x = features(serve, track, span, poses, cfg, serve.confidence, False, no_pose, swing=swing)
             if collect is not None:
                 collect.append((x, serve))
             if scorer is not None:
@@ -225,6 +227,10 @@ def detect_hits(
         if needed and (scorer is None or serve.confidence >= cfg.min_candidate_conf):
             out.insert(0, serve)
 
+    if cfg.side_decode:
+        from .sides import decode_sides
+
+        decode_sides(out, track, poses, cfg)
     return resolve_sequence(out, cfg)
 
 

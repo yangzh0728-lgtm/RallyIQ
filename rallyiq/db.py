@@ -23,6 +23,9 @@ from pathlib import Path
 from typing import Any, Protocol
 
 
+_SCHEMA_LOCK = 0x5241_4C4C  # pg advisory lock key for schema creation ("RALL")
+
+
 class Row(Protocol):
     def __getitem__(self, key: str) -> Any: ...
 
@@ -116,9 +119,20 @@ class Database:
             if self.dialect == "sqlite" and not getattr(self._local_tx, "active", False):
                 self._conn.executescript(script)
             else:
-                for stmt in (s.strip() for s in script.split(";")):
-                    if stmt:
-                        self._execute(stmt, ())
+                # The API and the worker start together and both create the schema; two
+                # concurrent CREATE TABLE IF NOT EXISTS can still collide in Postgres's
+                # catalog (duplicate pg_type), so serialise them with an advisory lock.
+                # (SQLite gets here only inside a transaction, which already holds its write lock.)
+                pg = self.dialect == "postgres"
+                if pg:
+                    self._execute("SELECT pg_advisory_lock(?)", (_SCHEMA_LOCK,))
+                try:
+                    for stmt in (s.strip() for s in script.split(";")):
+                        if stmt:
+                            self._execute(stmt, ())
+                finally:
+                    if pg:
+                        self._execute("SELECT pg_advisory_unlock(?)", (_SCHEMA_LOCK,))
 
     # Any constant shared by every RallyIQ process; names the advisory lock that serialises schema setup.
     _SCHEMA_LOCK = 0x5241_4C59

@@ -601,7 +601,7 @@
           {
             "key": "P1.style.tempo_cv",
             "label": "\u51fa\u7403\u5feb\u6162\u53d8\u5316\uff08\u53d8\u5f02\u7cfb\u6570\u00d7100\uff09",
-            "value": 13.3,
+            "value": 6.2,
             "unit": null,
             "n": 4,
             "status": "needs_review",
@@ -1162,10 +1162,10 @@
           {
             "key": "P2.style.tempo_cv",
             "label": "\u51fa\u7403\u5feb\u6162\u53d8\u5316\uff08\u53d8\u5f02\u7cfb\u6570\u00d7100\uff09",
-            "value": 0.0,
+            "value": null,
             "unit": null,
             "n": 3,
-            "status": "needs_review",
+            "status": "undeterminable",
             "confidence": "low",
             "note": null
           },

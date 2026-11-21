@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from . import metrics as M
-from .schema import load_dir, load_manifest
+from .schema import OWN_MANIFEST, load_dir, load_manifests
 
 HERE = Path(__file__).resolve().parent
 GROUP_KEYS = ("discipline", "camera", "source", "venue")
@@ -80,7 +80,7 @@ def run(labels_dir: Path, pred_dir: Path | None, manifest: dict[str, dict], spli
     for cid, gt in labels.items():
         meta = manifest.get(cid)
         if meta is None:
-            skipped[cid] = "不在 clips.yaml 中"
+            skipped[cid] = "不在 clips.yaml / own_clips.yaml 中"
             continue
         if split and meta.get("split") != split:
             continue
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--markdown", type=Path)
     a = ap.parse_args(argv)
 
-    rep = run(a.labels, a.pred, load_manifest(a.manifest), None if a.all_splits else a.split, a.include_draft)
+    rep = run(a.labels, a.pred, load_manifests(a.manifest, OWN_MANIFEST), None if a.all_splits else a.split, a.include_draft)
     md = to_markdown(rep)
     if a.json:
         a.json.parent.mkdir(parents=True, exist_ok=True)

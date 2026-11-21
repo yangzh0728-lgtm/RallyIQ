@@ -1,0 +1,138 @@
+# 自有素材片段清单（sam 自己拍的业余比赛和对练，原片在外接硬盘上）
+#
+# 仓库只保存文件名、时间段和人工标注，不保存任何视频或帧图像，也不写人名。
+# 原片根目录默认 /Volumes/T7/YZH/Badminton Film，可用 --footage 或环境变量
+# RALLYIQ_FOOTAGE 覆盖。extract_clips 在根目录下按文件名查找（DJI 文件名唯一），
+# 只切出清单里的时间段，缩到 1080p 以内，放进和 BWF 片段相同的 clips 目录，
+# 所以 real_run / label_tool / shuttle_loop 不用改用法。
+#
+# 字段和 clips.yaml 相同，只是用 file 代替 video_id：
+#   file          原片文件名（在根目录下递归查找）
+#   start_s       片段在原片中的起点（秒）。标注时间仍是原片毫秒时间
+#   holdout       true = 整段只当考试题，shuttle_loop 不拿它训练
+#   segment_verified  false = 起点只是取了原片中间，还没确认画面里是回合；
+#                 抽片后快速看一眼，必要时调整 start_s
+#   court_points  固定机位的球场点，{球场线交点名: [x, y]}，坐标是切好的片段画面（1920×1080）。
+#                 名字是 "横线/竖线"，如 near_short_service/centre_line。有了它 real_run 整段直接用
+#                 这个球场，不再自动标定。点由画面里的白线拟合直线后求交点得到，投影回画面核对过。
+#                 同一场次机位没动时用 YAML 锚点（&名字 / *名字）共用一份
+#   neighbour_courts  同一馆里其他球场的位置 [[dx, dy], ...]（米，相对我们球场近左角）。
+#                 低机位下我们球场上方的"空中"会盖住大半个画面，不告诉它邻场在哪，
+#                 邻场的球就会被当成我们的
+#
+# 机位（conditions.camera）：
+#   amateur_baseline   底线后方低机位，整块场地可见（与 DJI_0009 同类）
+#   amateur_side       场边斜角低机位
+#   amateur_multicourt 高中比赛场馆，画面里同时有多块球场，用于验证目标球场锁定
+
+clips:
+  # ---------------- 2026-05-29 对练：与 DJI_0009 同场次同机位（2688×1512，60fps） ----------------
+  - id: own0529_0008
+    file: DJI_20030505184606_0008_D.MP4
+    start_s: 265
+    duration_s: 120
+    segment_verified: false
+    split: train
+    # 0529 前段机位：底线后方低机位，近端底线和发球线在画面外；0006、0008 的抽帧都对上
+    court_points: &cam_0529_a
+      near_short_service/left_doubles_sideline: [400.7, 828.1]
+      near_short_service/left_singles_sideline: [478.4, 827.3]
+      near_short_service/centre_line: [910.2, 823.0]
+      near_short_service/right_singles_sideline: [1333.1, 818.8]
+      near_short_service/right_doubles_sideline: [1407.5, 818.1]
+      far_short_service/left_doubles_sideline: [599.9, 730.4]
+      far_short_service/left_singles_sideline: [647.7, 730.0]
+      far_short_service/centre_line: [918.6, 727.6]
+      far_short_service/right_singles_sideline: [1184.8, 725.2]
+      far_short_service/right_doubles_sideline: [1231.7, 724.8]
+      far_doubles_long_service/left_doubles_sideline: [696.9, 682.9]
+      far_doubles_long_service/left_singles_sideline: [729.7, 682.9]
+      far_doubles_long_service/centre_line: [922.6, 682.9]
+      far_doubles_long_service/right_singles_sideline: [1117.8, 682.9]
+      far_doubles_long_service/right_doubles_sideline: [1152.8, 682.9]
+      far_baseline/left_doubles_sideline: [707.0, 677.9]
+      far_baseline/left_singles_sideline: [738.4, 677.8]
+      far_baseline/centre_line: [923.1, 677.3]
+      far_baseline/right_singles_sideline: [1108.3, 676.9]
+      far_baseline/right_doubles_sideline: [1141.3, 676.8]
+    # 同一馆里的其他球场：[dx, dy] 是它们近左角相对我们近左角的偏移（米）。左右两块隔 1.18 m 边线间距，
+    # 后排一排在我们远端底线后 2.8 m。量自 0006 抽帧的邻场边线和后排底线；用来去掉邻场的球和人
+    neighbour_courts: &halls_0529_a [[-14.56, 0], [-7.28, 0], [7.28, 0], [14.56, 0],
+                                     [-7.28, 16.2], [0, 16.2], [7.28, 16.2]]
+    conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
+
+  - id: own0529_0006
+    file: DJI_20030505181751_0006_D.MP4
+    start_s: 528
+    duration_s: 120
+    segment_verified: false
+    split: train
+    court_points: *cam_0529_a
+    neighbour_courts: *halls_0529_a
+    conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
+
+  - id: own0529_0009
+    # 即 DJI_0009：击球建议和打法风格都在它上面试跑，整段只当考试题
+    file: DJI_20030505185816_0009_D.MP4
+    start_s: 500
+    duration_s: 120
+    segment_verified: false
+    split: eval
+    holdout: true
+    # 机位比前几段高，整块场地可见；只在原片中间的抽帧上核对过，切片后要再看一眼片段开头
+    court_points:
+      near_baseline/left_doubles_sideline: [18.1, 1026.2]
+      near_baseline/left_singles_sideline: [164.4, 1025.6]
+      near_baseline/centre_line: [976.4, 1021.7]
+      near_baseline/right_singles_sideline: [1782.3, 1017.9]
+      near_baseline/right_doubles_sideline: [1926.0, 1017.2]
+      near_doubles_long_service/left_doubles_sideline: [186.3, 938.8]
+      near_doubles_long_service/left_singles_sideline: [306.2, 938.5]
+      near_doubles_long_service/centre_line: [972.8, 936.5]
+      near_doubles_long_service/right_singles_sideline: [1639.6, 934.5]
+      near_doubles_long_service/right_doubles_sideline: [1758.9, 934.1]
+      near_short_service/left_doubles_sideline: [555.6, 747.0]
+      near_short_service/left_singles_sideline: [618.2, 746.9]
+      near_short_service/centre_line: [964.8, 746.3]
+      near_short_service/right_singles_sideline: [1316.6, 745.6]
+      near_short_service/right_doubles_sideline: [1379.6, 745.5]
+      far_short_service/left_doubles_sideline: [688.3, 678.0]
+      far_short_service/left_singles_sideline: [730.3, 678.0]
+      far_short_service/right_singles_sideline: [1199.6, 677.3]
+      far_short_service/right_doubles_sideline: [1242.2, 677.2]
+    conditions: {event: own_0529, venue: own_green_a, discipline: singles, camera: amateur_baseline, source: own}
+
+  # ---------------- 其他场馆：底线后方，换场馆测泛化 ----------------
+  - id: own0820_7696
+    file: IMG_7696.MOV
+    start_s: 136
+    duration_s: 120
+    segment_verified: false
+    split: eval
+    conditions: {event: own_0820, venue: own_green_b, discipline: singles, camera: amateur_baseline, source: own}
+
+  # ---------------- 2026-09-06：场边斜角，双打（4K，30fps） ----------------
+  - id: own0906_0620
+    file: DJI_20260907023905_0620_D.MP4
+    start_s: 935
+    duration_s: 120
+    segment_verified: false
+    split: train
+    conditions: {event: own_0906, venue: own_green_c, discipline: doubles, camera: amateur_side, source: own}
+
+  # ---------------- 高中比赛：多球场画面，验证目标球场锁定（4K，60fps） ----------------
+  - id: own_hs0319_0233
+    file: DJI_20030223224307_0233_D.MP4
+    start_s: 480
+    duration_s: 60
+    segment_verified: false
+    split: eval
+    conditions: {event: hs_league_2026, venue: hs_wilson, discipline: unknown, camera: amateur_multicourt, source: own}
+
+  - id: own_hs0324_0245
+    file: DJI_20030228235320_0245_D.MP4
+    start_s: 510
+    duration_s: 60
+    segment_verified: false
+    split: eval
+    conditions: {event: hs_league_2026, venue: hs_walnut, discipline: unknown, camera: amateur_multicourt, source: own}

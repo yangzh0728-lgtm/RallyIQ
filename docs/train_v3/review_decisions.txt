@@ -1,0 +1,109 @@
+# key t | hit(y/n) | hitter | side | stroke | hitter_sure | stroke_sure | note
+own_20260324_0245 115.95 | y | P2 | far | lift | 1 | 1 | far underarm forehand lift, shuttle at racket, rises after
+own_20260324_0245 118.03 | y | P2 | far | cross_net | 1 | 0 | far low lunge at net, net shot / cross-net unclear
+own_20260324_0245 121.84 | y | P1 | near | drop | 1 | 0 | near jump overhead; reply 1.28 s later -> drop or clear, not smash
+own_20260324_0245 123.12 | y | P2 | far | drop | 1 | 0 | far overhead, racket up at contact; clear vs drop unclear
+own_20260324_0245 127.94 | y | P1 | near | - | 1 | 0 | near deep forehand lunge, racket low: not a drop (lift/net), last hit
+own_20260324_0245 525.14 | y | P2 | far | drop | 1 | 0 | far shoulder-height swing, near player lunges low 0.94 s later: drop plausible
+own_20260324_0245 527.26 | y | P2 | far | clear | 1 | 0 | far overhead, near player receives deep 1.25 s later: clear likely
+own_20260324_0245 528.51 | y | P1 | near | drop | 1 | 0 | near swing around shoulder height, far player at net 0.99 s later; drop/push unclear
+own_20260324_0245 529.50 | y | P2 | far | lift | 1 | 0 | far at net, shuttle rises after contact (+0.12/+0.24): lift rather than net shot; last hit
+own_20260324_0245 986.43 | y | P1 | near | lift | 1 | 0 | near low lunge, shuttle climbs high after, far overhead 1.31 s later: lift, not push
+own_20260324_0245 987.74 | y | P2 | far | - | 1 | 0 | far chest-height forehand, near jumps to intercept 0.78 s later: too fast for a clear, type unclear
+own_20260324_0245 992.81 | y | P2 | far | net_shot | 1 | 0 | far low forehand, near lunges low 0.93 s later: short shot (net/push)
+own_20260324_0245 995.11 | y | P2 | far | clear | 1 | 0 | far overhead; near jumps overhead 1.02 s later, flat clear/drive
+own_20260324_0245 996.58 | y | P2 | far | lift | 1 | 1 | far deep lunge, shuttle at racket near floor, climbs after: lift
+own_20260324_0245 997.85 | y | P1 | near | net_shot | 1 | 0 | near low lunge, far player lunges at net 0.90 s later: net shot/push
+own_20260310_01 11.49 | y | P4 | far | net_shot | 1 | 0 | far-team player at net, shuttle head height, racket comes through; net exchange
+own_20260310_01 11.99 | y | P1 | near | net_shot | 1 | 0 | near player at net, shuttle at racket, far P2 lunges 0.66 s later
+own_20260310_01 14.08 | y | P4 | far | - | 0 | 0 | shuttle between P4 and P2 at contact, P4's racket arm is up next to it: P4 more likely than P2; last hit
+own_20260310_01 26.99 | y | P3 | near | drop | 1 | 0 | near overhead-ish swing, far P2 lunges low 0.90 s later: drop plausible
+own_20260310_01 384.17 | n | - | - | - | 0 | 0 | camera zoom, shuttle low by P2's knees, nobody swings, next hit 9.6 s later: dead time
+own_20260310_01 393.79 | y | P1 | far | net_shot | 0 | 0 | far pair overlap at net (P1/P3); P1 reaches up to the shuttle, near P2 lunges 0.50 s later
+own_20260310_01 394.29 | y | P2 | near | push | 1 | 0 | near P2 lunges, shuttle at racket height; P2 again 1.01 s later, a far reply in between is probably missed
+own_20260310_01 395.30 | y | P2 | near | - | 0 | 0 | P2 swings at the shuttle above the racket, P4 next to P2; type unclear; rally ends after (next hit 17.6 s)
+own_20260310_01 412.86 | y | P1 | far | net_shot | 1 | 0 | far P1 at the net, racket out to the shuttle at net height; near P2 lunges 0.60 s later
+own_20260310_01 458.46 | n | - | - | - | 0 | 0 | P2 holds/pushes the shuttle out at arm length while the others stand; next hit 15.9 s later: pass in dead time
+own_20260310_01 474.31 | y | P2 | near | short_serve | 1 | 0 | upright stance, shuttle at waist, no swing arc, far P1 meets it at the net 0.48 s later: short serve, not drop
+own_20260310_01 474.79 | y | P1 | far | net_shot | 1 | 0 | far P1 at the net, racket to the shuttle at tape height; near P4 1.00 s later
+own_20260310_01 475.79 | y | P4 | near | - | 1 | 0 | near grey-trousers player lunges, shuttle at chest height on his racket side; mid-court, push/lift rather than net shot; last hit
+own_20260320_0239 135.75 | y | P1 | near | short_serve | 1 | 1 | upright, shuttle held at waist in front, far P2 waiting at the service line: short serve
+own_20260320_0239 137.00 | y | P1 | near | - | 1 | 0 | near P1 at the net, contact above head: push/kill, not a lift
+own_20260320_0239 138.89 | y | P2 | far | lift | 0 | 0 | camera pans, P2 hidden behind P1, shuttle not visible; near P3 overhead 3.25 s later fits a lift
+own_20260320_0239 142.14 | y | P3 | near | drop | 1 | 0 | near P3 overhead, shuttle above; overhead type unclear; far reply before P3's next hit (3.1 s) missed
+own_20260320_0239 145.28 | y | P3 | near | cross_net | 1 | 0 | near P3 low lunge, shuttle at the racket by the net; last hit
+own_20260320_0239 317.77 | y | P2 | near | - | 1 | 0 | near P2 swings at chest height mid-court, far P1 0.83 s later: drive/push, not a net shot
+own_20260320_0239 389.36 | y | P2 | near | net_shot | 1 | 0 | near P2 low forehand mid-court, far P3 lunges at the net 0.93 s later: short shot
+own_20260320_0239 390.29 | y | P3 | far | net_shot | 1 | 0 | far P3 lunges at the net, shuttle at the racket low
+own_20260320_0239 391.22 | n | - | - | - | 0 | 0 | P3 upright, shuttle comes off the floor by his feet and is flicked up to near P2: dead-ball pass after the rally
+own_20260320_0239 392.31 | n | - | - | - | 0 | 0 | near P2 standing, reaches out and catches the pass from P3: dead ball
+own_20260302_07 340.81 | y | P2 | far | clear | 1 | 0 | far P2 swings, shuttle at shoulder height; near P1 jumps overhead 1.08 s later: flat clear/lift
+own_20260302_07 341.89 | y | P1 | near | drop | 1 | 0 | near P1 jump overhead; type unclear; far reply before P1's next hit (2.0 s) missed
+own_20260302_07 343.88 | y | P1 | near | - | 1 | 0 | near P1 deep lunge, shuttle by the floor at the racket: net shot/lift; block unlikely
+own_20260302_07 347.71 | y | P1 | near | cross_net | 1 | 0 | near P1 by the net, shuttle at head height goes across to far P2 who lunges 0.89 s later
+own_20260302_07 350.87 | y | P2 | far | - | 1 | 0 | far P2 chest-height contact, near P1 takes it mid-court 0.93 s later: drive/push, not clearly cross-net
+own_20260302_07 351.80 | y | P1 | near | lift | 1 | 0 | near P1 waist-height contact, shuttle climbs after: lift; last hit
+own_20260302_07 369.57 | y | P1 | near | smash | 1 | 0 | near P1 jump overhead, shuttle streaks flat, far P2 blocks 0.72 s later: smash rather than drop
+own_20260302_07 370.29 | y | P2 | far | block | 1 | 0 | far P2 low defensive reach after the smash, near P1 lunges forward 0.86 s later: block
+own_20260302_07 371.15 | y | P1 | near | net_shot | 1 | 0 | near P1 lunges to the net, shuttle low at the racket; far P2 0.57 s later
+own_20260302_07 371.72 | y | P2 | far | net_shot | 1 | 0 | far P2 at the net, shuttle stays at tape height by his racket, rally ends (next hit 7.7 s): net shot into/over the net, not a clear
+own_20260302_07 381.18 | y | P1 | near | clear | 1 | 0 | near P1 jump overhead; far reply 2.24 s later fits a clear (or drop)
+own_20260302_07 383.42 | y | P2 | far | lift | 0 | 0 | far player at the net among bystanders, shuttle rises after contact; last hit
+own_20260302_07 478.03 | y | P2 | far | block | 1 | 0 | far P2 low reply 0.5 s after near P1's smash (477.53): block/defence. (Corrected after cross-checking the previous labels: first pass called it a serve.)
+own_20260302_07 478.89 | y | P1 | near | push | 1 | 0 | near P1 lunges forward, chest-height contact: push return of serve
+own_20260302_07 481.50 | y | P2 | far | - | 1 | 0 | far P2 waist-height contact, racket low: not an overhead drop; push/drive
+own_20260302_07 482.37 | y | P1 | near | net_shot | 1 | 0 | near P1 chest-height contact, far P2 lunges low 0.83 s later: short reply
+own_20260302_07 485.79 | y | P1 | near | block | 0 | 0 | shuttle not visible, P1 moving back, no clear swing; far P2 at the net 0.60 s later implies a short reply from the near side
+own_20260302_07 486.39 | y | P2 | far | lift | 1 | 0 | far P2 at the net, shuttle rises after contact; rally ends (next 3.75 s): lift, not net shot
+own_20260302_07 490.14 | n | - | - | - | 0 | 0 | P1 walking with the arm out, shuttle drifting by 3.75 s after the rally ended: passing it back, dead ball
+own_20260324_0241 131.87 | y | P2 | far | short_serve | 1 | 0 | first hit of r013: far P2 upright at the service line, shuttle at chest goes over the tape, near P1 lunges 0.86 s later: short serve
+own_20260324_0241 132.73 | y | P1 | near | lift | 1 | 0 | near P1 deep lunge, shuttle low at the racket: lift
+own_20260324_0241 137.39 | y | P1 | near | - | 0 | 0 | near P1 and P4 side by side, shuttle at P1's racket side then climbs: P1 more likely; type unclear
+own_20260324_0241 138.42 | y | P4 | near | - | 0 | 0 | near P1 and P4 overlap, shuttle at head height above both; only 1.03 s after P1's hit, so a far reply in between may be missed; type unclear
+own_20260324_0241 139.07 | y | P2 | far | net_shot | 1 | 0 | far P2 forehand at shoulder height by the net, near P1 lunges 0.89 s later
+own_20260324_0241 139.96 | y | P1 | near | net_shot | 1 | 0 | near P1 lunges to the net, far P2 replies 0.73 s later
+own_20260324_0241 140.69 | y | P2 | far | push | 0 | 0 | far P2 at the net, but near P1 stands right under the shuttle too; P2 fits the alternation; last hit
+own_20260324_0241 281.23 | y | P4 | far | push | 1 | 0 | far P4 forehand at shoulder height, near P1 1.12 s later
+own_20260324_0241 284.18 | y | - | far | - | 0 | 0 | shuttle at a racket at the left edge, the untracked far partner, not P4 (P4's racket is low)
+own_20260324_0241 285.17 | y | - | near | lift | 0 | 0 | girl P1 is walking, not swinging; shuttle low at her left then climbs: the near boy partner (untracked) lifted it
+own_20260324_0241 286.77 | y | - | far | smash | 0 | 0 | the far boy behind P4 swings overhead, P4's racket stays low; near reply 0.33 s later: smash by the untracked far partner
+own_20260324_0241 290.71 | y | P1 | near | - | 1 | 0 | near P1 swings at waist height moving back, shuttle climbs after: lift/clear, not push
+own_20260324_0241 291.99 | y | P4 | far | drop | 1 | 0 | far boy (P4 box) overhead swing at the shuttle, near P1 lunges low 0.87 s later: drop, not clear
+own_20260324_0241 325.73 | n | - | - | - | 0 | 0 | near P1 standing, racket at the floor with the shuttle at his feet, next hit 5.8 s later: picking the shuttle up
+own_20260324_0241 333.42 | y | P4 | far | lift | 1 | 0 | far P4 chest-height contact at the net 1.5 s after his own serve (331.56) and P1's return: not a serve; shuttle rises, lift/push. (Corrected after cross-checking the previous labels.)
+own_20260906_0616 279.71 | y | P1 | far | clear | 1 | 0 | far P1 overhead, shuttle above; near reply 3.1 s later (a hit in between may be missed)
+own_20260906_0616 282.85 | y | P2 | near | net_shot | 1 | 0 | near P2 racket out in front at chest height, far P1 at the net 0.57 s later
+own_20260906_0616 283.42 | n | - | - | - | 0 | 0 | far P1 upright and relaxed, taps the shuttle straight up and it falls back to him (he bends for it 1.0 s later): dead ball after the rally
+own_20260906_0616 284.45 | n | - | - | - | 0 | 0 | far P1 bent over at the net scooping the shuttle up with the racket: pickup
+own_20260906_0616 285.25 | n | - | - | - | 0 | 0 | near P2 walking with the racket down, shuttle drifts past: pass between points
+own_20260906_0616 286.52 | n | - | - | - | 0 | 0 | far P1 standing still, only neighbouring-court players swing behind him: dead time
+own_20260906_0616 289.76 | y | P1 | far | short_serve | 1 | 1 | far P1 upright, shuttle at waist by the racket after dead time, near P2 lunges 0.83 s later: short serve
+own_20260906_0616 290.59 | y | P2 | near | lift | 1 | 0 | near P2 lunges forward, low contact, shuttle high afterwards: lift return of serve
+own_20260906_0616 291.73 | y | P1 | far | drop | 1 | 0 | far P1 moving back, overhead-side contact; type unclear
+own_20260906_0616 407.57 | y | P2 | near | - | 1 | 0 | near P2 shoulder-height forward swing mid-court, shuttle climbs: push/lift, not a net shot
+own_20260906_0616 408.31 | y | P1 | far | - | 1 | 0 | far P1 shoulder-height swing; P1 again 1.83 s later so a near hit in between is missed; type unclear
+own_20260906_0616 413.41 | y | P1 | far | clear | 1 | 0 | far P1 overhead with a jump; near reply 1.37 s later (clear or drop)
+own_20260906_0616 414.78 | n | - | - | - | 0 | 0 | camera pans, near P2 walks out of frame with the racket down; no swing (shuttle still high mid-court): likely let it go. low confidence
+own_20260906_0616 424.82 | y | P1 | far | clear | 1 | 0 | far P1 jump overhead; next detected hit 4.2 s later (hits missed in between)
+own_20260906_0616 429.03 | n | - | - | - | 0 | 0 | shuttle at near P2's feet by the post, he scoops it and walks; next hit 7.3 s later: pickup
+own_20260906_0616 436.37 | y | P2 | near | push | 1 | 0 | near P2 racket up at head height, shuttle at the racket, far P1 0.87 s later
+own_20260906_0622 301.00 | y | P4 | far | short_serve | 0 | 0 | start of r025: far P4 upright with the racket held in front at waist, shuttle just in front of it and over the tape, near P1 lunges 0.77 s later: serve
+own_20260906_0622 304.81 | y | P1 | near | lift | 1 | 0 | near P1 chest-height forehand, far P2 goes overhead 1.43 s later: lift
+own_20260906_0622 306.24 | y | P2 | far | drop | 1 | 0 | far P2 overhead, near P1 meets it 0.97 s later: drop or smash
+own_20260906_0622 307.21 | y | P1 | near | lift | 1 | 0 | near P1 forward-upward swing, shuttle climbs high, far P2 1.23 s later: lift, not net shot
+own_20260906_0622 311.14 | y | P2 | far | smash | 1 | 0 | far P2 jump overhead at the shuttle; last hit
+own_20260906_0622 367.47 | n | - | - | - | 0 | 0 | near P1 standing with the racket down, shuttle floats toward him from his partner, next hit 2.3 s later: dead-time pass
+own_20260906_0622 369.74 | y | P1 | near | - | 0 | 0 | first play after a pass: near P1 with the shuttle at head height above him, little visible swing; far P2 overhead 0.43 s later; type unclear
+own_20260906_0622 370.17 | y | P2 | far | - | 1 | 0 | far P2 high backhand-side contact above the head: not a drive; near reply missed (next detected 2.7 s)
+own_20260906_0622 374.04 | y | P2 | far | lift | 1 | 0 | far P2 forehand lunge, low contact, shuttle rises steadily, near P1 1.14 s later
+own_20260906_0622 375.18 | y | P1 | near | push | 1 | 0 | near P1 lunges right, shuttle at hip height on his racket side
+own_20260906_0622 376.48 | y | P4 | far | - | 1 | 0 | near P1 stands still; far P4 swings overhead at the shuttle at this moment: hitter is P4 (far), not P1
+own_20260906_0622 379.01 | y | P2 | far | lift | 1 | 0 | far P2 low forehand, shuttle low at his racket, far-court overhead by the near side 2.1 s later fits a lift
+own_20260906_0622 381.11 | y | P4 | far | drop | 1 | 0 | far P4 jump overhead at the shuttle; overhead type unclear
+own_20260906_0622 382.28 | y | P2 | far | - | 0 | 0 | shuttle meets P2's racket at net height (P2/P4 overlap); second far hit 1.17 s after P4's, so a near hit in between is missed or one of the two is wrong
+own_20260906_0622 1013.61 | y | P1 | near | lift | 1 | 0 | near P1 waist-height forehand, far P4 overhead 0.77 s later: lift/push
+own_20260906_0622 1014.68 | y | P1 | near | - | 1 | 0 | near P1 shoulder-height forehand mid-court, racket up after, far P4 overhead 0.70 s later: drive/push, not a net shot
+own_20260906_0622 1015.68 | y | P1 | near | push | 1 | 0 | near P1 head-height forehand again after P4's reply, far P4 0.90 s later
+own_20260906_0622 1016.58 | y | P4 | far | smash | 1 | 1 | far P4 overhead, near P1 reaches it only 0.30 s later: smash
+own_20260906_0622 1016.88 | y | P1 | near | block | 1 | 0 | near P1 meets the smash at head height with a short forehand: block/drive return
+own_20260906_0622 1017.58 | y | P4 | far | net_shot | 1 | 0 | far P4 low forehand, near P1 lunges forward 0.84 s later: short reply
