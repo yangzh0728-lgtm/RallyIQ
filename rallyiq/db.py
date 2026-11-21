@@ -50,8 +50,8 @@ class Database:
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
             self._conn: Any = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
             self._conn.row_factory = sqlite3.Row
-            self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA busy_timeout=5000")
+            self._set_wal()
         elif url.startswith(("postgres://", "postgresql://")):
             self.dialect = "postgres"
             try:
@@ -65,6 +65,22 @@ class Database:
             self._connect_pg()
         else:
             raise ValueError(f"unsupported RALLYIQ_DATABASE_URL {url!r}")
+
+    def _set_wal(self, wait_s: float = 5.0) -> None:
+        """Switch to WAL. Switching needs an exclusive lock and SQLite answers "database is locked" at once,
+        without the busy handler, while another process opening the same new file holds it: retry briefly.
+        The mode is stored in the file, so it only has to succeed once."""
+        import time
+
+        deadline = time.monotonic() + wait_s
+        while True:
+            try:
+                self._conn.execute("PRAGMA journal_mode=WAL")
+                return
+            except sqlite3.OperationalError as e:
+                if "locked" not in str(e) or time.monotonic() > deadline:
+                    raise
+                time.sleep(0.02)
 
     def _connect_pg(self) -> None:
         self._conn = self._psycopg.connect(self.url, autocommit=True, row_factory=self._dict_row)
@@ -96,12 +112,31 @@ class Database:
 
     def executescript(self, script: str) -> None:
         with self._lock:
-            if self.dialect == "sqlite":
+            # sqlite3's executescript commits a pending transaction first, so inside one run statement by statement
+            if self.dialect == "sqlite" and not getattr(self._local_tx, "active", False):
                 self._conn.executescript(script)
             else:
                 for stmt in (s.strip() for s in script.split(";")):
                     if stmt:
                         self._execute(stmt, ())
+
+    # Any constant shared by every RallyIQ process; names the advisory lock that serialises schema setup.
+    _SCHEMA_LOCK = 0x5241_4C59
+
+    @contextmanager
+    def schema_lock(self) -> Iterator[None]:
+        """Run schema setup (``CREATE ... IF NOT EXISTS``, added columns) one process at a time.
+
+        On PostgreSQL two processes creating the same table at once both pass ``IF NOT EXISTS`` and one fails
+        with a unique violation on ``pg_type`` (the API and a worker starting together on a fresh database).
+        A transaction-scoped advisory lock makes the second wait and then find the tables there. On SQLite the
+        race is in ``add_columns`` (read the columns, then add the missing ones); ``BEGIN IMMEDIATE`` takes the
+        write lock up front. DDL is transactional on both, so setup is also all or nothing.
+        """
+        with self.transaction():
+            if self.dialect == "postgres":
+                self._execute("SELECT pg_advisory_xact_lock(?)", (self._SCHEMA_LOCK,))
+            yield
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
