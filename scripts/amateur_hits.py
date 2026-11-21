@@ -93,9 +93,9 @@ def load_truth(root: Path, labels: Optional[Path]) -> dict[str, dict[str, Any]]:
             labs = []
             for h in hs:
                 st = h["status"]
-                kind = "neg" if st == "not_a_hit" else "pos"
+                kind = "neg" if st == "not_a_hit" else ("ign" if st == "unsure_hit" else "pos")
                 labs.append({"t": float(h["t"]), "kind": kind, "side": h.get("side"), "hitter": h.get("hitter"),
-                             "stroke": h.get("stroke"), "status": st})
+                             "stroke": h.get("stroke"), "status": st, "r3": h.get("review") == "claude_v3_r3"})
             out[key] = {"set": "am7", "windows": [tuple(w) for w in d["windows"][key]], "labels": labs}
     return out
 
