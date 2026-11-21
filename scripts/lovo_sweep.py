@@ -24,15 +24,17 @@ ap.add_argument("--mc", type=float, nargs="+", default=[0.15])
 ap.add_argument("--veto", type=float, nargs="+", default=[0.1])
 ap.add_argument("--extra", default="{}")
 ap.add_argument("--out", type=Path, required=True)
+ap.add_argument("--labels", default="~/Desktop/RallyIQ/train_v3/labels/amateur_v1.json")
 ap.add_argument("--bundled", action="store_true", help="use the bundled scorer for every video instead of DIR models")
+ap.add_argument("--scorer", help="with --bundled: this scorer JSON instead of rallyiq/events/models/hit_scorer.json")
 a = ap.parse_args()
-clips = AH.load_clips(Path("~/Desktop/RallyIQ/train_v3/inputs").expanduser(), Path("~/Desktop/RallyIQ/train_v3/labels/amateur_v1.json").expanduser())
+clips = AH.load_clips(Path("~/Desktop/RallyIQ/train_v3/inputs").expanduser(), Path(a.labels).expanduser())
 tmp = a.models.expanduser() / "sweep"
 tmp.mkdir(exist_ok=True)
 for keep, mc, veto in itertools.product(a.keep, a.mc, a.veto):
     preds = {}
     for c in clips:
-        src = (ROOT / "rallyiq/events/models/hit_scorer.json") if a.bundled else a.models.expanduser() / f"lovo_{c.cid}.json"
+        src = (Path(a.scorer).expanduser() if a.scorer else ROOT / "rallyiq/events/models/hit_scorer.json") if a.bundled else a.models.expanduser() / f"lovo_{c.cid}.json"
         spec = json.loads(src.read_text())
         spec["thresholds"] = {**spec.get("thresholds", {}), "min_candidate_conf": mc, "keep_threshold": keep, "ok_threshold": max(0.7, keep)}
         mp = tmp / f"{c.cid}_{keep}_{mc}.json"

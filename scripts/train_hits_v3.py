@@ -57,7 +57,7 @@ def collect(a: argparse.Namespace) -> int:
     out = a.out.expanduser()
     out.mkdir(parents=True, exist_ok=True)
     for msc in a.min_shuttle_conf:
-        cfg = replace(EventsConfig(), **{**V2_EVENT, "min_shuttle_conf": msc})
+        cfg = replace(EventsConfig(), **{**V2_EVENT, "min_shuttle_conf": msc, **json.loads(a.overrides or "{}")})
         p = out / f"am_msc{msc}.pkl"
         if not p.exists():
             t0 = time.time()
@@ -231,7 +231,7 @@ def cmd_cv(a: argparse.Namespace) -> int:
     seeds = list(range(a.seed0, a.seed0 + a.seeds))
     t0 = time.time()
     p_am, p_ss = oof(am, ss, a, feats, seeds, a.ss_folds)
-    base = replace(EventsConfig(), **V2_EVENT)
+    base = replace(EventsConfig(), **{**V2_EVENT, **json.loads(a.overrides or "{}")})
     grid = tune(am, ss, p_am, p_ss, base)
     best_am = max(grid, key=lambda r: r["am_f1"])
     best_ss = max(grid, key=lambda r: r.get("ss_f1", 0)) if p_ss else None
@@ -258,7 +258,7 @@ def cmd_fit(a: argparse.Namespace) -> int:
     sc = train_on(ss if a.ss_weight > 0 else [], am if a.am_weight > 0 else [], a, feats, list(range(a.seed0, a.seed0 + a.seeds)))
     spec = sc.spec
     th = json.loads(a.thresholds) if a.thresholds else {}
-    spec["thresholds"] = {**V2_EVENT, **th}
+    spec["thresholds"] = {**V2_EVENT, **json.loads(a.overrides or "{}"), **th}
     spec["trained_on"] = {"dataset": "ShuttleSet (CoachAI-Projects, MIT) train v3 + sam's own videos (13, labelled windows)",
                           "features": a.features, "hidden": a.hidden, "l2": a.l2, "seeds": a.seeds,
                           "am_weight": a.am_weight, "msc_am": a.msc_am, "msc_ss": a.msc_ss}
@@ -275,9 +275,8 @@ def cmd_lovo(a: argparse.Namespace) -> int:
     cache = a.cache.expanduser()
     am, ss, _ = load(cache, a.msc_am, a.msc_ss, a.unrefined)
     feats = FEATURE_SETS[a.features]
-    th = {**V2_EVENT, **(json.loads(a.thresholds) if a.thresholds else {})}
-    raw = {c.cid: c for c in AH.load_clips(Path("~/Desktop/RallyIQ/train_v3/inputs").expanduser(),
-                                           Path("~/Desktop/RallyIQ/train_v3/labels/amateur_v1.json").expanduser())}
+    th = {**V2_EVENT, **json.loads(a.overrides or "{}"), **(json.loads(a.thresholds) if a.thresholds else {})}
+    raw = {c.cid: c for c in AH.load_clips(Path("~/Desktop/RallyIQ/train_v3/inputs").expanduser(), Path(a.labels).expanduser())}
     tmp = Path(a.tmp).expanduser()
     tmp.mkdir(parents=True, exist_ok=True)
     preds = {}
@@ -307,6 +306,7 @@ def main(argv=None) -> int:
     c.add_argument("--ss-test", type=Path, default=Path("~/Desktop/RallyIQ/train_v3/inputs/public/shuttleset_test_v3"))
     c.add_argument("--min-shuttle-conf", type=float, nargs="+", default=[0.3, 0.15])
     c.add_argument("--amateur-only", action="store_true")
+    c.add_argument("--overrides", help="JSON EventsConfig overrides on top of V2_EVENT (candidate search)")
     for name in ("cv", "fit", "lovo"):
         p = sub.add_parser(name)
         p.add_argument("--cache", type=Path, required=True)
@@ -320,6 +320,7 @@ def main(argv=None) -> int:
         p.add_argument("--msc-am", type=float, default=0.15)
         p.add_argument("--msc-ss", type=float, default=0.3)
         p.add_argument("--model", default="mlp", choices=["mlp", "gbt"])
+        p.add_argument("--overrides", help="JSON EventsConfig overrides the candidates were collected with")
         p.add_argument("--gbt", help="JSON kwargs of fit_gbt (max_iter, lr, max_leaf_nodes, min_samples_leaf, l2)")
         p.add_argument("--unrefined", action="store_true", help="qa6 unrefined label times: looser positives (relabel_unrefined)")
         p.add_argument("--swing-dropout", type=float, default=0.0, help="share of training weight on copies with swing=0.5")
@@ -334,6 +335,7 @@ def main(argv=None) -> int:
             p.add_argument("--thresholds", help="JSON with min_candidate_conf/keep_threshold/ok_threshold")
             p.add_argument("--tmp", default="~/Desktop/RallyIQ/train_v3/ckpt/lovo_models")
             p.add_argument("--extra", help="JSON EventsConfig overrides on top of the amateur settings")
+            p.add_argument("--labels", default="~/Desktop/RallyIQ/train_v3/labels/amateur_v1.json")
             p.add_argument("--json")
     a = ap.parse_args(argv)
     global MODEL_KIND, GBT_ARGS

@@ -46,6 +46,9 @@ EXTRA_FEATURES: tuple[str, ...] = (
     "p_swing_hitter", "p_swing_other",
 )
 SWING_WINDOW_MS = 250.0
+# pose hit model the swing features read: "auto" = bundled models/pose_hits.json, or a JSON path. A scorer spec may
+# name its own ("swing_model", resolved next to the scorer file) when it was trained with a different one.
+SWING_MODEL = "auto"
 
 
 def _swing(poses: "PoseIndex", t_ms: float, side: Optional[str]) -> tuple[float, float]:
@@ -53,7 +56,7 @@ def _swing(poses: "PoseIndex", t_ms: float, side: Optional[str]) -> tuple[float,
     The side series is built once per PoseIndex and cached on it."""
     from . import pose_hits as PH
 
-    model = PH.get_model("auto")
+    model = PH.get_model(getattr(poses, "_swing_model", None) or SWING_MODEL)
     if model is None:
         return 0.5, 0.5
     cache = getattr(poses, "_swing_cache", None)

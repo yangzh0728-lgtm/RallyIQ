@@ -1,5 +1,10 @@
 # Hit scorer v3 (train_v3, 2026-11-21)
 
+**Bundled file = v3b**: the recipe below retrained with 17 more labelled own rallies (round 3, `amateur_v2.json`).
+Leave-one-own-video-out on all 13 videos with those labels (361 hits): v2 0.735, v3 0.750, **v3b 0.759**
+(qa6 0.556 / 0.600 / 0.610; dead-time false hits 72 / 33 / 27). ShuttleSet test v3: v2 77.0, v3 78.7, v3b 78.3.
+The tables below are for v3 (trained without round 3), which is what the round-3 held-out test measured.
+
 Bundled as `hit_scorer.json`; the previous model is kept as `hit_scorer_v2.json` (+ `.md`).
 
 - Model: mean of 5 one-hidden-layer MLPs (16 tanh units, l2 1e-2, seeds 0-4), features = the 27 v2 features +
