@@ -1,0 +1,109 @@
+# key t | y/n | hitter | side | note    (missed hits: "MISS key t side note")
+own_20260324_0245 207.91 | y | P1 | near | serve from near, shuttle off the racket at waist, far reply 0.82 s later (v3 only)
+own_20260324_0245 208.72 | y | P2 | far | far forehand at chest, shuttle rises after
+own_20260324_0245 209.63 | y | P1 | near | near deep lunge at the shuttle
+own_20260324_0245 210.68 | y | P2 | far | far player digs a low shuttle up from near the floor (last stroke of the rally; pipeline side 'near' is wrong)
+own_20260324_0245 212.73 | n | - | - | far player bends and scoops the shuttle off the floor: pickup (v2 only)
+own_20260324_0245 313.95 | y | P1 | near | near serve, shuttle off the racket at waist, far reply 0.87 s later
+own_20260324_0245 314.81 | y | P2 | far | far low forehand lift, shuttle climbs high
+own_20260324_0245 315.83 | y | P1 | near | near overhead jump at the shuttle
+own_20260324_0245 316.60 | y | P2 | far | far low reach, shuttle comes off the racket and rises
+own_20260324_0245 317.57 | y | P1 | near | near deep lunge, shuttle low at the racket
+own_20260324_0245 318.57 | y | P2 | far | far low reach and lift (pipeline side 'near' is wrong)
+own_20260324_0245 320.12 | y | P1 | near | near jump overhead 1.55 s after the far lift (v3 only)
+own_20260324_0245 320.94 | y | P2 | far | far forehand, shuttle off the racket at hip height and up
+own_20260324_0245 322.44 | n | - | - | shuttle already on the floor by near P1's feet, he walks: rally over (v2 only)
+own_20260324_0245 610.54 | y | P2 | far | far serve, shuttle off the racket in front of the waist, near reply 0.90 s later (v3 only)
+own_20260324_0245 611.44 | y | P1 | near | near low forehand return of serve, shuttle at the racket then high
+own_20260324_0245 612.55 | y | P2 | far | far overhead at the shuttle above
+own_20260324_0245 613.55 | y | P1 | near | near jump overhead; last hit of the window
+own_20260310_01 303.62 | n | - | - | near pair standing in serve/ready position, no swing, shuttle not near a racket; next hit 2.0 s later (v2 only). medium confidence
+own_20260310_01 305.64 | y | - | far | far pair at the net, shuttle at the tape by P1's racket; P1/P3 overlap, hitter unsure (v2 only)
+own_20260310_01 305.97 | y | P2 | near | near grey-trousers player (P2) reaches low and takes it; pipeline said P4
+own_20260310_01 308.21 | y | P4 | near | near P4 swings up at the shuttle overhead (v2 only)
+own_20260310_01 309.41 | y | P3 | far | far P3 jump overhead at the shuttle (v3 only, conf 0.11)
+own_20260310_01 310.74 | y | P2 | near | near P2 overhead/side swing at the shuttle above (v3 only)
+own_20260310_01 326.84 | n | - | - | far P1 bent over at the net post picking the shuttle up (v2 only)
+own_20260310_01 328.10 | n | - | - | near P2 walking with the racket down, shuttle passes by: dead ball (v2 only)
+own_20260310_01 328.91 | n | - | - | near P2 walking, no swing: dead ball (v2 only)
+own_20260310_01 329.41 | n | - | - | shuttle tossed high over the net while everyone stands: dead-time pass (v2 only)
+own_20260310_01 335.80 | y | P4 | near | near P4 serve, shuttle at the racket at shoulder height, low stance (v2 only). medium confidence
+own_20260310_01 337.34 | y | P4 | near | near P4 lunge forehand at the shuttle; far reply follows
+own_20260310_01 339.16 | y | P1 | far | far P1 at the net, low reply to P4's lunge (v2 only). medium confidence
+own_20260310_01 340.24 | n | - | - | near P2 standing, shuttle on the floor in front of him: rally over (v2 only)
+own_20260310_01 429.50 | y | P4 | near | near P4 forehand at chest height in front of the far player (v3 only)
+own_20260310_01 430.65 | y | P2 | near | near P2 lunges and lifts the shuttle
+own_20260310_01 431.65 | y | P3 | far | far P3 swings at the shuttle at shoulder height
+own_20260310_01 433.82 | n | - | - | far P3 walking, holding the shuttle by his chest after the rally (v2 only)
+own_20260310_01 436.04 | n | - | - | spectator walks in front of the camera, players standing: dead time (v2 only)
+own_20260310_01 436.32 | n | - | - | camera pan; a player on a neighbouring court hits, not this court (v2 only)
+own_20260310_01 440.92 | y | P2 | near | near grey-trousers player (P2) forehand at the shuttle; pipeline said P4. medium confidence
+own_20260310_01 441.77 | n | - | - | near pair collide/turn, shuttle far away by the far court: no contact (v2 only). medium confidence
+own_20260310_01 448.81 | n | - | - | far P3 standing with the shuttle by his hand after the rally: holding/serving prep, next hit not in window (v2 only). medium confidence
+own_20260302_07 222.72 | y | P2 | far | far serve: shuttle off the racket at waist, climbs high
+own_20260302_07 223.92 | y | P1 | near | near forehand at shoulder height
+own_20260302_07 224.66 | y | P2 | far | far forehand at head height at the net
+own_20260302_07 225.03 | y | P1 | near | near forehand drive at chest height
+own_20260302_07 225.88 | y | P2 | far | far forehand at shoulder height
+own_20260302_07 226.58 | u | P2 | far | shuttle by far P2's head 0.70 s after his own hit, no clear swing: unsure (ignored in scoring) (v2 only)
+own_20260302_07 227.58 | u | P1 | near | near P1 crouched with the racket back, contact not visible; 1.43 s before his own overhead: unsure (v2 only)
+own_20260302_07 229.01 | y | P1 | near | near P1 jump overhead (v3 only)
+own_20260302_07 232.17 | y | - | far | camera pans; the far white-shirt player jumps overhead at the shuttle at 0..+0.12, not near P1. medium confidence
+own_20260302_07 233.85 | y | P2 | far | far low dig from the floor, shuttle goes high
+own_20260302_07 528.26 | y | P1 | near | near P1 overhead/serve swing at shoulder height, far reply 1.13 s later (v3 only)
+own_20260302_07 529.40 | y | P2 | far | far forehand lift, shuttle climbs
+own_20260302_07 530.56 | y | P1 | near | near P1 jump smash
+own_20260302_07 532.20 | y | P2 | far | far P2 low defensive reach (camera pans)
+own_20260302_07 532.92 | n | - | - | shuttle drops past near P1's head while he stands with the racket low: rally over. medium confidence
+own_20260302_07 541.67 | u | P2 | far | far P2 bent with the racket low by the shuttle, shuttle by his head at +0.24: could be a serve or a pickup toss; unsure
+own_20260302_07 545.71 | n | - | - | near P1 walking, holding the shuttle in his hand at chest height: dead ball
+own_20260302_07 546.81 | n | - | - | far P2 walking with the racket down, no shuttle at the racket: dead ball (conf 0.18)
+own_20260302_07 549.12 | y | P1 | near | near P1 relaxed underarm flick at hip height after dead time: serve. medium confidence
+own_20260302_07 550.08 | y | P2 | far | far P2 forehand at head height
+own_20260324_0241 200.95 | n | - | - | spectator in a jacket bending by the wall picks up a shuttle (tracked as P2): not play (v2 only)
+own_20260324_0241 202.20 | y | P4 | far | far P4 serve, shuttle off the racket at waist
+own_20260324_0241 203.12 | y | - | near | near boy (untracked partner, behind P1) returns at the net; P1's racket is not at the shuttle
+own_20260324_0241 204.07 | y | P4 | far | far P4 lunges to the net, shuttle at the racket
+own_20260324_0241 204.82 | y | - | near | camera pans; near boy (untracked) by the net meets it, not P1. medium confidence
+own_20260324_0241 258.96 | y | P1 | near | near P1 underarm serve, shuttle just off the racket
+own_20260324_0241 260.71 | u | P4 | far | far P4 stands with the racket low while the shuttle flies high above; a far-side return around here is likely but the hitter/contact is not visible (v2 only)
+own_20260324_0241 261.89 | y | P4 | far | far P4 forehand at head height
+own_20260324_0241 262.86 | y | - | near | shuttle meets a racket above near P1, who stands still with the racket low: the untracked near partner hits it (v2 only). medium confidence
+own_20260324_0241 263.78 | u | P4 | far | shuttle drops by far P4's knees while he stands; partner beside him swings: end of rally or a dig, unclear (v2 only)
+own_20260324_0241 264.26 | n | - | - | far P4 upright, shuttle popped up after it fell: pickup/pass (v2 only)
+own_20260324_0241 266.15 | n | - | - | near P1 standing with the racket low, shuttle floats past: pass between points (v2 only)
+own_20260906_0616 123.19 | n | - | - | far P1 relaxed, taps the shuttle across to the near player between points: pass
+own_20260906_0616 124.22 | n | - | - | near P2 standing, receives the pass by his racket: dead ball
+own_20260906_0616 124.69 | n | - | - | near P2 juggles the shuttle up with the racket while standing: dead ball (v2 only)
+own_20260906_0616 125.66 | u | P1 | far | far P1 relaxed underarm tap after the passes; could be a casual serve or still passing: unsure
+own_20260906_0616 126.83 | u | P2 | near | near P2 reaches out at shoulder height and sends it up; same casual exchange: unsure
+own_20260906_0616 201.20 | n | - | - | far P1 walking with the racket down, shuttle at his side: dead ball
+own_20260906_0616 206.64 | n | - | - | camera turned to a neighbouring court; that court's player swings, not ours
+own_20260906_0616 209.88 | n | - | - | near P2 standing still, shuttle drops above him (juggling/pass) (v2 only)
+own_20260906_0616 211.08 | u | P2 | near | near P2 upright, arm stretched out tapping the shuttle at shoulder height: serve or casual pass, unsure
+own_20260906_0616 211.68 | y | P1 | far | far P1 forehand at shoulder height (v2 only)
+own_20260906_0616 212.54 | y | P2 | near | near P2 overhead swing
+own_20260906_0616 213.85 | y | P1 | far | far P1 overhead smash, near lunges 0.67 s later
+own_20260906_0616 214.51 | y | P2 | near | near P2 lunge, shuttle at the racket in front: defence of the smash
+own_20260906_0616 498.10 | y | P1 | far | far P1 forehand at chest height, shuttle off the racket
+own_20260906_0616 498.66 | y | P2 | near | near P2 overhead at the shuttle
+own_20260906_0616 499.13 | y | P1 | far | far P1 block/drive at head height
+own_20260906_0616 499.80 | y | P2 | near | near P2 low lunge at the shuttle
+own_20260906_0616 501.17 | y | P1 | far | far P1 overhead swing
+own_20260906_0622 81.01 | u | P2 | far | far P2 bumps the shuttle up in front of his face: feed/serve or juggle, unsure (v3 only)
+own_20260906_0622 81.92 | y | P1 | near | near P1 forehand at hip height, shuttle off the racket
+own_20260906_0622 82.98 | n | - | - | far P2 in ready stance, shuttle not near his racket (conf 0.11)
+own_20260906_0622 83.42 | y | P1 | near | near P1 overhead swing at the shuttle above
+own_20260906_0622 84.42 | y | - | far | far P2 stays in ready stance; the far partner next to him (untracked) swings at the shuttle (v2 only). medium confidence
+own_20260906_0622 85.48 | n | - | - | near P1 standing still, shuttle on the far side: no contact (v2 only)
+own_20260906_0622 224.99 | u | P1 | near | near P1 at the back, shuttle above him, swing not clearly visible: unsure
+own_20260906_0622 226.76 | y | P2 | far | far P2 overhead at the shuttle (camera pans)
+own_20260906_0622 227.29 | y | P1 | near | near P1 low backhand flick at the shuttle, racket comes through
+own_20260906_0622 228.36 | y | P2 | far | far P2 at the net lifts the shuttle (P4 beside him)
+own_20260906_0622 754.15 | y | P4 | far | far P4 serve, shuttle off the racket at waist (v2 only)
+own_20260906_0622 755.02 | y | P3 | near | near P3 forehand return at head height (v2 only)
+own_20260906_0622 756.12 | y | P4 | far | far P4 at the net meets the shuttle at head height (P2 hidden behind); pipeline said P2. medium confidence
+own_20260906_0622 756.62 | y | P1 | near | near P1 forehand push at chest height
+own_20260906_0622 757.52 | y | P2 | far | far P2 diving low lift, shuttle rises
+own_20260906_0622 758.66 | y | P3 | near | near P3 overhead smash
+own_20260906_0622 758.99 | y | P2 | far | far P2 blocks the smash at head height
