@@ -158,6 +158,7 @@ def run(ctx: StageContext) -> PlayerTracks:
     stride = int(ctx.config.get("players_stride", 1))
     cfg = PlayerTrackingConfig(stride=stride, match_format=match_format_setting(ctx), far_boost=far_boost_setting(ctx))
     cfg.tracker.fps = meta.fps
+    cfg.min_inside_frac = float(ctx.config.get("players_min_inside_frac", 0.0))
     est = RTMOOnnx(model_path)
 
     if cal is not None and str(ctx.config.get("court_choice", "auto")).lower() != "off":

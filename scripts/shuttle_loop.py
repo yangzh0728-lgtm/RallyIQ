@@ -9,6 +9,9 @@ Each round:
 1. Collects every **reviewed** label in ``evaluation/labels/``. Each clip is split by time:
    the first 70% trains, the last 30% validates (``--val-frac``). ``--holdout ID`` keeps a
    whole clip for validation only, e.g. a camera the model has never been trained on.
+   Clips marked ``holdout: true`` in a manifest (DJI_0009 in ``evaluation/own_clips.yaml``)
+   are always held out. Own footage from ``own_clips.yaml`` is cut by
+   ``python -m evaluation.tools.extract_clips`` into the same clips directory.
 2. Fine-tunes a candidate starting from the original pretrained weights (``--from champion``
    to continue from the current model instead), picking the best epoch by F1 at its own best
    peak threshold (0.2 / 0.3 / 0.4 / 0.5). Fine-tuned models score higher overall, so the
@@ -51,6 +54,8 @@ from scripts.finetune_shuttle import clip_labels, split_by_time
 
 LABELS = ROOT / "evaluation" / "labels"
 MANIFEST = ROOT / "evaluation" / "clips.yaml"
+OWN_MANIFEST = schema.OWN_MANIFEST
+PRIORITY_CAMERAS = {"side_court_fixed", "amateur_baseline", "amateur_side"}
 WEIGHTS = ROOT / "weights" / "shuttle"
 DEFAULT_CLIPS = Path.home() / "rallyiq-data" / "bwf" / "clips"
 RUNS = Path.home() / "rallyiq-data" / "runs"
@@ -285,16 +290,23 @@ def camera(manifest: dict, cid: str) -> str:
     return (manifest.get(cid, {}).get("conditions") or {}).get("camera", "") or ""
 
 
+def manifest_holdout(manifest: dict) -> list[str]:
+    """Clips marked ``holdout: true`` in a manifest (e.g. DJI_0009) never train."""
+    return sorted(cid for cid, c in manifest.items() if c.get("holdout"))
+
+
 def suggest_next(manifest: dict, docs_all: dict[str, dict], clips_dir: Path, runs: Path | None = None,
                  n: int = 3) -> list[str]:
-    """Clips to label next: side-court first, then the rest; skip what is already reviewed."""
+    """Clips to label next: side-court and own footage first, then the rest; skip what is reviewed.
+
+    Whole-clip holdouts (``holdout: true``) come last: labelling them only adds test frames."""
     lines = []
     reviewed = {cid for cid, d in docs_all.items() if d.get("status") == "reviewed"}
     started = {cid for cid, d in docs_all.items() if d.get("status") != "reviewed"}
 
     def rank(cid: str) -> tuple:
-        return (cid not in started, camera(manifest, cid) != "side_court_fixed",
-                manifest[cid].get("split") != "train", cid)
+        return (cid not in started, bool(manifest[cid].get("holdout")),
+                camera(manifest, cid) not in PRIORITY_CAMERAS, manifest[cid].get("split") != "train", cid)
 
     todo = sorted((c for c in manifest if c not in reviewed and (clips_dir / f"{c}.mp4").exists()), key=rank)
     for cid in todo[:n]:
@@ -308,8 +320,14 @@ def suggest_next(manifest: dict, docs_all: dict[str, dict], clips_dir: Path, run
             lines.append(f"- {cid}（{cam}）{note}：`python -m evaluation.tools.label_tool {cid} --prefill {pred}`")
     missing = [c for c in manifest if c not in reviewed and not (clips_dir / f"{c}.mp4").exists()]
     if not todo and missing:
-        lines.append(f"- 本地还没有视频的片段：{', '.join(missing[:5])}… 先运行 "
-                     f"`python -m evaluation.tools.extract_clips --download --only {missing[0]}`")
+        own = [c for c in missing if schema.is_own(manifest[c])]
+        if own:
+            lines.append(f"- 自有素材还没切片：{', '.join(own[:5])}。接上硬盘后运行 "
+                         f"`python -m evaluation.tools.extract_clips --only {' '.join(own[:3])}`")
+        yt = [c for c in missing if not schema.is_own(manifest[c])]
+        if yt:
+            lines.append(f"- 本地还没有视频的片段：{', '.join(yt[:5])}… 先运行 "
+                         f"`python -m evaluation.tools.extract_clips --download --only {yt[0]}`")
     return lines
 
 
@@ -336,8 +354,9 @@ def status(state: dict, manifest: dict, labels_dir: Path, clips_dir: Path, weigh
         L.append(f"最近一次标注检查：{checks[-1]}（标注工具加 --check 这个文件，逐帧看）")
     done = [f"{c}（{len(d['shuttle'])} 帧）" for c, d in sorted(rev.items())]
     L.append("已复核的标注：" + (", ".join(done) or "无"))
-    if state.get("holdout"):
-        L.append("只用于验证的片段：" + ", ".join(state["holdout"]))
+    held = sorted(set(state.get("holdout", [])) | set(manifest_holdout(manifest)))
+    if held:
+        L.append("只用于验证的片段：" + ", ".join(held))
     L.append("下一步建议标注：")
     L += suggest_next(manifest, docs_all, clips_dir, runs) or ["- （没有可标的片段）"]
     return "\n".join(L)
@@ -370,10 +389,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--weights-dir", type=Path, default=WEIGHTS)
     ap.add_argument("--base", help="pretrained checkpoint for the first round (default: the installed one)")
     ap.add_argument("--manifest", type=Path, default=MANIFEST, help=argparse.SUPPRESS)
+    ap.add_argument("--own-manifest", type=Path, default=OWN_MANIFEST, help=argparse.SUPPRESS)
     ap.add_argument("--runs", type=Path, default=RUNS, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
     clips_dir, wdir = a.clips.expanduser(), a.weights_dir.expanduser()
-    manifest = schema.load_manifest(a.manifest)
+    manifest = schema.load_manifests(a.manifest, a.own_manifest)
     runs = a.runs.expanduser()
     state = load_state(wdir)
 
@@ -396,7 +416,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.check:
         docs = reviewed_docs(a.labels)
-        tr, _va, _missing = build_split(docs, clips_dir, a.val_frac, state.get("holdout", []))
+        tr, _va, _missing = build_split(docs, clips_dir, a.val_frac,
+                                         sorted(set(state.get("holdout", [])) | set(manifest_holdout(manifest))))
         clips, missing = labeled_clips(docs, clips_dir)
         if not clips:
             raise SystemExit("没有已复核且本地有视频的片段")
@@ -428,7 +449,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.holdout is not None:
         state["holdout"] = list(a.holdout)
-    holdout = state.get("holdout", [])
+    holdout = sorted(set(state.get("holdout", [])) | set(manifest_holdout(manifest)))
     tr, va, missing = build_split(docs, clips_dir, a.val_frac, holdout)
     for cid in missing:
         print(f"跳过 {cid}：{clips_dir} 里没有视频")
@@ -484,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"新模型已复制为 {wdir / 'heatmap.pt'}，之后的 real_run 会默认使用它"
               f"（峰值阈值 {report.get('best_threshold')}，随模型保存）。不满意可运行 --rollback 回退。")
         untrained = sorted((c for c in manifest if c not in docs and (clips_dir / f"{c}.mp4").exists()),
-                           key=lambda c: (camera(manifest, c) != "side_court_fixed", c))[:2]
+                           key=lambda c: (camera(manifest, c) not in PRIORITY_CAMERAS, c))[:2]
         if untrained:
             print("建议在没参与训练的片段上核对击球结果：")
             print(f"  python scripts/real_run.py --only {' '.join(untrained)} --out ~/rallyiq-data/runs/round-{n:03d}")

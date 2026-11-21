@@ -33,7 +33,11 @@ export function MiniMap({ overlay, clock }: { overlay: OverlayData; clock: Playb
           ) : null,
         )}
       </CourtView>
-      {frame && frame.players.every((p) => !p.foot_court) && <div className="muted small">此刻没有可用的足点（未标定或未检测到）</div>}
+      {/* Always rendered (hidden when not needed): toggling it changed the panel height many times a second during
+          playback and shook everything below it. */}
+      <div className="muted small" style={{ visibility: frame && frame.players.every((p) => !p.foot_court) ? "visible" : "hidden" }}>
+        此刻没有可用的足点（未标定或未检测到）
+      </div>
     </div>
   );
 }
