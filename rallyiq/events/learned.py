@@ -86,7 +86,7 @@ def _clip(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
 
 def features(
     c: "Candidate", track: "Track", span: "RallySpan", poses: "PoseIndex", cfg: "EventsConfig",
-    rule_conf: float, landing: bool, no_pose: bool,
+    rule_conf: float, landing: bool, no_pose: bool, swing: bool = True,
 ) -> list[float]:
     """Feature vector of one candidate, in ``ALL_FEATURES`` order. Everything is scale-free (player heights,
     seconds), so near/far players, resolutions and frame rates share one model. A model uses the columns
@@ -129,7 +129,7 @@ def features(
     span_ms = max(pts[min(len(pts) - 1, c.idx + 40)].t_ms - pts[max(0, c.idx - 40)].t_ms, 1.0)
     fr_ms = span_ms / max(min(len(pts) - 1, c.idx + 40) - max(0, c.idx - 40), 1)
     density = _clip(seen * fr_ms / 1000.0)
-    sw_h, sw_o = _swing(poses, pt.t_ms, side)
+    sw_h, sw_o = _swing(poses, pt.t_ms, side) if swing else (0.5, 0.5)
     return [
         c.turn_deg / 180.0,
         c.change,
@@ -174,9 +174,11 @@ class HitScorer:
         if not set(names) <= set(ALL_FEATURES):
             raise ValueError("hit scorer was trained on a different feature set; retrain with scripts/learn_hits.py")
         self.cols = [ALL_FEATURES.index(n) for n in names]
+        self.uses_swing = any(n.startswith("p_swing") for n in names) or any(
+            n.startswith("p_swing") for m in spec.get("members", []) for n in (m.get("features") or []))
         self.spec = spec
         # an ensemble lists its members (same features); each member has mean/std/layers or is a gbt
-        self.members = [HitScorer({**m, "features": list(names)}) for m in spec.get("members", [])]
+        self.members = [HitScorer({**m, "features": list(m.get("features") or names)}) for m in spec.get("members", [])]
         # kind "gbt": gradient-boosted trees (rallyiq.gbt JSON, from scikit-learn's HistGradientBoostingClassifier)
         self.gbt = None
         if spec.get("kind") == "gbt":
@@ -195,10 +197,10 @@ class HitScorer:
     def predict(self, x: Sequence[Sequence[float]] | np.ndarray) -> np.ndarray:
         """``x``: rows in ``ALL_FEATURES`` order (or already in this model's own column order)."""
         x = np.asarray(x, float)
+        if "members" in self.spec:  # ensemble: mean probability of the members (each picks its own columns)
+            return np.mean([m.predict(x) for m in self.members], axis=0)
         if x.shape[-1] == len(ALL_FEATURES) and len(self.cols) != len(ALL_FEATURES):
             x = x[..., self.cols]
-        if "members" in self.spec:  # ensemble: mean probability of the members
-            return np.mean([m.predict(x) for m in self.members], axis=0)
         if self.gbt is not None:
             return self.gbt.predict_proba(x.reshape(-1, x.shape[-1]))[:, 1].reshape(x.shape[:-1])
         h = (x - self.mean) / self.std

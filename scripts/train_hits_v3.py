@@ -228,7 +228,7 @@ def cmd_cv(a: argparse.Namespace) -> int:
     cache = a.cache.expanduser()
     am, ss, _ = load(cache, a.msc_am, a.msc_ss, a.unrefined)
     feats = FEATURE_SETS[a.features]
-    seeds = list(range(a.seeds))
+    seeds = list(range(a.seed0, a.seed0 + a.seeds))
     t0 = time.time()
     p_am, p_ss = oof(am, ss, a, feats, seeds, a.ss_folds)
     base = replace(EventsConfig(), **V2_EVENT)
@@ -255,7 +255,7 @@ def cmd_fit(a: argparse.Namespace) -> int:
     cache = a.cache.expanduser()
     am, ss, te = load(cache, a.msc_am, a.msc_ss, a.unrefined)
     feats = FEATURE_SETS[a.features]
-    sc = train_on(ss if a.ss_weight > 0 else [], am if a.am_weight > 0 else [], a, feats, list(range(a.seeds)))
+    sc = train_on(ss if a.ss_weight > 0 else [], am if a.am_weight > 0 else [], a, feats, list(range(a.seed0, a.seed0 + a.seeds)))
     spec = sc.spec
     th = json.loads(a.thresholds) if a.thresholds else {}
     spec["thresholds"] = {**V2_EVENT, **th}
@@ -283,7 +283,7 @@ def cmd_lovo(a: argparse.Namespace) -> int:
     preds = {}
     for c in am:
         sc = train_on(ss if a.ss_weight > 0 else [], [o for o in am if o.cid != c.cid] if a.am_weight > 0 else [], a, feats,
-                      list(range(a.seeds)))
+                      list(range(a.seed0, a.seed0 + a.seeds)))
         spec = {**sc.spec, "thresholds": th}
         mp = tmp / f"lovo_{c.cid}.json"
         mp.write_text(json.dumps(spec))
@@ -314,6 +314,7 @@ def main(argv=None) -> int:
         p.add_argument("--hidden", type=int, default=16)
         p.add_argument("--l2", type=float, default=1e-2)
         p.add_argument("--seeds", type=int, default=1)
+        p.add_argument("--seed0", type=int, default=0, help="first seed (seeds seed0..seed0+seeds-1)")
         p.add_argument("--am-weight", type=float, default=3.0, help="weight of an amateur row (0 = ShuttleSet only)")
         p.add_argument("--ss-weight", type=float, default=1.0, help="0 = amateur only")
         p.add_argument("--msc-am", type=float, default=0.15)
