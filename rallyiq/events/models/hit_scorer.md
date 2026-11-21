@@ -22,6 +22,8 @@ Bundled as `hit_scorer.json`; the previous model is kept as `hit_scorer_v2.json`
 | own videos am7, 164 reviewed pre-labels (F1; labels come from v2's own detections) | 0.734 | **0.839** | 0.822 |
 | all own videos (F1) | 0.630 | 0.723 | **0.725** |
 | dead-time false hits (detections on a labelled pickup/pass) | 33 | 45 | **24** |
+| held-out round 3: 17 new rallies, all v2/v3 detections reviewed (F1) | 0.644 | 0.783 | **0.879** |
+| held-out round 3: dead-time false hits | 15 | 27 | **8** |
 
 Own-video numbers use the own-footage settings (swing_veto 0.1, swing_veto_keep_exchange_ms 2700,
 min_no_hit_rally_ms 2500, landed_ms 0). Paired bootstrap over videos, v2 -> v3: qa6 +0.044 (A5) to +0.054 (single
