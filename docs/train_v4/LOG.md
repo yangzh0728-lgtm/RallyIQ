@@ -152,3 +152,9 @@ stroke I re-read (MY STROKE vs the leg-1 label). Earlier working sheets: review/
   rear camera 0529 (784 shots): net_shot 26 -> 15%, lift 16 -> 31%, short_serve 13 -> 18%, block 9 -> 3%;
   side camera 0619/0621 (183): net_shot 25 -> 15%, lift 16 -> 29%. The same shift on both cameras, towards the
   labelled own mix (lift is 31% of the labelled own strokes); nothing collapses on the rear camera.
+
+## Extra: doubles team DP (after the report)
+doubles_alternation_penalty 0.3 / 0.5 / 1.0 (existing option, off by default; chooses the hitting team over the whole
+rally): all-video F1 unchanged (0.828), hitter side 367 -> 369 / 380, hitter id 286 -> 288 / 294 (6 doubles videos:
+side 151 -> 152, hitter 146 -> 147 of 154). Harmless and slightly positive, but +2 hits is within noise; not made a
+default. side_decode_gain 4 (instead of 8): 0.825, worse.
