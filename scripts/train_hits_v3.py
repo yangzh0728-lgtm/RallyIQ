@@ -16,6 +16,7 @@ Scores: ShuttleSet hit F1 (learn_hits.score: +-3 frames, same side) and amateur 
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import pickle
 import sys
@@ -53,6 +54,9 @@ FEATURE_SETS = {
 
 
 # ------------------------------------------------------------------ data
+# input root of the amateur runs/truth (train_v4 sets TRAIN_INPUTS to its own inputs/ with the re-timed qa6 truth)
+INPUTS = Path(os.environ.get("TRAIN_INPUTS", "~/Desktop/RallyIQ/train_v3/inputs")).expanduser()
+
 def collect(a: argparse.Namespace) -> int:
     out = a.out.expanduser()
     out.mkdir(parents=True, exist_ok=True)
@@ -114,7 +118,7 @@ def relabel_unrefined(c, match_s: float = 0.35, ambiguous_s: float = 0.4) -> Non
 def load(cache: Path, msc_am: float, msc_ss: float, unrefined: bool = False):
     am = pickle.load(open(cache / f"am_msc{msc_am}.pkl", "rb"))
     if unrefined:
-        truth = AH.load_truth(Path("~/Desktop/RallyIQ/train_v3/inputs").expanduser(), None)
+        truth = AH.load_truth(INPUTS, None)
         for c in am:
             if c.cid in truth:
                 c.truth = truth[c.cid]
@@ -276,7 +280,7 @@ def cmd_lovo(a: argparse.Namespace) -> int:
     am, ss, _ = load(cache, a.msc_am, a.msc_ss, a.unrefined)
     feats = FEATURE_SETS[a.features]
     th = {**V2_EVENT, **json.loads(a.overrides or "{}"), **(json.loads(a.thresholds) if a.thresholds else {})}
-    raw = {c.cid: c for c in AH.load_clips(Path("~/Desktop/RallyIQ/train_v3/inputs").expanduser(), Path(a.labels).expanduser())}
+    raw = {c.cid: c for c in AH.load_clips(INPUTS, Path(a.labels).expanduser())}
     tmp = Path(a.tmp).expanduser()
     tmp.mkdir(parents=True, exist_ok=True)
     preds = {}

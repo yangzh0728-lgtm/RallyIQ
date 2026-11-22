@@ -66,6 +66,8 @@ def read_json(d: Path, name: str) -> Optional[str]:
 
 
 def art_dir(root: Path, key: str) -> Path:
+    if (root / "new_runs" / key).is_dir():  # train_v4: unlabelled-before runs copied with their source video
+        return root / "new_runs" / key
     if key in QA6:
         return root / "own_v12" / QA6[key] / "artifacts"
     if key in AM7_R1:

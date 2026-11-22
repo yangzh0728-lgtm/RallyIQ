@@ -1,0 +1,126 @@
+# S-id | stroke (or "-" = leave unknown) | sure (true/false) | note     (side view 0245: far = left, near = right)
+S0 | lift | true | far lunge at the net, rising arc to the near player 1.04 s later (was cross_net)
+S1 | clear | true | near jump overhead, shuttle climbs and travels flat-high to the far back (was drop)
+S2 | drop | false | far overhead, slight rise then down to the near player at mid court (0.85 s)
+S3 | - | false | forehand at shoulder height mid court, arc to the far forecourt (push or drive)
+S4 | - | false | track mixes two shuttles; cannot tell where it goes
+S5 | net_shot | false | near forehand at chest height at the net, small rise and drop to the far forecourt
+S6 | net_shot | false | far underarm at the net, arc over and down into the near forecourt, near lunges
+S7 | lift | true | near deep lunge, shuttle rises almost vertically and deep
+S8 | - | false | far low pickup near the floor at the left edge; path goes off-frame (may be the end of the rally)
+S9 | net_shot | false | near forehand at chest height at the net, small arc to the far forecourt (same pattern as S5)
+S10 | lift | true | far underarm near the floor, shuttle climbs very high to the near back court (near overhead 1.02 s later)
+S11 | clear | false | near overhead at the back, long high flight to the far back court
+S12 | net_shot | false | far lunge at the net, short arc over the tape, near lunges at the net 0.97 s later
+S13 | net_shot | false | near deep lunge at the net, small arc back, far player lunges at the net
+S14 | lift | true | far lunge, shuttle climbs high to the near back court where the near player jumps 1.55 s later
+S15 | smash | false | near jump overhead from the back, fast straight path to the far player (0.82 s)
+S16 | - | false | far low at the net, short pop-up; no next hit (rally ends)
+S17 | drop | true | far overhead at head height, slight rise then steep into the near forecourt, near lunges (0.94 s)
+S18 | clear | true | far jumping overhead, shuttle goes very high toward the near back court (1.25 s)
+S19 | - | false | near underarm from mid court (label said drop: wrong, the racket is low); destination unclear
+S20 | lift | false | far at the net, racket under the shuttle, shuttle rises; rally ends (kept lift)
+S21 | net_shot | false | far underarm at waist height near the net, small arc over, near player takes it at the net
+S22 | lift | true | near underarm, shuttle climbs high to the far back court
+S23 | clear | true | far jumping overhead, shuttle climbs steeply toward the near back; near jumps overhead 1.0 s later
+S24 | smash | false | near jump overhead from the back, shuttle down toward the far court; rally ends
+S25 | lift | true | near lunge in the forecourt, shuttle climbs high toward the far back (1.31 s)
+S26 | clear | false | far overhead, shuttle climbs toward the near back court, near overhead 0.78 s later
+S27 | net_shot | true | far at the net, racket low under the tape, small arc into the near forecourt, near lunges
+S28 | clear | true | far jumping overhead, shuttle climbs steeply toward the near back, near jumps overhead 1.02 s later
+S29 | net_shot | true | near lunge at the net, small arc over the tape, far lunges at the net 0.9 s later
+S30 | - | false | far at the net with the racket up at head height (net kill/push?), too small to tell
+S31 | - | false | near at the net, flat exchange; push or net shot, not readable
+S32 | - | false | far at the net; next contact not tracked
+S33 | - | false | near mid court, destination unclear
+# S34-S53 (rest of 0310_01): not reviewed: four small players on a far-away doubles court, strokes not readable at this size; leg-1 labels kept as unsure
+S62 | - | false | far underarm at waist, high arc to the near mid court; first hit of the rally (serve?) - not decided
+S63 | drive | false | near side-arm forehand at chest height, flat to the far player (0.73 s)
+S64 | smash | true | far overhead above the head, reaches the near player in 0.37 s
+S65 | drive | false | near forehand at chest height, flat return (0.85 s)
+S66 | - | false | far player occluded by the spectator in the foreground
+S67 | smash | false | near jumping overhead, shuttle not tracked after
+S68 | - | false | hitter untracked (far partner), not readable
+S69 | - | false | far low with the racket near the floor, high arc after; may be a feed
+# S70-S93 (rest of 0302_07): skipped for now, foreground spectator blocks most hits; leg-1 labels kept
+S118 | - | false | far low forehand at mid court; shuttle path tracked on the neighbour court
+S119 | clear | true | near overhead, very high arc to the far back court (1.3 s)
+S120 | smash | true | far jumping overhead, steep down to the near player who lunges 0.67 s later
+S121 | - | false | near lunge, low return; rally ends
+S122 | - | false | far jumping overhead; the tracked path afterwards falls on the far side (mis-track?), label clear not confirmed
+S123 | net_shot | false | near forehand in the mid/front court, shuttle pops over near the far player at the net
+S124 | lift | true | near lunge, rising arc to the far player (1.14 s)
+S125 | - | false | far overhead at head height, flat fast path to the near player (0.53 s): smash or drive, not drop
+S126 | clear | false | near overhead at the head, high arc to the far mid/back (0.93 s)
+S127 | lift | false | near lunging forehand, rising arc to the far player (0.74 s): lift or push
+S128 | lift | true | far forehand under the net level, high arc to the near back where near jumps overhead 0.67 s later
+S129 | clear | true | near jumping overhead, high arc to the far back court (1.16 s)
+S130 | clear | true | far jumping overhead, high arc to the near back court
+S131 | clear | false | far jumping overhead, arc toward the near court; next contact 2.7 s later (not tracked)
+S132 | - | false | far side-arm forehand at shoulder height, arc down into the near mid court (drive/drop?)
+S133 | push | false | near forehand at chest height in the mid court, flat-rising to the far player (0.87 s)
+S134 | drop | true | near overhead at head height, arc down to the far player who lunges low at the net (1.13 s)
+S135 | drive | false | far forehand at shoulder height, flat-rising to the near player (overhead 0.57 s later)
+S136 | smash | true | near overhead from mid/back, steep and fast to the far player (0.47 s)
+S137 | smash | false | far overhead at head height, steep descent to the near player low (0.67 s); drop possible
+S138 | lift | true | near lunge low in the forecourt, high arc to the far back (1.37 s)
+S139 | drop | true | far overhead at head height, shuttle drops into the near forecourt and lands (winner)
+S140 | - | false | near player has the racket low; the shuttle at 0.0 is next to the far player: hitter doubtful
+S141 | clear | true | near overhead at head height from the back, high arc to the far back (1.0 s)
+S142 | clear | false | far partner (untracked) overhead, arc high back to the near court
+S143 | smash | false | far partner jumping overhead, steep to the near pair (0.53 s)
+S144 | lift | true | near low underarm swing at waist (racket rises at +0.15), high arc to the far court (1.07 s)
+S145 | clear | false | far overhead (partner overlapping), high arc toward the near back court
+S146 | short_serve | true | far backhand serve at the waist, short low path, near lunges at the net 0.77 s later
+S147 | lift | true | near underarm in the mid/front court, very high arc to the far back (1.43 s)
+S148 | drop | false | far overhead, arc rises a little then down to the near mid court (0.97 s)
+S149 | lift | true | near forehand underarm, shuttle goes very high to the far back court (1.23 s)
+S150 | clear | false | far partner overhead (untracked), high arc to the near back; next contact 2.5 s later
+S151 | smash | false | far jumping overhead, steep down; rally ends
+S152 | - | false | near player with the racket low while the shuttle passes over him: contact not visible
+S153 | clear | false | far overhead at head height, high arc back toward the near court
+S154 | - | false | far partner (right) jumping; not readable
+S155 | lift | true | far forehand low at the net, shuttle goes up high toward the near back (1.14 s)
+S156 | lift | false | near player at mid court, shuttle climbs high to the far back (was push)
+S157 | smash | false | far jumping overhead, shuttle down steeply toward the near player
+S158 | lift | false | far low backhand at the net, shuttle rises high and long (2.1 s)
+S159 | smash | false | far jumping overhead, steep and fast to the near player (was drop)
+S160 | net_shot | false | far backhand reach at the net, small arc over the tape, near lunges at the net 0.94 s later
+S161 | short_serve | true | far backhand serve (shuttle held at the waist at -0.2), short path just over the net
+S162 | lift | false | near underarm from the forecourt, rising arc to the far court (1.1 s)
+S163 | - | false | far player stands still with the racket low as the shuttle passes: hitter or hit doubtful
+S164 | drive | false | near forehand at shoulder height, flat-rising to the far back (0.9 s), far lunges
+S165 | lift | true | far lunge low at the net, shuttle climbs very high to the near court (1.13 s)
+S166 | smash | false | near overhead at the head, fast to the far right player (0.33 s)
+S167 | lift | false | far forehand at chest height, shuttle rises high toward the near court; rally end
+S168 | push | false | near forehand underarm at waist, moderate arc to the far player at the net (0.77 s); was lift
+S169 | push | false | near forehand at waist height, same pattern (0.7 s)
+S170 | push | false | near forehand, short rising arc to the far player (0.9 s)
+S171 | drive | false | near forehand at head height, flat to the far player (0.7 s); was block
+S172 | net_shot | false | far forehand at chest height mid/front, shuttle dips into the near forecourt, near lunges (0.84 s)
+S173 | - | false | hitter is the untracked far partner (right); tracked far player stands still
+S94 | short_serve | true | far backhand serve at the waist, short arc just over the net, near lunges 0.86 s later
+S95 | lift | false | near deep lunge, rising arc back over the net
+S96 | drive | false | near forehand at chest height in the forecourt/mid, flat to the far court (1.03 s)
+S97 | - | false | near (girl) at the front, racket at head height; flat to the far side; type unclear
+S98 | lift | false | far underarm at the net, shuttle goes up steeply (label net_shot doubtful); near lunges 0.89 s later
+S99 | net_shot | false | near lunge at the net, small arc back over the tape
+S100 | - | false | far at the net, racket at head height; shuttle flies flat-high to the near mid court (push or drive)
+S101 | drive | false | far forehand at waist/chest height, flat arc to the near player (0.92 s)
+S102 | - | false | hitter untracked (far/near girl at the net), not readable
+S103 | drive | false | far lunging forehand, flat arc to the near pair (0.75 s)
+S104 | - | false | hitter untracked
+S105 | lift | true | near lunge low at the net, shuttle climbs very high (2.9 s to the next contact)
+S106 | - | false | far player reaching high at the net; flat path, type unclear
+S107 | - | false | hitter untracked
+S108 | drive | false | far forehand at shoulder height, flat-high path to the near player (1.12 s); was push
+S109 | lift | true | untracked near partner (front) low underarm, shuttle climbs very high to the far court (hitter = partner, not P1)
+# S110-S117 (rest of 0241) and S54-S61 (0239): not reviewed in this pass (low yield on these angles)
+S54 | - | false | near forehand mid court, destination not tracked
+S55 | lift | false | far player hidden behind the near player; high arc from the far forecourt to the near back (1.15 s)
+S56 | clear | true | near overhead at full stretch, high arc to the far back court (2.1 s)
+S57 | drop | false | near jumping overhead, flatter arc down to the far mid court
+S58 | - | false | near lunge at the net; shuttle track unclear
+S59 | drive | false | near lunging forehand at waist, flat path to the far player (0.83 s)
+S60 | net_shot | false | near lunging forehand at the net, small arc over, far player lunges at the net 0.93 s later
+S61 | lift | false | far deep lunge at the net, shuttle climbs steeply after the contact (was net_shot)

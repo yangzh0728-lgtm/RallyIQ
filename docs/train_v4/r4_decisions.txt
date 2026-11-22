@@ -1,0 +1,91 @@
+# key | idx | t | status (hit / not_a_hit / unsure_hit) | hitter | side | stroke | stroke_sure | note
+# hitter = detection's player id when it is the right player, "null" if the hitter is untracked
+own_20260906_0618 | 0 | 9.51 | not_a_hit | P4 | far | - | - | far player lifts the shuttle back before the rally (near player walks away): pass
+own_20260906_0618 | 1 | 12.81 | not_a_hit | P1 | far | - | - | girl on the neighbour court, not this court
+own_20260906_0618 | 2 | 15.05 | not_a_hit | P4 | far | - | - | far player tosses the shuttle in his hand: dead ball
+own_20260906_0618 | 3 | 17.18 | hit | P3 | near | short_serve | true | underarm serve, short arc dropping just over the net
+own_20260906_0618 | 4 | 21.72 | hit | P3 | near | smash | true | jump overhead, reaches the far player 0.37 s later
+own_20260906_0618 | 5 | 22.09 | hit | P4 | far | block | true | smash return at chest height, high soft arc into the near forecourt (near player lunges)
+own_20260906_0618 | 6 | 23.16 | hit | P3 | near | lift | false | net lunge, shuttle rises over the far player (only 0.8 s to the next hit)
+own_20260906_0618 | 7 | 23.96 | hit | P4 | far | drop | false | overhead, shuttle descends steeply toward the near mid/front court
+own_20260906_0618 | 8 | 51.28 | hit | P3 | near | clear | false | overhead, high arc to the far player (1.1 s)
+own_20260906_0618 | 9 | 52.38 | hit | P4 | far | clear | true | overhead from the far back court, near player answers overhead at the back 1.4 s later
+own_20260906_0618 | 10 | 53.79 | hit | P3 | near | smash | true | jump smash, far reply 0.37 s later
+own_20260906_0618 | 11 | 54.15 | hit | P4 | far | block | true | smash return low on the forehand, soft arc to the near forecourt, near player lunges
+own_20260906_0618 | 12 | 55.19 | hit | P3 | near | lift | true | deep lunge at the net, high arc to the far back court (rally ends)
+own_20260906_0618 | 13 | 58.49 | not_a_hit | P4 | far | - | - | between rallies: far player passes the shuttle back
+own_20260906_0618 | 14 | 63.50 | hit | P3 | near | short_serve | true | serve, short arc, far reply at the net 0.53 s later
+own_20260906_0618 | 15 | 64.03 | hit | P4 | far | lift | true | underarm at the net, very high deep arc to the near back court
+# 0619: players.json says doubles but the court is played as singles (P4f is a spectator at the side)
+own_20260906_0619 | 0 | 85.78 | hit | P2 | far | - | - | far contact at the racket at 0.0 (rally start); stroke unclear
+own_20260906_0619 | 1 | 87.09 | not_a_hit | P3 | near | - | - | near player standing; the detected shuttle is on the neighbour court
+own_20260906_0619 | 2 | 87.45 | hit | P3 | near | drive | false | forehand at chest height, flat to the far player 0.8 s later
+own_20260906_0619 | 3 | 88.25 | hit | P2 | far | lift | true | forehand under the net, very high deep arc to the near back court (1.2 s)
+own_20260906_0619 | 4 | 89.46 | hit | P3 | near | smash | false | overhead from the near back court, reaches the far court 0.37 s later
+own_20260906_0619 | 5 | 89.82 | not_a_hit | P2 | far | - | - | shuttle lands at the far player's feet, no swing (end of rally)
+own_20260906_0619 | 6 | 95.73 | hit | P2 | far | long_serve | false | first contact of the rally at shoulder height, high deep arc to the near back court
+own_20260906_0619 | 7 | 96.76 | hit | P3 | near | clear | true | overhead from the back, high arc to the far back court (1.2 s)
+own_20260906_0619 | 8 | 97.96 | hit | P2 | far | drop | false | jumping overhead, arc rising slightly then down to the near mid court
+own_20260906_0619 | 9 | 98.83 | hit | P3 | near | - | - | forehand at shoulder height from mid court, arc to the far mid/front; type unclear
+own_20260906_0619 | 10 | 99.97 | hit | P2 | far | - | - | low forehand lunge, shuttle rises toward the near player 0.5 s later
+own_20260906_0619 | 11 | 100.47 | hit | P3 | near | - | - | racket above the head, arc back to the far player (0.87 s)
+own_20260906_0619 | 12 | 101.33 | unsure_hit | P2 | far | - | - | far lunge at the floor at the net; shuttle seems to stay on the far side
+own_20260906_0619 | 13 | 252.15 | not_a_hit | P2 | far | - | - | picks the shuttle up from the floor
+own_20260906_0619 | 14 | 253.79 | not_a_hit | P3 | near | - | - | standing; shuttle from the neighbour court
+own_20260906_0619 | 15 | 257.79 | hit | P3 | near | short_serve | true | forehand underarm serve, low arc just over the net
+own_20260906_0619 | 16 | 258.52 | hit | P2 | far | net_shot | true | underarm at the net, shuttle tumbles over into the near forecourt, near lunges
+own_20260906_0619 | 17 | 259.46 | hit | P3 | near | lift | true | deep lunge at the net, very high arc to the far back (1.57 s)
+own_20260906_0619 | 18 | 261.03 | hit | P2 | far | - | - | forehand at head height, flat path to the near player 0.6 s later (smash or drive)
+own_20260906_0619 | 19 | 261.63 | hit | P3 | near | drop | false | overhead at head height, arc to the far mid court; rally ends
+own_20260906_0619 | 20 | 270.60 | hit | P2 | far | short_serve | true | backhand serve at the waist, just over the net, near lunges 0.9 s later
+own_20260906_0619 | 21 | 271.50 | hit | P3 | near | lift | true | lunge in the forecourt, shuttle goes almost straight up and deep (1.4 s)
+own_20260906_0619 | 22 | 272.91 | hit | P2 | far | drop | false | overhead near the far service line, arc down into the near forecourt (near lunges)
+own_20260906_0619 | 23 | 273.71 | hit | P3 | near | net_shot | false | lunge at the net, small arc, far player lunges at the net 1.03 s later
+own_20260906_0619 | 24 | 274.74 | hit | P2 | far | lift | true | lunge at the net, very high deep arc to the near back court
+own_20260906_0621 | 0 | 70.07 | hit | P4 | far | short_serve | true | backhand serve, shuttle held in front at -0.2, short arc to the near forecourt
+own_20260906_0621 | 1 | 70.97 | hit | P3 | near | - | - | low forehand in the mid/forecourt, steep rise; far player takes it at the front ~1 s later
+own_20260906_0621 | 2 | 71.94 | hit | P4 | far | - | - | forehand at shoulder height near the net, flat to the near player (0.8 s)
+own_20260906_0621 | 3 | 72.74 | hit | P3 | near | lift | false | forehand at chest height from mid court, high arc to the far back (1.27 s)
+own_20260906_0621 | 4 | 74.01 | hit | P4 | far | - | - | jumping overhead; shuttle lands on the near left side (winner), type unclear
+own_20260906_0621 | 5 | 76.18 | not_a_hit | P3 | near | - | - | picks the shuttle up between rallies
+own_20260906_0621 | 6 | 78.64 | not_a_hit | P4 | far | - | - | catches the shuttle with the hand
+own_20260906_0621 | 7 | 110.11 | hit | P3 | near | smash | true | jump smash, far reply 0.33 s later
+own_20260906_0621 | 8 | 110.44 | hit | P4 | far | drive | false | smash return at chest height, flat over the near player's head
+own_20260906_0621 | 9 | 111.31 | hit | P3 | near | clear | true | overhead from the near back court, high arc to the far back (1.07 s)
+own_20260906_0621 | 10 | 112.38 | hit | P4 | far | smash | true | jump smash, steep, near reply 0.6 s later
+own_20260906_0621 | 11 | 112.98 | hit | P3 | near | lift | true | low forehand, high arc to the far back court (1.03 s)
+own_20260906_0621 | 12 | 114.01 | hit | P4 | far | lift | false | low lunge, shuttle at the racket at 0.0 and high above him at +0.15
+own_20260906_0621 | 13 | 147.48 | not_a_hit | P3 | near | - | - | near player waiting; detected shuttle is on the neighbour court
+own_20260906_0621 | 14 | 148.05 | hit | P3 | near | - | - | NEAR player hits (follow-through in the overview), detector said P4/far; far player receives at 148.85
+own_20260906_0621 | 15 | 148.85 | hit | P4 | far | lift | true | underarm at chest height, high arc to the near back court (near overhead 0.7 s later)
+own_20260906_0621 | 16 | 149.55 | not_a_hit | P3 | near | - | - | racket up preparing; the contact is #17 0.43 s later (one swing detected twice)
+own_20260906_0621 | 17 | 149.98 | hit | P3 | near | smash | false | overhead from the back, straight down-line to the far front in 0.63 s
+own_20260906_0621 | 18 | 150.62 | hit | P4 | far | - | - | forehand at shoulder height in the far forecourt, shuttle drops into the near forecourt (net shot or drop)
+own_20260906_0621 | 19 | 151.65 | unsure_hit | P3 | near | - | - | lunge at the front, shuttle low next to the racket; rally ends, may be a miss
+own_20260906_0621 | 20 | 171.77 | hit | P3 | near | clear | false | overhead from the back; far player takes it overhead 1.37 s later (#21 is not a contact)
+own_20260906_0621 | 21 | 172.71 | not_a_hit | P3 | near | - | - | near player in ready stance; shuttle is still flying to the far player
+own_20260906_0621 | 22 | 173.14 | hit | P4 | far | smash | true | jumping overhead, near reply at chest height 0.67 s later
+own_20260906_0621 | 23 | 173.81 | hit | P3 | near | drive | false | defence at chest height, flat back to the far player
+own_20260906_0621 | 24 | 174.24 | hit | P4 | far | - | - | forehand at chest/shoulder height, contact about +0.1, flat to the near player
+own_20260906_0621 | 25 | 175.11 | hit | P3 | near | drive | false | racket at head height mid court, fast to the far player (0.3 s)
+own_20260906_0621 | 26 | 175.41 | hit | P4 | far | drive | false | forehand at shoulder height, flat to the near player (0.7 s)
+own_20260906_0621 | 27 | 176.11 | hit | P3 | near | - | - | forehand at shoulder height, high arc to the far back (1.1 s); lift or clear
+own_20260906_0621 | 28 | 177.21 | hit | P4 | far | drop | false | overhead, arc down into the near mid/front court, near player lunges
+own_20260906_0621 | 29 | 178.24 | hit | P3 | near | net_shot | false | low forehand at the front, small arc over the net to the far forecourt
+own_20260906_0621 | 30 | 179.01 | hit | P4 | far | lift | false | forehand reach at the front (v2 only), near player overheads ~1.5 s later
+own_20260906_0617 | 0 | 46.05 | unsure_hit | P1 | near | - | - | near forehand at chest height but the shuttle path leaves sideways toward the left (warm-up feed?)
+own_20260906_0617 | 1 | 47.15 | not_a_hit | P2 | far | - | - | far player standing, shuttle on the near left side
+own_20260906_0617 | 2 | 48.41 | hit | P1 | near | smash | true | jumping overhead, reaches the far player 0.33 s later
+own_20260906_0617 | 3 | 48.75 | hit | P2 | far | lift | true | low forehand off the smash, high arc to the near back court
+own_20260906_0617 | 4 | 49.75 | hit | P1 | near | - | - | overhead at the back, contact about +0.1; where it goes is not tracked
+own_20260906_0617 | 5 | 60.06 | hit | P1 | near | short_serve | true | forehand serve, low arc just over the net
+own_20260906_0617 | 6 | 60.93 | hit | P2 | far | lift | true | low forehand at the net, very high arc to the near back court
+own_20260906_0617 | 7 | 62.03 | hit | P1 | near | smash | true | jumping overhead, steep to the far mid court in 0.4 s
+own_20260906_0617 | 8 | 62.43 | hit | P2 | far | lift | true | forehand at hip height, high arc to the near back court
+own_20260906_0617 | 9 | 63.66 | not_a_hit | P1 | near | - | - | standing after the rally; shuttle out
+own_20260906_0617 | 10 | 64.50 | not_a_hit | P1 | near | - | - | walking, racket down
+own_20260906_0617 | 11 | 89.29 | hit | P2 | far | lift | true | lunge at the front, very high arc to the near back court
+own_20260906_0617 | 12 | 91.19 | hit | P1 | near | smash | true | jumping overhead, steep to the far player 0.43 s later
+own_20260906_0617 | 13 | 91.62 | hit | P2 | far | drive | false | forehand at shoulder height, flat to the near player (0.7 s)
+own_20260906_0617 | 14 | 92.33 | hit | P1 | near | - | - | forehand at shoulder height, high arc to the far back (lift or clear)
+own_20260906_0617 | 15 | 93.99 | not_a_hit | P2 | far | - | - | shuttle on the floor next to the walking far player
