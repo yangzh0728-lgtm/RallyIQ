@@ -123,7 +123,26 @@ def side_series(poses: Sequence[PoseFrame]) -> dict[str, SideSeries]:
     return out
 
 
+_STEP_CACHE: dict[tuple[int, int], tuple] = {}
+
+
 def _step(b: _Body | None, prev: _Body | None) -> list[float]:
+    """Per-frame pose features of ``b`` (wrist speed against ``prev``). Memoised on the body pair: the swing
+    windows of neighbouring candidates and both sides re-read the same frames many times."""
+    if b is None:
+        return [math.nan] * 6 + [0.0]
+    key = (id(b), id(prev) if prev is not None else 0)
+    hit = _STEP_CACHE.get(key)
+    if hit is not None and hit[0] is b and hit[1] is prev:
+        return hit[2]
+    out = _step_compute(b, prev)
+    if len(_STEP_CACHE) > 200_000:
+        _STEP_CACHE.clear()
+    _STEP_CACHE[key] = (b, prev, out)
+    return out
+
+
+def _step_compute(b: _Body | None, prev: _Body | None) -> list[float]:
     nan = math.nan
     if b is None:
         return [nan] * 6 + [0.0]
