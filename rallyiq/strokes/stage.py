@@ -67,9 +67,23 @@ def run(ctx: StageContext) -> StrokesResult:
             except (ValueError, KeyError) as e:
                 court = None
                 log.warning("bundled court stroke model unusable (%s)", e)
+            residual = None
+            # Own-footage correction of the court x video probabilities (train_v4): "off" (default), "auto"
+            # (bundled models/strokes_residual_own.json) or a JSON path. Its features are image-space shuttle
+            # climb / wrist-above-shoulder, fitted on sam's own camera setups; on broadcast ShuttleSet clips it
+            # costs 5-8 points, so only the own-footage batch settings turn it on.
+            res_opt = str(opts.get("residual", "off"))
+            if court is not None and res_opt != "off":
+                try:
+                    residual = CM.get_residual(None if res_opt == "auto" else res_opt)
+                except (ValueError, KeyError, OSError) as e:
+                    log.warning("residual stroke model unusable (%s)", e)
             if court is not None:
-                model = CM.make_model_fn(model, court, attrs, meta.fps, seq=bool(opts.get("sequence", True)))
+                model = CM.make_model_fn(model, court, attrs, meta.fps, seq=bool(opts.get("sequence", True)),
+                                         residual=residual)
                 name = f"{name}+{CM.NAME}" if name else CM.NAME
+                if residual is not None:
+                    name += "+own_residual"
     elif cfg.classifier == "bst":
         from .bst import BSTConfig, BSTUnavailable, make_model_fn
 

@@ -196,11 +196,96 @@ def contact_high(events, shuttle, players, feats: Sequence[StrokeFeatures], fps:
     return {f.shot_id: (p if v == "high" else 1.0 - p) for f, (v, p) in zip(feats, pred)}
 
 
-def make_model_fn(video_fn, court: CourtModel, attrs, fps: float, seq: bool = True):
+# ------------------------------------------------------------------ own-footage residual stage
+RESIDUAL_BUNDLED = Path(__file__).with_name("models") / "strokes_residual_own.json"
+
+
+def own_shot_features(events: EventsResult, shuttle: ShuttleTrack | None, players: PlayerTracks | None,
+                      fps: float) -> dict[str, dict[str, float]]:
+    """Per shot: ``rise`` / ``fall`` (shuttle climb to its highest image point before the next hit, and its drop
+    from the contact to the end of that flight, in hitter heights) and ``oh`` (hitter's highest wrist above the
+    highest shoulder at contact, in torso lengths). Image-space, so only meaningful for one camera family: the
+    residual stage that uses them is trained on (and enabled for) sam's own footage only."""
+    out: dict[str, dict[str, float]] = {}
+    if shuttle is None:
+        return out
+    spts = {q.frame: q for q in shuttle.points}
+    pf = {f.frame: f for f in players.frames} if players is not None else {}
+    order = sorted(events.shots, key=lambda s: s.frame)
+    nxt = {a.shot_id: (b.frame if b.rally_id == a.rally_id else None) for a, b in itertools.pairwise(order)}
+
+    def hitter_det(s):
+        for df in (0, -1, 1, -2, 2, -3, 3):
+            fr = pf.get(s.frame + df)
+            for p in (fr.players if fr else []):
+                if p.player_id == s.hitter:
+                    return p
+        return None
+
+    for s in order:
+        det = hitter_det(s)
+        h = max((det.bbox[3] - det.bbox[1]) if det else 200.0, 30.0)
+        rise = fall = oh = math.nan
+        y0 = next((spts[s.frame + d].y for d in (0, 1, -1, 2, -2, 3, -3) if s.frame + d in spts), None)
+        if y0 is not None:
+            end = min(nxt.get(s.shot_id) or s.frame + int(1.5 * fps), s.frame + int(2.0 * fps))
+            ys = [spts[f].y for f in range(s.frame + 1, end) if f in spts]
+            if len(ys) >= 4:
+                rise, fall = (y0 - min(ys)) / h, (ys[-1] - y0) / h
+        if det is not None and det.keypoints:
+            def kp(i, k=det.keypoints):
+                v = k[i]
+                return (v[0], v[1]) if (len(v) < 3 or v[2] >= 0.3) else None
+            sh_ = [q for q in (kp(5), kp(6)) if q]
+            wr = [q for q in (kp(9), kp(10)) if q]
+            hp = [q for q in (kp(11), kp(12)) if q]
+            if sh_ and wr:
+                torso = (np.mean([y for _, y in hp]) - np.mean([y for _, y in sh_])) if hp else h / 3
+                if torso > 1:
+                    oh = (min(y for _, y in sh_) - min(y for _, y in wr)) / torso
+        out[s.shot_id] = {"rise": rise, "fall": fall, "oh": oh}
+    return out
+
+
+class Residual:
+    """logits = log p(base) + W z + b over the base model's classes (``court_resid.py`` in train_v4)."""
+
+    def __init__(self, spec: dict[str, Any]):
+        if spec.get("kind") != "strokes_residual":
+            raise ValueError("not a residual stroke model")
+        self.classes = list(spec["classes"])
+        self.features = list(spec["features"])
+        self.W = np.asarray(spec["W"], float)
+        self.b = np.asarray(spec["b"], float)
+
+    def z(self, own: dict[str, float], first: float) -> np.ndarray:
+        out = []
+        for f in self.features:
+            v = first if f == "first" else own.get(f, math.nan)
+            miss = v is None or math.isnan(v)
+            out += [0.0 if miss else float(np.clip(v, -3, 3)), float(miss)]
+        return np.asarray(out)
+
+    def apply(self, P: np.ndarray, Z: np.ndarray) -> np.ndarray:
+        S = np.log(np.clip(P, 1e-4, None)) + Z @ self.W.T + self.b
+        S -= S.max(1, keepdims=True)
+        E = np.exp(S)
+        return E / E.sum(1, keepdims=True)
+
+
+def get_residual(path: str | Path | None = None) -> Residual | None:
+    p = Path(path or RESIDUAL_BUNDLED)
+    return Residual(json.loads(p.read_text(encoding="utf-8"))) if p.is_file() else None
+
+
+def make_model_fn(video_fn, court: CourtModel, attrs, fps: float, seq: bool = True, residual: Residual | None = None):
     """A ``classify`` backend: video model x court model (geometric mean), then rally smoothing.
 
-    ``video_fn`` may be None (court model alone)."""
+    ``video_fn`` may be None (court model alone). ``residual``: own-footage correction applied after the
+    geometric mean (``Residual``; off unless the strokes options ask for it)."""
     C = court.classes
+    if residual is not None and residual.classes != C:
+        raise ValueError("residual stroke model classes differ from the court model")
 
     def fn(events: EventsResult, shuttle: ShuttleTrack | None, players: PlayerTracks | None,
            feats: list[StrokeFeatures]) -> dict[str, dict[str, float]]:
@@ -214,6 +299,11 @@ def make_model_fn(video_fn, court: CourtModel, attrs, fps: float, seq: bool = Tr
             if have.any():
                 G = np.sqrt(np.clip(P[have], 1e-6, None) * np.clip(V[have], 1e-6, None))
                 P[have] = G / G.sum(1, keepdims=True)
+        if residual is not None and len(ids):
+            own = own_shot_features(events, shuttle, players, fps)
+            fi = FEATURES.index("first")
+            Z = np.asarray([residual.z(own.get(i, {}), float(X[k, fi])) for k, i in enumerate(ids)])
+            P = residual.apply(P, Z)
         if seq and court.seq_weight > 0:  # the smoothing assumes no hit is missing in between
             rid_arr = np.asarray([str(r) for r in rids], dtype=object)
             for r in dict.fromkeys(rids):
