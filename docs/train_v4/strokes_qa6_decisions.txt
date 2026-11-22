@@ -1,0 +1,16 @@
+# Q-id (qa6 hits_truth id) | stroke | sure | note
+Q185 | - | false | near (black) forehand at head height, arc to the far mid court: drive or clear
+Q186 | clear | false | far jumping overhead, high arc to the near back (0.63 s)
+Q187 | - | false | near overhead (blue) partner-overlap; descends to the far forecourt (drop/smash)
+Q190 | short_serve | true | far backhand serve, shuttle at the waist, short path over the net
+# rest of qa6 stroke pass stopped: doubles side view, low yield; switched to round 4b (singles rallies in 0617/0619)
+# 0529_0006 (rear camera behind the near baseline, singles)
+Q127 | lift | false | far underarm at the front, shuttle rises toward the near court (1.0 s)
+Q128 | lift | true | near low underarm at mid court, very high arc to the far back court (1.3 s)
+Q130 | lift | true | near deep lunge at the front, shuttle climbs steeply
+Q133 | - | false | far underarm at the waist at the start of a point (serve or feed), path short
+Q138 | - | false | far player with the shuttle at the left hand, it rises after +0.15: serve, type unclear
+Q143 | - | false | near forehand at shoulder height, arc to the far player (1.47 s): drop or clear
+Q145 | lift | false | far low contact near the feet, shuttle climbs high to the near court
+Q148 | - | false | near forehand at chest height, medium arc (drive or push)
+# stopped: on the rear camera (0529) only 2 of 8 strokes are readable with confidence; not used for training/eval

@@ -1,0 +1,61 @@
+# id | offset_s (contact - label) | conf | note   ("none" = no contact of the labelled side in -0.8..+0.7 s -> ignored; side=X = side corrected)
+# readings marked [v3] are carried over from train_v3/labels/qa6_time_refine.txt (13-frame strips) and not re-read
+7 | +0.10 | med | near return; re-read on the wide sheet: shuttle at the racket +0.1, gone by +0.2 [v3 agrees]
+9 | none | - | shuttle falls in front of the near player who stands with racket low to +0.7; no contact
+11 | -0.30 | med | low forehand at -0.3, shuttle then rises over the player [v3 agrees]
+22 | +0.55 | high | serve: shuttle dropped from the hand at +0.2, hit at +0.55 (cand +0.56), rises after
+24 | -0.05 | low | [v3]
+26 | 0.00 | med | [v3]
+31 | -0.08 | med | [v3]
+38 | -0.02 | high | far jump smash: shuttle comes down to the far racket at 0.0, reaches the near player at +0.4
+41 | -0.10 | med | [v3]
+45 | none | - | far player waits under a high shuttle through +0.7 (the +1.00f label is this hit); near racket on the floor
+46 | none | - | near player picks up his racket (-0.5..0.0); no near contact
+47 | none | - | far contact not visible (shuttle off the top of the frame); near hit at +0.5 is a separate label
+50 | +0.25 | med | near backward-jump overhead, racket up at 0.0, swing +0.2..+0.3, shuttle leaves by +0.4
+56 | -0.20 | med | [v3]
+58 | -0.10 | low | [v3]
+64 | +0.03 | low | [v3] (65 is the same exchange; the near hit is the -0.62n label)
+65 | none | - | near hit at -0.6 is another label; far hits at -0.2; no near contact afterwards -> duplicate
+73 | none | - | shuttle rolls along the floor toward the far player, who stands still: dead ball
+75 | -0.15 | med | [v3]
+77 | -0.20 | med | [v3]
+86 | -0.20 | low | [v3]
+90 | +0.20 | med | [v3]
+92 | +0.35 | low | high shuttle comes down to the near player, backhand/overhead around +0.3..+0.4 (cand +0.41); v3's "none" was the narrow window
+95 | 0.00 side=far | high | far smash at 0.0 (cand -0.01); the shuttle passes the near player, who does not touch it
+107 | +0.42 | med | near lunge, shuttle at the racket +0.4, rising at +0.5 (cand +0.40)
+118 | +0.50 | high | near forehand, low point at the racket at +0.5 (cand +0.50), rises after
+121 | +0.40 | high | near backhand, cand +0.42
+122 | none | - | the near backhand is #121 (800.02); at 800.50 the shuttle is reaching the far player: duplicate
+125 | none | - | near overhead at -0.63 is another label; the far player never touches the shuttle, which lands
+130 | +0.10 | med | near jump overhead, racket at the head at +0.1
+133 | -0.30 | low | far underarm launch at -0.3 (shuttle rises from the racket side, very high): serve/feed
+139 | none | - | no near swing in the window; shuttle turns on the far side at -0.2
+145 | +0.03 side=far | med | far lift from the forecourt at 0.0 (shuttle low at the far player's feet, then rises high); near player only retreats
+148 | -0.28 | med | near forehand at head height, shuttle leaves up-left at -0.3..-0.2 (cand -0.26), reaches the far player at +0.67
+152 | -0.05 | low | near drive: shuttle next to the racket at -0.1, follow-through 0.0..+0.1
+154 | +0.18 | med | near lift from the front-right, low point at +0.2 (cand +0.18), rises after
+155 | -0.05 | low | far forehand swing -0.1..0.0 (track gap on the far side), shuttle then rises toward the near back court
+159 | 0.00 | low | far net shot: far lunge at 0.0 with the shuttle at the net tape, drops into the near forecourt
+166 | 0.00 | low | near lunge lift; shuttle above head height at 0.0..+0.1 and rising (track mixed with another shuttle)
+168 | -0.17 | med | near serve: shuttle near the hand -0.4..-0.2, racket meets it at -0.2, rising at -0.1 (cand -0.17)
+171 | +0.12 | med | far overhead: shuttle over the racket at 0.0, swing at +0.1 (cand +0.17), steep descent after
+172 | none | - | far smash lands next to the lunging near player (+0.6 on the floor); no return
+176 | +0.15 | med | near overhead: racket up at 0.0, swing +0.1..+0.2, shuttle turns at the circle (cand +0.22)
+189 | none | - | far drop passes the black-shirt near player's racket and lands; no deflection
+190 | -0.15 | high | far serve: shuttle at waist at -0.2, rising at -0.1 (cand -0.13/-0.16)
+193 | 0.00 | med | near jump smash at 0.0, shuttle reaches the far pair at +0.5
+212 | -0.12 | med | near: shuttle at the racket at -0.1, leaving up-right at 0.0
+214 | -0.40 | med | near: shuttle at the raised racket at -0.4 (cand -0.39), then over the net to the far player at +0.54
+217 | -0.03 | med | far swing at 0.0, shuttle leaving left at 0.0..+0.1
+218 | +0.30 | med | near: shuttle comes down to the near player at +0.25..+0.3, racket raised, then back to the far side
+231 | -0.03 | med | near jump smash, arm fully extended at 0.0
+232 | -0.20 | med | far block at the net: shuttle turns at -0.2 (cand -0.20 = #231's cand +0.25), back to the near court
+233 | -0.17 | high | near: shuttle by the low racket at -0.2, racket swings up at -0.1 (cand -0.15), lift to the far side
+244 | -0.05 | med | near overhead, racket at the head at -0.1, follow-through at 0.0; shuttle reappears high at +0.4 going far
+247 | none | - | far player waits under a high shuttle through +0.7 (contact = the +1.02f label); duplicate
+250 | +0.28 | med | near: shuttle descends to the low racket at +0.3 (cand +0.29), back to the far side (far +0.60)
+251 | none | - | near contact at -0.31 is #250; far player waits under the high shuttle, contact = the +0.69f label: duplicate
+262 | none | - | dead-ball: player picks the shuttle up (-0.8..-0.4) and feeds it later; no rally contact
+# all 58 done: 34 re-timed/confirmed (+2 side corrections: 95, 145), 1 kept from v3 with low confidence each as listed, 18 "none" -> ignored

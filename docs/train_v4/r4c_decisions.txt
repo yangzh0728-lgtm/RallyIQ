@@ -1,0 +1,16 @@
+# same format as labels/r4/decisions.txt
+own_20260906_0621 | 0 | 57.59 | hit | P3 | near | lift | true | low lunge in the forecourt, very high arc to the far back (1.33 s)
+own_20260906_0621 | 1 | 58.92 | hit | P1 | far | clear | false | overhead at full stretch, long arc back toward the near court (next contact 2.1 s)
+own_20260906_0621 | 2 | 61.06 | hit | P4 | far | - | - | lunging forehand, flat path that drops in the near court (rally ends)
+own_20260906_0621 | 3 | 202.90 | hit | P4 | far | drive | false | forehand at chest height, fast flat path to the near player (0.4 s)
+own_20260906_0621 | 4 | 203.30 | hit | P3 | near | lift | false | forehand at waist height, rising high arc to the far back (0.8 s, far overhead)
+own_20260906_0621 | 5 | 204.10 | hit | P4 | far | smash | false | jumping overhead, steep path down to the near player; rally ends
+own_20260906_0621 | 6 | 242.94 | not_a_hit | P4 | far | - | - | far player holds the shuttle in his hand at the waist (getting ready to serve)
+own_20260906_0621 | 7 | 243.98 | hit | P4 | far | short_serve | false | forehand underarm serve from the hand, arc over the net into the near forecourt, near lunges 1.03 s later
+own_20260906_0621 | 8 | 245.01 | hit | P3 | near | net_shot | false | deep lunge at the net, arc over into the far forecourt, far player lunges 0.87 s later
+own_20260906_0621 | 9 | 245.88 | hit | P4 | far | lift | false | far lunge, shuttle at the low racket at 0.0 and rising after (a near hit in between is missed: next detection 2.5 s later)
+own_20260906_0621 | 10 | 248.35 | hit | P4 | far | smash | false | jumping overhead, steep path into the near court; rally ends
+own_20260906_0621 | 11 | 273.27 | unsure_hit | P1 | near | - | - | hitter at the left edge of the frame (partly out of view)
+own_20260906_0621 | 12 | 273.97 | hit | P2 | far | - | - | forehand at shoulder height, medium arc to the near player at the front (0.94 s): push or drive
+own_20260906_0621 | 13 | 274.91 | hit | P1 | near | lift | true | low underarm in the forecourt, high arc to the far back court (1.1 s)
+own_20260906_0621 | 14 | 276.01 | hit | P2 | far | clear | false | jumping overhead in the far back court, high arc back toward the near court
