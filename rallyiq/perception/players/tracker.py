@@ -88,13 +88,17 @@ class TrackerConfig:
     # a moment. On the 2026-03-02 doubles clip the opening frames seeded slots with a spectator by the left post
     # and a man walking outside the right sideline, so the near man ended up in team B and the far man never got
     # a slot. Behind the baselines is not restricted: far players often stand a metre behind theirs.
-    acquire_max_outside_side_m: float = 0.4
+    acquire_max_outside_side_m: float = 0.15
     bystander_radius_m: float = 1.0
     # Moving or not: a slot followed further than ``side_out_m`` outside a sideline for ``side_out_s``
     # is on somebody else (a player walking behind the bench, a spectator the slot drifted to). It is
     # released and stays empty until someone stands on court. Players lunge past the line for a moment.
     side_out_m: float = 0.6
     side_out_s: float = 1.5
+    # A little outside for longer is enough: line judges sit by the net post 0.2-0.4 m past the line
+    # for minutes (0239, 0241). Their spot is ignored afterwards.
+    side_sit_m: float = 0.05
+    side_sit_s: float = 4.0
     # A slot that missed its player for a while may pick them up again at most this far from where
     # they should be. Beyond it the person is somebody else: the slot stays empty until it counts as
     # lost and is re-acquired on court (P3 of 0241 hopped between spectators within one gap).
@@ -117,6 +121,7 @@ class _Slot:
     # Start frame and position of the current still, off-court stretch (calibrated only).
     still_since: int | None = None
     still_at: np.ndarray | None = None
+    side_sit_since: int | None = None
     side_out_since: int | None = None  # start of the current stretch past a sideline
     still_ema: np.ndarray | None = None  # smoothed position for the stillness test
 
@@ -176,6 +181,7 @@ class PlayerTracker:
         self._mate_pairs = [(i, j) for i in range(n) for j in range(i + 1, n) if teams[i] == teams[j]]
         self._team_size = max(n // 2, 1)
         self.bystander_spots: list[np.ndarray] = []
+        self.side_spots: list[np.ndarray] = []  # where somebody stayed just past a sideline
         self.relabels: dict[int, str] = {}  # track_id -> player_id it was moved to
         self._clash: dict[tuple[int, int], int] = {}  # (slot, opponent slot) -> first frame on one half
 
@@ -273,6 +279,10 @@ class PlayerTracker:
     _LINES = PlayArea(margin_side=0.0, margin_end=0.0)
 
     def _at_bystander_spot(self, xy: np.ndarray) -> bool:
+        x = float(xy[0])
+        if self.side_spots and max(-x, x - COURT_WIDTH_M) > 0 and any(
+                float(np.linalg.norm(xy - s)) <= self.cfg.bystander_radius_m for s in self.side_spots):
+            return True
         if not self.bystander_spots or self._LINES.distance_outside(xy) < self.cfg.offcourt_m:
             return False
         return any(float(np.linalg.norm(xy - s)) <= self.cfg.bystander_radius_m for s in self.bystander_spots)
@@ -280,7 +290,17 @@ class PlayerTracker:
     def _check_bystander(self, slot: _Slot, frame: int) -> None:
         cfg = self.cfg
         x = float(slot.pos[0])
-        if max(-x, x - COURT_WIDTH_M) <= cfg.side_out_m:
+        out = max(-x, x - COURT_WIDTH_M)
+        if out <= cfg.side_sit_m:
+            slot.side_sit_since = None
+        elif slot.side_sit_since is None:
+            slot.side_sit_since = frame
+        elif frame - slot.side_sit_since >= cfg.side_sit_s * cfg.fps:
+            if slot.still_ema is not None:
+                self.side_spots.append(slot.still_ema.copy())
+            self._release(slot)
+            return
+        if out <= cfg.side_out_m:
             slot.side_out_since = None
         elif slot.side_out_since is None:
             slot.side_out_since = frame
@@ -341,7 +361,7 @@ class PlayerTracker:
     def _move(self, src: int, dst: int) -> None:
         s = self.slots[src]
         moved = _Slot(self.slots[dst].player_id, s.track_id, s.pos, s.vel, s.scale, s.last_frame, s.appearance,
-                      s.side, s.still_since, s.still_at, s.side_out_since, s.still_ema)
+                      s.side, s.still_since, s.still_at, s.side_sit_since, s.side_out_since, s.still_ema)
         self.slots[dst] = moved
         self.relabels[s.track_id] = moved.player_id
         self._release(s)
@@ -414,6 +434,7 @@ class PlayerTracker:
             self._next_track_id += 1
             slot.vel = np.zeros(2)
             slot.still_since, slot.still_at, slot.still_ema, slot.side_out_since = None, None, None, None
+            slot.side_sit_since = None
         else:
             n = max(slot.missed(frame), 1)
             v = (pos - slot.pos) / n

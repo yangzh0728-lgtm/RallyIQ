@@ -213,3 +213,16 @@ def test_no_jump_to_a_person_across_the_court():
         tr.update(f, [_cand(3, 10)], calibrated=True)
     out = tr.update(70, [_cand(5.8, 6.2), _cand(3, 10)], calibrated=True)  # 7.4 m away, 1.4 s later
     assert [p.player_id for p in out] == ["P2"]
+
+
+def test_seated_judge_just_past_the_sideline_gives_the_slot_back():
+    """train_v5 (0239): someone sitting 0.2 m past the line by the net post held a slot for 80 s."""
+    from rallyiq.perception.players.tracker import SinglesTracker, TrackerConfig
+
+    tr = SinglesTracker(TrackerConfig(fps=30.0))
+    for f in range(30):
+        tr.update(f, [_cand(6.0, 7.5), _cand(3, 3)], calibrated=True)
+    for f in range(30, 400):
+        out = tr.update(f, [_cand(6.35, 7.5), _cand(3, 3), _cand(3, 11, 0.5)], calibrated=True)
+    feet = sorted(round(float(p.foot_court[1]), 1) for p in out)
+    assert feet == [3.0, 11.0]

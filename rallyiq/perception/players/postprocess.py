@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 
 from .geometry import PlayArea, court_side
-from .models import PlayerFrameResult, PlayerState
+from .models import COURT_WIDTH_M, PlayerFrameResult, PlayerState
 from .tracker import TEAM_OF
 
 
@@ -76,6 +76,7 @@ def drop_offcourt_runs(
     still_extent_m: float = 1.0,
     min_inside_frac: float = 0.0,
     inside_margin_m: float = 0.3,
+    side_outside_frac: float = 0.7,
 ) -> int:
     """Track-level court lock: remove whole runs (same ``player_id`` and
     ``track_id``) that mostly stand outside the target play area.
@@ -95,7 +96,9 @@ def drop_offcourt_runs(
     about at the sideline or behind a post (spectators, a coach, the next court's
     players waiting) stay within the run-off margin and are not still, so the rules
     above keep them; our players are inside the lines most of the time.
-    Returns the number of runs dropped.
+    ``side_outside_frac``: drop runs whose feet are past a sideline line, by however little, in at
+    least this share of frames. In 0239 and 0241 every such run was a line judge or spectator; real
+    players stayed below 0.3. 1.01 disables. Returns the number of runs dropped.
     """
     area = play_area or PlayArea()
     lines = PlayArea(margin_side=0.0, margin_end=0.0)
@@ -112,6 +115,10 @@ def drop_offcourt_runs(
             continue
         arr = np.asarray([area.distance_outside(xy) for xy in pts])
         if (arr > 0).mean() >= min_outside_frac and float(np.median(arr)) >= min_median_outside_m:
+            bad.add(key)
+            continue
+        side = np.mean([max(-float(q[0]), float(q[0]) - COURT_WIDTH_M) > 0 for q in pts])
+        if len(pts) >= 30 and float(side) >= side_outside_frac:
             bad.add(key)
             continue
         if min_inside_frac > 0:
