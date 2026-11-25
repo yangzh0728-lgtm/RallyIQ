@@ -12,11 +12,12 @@ instead of silently tracked with the wrong number of players.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 from .geometry import court_side
-from .models import Candidate
+from .models import COURT_WIDTH_M, Candidate
 
 FORMATS = ("singles", "doubles")
 
@@ -25,6 +26,10 @@ FORMATS = ("singles", "doubles")
 class FormatConfig:
     min_score: float = 0.4  # candidates below this are not counted as players
     doubles_frac: float = 0.4  # share of frames with >= 3 players needed for doubles
+    # A person whose feet are further than this outside a sideline is not counted: umpires,
+    # people waiting for the court and spectators stand just there, inside the run-off the
+    # tracker allows, and turned a singles court with one onlooker by the post into doubles.
+    max_outside_side_m: float = 0.2
     min_frames: int = 10  # fewer usable frames than this -> low confidence
 
 
@@ -36,9 +41,17 @@ class FormatDecision:
     frac_three_plus: float
 
 
-def _count(cands: Sequence[Candidate], min_score: float) -> tuple[int, bool]:
+def _outside_side(c: Candidate) -> float:
+    if c.foot_court is None:
+        return 0.0
+    x = float(c.foot_court[0])
+    return max(-x, x - COURT_WIDTH_M, 0.0)
+
+
+def _count(cands: Sequence[Candidate], min_score: float, max_outside_side_m: float = math.inf) -> tuple[int, bool]:
     """(confident players, whether some half has >= 2 of them)."""
-    good = [c for c in cands if c.player_score >= min_score and c.on_court is not False]
+    good = [c for c in cands if c.player_score >= min_score and c.on_court is not False
+            and _outside_side(c) <= max_outside_side_m]
     halves: dict[str, int] = {}
     for c in good:
         s = court_side(c.foot_court) if c.foot_court is not None else None
@@ -54,7 +67,7 @@ def decide_format(frames: Sequence[Sequence[Candidate]], cfg: FormatConfig | Non
     used = 0
     three = 0
     for cands in frames:
-        n, paired = _count(cands, cfg.min_score)
+        n, paired = _count(cands, cfg.min_score, cfg.max_outside_side_m)
         if n == 0:
             continue
         used += 1

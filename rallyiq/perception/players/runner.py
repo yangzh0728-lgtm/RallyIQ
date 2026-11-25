@@ -31,7 +31,9 @@ class PlayerTrackingConfig:
     stride: int = 1  # run pose on every n-th frame (2 halves cost on 60 fps)
     # "auto" decides from the first ``format_probe_frames`` processed frames.
     match_format: str = "auto"
-    format_probe_frames: int = 90
+    # 90 (3-6 s) caught people standing about before the first rally: an onlooker chatting at the
+    # net made a singles match doubles (0618). Only candidates are buffered, so this is cheap.
+    format_probe_frames: int = 450
     format: FormatConfig = field(default_factory=FormatConfig)
     sides: SideConfig = field(default_factory=SideConfig)
     # Second pose pass on an upscaled crop of the far half of the court, for

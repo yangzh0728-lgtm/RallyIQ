@@ -9,6 +9,8 @@
 * ``roi``: ``"off"`` (default) or ``"auto"``: crop to the calibrated court plus the air
   above it, which enlarges small far-court shuttles. Experimental until measured.
 * ``tracker``: overrides for ``TrackerConfig`` fields.
+* ``ownership``: ``"auto"`` (default) or ``"off"``. Reject trajectories that our players
+  cannot be playing (next court's rally), see ``ownership.py``.
 * ``reuse_candidates``: re-track the raw peaks saved by an earlier run of this video
   (``<work_dir>/shuttle_candidates.json``) instead of running the network again. For
   re-running the court lock / tracker after a calibration fix; ignored when no file.
@@ -37,6 +39,7 @@ from pathlib import Path
 from ...contracts import CourtCalibration, FrameGap, PlayerTracks, ShuttlePoint, ShuttleTrack, VideoMeta
 from ...pipeline.context import StageContext, demo_mode
 from ..target_court import PlayerProximity, PlayerSpanRegion, SegmentRegions
+from .ownership import CourtOwnership
 from .tracker import Candidate, RegionFn, RestFn, ShuttleTracker, SupportFn, TrackerConfig
 
 log = logging.getLogger("rallyiq.shuttle")
@@ -220,6 +223,7 @@ def build_track(
     rest: RestFn | None = None,
     strict: SupportFn | None = None,
     held: SupportFn | None = None,
+    own: CourtOwnership | None = None,
 ) -> tuple[ShuttleTrack, dict[int, int]]:
     """Run the tracker and convert to the contract. Also returns the selected
     candidate index per frame (for the raw-candidates file)."""
@@ -232,7 +236,8 @@ def build_track(
     # Coordinates are in decoded-frame px; scale if the decoder's size differs from the probe.
     sx, sy = meta.width / width, meta.height / height
     tracker = ShuttleTracker(meta.fps, meta.width, meta.height, config, region=region, support=support, rest=rest,
-                             strict_support=strict, held=held)
+                             strict_support=strict, held=held,
+                             foreign=own.logit if own else None, contact=own.contact if own else None)
     scaled = {f: [(x * sx, y * sy, s) for x, y, s in cs] for f, cs in candidates.items()}
     res = tracker.track(scaled, frame_count)
     if tracker.rejected_foreign:
@@ -401,14 +406,16 @@ def run(ctx: StageContext) -> ShuttleTrack:
             return ShuttleTrack(video_id=meta.video_id, detector=None, points=[])
         detector, det_cfg = got
         candidates, size = _detect(ctx, detector, lambda p: ctx.report(0.95 * p))
-    region = support = rest = strict = held = None
+    region = support = rest = strict = held = own = None
     if cfg.get("court_lock", "auto") != "off":
         region, support, mode = court_lock(ctx.calibration, ctx.players)
         rest = rest_area(ctx.calibration, ctx.players)
         strict, held = contact_tests(ctx.players, meta, cfg.get("contact", "box"))
+        if cfg.get("ownership", "auto") != "off":
+            own = CourtOwnership(ctx.players, meta.fps, meta.width)
         log.info("shuttle: court lock using %s", mode)
     track, selected = build_track(meta, candidates, size[0], size[1], detector.name,
-                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support, rest, strict, held)
+                                  tracker_config(cfg.get("tracker"), det_cfg.peak_threshold), region, support, rest, strict, held, own)
     save_candidates(Path(ctx.work_dir) / CANDIDATES_FILE, candidates, selected, detector.name, size)
     ctx.report(1.0)
     return track
