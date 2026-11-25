@@ -50,9 +50,9 @@ class PlayerTrackingConfig:
     far_feet_above: float = 0.25  # far player's feet at most this far above the near head
     far_max_height_ratio: float = 0.75
     # Drop whole track runs inside the court lines (+0.3 m) for less than this share of their frames
-    # (postprocess.drop_offcourt_runs). 0 = off. Own footage: 0.25 removes sideline spectators (3 % inside)
+    # (postprocess.drop_offcourt_runs). 0 = off. 0.25 removes sideline spectators (3 % inside)
     # and keeps every real player track seen (lowest 53 %, doubles players hugging a sideline).
-    min_inside_frac: float = 0.0
+    min_inside_frac: float = 0.25
 
 
 class PlayerTrackingOutput(list):

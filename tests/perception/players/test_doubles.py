@@ -178,3 +178,38 @@ def test_doubles_bystander_guard_tolerates_foot_jitter():
     # The bystander never gets a slot (free slots only go to people near the court), so all four players are
     # tracked as soon as the far back player shows up, without waiting for the guards.
     assert all(len(r.players) == 4 for r in res[130:])
+
+
+def _cand(x, y, score=0.9):
+    import numpy as np
+
+    from rallyiq.perception.players.models import Candidate, PersonDetection
+
+    det = PersonDetection(bbox=np.array([x * 100, y * 50, x * 100 + 40, y * 50 + 100]), keypoints=np.ones((17, 3)), score=score)
+    return Candidate(det, np.array([x * 100 + 20, y * 50 + 100], np.float32), np.array([x, y], np.float32), True, score, [])
+
+
+def test_slot_on_someone_walking_outside_the_sideline_is_released():
+    """train_v5 (0241): a slot that drifts to a person behind the sideline must not follow them, even moving."""
+    from rallyiq.perception.players.tracker import SinglesTracker, TrackerConfig
+
+    tr = SinglesTracker(TrackerConfig(fps=30.0))
+    for f in range(30):
+        tr.update(f, [_cand(3, 3), _cand(3, 10)], calibrated=True)
+    for f in range(30, 240):
+        x = min(3 + (f - 30) * 0.1, 7.4)  # walks out over the right sideline and along it
+        y = 3 + 0.03 * max(f - 80, 0)
+        out = tr.update(f, [_cand(x, y), _cand(3, 10)], calibrated=True)
+    assert [p.player_id for p in out] == ["P2"]
+
+
+def test_no_jump_to_a_person_across_the_court():
+    from rallyiq.perception.players.tracker import SinglesTracker, TrackerConfig
+
+    tr = SinglesTracker(TrackerConfig(fps=30.0))
+    for f in range(30):
+        tr.update(f, [_cand(0.5, 1), _cand(3, 10)], calibrated=True)
+    for f in range(30, 70):
+        tr.update(f, [_cand(3, 10)], calibrated=True)
+    out = tr.update(70, [_cand(5.8, 6.2), _cand(3, 10)], calibrated=True)  # 7.4 m away, 1.4 s later
+    assert [p.player_id for p in out] == ["P2"]
