@@ -109,18 +109,39 @@ def _body(frame: int, t_ms: float, p) -> _Body | None:
 
 
 def side_series(poses: Sequence[PoseFrame]) -> dict[str, SideSeries]:
+    """``"near"`` / ``"far"``: the first listed player of each side per frame (one body per frame). In
+    doubles that hops between partners, and which partner is listed first depends only on the ids, so
+    every player also gets a series of their own under ``"<player_id>@<side>"`` (see
+    ``player_series``); ``swing_evidence`` reads all series of a side."""
     out = {"near": SideSeries("near"), "far": SideSeries("far")}
+    own: dict[str, SideSeries] = {}
+    ids: dict[str, set] = {"near": set(), "far": set()}
     for pf in poses:
         seen: set[str] = set()
         for p in pf.players:
-            if p.side not in out or p.side in seen:
+            if p.side not in out:
                 continue
             b = _body(pf.frame, pf.t_ms, p)
-            if b is not None:
-                seen.add(p.side)
-                out[p.side].bodies.append(b)
-                out[p.side].t.append(pf.t_ms)
+            if b is None:
+                continue
+            if p.player_id:
+                ids[p.side].add(p.player_id)
+                key = player_series(p.player_id, p.side)
+                ser = own.setdefault(key, SideSeries(p.side))
+                ser.bodies.append(b)
+                ser.t.append(pf.t_ms)
+            if p.side in seen:
+                continue
+            seen.add(p.side)
+            out[p.side].bodies.append(b)
+            out[p.side].t.append(pf.t_ms)
+    # Per-player series only add something where a side holds more than one player.
+    out.update({k: v for k, v in own.items() if len(ids[v.side]) > 1})
     return out
+
+
+def player_series(player_id: str, side: str) -> str:
+    return f"{player_id}@{side}"
 
 
 _STEP_CACHE: dict[tuple[int, int], tuple] = {}
@@ -329,7 +350,7 @@ def swing_evidence(series: dict[str, SideSeries], t_ms: float, side: str | None,
                    window_ms: float, frame_ms: float) -> tuple[float, float]:
     """``(p_swing, wrist_v_max)`` of ``side`` (both sides when None) within ``window_ms`` of ``t_ms``:
     the pose model's best swing probability and the fastest wrist (body spans per second)."""
-    sides = [series[side]] if side is not None and side in series else list(series.values())
+    sides = [s for s in series.values() if s.side == side] if side in ("near", "far") else list(series.values())
     step = max(frame_ms, 20.0)
     best_p, best_v = 0.0, 0.0
     iv = FEATURES.index("wrist_v_max")

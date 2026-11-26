@@ -185,7 +185,8 @@ def attr_matrix(
             side = next((sd for sd, se in ser.items()
                          if (b := se.near(s.t_ms, 120.0)) is not None and b.player_id == s.hitter), None)
         if side is not None:
-            pose[k] = PH.window_features(ser[side], s.t_ms, frame_ms)
+            own = ser.get(PH.player_series(s.hitter, side)) if s.hitter else None
+            pose[k] = PH.window_features(own if own is not None else ser[side], s.t_ms, frame_ms)
         hand[k] = _hand_row(p, tuple(s.shuttle_px) if s.shuttle_px else None, side)
     ci = FEATURES_V2.index("contact_h")
     dom = _dom_rows(hand, np.nan_to_num(X_v2[:, ci], nan=-1.0) if n else np.zeros(0), hitters)

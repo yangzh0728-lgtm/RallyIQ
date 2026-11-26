@@ -46,6 +46,9 @@ SupportFn = Callable[[int, float, float], bool]
 # (frame, x, y) -> True where a shuttle can lie or be held still: on our court's floor
 # (with run-off) or inside one of our players' boxes.
 RestFn = Callable[[int, float, float], bool]
+# (frames, xy, indices of sharp turns, concurrency) -> log-odds that the trajectory is another court's,
+# or None when that cannot be told.
+ForeignFn = Callable[[Sequence[int], Sequence[tuple[float, float]], Sequence[int], float], "float | None"]
 
 
 @dataclass
@@ -157,6 +160,33 @@ class TrackerConfig:
     chain_s: float = 0.3
     chain_turn_deg: float = 45.0
     chain_px_frac: float = 0.03
+    # Whose shuttle (``foreign``, see ownership.py): a tracklet whose probability of being
+    # another court's is above ``foreign_drop`` is dropped; below it the probability still
+    # scales the weight, so that between two trajectories over the same frames the one our
+    # players are hitting wins even when the neighbour's is longer. A tracklet that the
+    # linker ran from one shuttle into another is also judged flight by flight (cut at
+    # sharp turns); flights of at least ``foreign_min_points`` points above
+    # ``foreign_flight_drop`` are cut out.
+    foreign_drop: float = 0.5
+    foreign_flight_drop: float = 0.9
+    foreign_min_points: int = 4
+    # Only turns at this speed (diagonals per second, both sides) count there: a shuttle
+    # held, dropped or rolling jitters without anybody hitting it.
+    foreign_turn_speed: float = 0.15
+    foreign_weight_power: float = 1.0
+    # ``concurrency``: a moving tracklet (mean score >= ``strong_score``) lasts this long
+    # and spans this share of the width.
+    concurrent_min_s: float = 0.4
+    concurrent_min_span: float = 0.06
+    concurrent_min_speed: float = 0.1  # mean path speed, diagonals per second
+    # Less than this in all is no evidence of a second court (a replay, a thrown spare shuttle).
+    concurrent_min_total_s: float = 5.0
+    # With less concurrency than this only one court is in play and nothing is judged.
+    foreign_min_concurrency: float = 0.05
+    # A clean flight between two of our rackets takes its frames back from a tracklet whose
+    # points there score lower by this much on average (``_challenge``; 0 = off).
+    challenge_margin: float = 0.07
+    challenge_min_points: int = 8
 
 
 @dataclass
@@ -193,6 +223,7 @@ class _Tracklet:
     # Target-court plausibility of each point (1.0 when no region is used).
     region: list[float] = field(default_factory=list)
     supported: bool = False
+    ours: float = 1.0  # probability of being our court's shuttle (1 when not judged)
 
     @property
     def start(self) -> int:
@@ -217,9 +248,15 @@ class _Tracklet:
         if not (n >= need and dense):
             return 0.0
         if not self.region:
-            return float(sum(self.scores))
+            return float(sum(self.scores)) * self.ours ** cfg.foreign_weight_power
         w = float(sum(s * r for s, r in zip(self.scores, self.region)))
+        w *= self.ours ** cfg.foreign_weight_power
         return w * (1.0 + cfg.player_support_bonus) if self.supported else w
+
+    def score_sum(self, cfg: TrackerConfig) -> float:
+        """Selection weight without the length test."""
+        w = float(sum(s * r for s, r in zip(self.scores, self.region))) if self.region else float(sum(self.scores))
+        return w * self.ours ** cfg.foreign_weight_power * (1.0 + cfg.player_support_bonus * self.supported)
 
     def mean_region(self) -> float:
         return float(np.mean(self.region)) if self.region else 1.0
@@ -228,7 +265,7 @@ class _Tracklet:
         return _Tracklet(
             [self.frames[i] for i in keep], [self.xy[i] for i in keep],
             [self.scores[i] for i in keep], [self.cand_idx[i] for i in keep],
-            [self.region[i] for i in keep] if self.region else [], self.supported,
+            [self.region[i] for i in keep] if self.region else [], self.supported, self.ours,
         )
 
 
@@ -236,13 +273,16 @@ class ShuttleTracker:
     def __init__(self, fps: float, width: int, height: int, config: TrackerConfig | None = None,
                  region: RegionFn | None = None, support: SupportFn | None = None,
                  rest: RestFn | None = None, strict_support: SupportFn | None = None,
-                 held: SupportFn | None = None):
+                 held: SupportFn | None = None, foreign: ForeignFn | None = None,
+                 contact: SupportFn | None = None):
         """``region`` / ``support`` lock the tracker onto the target court when
         several matches are in view (see ``rallyiq.perception.target_court``).
         ``strict_support`` is a racket-contact test that decides tracklets in air shared
         with another court (checked only where a tracklet starts, ends or turns), where
         the loose ``support`` is reached too easily. ``held`` marks a shuttle in a hand,
-        which may sit still without being a fixed scene feature."""
+        which may sit still without being a fixed scene feature. ``foreign`` tells another
+        court's trajectory from ours by our players alone and
+        ``contact`` is true at a swinging racket of ours (see ownership.py)."""
         if fps <= 0:
             raise ValueError("fps must be > 0")
         self.fps = float(fps)
@@ -250,6 +290,8 @@ class ShuttleTracker:
         self.cfg = config or TrackerConfig()
         self.region, self.support, self.rest = region, support, rest
         self.strict_support, self.held = strict_support, held
+        self.foreign, self.contact = foreign, contact
+        self.concurrency = 0.0  # share of shuttle time with two in flight (another court in view)
         self.hot_cells: set[tuple[int, int]] = set()  # fixed-feature cells, for diagnosis
         self.rejected_foreign = 0  # tracklets dropped as another court's shuttle
         # (start, end, n, mean region, supported, verdict) per linked tracklet, for diagnosis
@@ -278,8 +320,9 @@ class ShuttleTracker:
         if spots:
             cands, index_map = self._without_spots(cands, index_map, spots)
             tracklets = self._link(cands, index_map)
-        tracklets = self._target_court(tracklets)
-        chosen = self._select(tracklets)
+        self.concurrency = self._concurrency(tracklets)
+        tracklets = self._ownership(self._target_court(tracklets))
+        chosen = self._challenge(self._select(tracklets), tracklets)
 
         det: dict[int, TrackPoint] = {}
         selected: dict[int, int] = {}
@@ -522,6 +565,72 @@ class ShuttleTracker:
             return None
         return t if len(keep) == len(t.frames) else t.subset(keep)
 
+    def _ownership(self, tracklets: list[_Tracklet]) -> list[_Tracklet]:
+        """Drop trajectories (and flights inside linked ones) that another court is playing."""
+        if self.foreign is None or self.concurrency < self.cfg.foreign_min_concurrency:
+            return tracklets
+        cfg, out = self.cfg, []
+
+        def p_foreign(t: _Tracklet) -> float:
+            z = self.foreign(t.frames, t.xy, self._hard_turns(t), self.concurrency)
+            return 0.0 if z is None else _sigmoid(z)
+
+        for t in tracklets:
+            if len(t.frames) < cfg.min_len:
+                out.append(t)
+                continue
+            cuts = self._hard_turns(t)
+            bounds = [0, *[c + 1 for c in cuts], len(t.frames)]
+            keep: list[int] = []
+            for a, b in zip(bounds, bounds[1:]):
+                idx = list(range(a, b))
+                if len(cuts) and len(idx) >= cfg.foreign_min_points \
+                        and p_foreign(t.subset(idx)) > cfg.foreign_flight_drop:
+                    continue
+                keep += idx
+            if not keep:
+                self.rejected_foreign += 1
+                self._note(t, "neighbour")
+                continue
+            if len(keep) < len(t.frames):
+                self._note(t, "cut")
+                # What is left on either side of a removed flight is a trajectory of its own.
+                runs, start = [], 0
+                for i in range(1, len(keep) + 1):
+                    if i == len(keep) or keep[i] != keep[i - 1] + 1:
+                        runs.append(keep[start:i])
+                        start = i
+                parts = [t.subset(r) for r in runs]
+            else:
+                parts = [t]
+            for q in parts:
+                p = p_foreign(q) if len(q.frames) >= cfg.min_len else 0.0
+                if p > cfg.foreign_drop:
+                    self.rejected_foreign += 1
+                    self._note(q, "neighbour")
+                    continue
+                q.ours = 1.0 - p
+                out.append(q)
+        return out
+
+    def _path_speed(self, t: _Tracklet) -> float:
+        path = sum(math.dist(a, b) for a, b in zip(t.xy, t.xy[1:]))
+        return path / self.diag / (max(t.end - t.start, 1) / self.fps)
+
+    def _concurrency(self, tracklets: list[_Tracklet]) -> float:
+        """Share of the time with a shuttle in flight that has at least two in flight."""
+        cfg = self.cfg
+        n: dict[int, int] = {}
+        for t in tracklets:
+            xs, ys = [p[0] for p in t.xy], [p[1] for p in t.xy]
+            if (float(np.mean(t.scores)) < cfg.strong_score or t.end - t.start < cfg.concurrent_min_s * self.fps or t.weight(cfg) <= 0
+                    or self._path_speed(t) < cfg.concurrent_min_speed or max(max(xs) - min(xs), max(ys) - min(ys)) < cfg.concurrent_min_span * self.width):
+                continue
+            for f in range(t.start, t.end + 1):
+                n[f] = n.get(f, 0) + 1
+        two = sum(1 for k in n.values() if k > 1)
+        return two / len(n) if two >= cfg.concurrent_min_total_s * self.fps else 0.0
+
     def _judge(self, t: _Tracklet) -> tuple[str, _Tracklet]:
         if self.support is not None:
             t.supported = any(self.support(f, x, y) for f, (x, y) in zip(t.frames, t.xy))
@@ -570,8 +679,12 @@ class ShuttleTracker:
                     return True
         return False
 
-    def _turns(self, t: _Tracklet) -> list[int]:
-        """Middle index of each run of sharp turns."""
+    def _hard_turns(self, t: _Tracklet) -> list[int]:
+        """Sharp turns of a fast shuttle (see ``foreign_turn_speed``)."""
+        return self._turns(t, self.cfg.foreign_turn_speed * self.diag / self.fps)
+
+    def _turns(self, t: _Tracklet, min_step: float = 0.0) -> list[int]:
+        """Middle index of each run of sharp turns (of at least ``min_step`` px per frame)."""
         n = len(t.frames)
         cos_max = math.cos(math.radians(self.cfg.contact_turn_deg))
         hits = []
@@ -579,6 +692,9 @@ class ShuttleTracker:
             (ax, ay), (bx, by), (cx, cy) = t.xy[i - 2], t.xy[i], t.xy[i + 2]
             u, v = (bx - ax, by - ay), (cx - bx, cy - by)
             nu, nv = math.hypot(*u), math.hypot(*v)
+            du, dv = t.frames[i] - t.frames[i - 2], t.frames[i + 2] - t.frames[i]
+            if nu / du < min_step or nv / dv < min_step:
+                continue
             if nu > 1 and nv > 1 and (u[0] * v[0] + u[1] * v[1]) / (nu * nv) < cos_max:
                 hits.append(i)
         out, run = [], []
@@ -648,6 +764,45 @@ class ShuttleTracker:
             self._note(sub, "kept")
         chosen.sort(key=lambda t: t.start)
         return chosen
+
+    def _challenge(self, chosen: list[_Tracklet], tracklets: list[_Tracklet]) -> list[_Tracklet]:
+        """Give a hit-to-hit flight its frames back. A linked tracklet that jumps between a
+        racket, a neighbour's shuttle and a light can outweigh, by sheer length, a shorter
+        clean flight that leaves one of our rackets and arrives at another. Over the frames
+        they share the clean flight scores higher point by point, and it takes them."""
+        cfg = self.cfg
+        if self.contact is None or cfg.challenge_margin <= 0:
+            return chosen
+        score: dict[int, float] = {f: s for t in chosen for f, s in zip(t.frames, t.scores)}
+        held: dict[int, tuple[float, float]] = {f: q for t in chosen for f, q in zip(t.frames, t.xy)}
+        winners = []
+        for t in sorted(tracklets, key=lambda t: t.weight(cfg), reverse=True):
+            n = len(t.frames)
+            if n < cfg.challenge_min_points or t.weight(cfg) <= 0 or self._turns(t):
+                continue
+            lost = [i for i, f in enumerate(t.frames)
+                    if f in held and math.dist(held[f], t.xy[i]) > 1.0]
+            if len(lost) < 0.5 * n or self._idle(t):
+                continue
+            gain = float(np.mean([t.scores[i] - score[t.frames[i]] for i in lost]))
+            if gain < cfg.challenge_margin or any(set(t.frames) & set(w.frames) for w in winners):
+                continue
+            if self.contact(t.frames[0], *t.xy[0]) and self.contact(t.frames[-1], *t.xy[-1]):
+                winners.append(t)
+        if not winners:
+            return chosen
+        taken = {f for w in winners for f in w.frames}
+        out = list(winners)
+        for t in chosen:
+            keep = [i for i, f in enumerate(t.frames) if f not in taken]
+            if len(keep) == len(t.frames):
+                out.append(t)
+            elif len(keep) >= cfg.min_len:
+                out.append(t.subset(keep))
+        for w in winners:
+            self._note(w, "challenge")
+        out.sort(key=lambda t: t.start)
+        return out
 
     def _note(self, t: _Tracklet, verdict: str) -> None:
         if len(t.frames) >= self.cfg.min_len:
@@ -809,3 +964,7 @@ class ShuttleTracker:
 
 def _clip01(v: float) -> float:
     return float(min(1.0, max(0.0, v)))
+
+
+def _sigmoid(z: float) -> float:
+    return 1.0 / (1.0 + math.exp(-min(max(z, -30.0), 30.0)))

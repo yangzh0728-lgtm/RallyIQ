@@ -31,7 +31,9 @@ class PlayerTrackingConfig:
     stride: int = 1  # run pose on every n-th frame (2 halves cost on 60 fps)
     # "auto" decides from the first ``format_probe_frames`` processed frames.
     match_format: str = "auto"
-    format_probe_frames: int = 90
+    # 90 (3-6 s) caught people standing about before the first rally: an onlooker chatting at the
+    # net made a singles match doubles (0618). Only candidates are buffered, so this is cheap.
+    format_probe_frames: int = 450
     format: FormatConfig = field(default_factory=FormatConfig)
     sides: SideConfig = field(default_factory=SideConfig)
     # Second pose pass on an upscaled crop of the far half of the court, for
@@ -48,9 +50,9 @@ class PlayerTrackingConfig:
     far_feet_above: float = 0.25  # far player's feet at most this far above the near head
     far_max_height_ratio: float = 0.75
     # Drop whole track runs inside the court lines (+0.3 m) for less than this share of their frames
-    # (postprocess.drop_offcourt_runs). 0 = off. Own footage: 0.25 removes sideline spectators (3 % inside)
+    # (postprocess.drop_offcourt_runs). 0 = off. 0.25 removes sideline spectators (3 % inside)
     # and keeps every real player track seen (lowest 53 %, doubles players hugging a sideline).
-    min_inside_frac: float = 0.0
+    min_inside_frac: float = 0.25
 
 
 class PlayerTrackingOutput(list):
