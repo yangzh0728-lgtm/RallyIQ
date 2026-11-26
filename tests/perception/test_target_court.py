@@ -152,6 +152,13 @@ def test_drop_offcourt_runs_min_inside_frac_drops_sideline_spectators():
             _state("P2", 1, W - 0.6, 10.0 if f % 4 else 13.9),  # our far player: inside, out the back now and then
             _state("P3", 2, -0.6, 8.0),  # spectator standing just outside the sideline, within the run-off
         ]))
-    assert drop_offcourt_runs(frames) == 0  # within the 1 m run-off: the old rule keeps everyone
-    assert drop_offcourt_runs(frames, min_inside_frac=0.25) == 1
+    # Within the 1 m run-off: without the sideline rule (train_v5) and the inside share, everyone stays.
+    assert drop_offcourt_runs(frames, side_outside_frac=1.01) == 0
+    assert drop_offcourt_runs(frames, side_outside_frac=1.01, min_inside_frac=0.25) == 1
     assert all(sorted(p.player_id for p in f.players) == ["P1", "P2"] for f in frames)
+
+
+def test_drop_offcourt_runs_sideline_rule_drops_a_spectator_by_default():
+    frames = [PlayerFrameResult(f, f * 33.3, [_state("P1", 0, W / 2, 3.0), _state("P3", 2, -0.3, 8.0)]) for f in range(40)]
+    assert drop_offcourt_runs(frames) == 1
+    assert all([p.player_id for p in f.players] == ["P1"] for f in frames)

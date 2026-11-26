@@ -1,0 +1,107 @@
+# key | action (add / retime / status) | t | t_new or status | side | stroke | note
+own_20260906_0616 | add | 126.53 | hit | near | short_serve | serve, shuttle leaves the racket
+own_20260906_0616 | drop | 126.83 | - | near | - | same serve, label late (was unsure_hit)
+own_20260906_0616 | add | 127.33 | hit | far | lift | lunging lift, high arc to the near back
+own_20260906_0616 | add | 128.16 | hit | near | smash | overhead, steep down
+own_20260906_0616 | add | 204.67 | not_a_hit | far | - | shuttle dropped from the hand
+own_20260906_0616 | add | 289.09 | not_a_hit | near | - | near player standing, no shuttle
+own_20260906_0616 | add | 406.74 | hit | far | short_serve | serve
+own_20260906_0616 | add | 422.42 | hit | near | short_serve | serve
+own_20260906_0616 | add | 426.36 | hit | near | - | overhead at the left edge of the frame, shuttle out to the right
+own_20260906_0616 | add | 435.47 | hit | far | short_serve | serve
+own_20260906_0617 | add | 46.88 | hit | near | short_serve | serve
+own_20260906_0617 | add | 47.71 | hit | far | lift | lift
+own_20260906_0617 | retime | 48.41 | 48.11 | near | - | contact is 0.3 s earlier on the real track
+own_20260906_0618 | add | 8.60 | hit | near | short_serve | serve
+own_20260906_0618 | add | 11.48 | not_a_hit | near | - | walking back, next court's shuttle
+own_20260906_0618 | add | 15.85 | not_a_hit | far | - | shuttle in the hand
+own_20260906_0618 | add | 18.05 | hit | far | net_shot | return low to the near front
+own_20260906_0618 | add | 19.05 | hit | near | net_shot | net shot
+own_20260906_0618 | add | 19.99 | hit | far | lift | lift to the near back
+own_20260906_0618 | add | 25.32 | hit | far | lift | lift
+own_20260906_0618 | add | 59.36 | not_a_hit | near | - | next court's shuttle
+own_20260906_0618 | add | 65.23 | hit | near | - | low reach, shuttle up over the net
+own_20260906_0618 | add | 66.07 | hit | far | - | overhead, shuttle down
+own_20260906_0619 | status | 85.78 | not_a_hit | far | - | dead ball, shuttle passed to the server
+own_20260906_0619 | add | 154.92 | not_a_hit | far | - | picking the shuttle up
+own_20260906_0619 | add | 160.49 | hit | near | short_serve | serve
+own_20260906_0619 | add | 276.00 | unsure_hit | near | - | overhead, contact not readable
+own_20260906_0619 | add | 412.61 | hit | near | lift | lift (unsure label 412.35 is this stroke)
+own_20260906_0619 | drop | 412.35 | - | near | - | same stroke
+own_20260906_0619 | add | 413.88 | hit | far | drop | overhead drop
+own_20260302_07 | add | 229.93 | hit | far | - | far player runs and plays behind the spectator
+own_20260302_07 | add | 230.93 | hit | near | lift | low pick-up, high arc
+own_20260302_07 | add | 337.24 | not_a_hit | far | - | standing, next court's shuttle
+own_20260302_07 | add | 339.47 | not_a_hit | near | - | standing, next court's shuttle
+own_20260302_07 | add | 343.21 | hit | far | - | far overhead
+own_20260302_07 | add | 346.16 | hit | near | smash | overhead jump, steep down
+own_20260302_07 | add | 346.65 | hit | far | - | defence
+own_20260302_07 | add | 352.74 | hit | far | lift | far player at the net lifts to the near back
+own_20260302_07 | add | 480.58 | hit | near | - | lunge at the net
+own_20260302_07 | retime | 485.79 | 485.12 | near | - | contact is 0.67 s earlier on the real track
+#qa6(not applied) own_20260529_0004 | add | 175.91 | not_a_hit | far | - | standing, shuttle on the floor
+#qa6(not applied) own_20260529_0004 | add | 189.56 | not_a_hit | far | - | standing, dead ball
+#qa6(not applied) own_20260529_0004 | add | 216.63 | not_a_hit | near | - | dead ball
+own_20260906_0618 | status | 9.51 | hit | far | lift | answers the serve at 8.6 (the old track hid the serve), shuttle goes long
+own_20260906_0621 | add | 54.49 | hit | far | lift | lift
+own_20260906_0621 | add | 55.99 | hit | near | clear | overhead, flat and deep
+own_20260906_0621 | retime | 148.05 | 147.68 | near | - | serve contact is 0.37 s earlier on the real track
+own_20260906_0621 | drop | 147.48 | - | near | - | this is the serve itself (was not_a_hit)
+own_20260906_0621 | add | 153.32 | hit | far | smash | overhead, flat and fast
+own_20260906_0621 | add | 153.62 | hit | near | - | fast reply
+own_20260906_0621 | retime | 174.24 | 174.50 | far | - | contact is 0.26 s later
+own_20260310_01 | add | 17.13 | not_a_hit | near | - | shuttle thrown to the server
+own_20260310_01 | add | 26.38 | unsure_hit | far | - | far player leaning back, contact not readable
+own_20260310_01 | add | 33.38 | not_a_hit | far | - | standing between rallies
+own_20260310_01 | add | 322.96 | hit | near | short_serve | serve
+own_20260310_01 | add | 393.08 | hit | near | - | near partner (P2) intercepts at the net
+own_20260310_01 | retime | 440.92 | 440.41 | near | - | serve contact is 0.51 s earlier on the real track
+own_20260310_01 | add | 442.46 | hit | near | - | near player drives it back
+own_20260310_01 | add | 442.99 | hit | far | - | jumping overhead
+own_20260310_01 | add | 459.48 | not_a_hit | far | - | between rallies, lob to the server
+# round 2 (after the doubles swing fix): detections inside labelled windows that no label covered
+own_20260324_0241 | add | 134.87 | hit | far | - | far player forehand at the net
+own_20260324_0241 | add | 135.75 | hit | near | - | near overhead at the back
+own_20260324_0241 | add | 136.67 | hit | far | - | far forehand, shuttle back to the near pair
+own_20260324_0241 | add | 258.06 | hit | far | - | far forehand at the net, shuttle over to the near pair
+own_20260324_0241 | add | 268.33 | not_a_hit | near | - | standing, racket down
+own_20260324_0241 | add | 278.06 | hit | far | - | far player at the net, shuttle on the racket
+own_20260324_0241 | add | 278.58 | hit | near | - | near jumping overhead
+own_20260324_0241 | add | 279.15 | hit | far | - | far forehand
+own_20260324_0241 | add | 280.08 | hit | near | - | near forehand at chest height
+own_20260324_0241 | add | 288.25 | unsure_hit | far | - | far pair, contact not readable
+own_20260324_0241 | add | 289.42 | hit | near | - | near jumping overhead
+own_20260324_0241 | add | 289.82 | hit | far | - | far forehand
+own_20260324_0241 | add | 294.41 | hit | far | - | far overhead
+own_20260310_01 | add | 20.15 | unsure_hit | far | - | far player, shuttle at the chest then up; serve or toss
+own_20260310_01 | add | 301.05 | unsure_hit | far | - | far player with the shuttle at the waist, serve not readable
+own_20260310_01 | add | 307.01 | hit | far | - | far forehand, shuttle on the racket
+own_20260310_01 | retime | 308.21 | 308.68 | near | - | near jumping overhead, contact 0.47 s after the label
+own_20260310_01 | add | 400.45 | hit | near | - | near forehand at the net, shuttle up
+own_20260310_01 | add | 421.19 | not_a_hit | far | - | far pair standing, no swing
+own_20260310_01 | add | 429.98 | hit | far | - | far forehand at the net, shuttle on the racket
+own_20260310_01 | add | 441.04 | hit | far | - | far lunge forehand after the serve
+own_20260906_0622 | status | 82.98 | hit | far | smash | far jumping overhead, the near player answers at 83.42 (was not_a_hit)
+own_20260906_0622 | add | 223.86 | hit | far | - | far lunge, shuttle on the racket
+own_20260906_0622 | add | 309.41 | hit | near | - | near partner (left) forehand, shuttle on the racket
+own_20260906_0622 | add | 312.14 | hit | near | - | near overhead reach, shuttle up
+own_20260906_0622 | status | 369.17 | unsure_hit | far | - | far jumping overhead just before the near player's touch (was not_a_hit)
+own_20260906_0622 | add | 371.17 | hit | near | - | near partner low reach, shuttle on the racket
+own_20260906_0622 | add | 373.41 | hit | near | - | near partner forehand at the net
+own_20260906_0622 | add | 377.61 | unsure_hit | near | - | shuttle just above the near player, contact not readable
+own_20260906_0621 | add | 53.69 | hit | near | short_serve | near forehand serve, shuttle off the racket
+own_20260906_0621 | add | 56.66 | hit | far | - | far forehand at the net
+own_20260906_0621 | add | 109.48 | hit | far | short_serve | far backhand serve
+own_20260906_0616 | add | 297.56 | not_a_hit | near | - | near player standing, arc from the next court
+# round 3: detections of the OLD pipeline inside labelled windows that no label covered (fairness check)
+own_20260324_0245 | add | 214.20 | unsure_hit | far | - | far player at the net, shuttle by the racket
+own_20260324_0245 | add | 320.44 | not_a_hit | near | - | same jump smash as the label at 320.12
+own_20260324_0245 | add | 1000.55 | unsure_hit | far | - | far player reaching at the net
+own_20260310_01 | add | 324.37 | unsure_hit | near | - | shuttle at the near player's head, contact not readable
+own_20260310_01 | add | 338.11 | not_a_hit | near | - | no swing, shuttle passing high
+own_20260310_01 | add | 394.88 | unsure_hit | far | - | far pair crouching, contact not readable
+own_20260310_01 | add | 401.03 | not_a_hit | near | - | standing, no swing
+own_20260310_01 | add | 401.42 | not_a_hit | near | - | standing, no swing
+own_20260310_01 | add | 413.98 | hit | far | - | far lunge forehand, shuttle on the racket
+own_20260906_0616 | add | 424.39 | not_a_hit | near | - | crouching, no swing
+own_20260906_0618 | add | 56.26 | not_a_hit | far | - | picks the shuttle up from the floor
