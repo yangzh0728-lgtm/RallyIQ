@@ -422,3 +422,69 @@ def one_sided(rally: RallySegment, poses: Sequence[PoseFrame], max_hits: int,
     series = series if series is not None else side_series(poses)
     sides = {_side_of(h, series) for h in rally.hits} - {None}
     return len(sides) <= 1
+
+
+# -------------------------------------------------------------- partner swing
+def partner_swing(rallies: list[RallySegment], poses: Sequence[PoseFrame], pose_index, model: PoseHitModel | None,
+                  margin: float, prox_margin: float, window_ms: float = 250.0, frame_ms: float = 40.0) -> int:
+    """Doubles only. For each shuttle-based hit, compare the hitter with their partner(s): if a partner's best
+    ``p_swing`` within ``window_ms`` is at least ``margin`` higher and their proximity score at the hit is at
+    most ``prox_margin`` lower, the partner gets the hit (reason ``hitter_from_swing``). Returns how many moved."""
+    if model is None or margin <= 0 or not rallies or not poses:
+        return 0
+    team: dict[str, str] = {}
+    for pf in poses:
+        for p in pf.players:
+            if p.player_id and p.team:
+                team.setdefault(p.player_id, p.team)
+    if len(set(team.values())) != 2 or len(team) < 3:
+        return 0
+    series = side_series(poses)
+    step = max(frame_ms, 20.0)
+    cache: dict[tuple[str, float], float] = {}
+
+    def p_swing(pid: str, side: str | None, t: float) -> float | None:
+        s_ = series.get(player_series(pid, side or "")) if side else None
+        if s_ is None:
+            s_ = next((v for k, v in series.items() if k.startswith(pid + "@")), None)
+        if s_ is None or not s_.bodies:
+            return None
+        key = (pid, t)
+        if key not in cache:
+            ts = np.arange(t - window_ms, t + window_ms + 1e-6, step)
+            X = np.asarray([window_features(s_, float(x), frame_ms) for x in ts], float)
+            cache[key] = float(model.predict(X).max())
+        return cache[key]
+
+    moved = 0
+    for r in rallies:
+        for h in r.hits:
+            if h.source == SOURCE or h.hitter_id is None or h.shuttle_xy_px is None or h.hitter_id not in team:
+                continue
+            mates = [q for q, t in team.items() if t == team[h.hitter_id] and q != h.hitter_id]
+            if not mates:
+                continue
+            prox = {x.player_id: x for x in pose_index.proximities(h.frame, h.shuttle_xy_px)}
+            me = prox.get(h.hitter_id)
+            if me is None:
+                continue
+            side = me.pose.side
+            ps_me = p_swing(h.hitter_id, side, h.t_ms)
+            if ps_me is None:
+                continue
+            best, best_gain = None, 0.0
+            for q in mates:
+                o = prox.get(q)
+                if o is None or o.filled or o.score < me.score - prox_margin:
+                    continue
+                ps = p_swing(q, o.pose.side, h.t_ms)
+                if ps is not None and ps - ps_me >= margin and ps - ps_me > best_gain:
+                    best, best_gain = q, ps - ps_me
+            if best is not None:
+                h.scores["partner_p_swing_gain"] = round(best_gain, 3)
+                h.hitter_id = best
+                h.hitter_court_xy = prox[best].pose.foot_court_xy
+                if "hitter_from_swing" not in h.reasons:
+                    h.reasons.append("hitter_from_swing")
+                moved += 1
+    return moved

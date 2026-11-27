@@ -100,6 +100,14 @@ class EventsConfig:
     swing_veto_keep_serve: bool = False  # ... never drop a rally's first hit
     # ... never drop a hit answered by (or answering) the other side within this many ms; 0 = unused
     swing_veto_keep_exchange_ms: float = 0.0
+    # Doubles: hand a hit to the hitter's partner when the bundled pose model sees the partner swing clearly
+    # more (``p_swing`` higher by at least this much within ``swing_veto_window_ms``) while the partner is
+    # nearly as close to the shuttle (proximity score at most ``partner_swing_prox_margin`` lower).
+    # Partners often stand within a racket length of the shuttle at the net or in a front/back rotation,
+    # and the nearest wrist at the contact frame is then a coin toss (train_v6: 2 of the 4 errors on 102
+    # hand-checked doubles hits, none broken). 0 = off.
+    partner_swing_margin: float = 0.2
+    partner_swing_prox_margin: float = 0.3
     # Drop a rally whose hits (at most this many; none counts too) are all by one side: nobody answered
     # across the net, so it is a catch, pick-up or toss between points. 0 disables.
     one_sided_rally_max_hits: int = 0
