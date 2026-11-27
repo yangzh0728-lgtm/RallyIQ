@@ -1,0 +1,269 @@
+# v9 stroke review of the 268 not-yet-sure am7 hits (review/n/s_NN.jpg). n | stroke (- = keep/none) | sure | reason
+0 | lift | false | far underarm, arc rises high over the net toward the near side (spectator blocks the near court)
+1 | - | false | near player at the net; short track, type unreadable (keep drive)
+2 | - | false | near forehand, track behind the spectator, unreadable
+3 | lift | false | far player sends a short high arc; depth unclear
+4 | smash | false | near jumping overhead, steep line down (keep smash)
+5 | - | false | far player, flat track toward the near side; drive or push, unreadable
+6 | lift | false | high narrow arc, spectator blocks the receiver (keep lift)
+7 | - | false | far player, arc falls toward the near player's feet; drop or net shot
+8 | lift | false | far underarm, high arc that lands at the near player at mid court
+9 | - | false | near jump overhead, track leaves the frame top (keep clear)
+10 | - | false | near jump overhead, trail climbs then falls on the far side; clear vs drop unclear (keep drop)
+11 | drop | false | far overhead, shuttle falls steeply to the near player lunging low at the front
+12 | lift | false | near lunge low, shuttle rises and falls to the far player
+13 | smash | true | near jump smash, steep straight line down into the far court, far player low
+14 | lift | true | far player answers the smash low, shuttle climbs over the net to the near mid court
+15 | - | false | near player, medium arc to the far mid court (keep cross_net)
+16 | - | false | far player, long flat arc to the near back; clear or drive
+17 | - | false | near player, short arc by the net (keep lift)
+18 | lift | true | far player, very high climb over the net to the near back, near player waits deep
+19 | smash | true | near jump overhead, fast straight line down to the far player
+20 | block | true | far player meets the smash, short arc just over the net, near player lunges forward
+21 | net_shot | true | near lunge at the net, tiny arc back over the tape
+22 | net_shot | false | far player at the net, short arc back, falls close to the net
+23 | - | false | near overhead, track to the far side partly lost (keep clear)
+24 | - | false | arc ends at the far back left; hitter side vs flight unclear (keep lift)
+25 | - | false | far player, short arc just over the net (keep block)
+26 | - | false | near player, flat arc to the far left (keep push)
+27 | lift | false | near deep lunge, arc rises over the net to the far mid court
+28 | - | false | far player, arc over the net down to the near player at mid; drive or drop
+29 | - | false | near player at the net, short arc (keep net_shot)
+30 | drop | false | near overhead, shuttle falls steeply close to the net on the far side
+31 | - | false | far player, arc to the near back left (keep lift)
+32 | drop | false | near overhead, steep fall just past the net on the far side
+33 | lift | true | far player at the net, very high arc to the near back where the near player jumps
+34 | smash | false | near jumping overhead, steep line toward the far court
+35 | - | false | far player, flat high arc to the near mid court
+36 | lift | false | near player low at the left, shuttle rises over the net to the far side
+37 | net_shot | false | far player at the net, short drop by the tape
+38 | - | false | doubles, far camera, flat short track at the net; unreadable
+39 | - | false | same exchange, unreadable
+40 | drive | false | far player, long flat fast track to the near back
+41 | - | false | near forehand, track to the far right partly lost
+42 | - | false | doubles net exchange, tiny flat track; unreadable
+43 | - | false | near partner at the net, short track; unreadable
+44 | lift | false | far player, shuttle climbs high toward the near back, near player jumps next
+45 | smash | false | near jumping overhead, flat fast track toward the far court
+46 | lift | true | far player, very high arc to the near back right
+47 | - | false | near player, long flat track, receiver hidden; drive or clear
+48 | short_serve | true | near doubles serve, short low arc just over the net, receivers at the front
+49 | - | false | far reply, track to the right partly lost
+50 | lift | false | near partner, shuttle climbs steeply (track mixes a second arc)
+51 | - | false | near player lunges low; vertical track, unclear
+52 | lift | false | near deep lunge, shuttle climbs to the far side
+53 | - | false | far player, short track; unreadable
+54 | - | false | far player, short rising track; unreadable
+55 | lift | false | near player, high arc to the far side
+56 | - | false | near partner at the net, short track; unreadable
+57 | - | false | far player, flat track to the near side (keep net_shot? flight is long and flat: push/drive)
+58 | - | false | near partner, flat track (keep push)
+59 | lift | false | near player, high arc to the far back
+60 | - | false | near player at the net, short vertical track; unreadable
+61 | - | false | far player, short arc to the near front (keep net_shot)
+62 | - | false | far partner, short track; unreadable
+63 | - | false | near partner at the net, no visible flight
+64 | - | false | near partner at the net, short track; unreadable
+65 | - | false | far player, long flat track to the near back; drive or clear
+66 | - | false | near player, long flat track to the far back; drive or clear
+67 | - | false | far partner, short track at the net; unreadable
+68 | - | false | near player, flat track to the far front; drive or push
+69 | - | false | far player lunges, short rising track; unreadable
+70 | - | false | near player lunges, no flight visible
+71 | - | false | far player, short track; unreadable
+72 | lift | false | near player, rising arc to the far back
+73 | smash | false | far player, steep fast line down to the near side
+74 | - | false | near partner at the net, tangled track; unreadable
+75 | - | false | near serve, short track (keep short_serve)
+76 | lift | false | far player at the net, shuttle climbs high
+77 | - | false | near player, no flight visible
+78 | - | false | near player, flat track at the net; unreadable
+79 | smash | false | near jumping overhead, shuttle goes down toward the far right
+80 | lift | true | far player at the net, very high arc to the near back, near player waits deep
+81 | - | false | near overhead from the back, flat track to the far front (keep drop)
+82 | net_shot | false | near player lunges at the net, short arc over the tape
+83 | - | false | near lunge, vertical track; unreadable
+84 | - | false | near lunge, track goes to the far right corner then vertical; unreadable
+85 | - | false | near player, short track at the net (keep drive)
+86 | net_shot | false | near player at the net, short arc over, far player lunges
+87 | - | false | far lunge, short rising track (keep lift)
+88 | lift | false | near player, high arc over the net to the far back
+89 | - | false | near lunge low, tangled track (keep lift)
+90 | lift | false | far player near the net, high arc to the near back right
+91 | clear | false | near player, high long arc to the far back left
+92 | - | false | far player, high arc to the near back; lift or clear
+93 | drive | false | near player, flat fast track toward the far side (keep drive)
+94 | clear | false | far player from the back, high arc to the near back
+95 | clear | false | near player, long high arc to the far back
+96 | - | false | far player at the net, short vertical track (keep lift)
+97 | net_shot | true | near lunge at the net, short arc just over the tape, far player lunges to it
+98 | - | false | far player, medium arc to the near mid court; lift or drive
+99 | - | false | far player, medium arc to the near mid court (keep drive)
+100 | - | false | near player at the net, short tangled track
+101 | - | false | far player, medium arc to the near right mid (keep drive)
+102 | - | false | near player, tangled double track; unreadable
+103 | - | false | far player, medium arc to the near mid right; lift or drive
+104 | - | false | far player, medium arc to the near player at mid
+105 | - | false | near player, track mixes two shuttles
+106 | lift | false | far player at the net, shuttle climbs high (far girl swings next)
+107 | smash | false | near overhead, steep line down to the far left
+108 | lift | false | far player, arc over the net down to the near mid court
+109 | lift | false | near player, high arc that falls on the far side near the net area
+110 | - | false | far player, track split in two; keep drive
+111 | lift | false | far player, arc to the near mid right
+112 | lift | true | near boy lifts from low, steep high climb to the far side
+113 | smash | false | far overhead, fast flat line down to the near pair (keep smash)
+114 | - | false | near boy, track mixes two arcs; block or lift
+115 | - | false | near player, flat track to the far side; drive or clear
+116 | - | false | far player, short arc to the near player at the net
+117 | - | false | near player, tangled track
+118 | - | false | far player at the net, short arc down (keep drop)
+119 | lift | true | far player sends a very high arc to the near back, near girl overhead next
+120 | lift | false | near girl at the net, shuttle climbs vertically
+121 | - | false | near boy, no flight visible
+122 | smash | false | near boy overhead at the net side, steep line to the far left
+123 | - | false | far player, short arc at the net (keep lift)
+124 | - | false | far player, long arc to the near player at mid (keep drop; flight looks long, lift/clear)
+125 | lift | false | near player, rising arc to the far back left
+126 | - | false | near lunge, track mixes two shuttles (window light)
+127 | net_shot | true | near player at the net, small arc over the tape to the far front
+128 | lift | false | far player at the net, arc rises and falls to the near mid left
+129 | - | false | far player, short vertical track at the left
+130 | net_shot | true | near player at the net, small arc over the tape (keep net_shot, now sure)
+131 | clear | true | near overhead, long high arc to the far back left (keep clear, now sure)
+132 | net_shot | false | far player at the net, small tumble just over, near player lunges
+133 | lift | false | near lunge at the net, high arc back to the far side (was net_shot: the arc climbs well above the net)
+134 | smash | true | near jump smash, straight steep line to the far left (keep smash)
+135 | - | false | far player at the net, short arc to the near player's body
+136 | lift | false | near lunge, shuttle rises high toward the far left
+137 | - | false | far player, vertical track at the left edge (keep lift)
+138 | net_shot | false | far player at the net, short tumble to the near front, near player steps in
+139 | smash | true | near jump smash, straight fast line down to the far left
+140 | clear | false | far overhead, high arc to the near back where the near player jumps (keep clear)
+141 | - | false | near serve, arc reaches the far player at mid court; short vs long unclear (keep short_serve)
+142 | lift | true | far player from low, very high arc to the near back, near overhead next
+143 | smash | true | near jumping overhead, steep line down to the far player (keep smash)
+144 | clear | true | far player sends a long high arc over the near player to the near back, near overhead next
+145 | net_shot | true | near lunge at the net, small arc over the tape, far player picks it up at the net
+146 | lift | false | far player at the net, arc rises and falls toward the near right
+147 | lift | false | near player at the net, shuttle climbs steeply over the far player at the net
+148 | clear | true | far player, long high arc to the near back, near player waits deep
+149 | clear | false | near overhead from the back, long high arc to the far mid/back (keep clear)
+150 | - | false | far serve? arc ends at the far player's own side (track direction unclear; keep short_serve)
+151 | - | false | near player, medium arc to the far mid (keep lift)
+152 | - | false | near serve, track shows two arcs (next court); keep short_serve
+153 | - | false | far overhead, track leaves the frame top (keep clear)
+154 | drop | false | near overhead, arc falls just past the net on the far side
+155 | lift | false | far player at the net, arc rises then falls to the near front left
+156 | short_serve | false | far serve, short arc over the net to the near front, near player steps in (keep)
+157 | net_shot | false | near player at the front, small arc just over the tape (was push)
+158 | clear | false | far player, high arc to the near back where the near player jumps (was drive: the flight is high, not flat)
+159 | - | false | far overhead, flight down to the near player lunging forward; smash or drop (keep smash)
+160 | short_serve | true | near serve, low short arc just over the net to the far front (keep, now sure)
+161 | lift | true | far player from low, high arc to the near back, near overhead next (keep, now sure)
+162 | smash | true | near jump overhead, steep fast line down to the far player at mid court
+163 | lift | false | far player, long arc high to the near back (was drive: flight high, near player at the back)
+164 | drop | false | near player, arc that falls steeply just past the net on the far side
+165 | short_serve | true | near serve, short low arc to the far front (keep, now sure)
+166 | - | false | far player, track mixes two shuttles (keep lift)
+167 | lift | false | far player at the net, arc to the near front where the near player lunges (keep net_shot? arc is medium high: lift)
+168 | net_shot | true | near player at the net, small arc over the tape, far player lunges to it
+169 | lift | true | far lunge at the net, very high arc to the near back, near overhead next
+170 | lift | true | near lunge low, arc climbs to the far back, far player overhead next
+171 | drop | true | far overhead, shuttle falls steeply just over the net, near player steps in
+172 | - | false | far player, track leaves the frame (keep lift)
+173 | clear | true | near overhead from the back, long high arc to the far back
+174 | lift | false | near lunge at the net, shuttle climbs over the far player
+175 | - | false | far player, track goes back to the near side low; push or drive
+176 | short_serve | false | near serve-like underarm, short arc to the far front (was drive; first hit of the rally)
+177 | smash | true | near jump overhead, steep line down to the far player's feet (keep, now sure)
+178 | long_serve | true | far serve, very high arc to the near back, near overhead next (keep, now sure)
+179 | drop | false | far player, arc falls toward the near front where the near player lunges (keep drop)
+180 | net_shot | false | near player at the front, arc just over the net to the far front, far player lunges
+181 | clear | false | far player, long high arc to the near back
+182 | smash | false | near overhead from the back, line down to the far mid court
+183 | short_serve | false | near underarm, short arc to the far front at rally start (was drive)
+184 | lift | false | near lunge low, shuttle climbs over the far player at the net
+185 | short_serve | true | near serve, short arc to the far front (keep, now sure)
+186 | lift | true | far player at the net, very high arc to the near back (keep, now sure)
+187 | drop | false | near player from the back, shuttle falls steeply to the far front (keep drop)
+188 | - | false | far player, short track back over the net low; push or net shot
+189 | - | false | near underarm, medium arc to the far front; first hit? (keep push)
+190 | - | false | far overhead, arc to the near front where the near player reaches (smash vs drop; keep smash)
+191 | lift | true | near lunge at the net, shuttle goes straight up over the far player (keep, now sure)
+192 | lift | false | far lunge at the net, arc climbs high and falls on the near left (was net_shot: arc well above the net)
+193 | clear | false | far player, long arc over the near player toward the near back
+194 | - | false | near player, arc rises then falls at the far mid court; drop vs lift unclear (keep drop)
+195 | drop | false | far overhead, short arc down just over the net, near player lunges (keep drop)
+196 | net_shot | false | near lunge at the net, short tumble over the tape (keep net_shot)
+197 | - | false | near player low, track near the floor (pickup); unreadable
+198 | lift | false | near lunge, medium-high arc to the far player at mid court (keep lift)
+199 | lift | false | far player from mid, arc rises and lands at the near mid left (was drop: the arc goes up first)
+200 | short_serve | true | near serve, short low arc to the far front (keep, now sure)
+201 | lift | true | far player, very high arc to the near back, near overhead next (keep, now sure)
+202 | clear | false | near overhead from the back, long arc to the far mid/back (keep clear)
+203 | drop | false | far player, arc falls to the near front where the near player lunges
+204 | - | false | far overhead, track mixes two shuttles (keep clear)
+205 | - | false | far lunge, long flat arc to the near right low; drive
+206 | lift | false | near player at the front, shuttle climbs over the far player
+207 | - | false | far player at the net, short arc; net shot or push
+208 | lift | true | near player, very high arc to the far back, far player jumps next (keep, now sure)
+209 | smash | false | far jumping overhead, line down to the near player's right
+210 | long_serve | true | far serve, very high arc to the near back where the near player jumps (was short_serve: wrong)
+211 | clear | false | far player, long arc to the near back left, near player jumps (was drive)
+212 | - | false | far lunge, track mixes two shuttles (next court on the left)
+213 | short_serve | true | near serve, short arc to the far front (rally start)
+214 | smash | true | near jumping overhead from the back, steep line to the far player (keep, now sure)
+215 | lift | false | far player at mid, shuttle climbs high
+216 | drive | false | far player, flat fast track toward the near player at mid court (was smash: line is flat)
+217 | drive | false | near player answers flat, fast track back over the net
+218 | - | false | near overhead, track mixes two shuttles (keep clear)
+219 | - | false | near player at mid, arc to the far front; drive or lift (keep drive)
+220 | clear | false | far player, long high arc over the near player to the near back
+221 | smash | false | near overhead, steep line down to the far player (was drive)
+222 | - | false | far player, track mixes the next court (keep drive)
+223 | lift | true | near player, high arc to the far back, far player overhead next
+224 | drop | false | far overhead, arc falls to the near front where the near player lunges (keep drop)
+225 | lift | false | near lunge, arc rises over the net to the far mid (was net_shot: apex well above the net)
+226 | lift | true | far player, very high arc to the near back, near overhead next (keep, now sure)
+227 | drive | false | far player, flat track to the near mid, near player meets it at chest height (keep)
+228 | lift | true | near lunge, high arc to the far back, far player overhead next (keep, now sure)
+229 | smash | false | far jumping overhead; track leaves the frame (keep smash)
+230 | short_serve | true | far serve, short arc to the near front, near player steps in low (keep, now sure)
+231 | lift | false | near lunge at the front, arc rises to the far mid (was net_shot: arc well above the net)
+232 | lift | true | far lunge, very high arc to the near back (keep, now sure)
+233 | smash | true | far jumping overhead, steep line down to the near side (keep, now sure)
+234 | drop | false | far player, arc falls to the near front where the near player lunges
+235 | - | false | far lunge, two arcs mixed (next court); keep clear
+236 | lift | false | near player, high arc toward the far back right
+237 | - | false | far player, high long arc to the near back (was smash: the flight is high and long, clear or lift)
+238 | - | false | far player, track mixes two arcs; keep clear
+239 | lift | false | far lunge low, high arc to the near back where the near player waits
+240 | - | false | far player, flat track to the near left (smash or drive; keep smash)
+241 | lift | false | far player at the net, high arc toward the near mid (was clear: hit from the front)
+242 | - | false | far overhead, arc to the near mid; drop vs clear unclear (keep drop)
+243 | clear | false | far jumper (hidden), long high arc to the near back (keep clear)
+244 | - | false | near partner, track mixes two arcs
+245 | - | false | far overhead, arc goes up first then down to the near mid (keep smash? arc rises: clear/drop) unsure
+246 | smash | false | near jumping overhead, steep line down into the far court
+247 | - | false | near player, short track toward the far front; push or drop
+248 | lift | false | far player at the front, arc to the near left where the near partner bends low
+249 | lift | false | near partner low, high arc to the far back
+250 | clear | false | far player, long high flat arc to the near back left
+251 | drive | false | near partner, flat arc to the far mid, far pair at mid court
+252 | lift | true | near player, very high arc to the far back, far player overhead next (keep, now sure)
+253 | - | false | far overhead, two arcs mixed (keep smash)
+254 | lift | false | far player, high arc toward the near back (keep lift)
+255 | - | false | far overhead, track toward the near left mid; smash or drive (keep smash)
+256 | net_shot | false | far player at the net, short tumble to the near front, near player lunges (keep)
+257 | lift | false | near partner at the front, arc climbs over the far pair (keep lift)
+258 | drive | false | far player, flat arc to the near partner at shoulder height
+259 | - | false | near partner, long arc to the far back right; drive or clear (keep drive)
+260 | - | false | near player overhead, track partly lost (keep smash)
+261 | lift | true | far player, very high arc to the near side (keep, now sure)
+262 | - | false | near player, short arc up to the far front; push or lift (keep push)
+263 | lift | false | near player, arc climbs over the far player at the front
+264 | - | false | near player, short arc to the far front player (keep push)
+265 | drive | false | near player, flat arc to the far front player at chest height (keep drive)
+266 | lift | false | far player at the front, arc climbs then falls deep on the near right (was net_shot: it lands behind the near player)
+267 | - | false | far player, arc down to the near player lunging; drop or smash
