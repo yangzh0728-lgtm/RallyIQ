@@ -1,0 +1,102 @@
+# isolated pipeline hits outside the labelled windows (100 of 232, random), review/iso/r_NN.jpg, 4 panels -0.6/-0.15/+0.15/+0.6 s
+# n | label | reason
+0 | not_a_hit | the tracked shuttle is at a next-court player on the left
+1 | hit | near player overhead at a high shuttle, real stroke
+2 | not_a_hit | shuttle tossed to the far player, who bends to pick it up
+3 | unsure | no shuttle visible, near player just shifting
+4 | not_a_hit | shuttle with the next court's players on the left
+5 | unsure | far player on the left may be serving, near player half ready; cannot tell
+6 | not_a_hit | far player taps the shuttle up to himself, near player walking
+7 | not_a_hit | far player scoops the shuttle off the floor
+8 | hit | rally in play, shuttle turns at the far pair's rackets
+9 | hit | near player lunges, shuttle at the racket, rally in play
+10 | hit | near forehand, shuttle off the racket toward the far pair (in play)
+11 | hit | near overhead, rally in play
+12 | not_a_hit | far player bounces the shuttle on his racket between rallies, nobody ready
+13 | not_a_hit | far player scoops the shuttle up, near pair walking
+14 | hit | near player lunges and lifts the shuttle high, rally in play (far pair in stance)
+15 | unsure | far player serves? near pair standing, not clearly ready
+16 | not_a_hit | near player bounces the shuttle on his racket, others standing
+17 | not_a_hit | near player bends to pick the shuttle up
+18 | unsure | near player raises the racket as a high shuttle passes; far pair standing, contact not visible
+19 | hit | near player lunges, shuttle off his racket climbs to the far court, far pair in stance
+20 | hit | near player jumping overhead, far pair in stance
+21 | hit | near partner lunges at the net, shuttle off the racket, far players ready
+22 | unsure | near player at the net as the shuttle passes, contact unclear
+23 | not_a_hit | between rallies, players walking, shuttle tossed at the net
+24 | not_a_hit | far player bounces/drops the shuttle, near players walking
+25 | unsure | near partner lunges at a shuttle by the net, far side not clearly ready
+26 | not_a_hit | near player picks the shuttle up and tosses it over
+27 | not_a_hit | far player drops the shuttle, near player walking to the side
+28 | hit | near partner lunges at the net, far pair crouched in stance
+29 | hit | near partner meets the shuttle at the net, it climbs high, far pair ready
+30 | hit | near player reaches the shuttle low on the left, it rises again (medium)
+31 | unsure | near girl at the right edge sends the shuttle up; far pair standing, cannot tell rally or warm-up
+32 | hit | near player at the net meets the shuttle, it goes back over, rally in play
+33 | not_a_hit | far player tosses the shuttle flat to the near player, who catches it
+34 | hit | near player forehand at the net, shuttle climbs; partner behind in stance (medium)
+35 | not_a_hit | near players walking, shuttle tossed between rallies
+36 | hit | (camera zoomed in) far player swings at the shuttle, near player reaching in on the right
+37 | not_a_hit | (zoomed) shuttle drops past the player to the floor
+38 | not_a_hit | near player catches the shuttle by the net between rallies
+39 | hit | far player sends the shuttle up the middle, near player lunges for it (in play)
+40 | not_a_hit | near player scoops the shuttle off the floor
+41 | not_a_hit | far player juggles, near player bending to pick up a shuttle
+42 | hit | near serve, far player waiting in stance
+43 | hit | far serve, near player ready
+44 | hit | far serve (high), near player in stance then overhead
+45 | unsure | (zoomed) far player reaches as the shuttle passes at the right edge, contact unclear
+46 | hit | near player at the net meets the shuttle, far player lunging (in play)
+47 | hit | far player sends a high lift from the left, near player in stance
+48 | not_a_hit | far player scoops the shuttle off the floor, near player bent over resting
+49 | hit | far player at the left lifts the shuttle high, near player in stance with racket up
+50 | not_a_hit | shuttle on the next court on the left; near player just tossed ours
+51 | not_a_hit | near player walking; shuttle tossed high by the far player between rallies
+52 | not_a_hit | near player taps the shuttle over to the far player between rallies
+53 | not_a_hit | far player tosses the shuttle back over, near player standing
+54 | not_a_hit | shuttle on the floor, far player picks it up
+55 | not_a_hit | near player tosses the shuttle over between rallies, far players walking
+56 | not_a_hit | far player juggles the shuttle, near player standing with racket down
+57 | not_a_hit | far player juggles again, near player not ready
+58 | not_a_hit | far player taps the shuttle to himself at the net, near player walking
+59 | not_a_hit | near player lets the shuttle drop past him (rally end), no swing
+60 | hit | far serve, near player ready, answers with an overhead
+61 | hit | far serve: tosses and hits; near player ready and returns
+62 | not_a_hit | far player juggles, near player standing relaxed
+63 | not_a_hit | far player lets it drop; near player bends to pick it up
+64 | not_a_hit | far player taps the shuttle up while walking, near player walking
+65 | not_a_hit | far player juggles, near player walking back
+66 | not_a_hit | near player scoops the shuttle from the floor and hands it over
+67 | not_a_hit | far player juggles, near player bends to pick up another shuttle
+68 | hit | far serve, near player waiting and returns overhead
+69 | not_a_hit | near player taps the shuttle along low beside him, far player standing
+70 | hit | far serve (high), near player waiting
+71 | not_a_hit | near player walking off; shuttle tossed between rallies
+72 | hit | near player smashes/returns at the left, far player crouched in stance (in play)
+73 | not_a_hit | near player scoops the shuttle off the floor
+74 | not_a_hit | far player juggles, near player standing with racket down
+75 | not_a_hit | far player tosses the shuttle over, near player walking
+76 | not_a_hit | near player juggles and taps the shuttle over, far pair chatting
+77 | not_a_hit | far player catches the shuttle, near pair walking
+78 | not_a_hit | near player bends to pick the shuttle up
+79 | not_a_hit | near partner tosses the shuttle to the far pair, who are standing
+80 | hit | near partner's shot at the net met by the far player, who sends it up; near pair in position (medium)
+81 | hit | far player meets the near partner's push and lifts it, rally in play
+82 | not_a_hit | far player juggles, near pair standing relaxed
+83 | not_a_hit | near player tosses the shuttle to the far player between rallies
+84 | not_a_hit | far player catches the shuttle, everyone standing
+85 | not_a_hit | near partner taps the shuttle over between rallies, far pair standing
+86 | hit | far player lifts the shuttle from a crouch, near pair in play (near overhead follows)
+87 | not_a_hit | far player juggles, near player bent over resting
+88 | not_a_hit | far player juggles, near pair chatting with rackets down
+89 | not_a_hit | far player taps the shuttle over between rallies, near pair talking
+90 | not_a_hit | shuttle falls, near player bends to scoop it up
+91 | not_a_hit | near partner scoops the shuttle from the floor to the far pair
+92 | unsure | near partner serves? far pair standing upright, near partner on the left relaxed
+93 | hit | near player jump smash, far player meets it (in play)
+94 | not_a_hit | near partner taps the shuttle over, far player catches/taps back, nobody in stance
+95 | not_a_hit | far player juggles, near pair standing
+96 | not_a_hit | far player taps the shuttle over, near player catches it
+97 | not_a_hit | far player tosses it to the near player, who catches it
+98 | not_a_hit | far player taps the shuttle over between rallies, near pair standing
+99 | hit | far player at the back meets a high shuttle, near pair in stance (in play)

@@ -107,6 +107,9 @@ class EventsConfig:
     # and the nearest wrist at the contact frame is then a coin toss (train_v6: 2 of the 4 errors on 102
     # hand-checked doubles hits, none broken). 0 = off.
     partner_swing_margin: float = 0.2
+    # Dead-ball filter (events/dead_ball.py): "off", "auto" (bundled models/dead_ball.json) or a JSON path. Removes
+    # isolated hits nobody answers (bouncing, scooping or tapping the shuttle over between rallies).
+    dead_ball: str = "auto"
     partner_swing_prox_margin: float = 0.3
     # Drop a rally whose hits (at most this many; none counts too) are all by one side: nobody answered
     # across the net, so it is a catch, pick-up or toss between points. 0 disables.
@@ -122,6 +125,11 @@ class EventsConfig:
     # --- decisions ---
     min_candidate_conf: float = 0.3  # below this a candidate is not reported at all
     keep_threshold: float = 0.45  # candidates below this survive only if alternation needs them
+    # Alternation may hand a candidate to the other side's player near the shuttle, at this cost (0 = never;
+    # hits.py _alternating_subset), when that player's proximity score is at least alternation_flip_min_prox.
+    # train_v7: 0.2 / 0.4 chosen by nested leave-one-video-out on 11 own videos (together with dead_ball="auto").
+    alternation_flip_penalty: float = 0.2
+    alternation_flip_min_prox: float = 0.4
     low_track_quality: float = 0.35
     ok_threshold: float = 0.6
     hitter_margin: float = 0.15  # proximity gap below which the hitter is ambiguous

@@ -160,6 +160,6 @@ def test_partner_swing_needs_clear_margin_and_doubles(monkeypatch):
     assert PH.partner_swing(rallies, v.poses, idx, _ByPlayer(), 0.2, 1.0, frame_ms=1000.0 / v.fps) == 0
     assert [h.hitter_id for r in rallies for h in r.hits] == before
     s = make_video(n_rallies=1, seed=1)  # singles: no partners, nothing to do
-    sr = segment_events(s.shuttle, s.poses, replace(EventsConfig(), hit_scorer="off"))
+    sr = segment_events(s.shuttle, s.poses, replace(EventsConfig(), hit_scorer="off", dead_ball="off"))
     from rallyiq.events.players import PoseIndex
     assert PH.partner_swing(sr, s.poses, PoseIndex(s.poses, EventsConfig()), _ByPlayer(), 0.2, 1.0) == 0
