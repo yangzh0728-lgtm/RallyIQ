@@ -1,0 +1,89 @@
+# fresh test labels, own_20260529_0009 (review/d/own_20260529_0009_NN.jpg)
+# n | label | t | side | reason
+0 | hit | 225.48 | far | far forehand at the left, shuttle at the racket, flies back to the near court
+1 | hit | 229.78 | near | near forehand at the right, shuttle at the racket head, climbs high to the far court
+2 | not_a_hit | 230.55 | far | far player watches the shuttle land / catches it (rally over)
+3 | not_a_hit | 230.95 | near | far player juggles, near player walking away
+4 | not_a_hit | 231.93 | near | between rallies
+5 | not_a_hit | 240.12 | far | far player bounces the shuttle on his racket before serving
+6 | hit | 241.09 | near | near forehand: shuttle comes to the racket low and goes back up (the far serve itself is not a row)
+7 | hit | 241.60 | far | far player lunges at the net, shuttle turns back up toward the near side
+8 | hit | 242.17 | near | near player meets it low in front, it rises again
+9 | not_a_hit | 242.49 | far | shuttle drops into the net / near player's body after #8; no far swing
+10 | not_a_hit | 242.78 | near | shuttle dropping by the near player's shoulder after the rally ended, no swing
+11 | not_a_hit | 243.13 | far | near player throws the shuttle across to the far player by hand (pipeline hit = false)
+12 | not_a_hit | 243.58 | near | far player catches it
+13 | not_a_hit | 244.56 | near | near player tosses it up between rallies
+14 | not_a_hit | 245.23 | far | juggled shuttle above the near player
+15 | not_a_hit | 245.56 | near | juggle between rallies (far player standing behind the near one)
+16 | not_a_hit | 246.95 | near | near player bounces the shuttle off his racket to the floor
+17 | not_a_hit | 251.27 | near | near player tosses the shuttle up before serving
+18 | hit | 252.97 | far | far player returns the serve, shuttle off his raised racket goes high to the near back
+19 | unsure_hit | 253.95 | near | near player dives low at the shuttle; whether he got it up is not visible
+20 | hit | 255.20 | near | near player lifts the shuttle at his left, it climbs very high
+21 | not_a_hit | 255.77 | far | shuttle high above the near player (no far contact)
+22 | hit | 256.84 | near | near overhead at full stretch, racket at the shuttle
+23 | hit | 257.95 | far | far player at the net meets the shuttle, it turns back
+24 | hit | 258.80 | near | near player lunges low, shuttle rises off the racket
+25 | unsure_hit | 259.96 | far | far player behind the near one at the net, shuttle direction changes there; contact hidden
+26 | hit | 260.45 | near | near player lunges right, shuttle at the racket by the net
+27 | not_a_hit | 260.89 | far | shuttle falls to the floor beside the near player (rally end)
+28 | not_a_hit | 263.16 | far | near player (walking to the shuttle tube, boxed as far) takes a new shuttle and tosses it
+29 | not_a_hit | 264.33 | far | the tossed shuttle drops to the far player
+30 | not_a_hit | 264.63 | far | far player kicks/knocks the falling shuttle away; no rally
+31 | not_a_hit | 564.11 | far | near player (at the net, boxed far) scoops the shuttle up from the floor to the other player (pipeline hit = false)
+32 | not_a_hit | 564.91 | far | other player catches it
+33 | hit | 572.73 | far | far serve, near player waiting; shuttle climbs high
+34 | hit | 573.71 | near | near overhead, racket at the shuttle above the head
+35 | hit | 575.02 | far | far overhead, racket up at the shuttle
+36 | not_a_hit | 575.98 | near | the far smash lands on the near left, near player does not reach it
+37 | not_a_hit | 579.23 | near | near player taps the shuttle up beside the net between rallies
+38 | unsure_hit | 579.53 | near | near player hits it high after juggling; far player not in stance (toss-over or serve, unclear)
+39 | not_a_hit | 581.51 | near | shuttle falls back to the near player, who catches it
+40 | hit | 585.07 | far | far serve, near player waiting; shuttle rises off the racket
+41 | hit | 586.20 | near | near forehand on the right, shuttle at the racket then up
+42 | unsure_hit | 586.49 | far | shuttle comes back down on the near right; far contact not visible behind the near player
+43 | not_a_hit | 586.90 | near | shuttle falls past the near player's racket to the floor (rally end)
+44 | not_a_hit | 589.59 | far | near player scoops the shuttle from the floor (boxed far)
+45 | hit | 593.76 | far | far serve, near player in stance; shuttle rises off the far racket
+46 | hit | 594.70 | near | near player at the shuttle by his shoulder, it climbs high
+47 | hit | 596.90 | near | near player meets the shuttle on his left at the net, it climbs again
+48 | hit | 597.95 | far | far player lunges at the net, shuttle off the racket climbs to the near back
+49 | hit | 598.75 | near | near jumping overhead, racket at the shuttle
+50 | hit | 599.30 | far | far player meets the smash low, shuttle turns back up
+51 | hit | 600.27 | near | near player at the shuttle over his left shoulder, it climbs high
+52 | hit | 601.15 | far | far player at the net, shuttle comes back off his racket
+53 | not_a_hit | 602.25 | near | shuttle falls past the near player to the floor (rally end)
+54 | unsure_hit | 902.27 | far | shuttle turns behind the near player's head; far player hidden, cannot tell who hit
+55 | hit | 903.35 | near | near lunge, racket meets the shuttle near the floor, it climbs high
+56 | hit | 905.00 | far | far player at the net meets the descending shuttle, it climbs back
+57 | hit | 906.35 | near | near overhead, racket at the shuttle
+58 | hit | 908.06 | near | near forehand at the right, shuttle off the racket rises again
+59 | not_a_hit | 908.56 | far | near player catches the shuttle at the head (rally over)
+60 | not_a_hit | 909.14 | near | near player drops the shuttle to the floor between rallies
+61 | not_a_hit | 910.78 | far | near player scoops it along the floor to the other player
+62 | not_a_hit | 913.16 | near | near player scoops the shuttle up from the floor (pipeline hit = false)
+63 | not_a_hit | 914.20 | far | shuttle passed across between rallies; far player is walking (pipeline hit = false)
+64 | not_a_hit | 915.62 | near | between rallies, the shuttle tossed back
+65 | not_a_hit | 916.60 | far | far player bouncing the shuttle on his racket between rallies
+66 | not_a_hit | 919.10 | far | far player juggling, near player not ready (hand at his face)
+67 | not_a_hit | 919.38 | near | same juggle (track flips between two points)
+68 | not_a_hit | 919.84 | far | far player lets it drop
+69 | not_a_hit | 922.25 | far | far player juggling before serving
+70 | hit | 924.46 | far | far serve, shuttle rises straight up off the racket
+71 | hit | 925.21 | near | near jumping overhead, racket at the shuttle
+72 | hit | 926.57 | far | far player meets the smash low, shuttle turns back up
+73 | not_a_hit | 926.81 | near | shuttle at its apex above the far side, near player moving forward
+74 | hit | 927.40 | near | near forehand at the net, shuttle at the racket then up again
+75 | not_a_hit | 927.94 | near | shuttle at the far side after #74; far player not visible hitting, it falls (rally end)
+76 | not_a_hit | 930.78 | far | near player picks the shuttle up from the floor; the tracked one on the left is the next court's
+77 | not_a_hit | 931.08 | near | same, next-court shuttle
+78 | not_a_hit | 931.61 | far | far player tosses the shuttle between rallies
+79 | not_a_hit | 931.90 | near | tossed shuttle falls to the near player
+80 | not_a_hit | 934.50 | far | far player taps the shuttle over between rallies, near player with his back turned
+81 | unsure_hit | 937.35 | near | near player sends the shuttle up while the far player stands with hands on hips (serve or pass)
+82 | unsure_hit | 938.40 | far | far player reaches up and the shuttle goes back up; casual exchange, not clearly a rally
+83 | not_a_hit | 939.32 | near | shuttle falls to the near player, who catches it at the head
+84 | not_a_hit | 939.67 | near | near player tosses it up
+85 | not_a_hit | 940.07 | far | tossed shuttle falling in front of the near player
+86 | not_a_hit | 940.67 | near | shuttle falls to the floor beside the near player

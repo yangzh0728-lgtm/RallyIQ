@@ -18,4 +18,4 @@ if __name__=='__main__':
         if n in('new_runs',) or n.startswith('.'): continue
         if not os.path.lexists(f'{R}/{n}'): os.symlink(os.path.realpath(f'{C}/{n}'),f'{R}/{n}')
     with Pool(4) as p:
-        for r in p.imap(f,sorted(rt.IDS)): print(*r,flush=True)
+        for r in p.imap(f,os.environ['KEYS'].split() if os.environ.get('KEYS') else sorted(rt.IDS)): print(*r,flush=True)

@@ -17,6 +17,12 @@ for p in (B6/'ckpt/d/v6').glob('*.json'): WIN[p.stem]=json.load(open(p))['window
 from collections import defaultdict
 IDV=defaultdict(str,{l.split()[0]:l.split()[1] for l in open('/Users/mac/Desktop/RallyIQ/train_v5/ids.txt')})
 src=lambda k: next(s for s in (str(DD/k/'source.mp4'),os.path.expanduser(f'~/rallyiq-data/runs/own-v12/data/videos/{IDV[k]}/source.mp4'),f'/Users/mac/Desktop/RallyIQ/train_v4/inputs/sources/{k}.mp4',f'{B5}/inputs/sources/{k}.mp4',f'/Users/mac/Desktop/RallyIQ/train_v4/inputs/new_runs/{k}/source.mp4') if os.path.exists(s))
+IDS5={l.split()[0]:l.split()[-1].replace('~',os.path.expanduser('~')) for l in open('/Users/mac/Desktop/RallyIQ/train_v5/ids.txt')}
+def rt_art(k): return IDS5[k]
+import gzip
+def rd(d,n):
+    for p in (f'{d}/{n}.json',f'{d}/{n}.json.gz'):
+        if os.path.exists(p): return gzip.open(p,'rt').read() if p.endswith('gz') else open(p).read()
 det=HeatmapShuttleDetector(Path(W).expanduser(),DetectorConfig(peak_threshold=0.1,top_k=3))
 out_dir=B6/f'ckpt/b/cands_{name}'; out_dir.mkdir(parents=True,exist_ok=True)
 def median(k):
@@ -30,8 +36,14 @@ def median(k):
     m=np.median(np.stack(fr),axis=0).astype(np.uint8); np.save(p,m); return m
 def run(k):
     fps=json.load(open(DD/k/'probe.json' if (DD/k).exists() else f'{B5}/inputs_C/new_runs/{k}/probe.json'))['fps']; stride=max(1,round(fps/30)); Lq=det.seq_len
-    med=median(k)  # HWC RGB uint8, as training
-    bg=torch.from_numpy(np.ascontiguousarray(med.transpose(2,0,1))).float().div(255).to(det.device)
+    # production background: one median per calibration segment (stage.segments_for, the run's own calibration)
+    from rallyiq.perception.shuttle.stage import segments_for
+    from rallyiq.contracts import CourtCalibration,VideoMeta
+    ad=DD/k if (DD/k).exists() else Path(rt_art(k))
+    meta=VideoMeta.model_validate_json(rd(ad,'probe')); cj=rd(ad,'calibration')
+    segs=segments_for(meta,CourtCalibration.model_validate_json(cj) if cj else None,'off')
+    meds=[torch.from_numpy(m).to(det.device) for m in det._medians(Path(src(k)),segs)]
+    def bgf(f): return meds[next((i for i,s in enumerate(segs) if s.start<=f<=s.end),len(segs)-1)]
     old=json.load(open(DD/k/'shuttle_candidates.json' if (DD/k).exists() else f'{B5}/inputs/cands/{k}.json'))
     ranges=[]
     for a,b in sorted(WIN[k]):
@@ -56,7 +68,7 @@ def run(k):
             for b0 in range(0,len(wins),8):
                 bt=wins[b0:b0+8]
                 x=torch.from_numpy(np.stack([np.concatenate([frames[i] for i in w],0) for w,_ in bt])).to(det.device).float().div_(255.)
-                x=torch.cat([bg.unsqueeze(0).expand(len(bt),-1,-1,-1),x],1)
+                x=torch.cat([torch.stack([bgf(s+w[0]) for w,_ in bt]),x],1)
                 with torch.no_grad(): y=det.net(x).float().cpu().numpy()
                 for (w,n_real),hms in zip(bt,y):
                     for pos,i in enumerate(w[:n_real]):

@@ -60,3 +60,27 @@
 - TrackNet public test (30 clips, re-detected): shipped heatmap.pt F1 90.6 / acc 88.3 -> ft1 92.6 / 90.5.
   (v5's 95.0/93.0 came from candidates of the older loop/base.pt; same code on today's heatmap.pt gives 90.6.)
 - ShuttleSet local test-match clips (6, re-detected, bundled scorer): hit F1 61.4 -> 65.4, rules 45.3 -> 52.0.
+
+### B end-to-end (harness fixes)
+- First end-to-end runs used one whole-video background median and kept all peaks >= 0.1; production uses one median per
+  calibration segment and the checkpoint's peak_threshold 0.3. With both fixed (scripts/detrange.py, thr_cands.py) the
+  base detector reproduces the v5 candidates exactly (0310_01: top-score diff 0.000, hit F1 0.716 = v5).
+- Guards at the production threshold 0.3: TrackNet test F1/acc base 93.9/91.8 -> ft1 94.5/92.2; ShuttleSet 6 local
+  test-match clips hit F1 61.1 -> 61.9, rally F1 73.9 -> 81.8 (bundled scorer). No drop.
+- Label round B1 (labels/v6_decisions.txt -> labels/amateur_v6.json): 30 detections in labelled windows with no label,
+  from base/ft1 re-detected tracks, read from review/unlab/r_NN.jpg: 14 hits, 9 not-hits, 7 unsure. qa6 untouched.
+- D: fresh videos own_20260529_0005/0007/0009 (never labelled, not in any training): 3 fixed 40 s windows each at 20/50/80 %
+  of the video, every pipeline hit and rules candidate read by me: 246 rows, 87 hits (labels/d/*.txt).
+  v6 pipeline (v5 tracker + replayed players, bundled scorer) F1 0.798 (0005 0.857, 0007 0.737, 0009 0.806).
+
+### B/C verdict (17 own videos, amateur_v6 labels, paired bootstrap over videos, 5,000 draws)
+| tracks | scorer | all 17 | other 11 | qa6 |
+|---|---|---|---|---|
+| v5 (base detector) | v3b (shipped, LOVO lovo_B5) | **0.847** | **0.891** | **0.695** |
+| v5 | retrained on v6 labels (R6C, LOVO) | 0.834 [-0.028,+0.007] | 0.885 | 0.656 [-0.072,-0.017] |
+| ft1 detector | v3b | 0.821 [-0.045,-0.008] | 0.864 [-0.050,-0.006] | 0.664 |
+| ft1 detector | retrained on ft1 tracks (R6F, LOVO) | 0.821 [-0.050,-0.003] | 0.856 | 0.690 |
+Fresh videos (D, 87 hits): v5 tracks 0.798 vs ft1 tracks 0.739 (ft1 rows not all labelled, but recall also falls 69 -> 61 TP).
+=> ft1 detector NOT shipped (better per-frame and on public sets, worse hits end-to-end: the tracker and scorer are tuned on
+the shipped detector's score distribution). Scorer retrain not shipped (v3b wins again). Stroke / landing models not retrained:
+tracks and players are unchanged, so their inputs are unchanged (v5 showed no stroke gain from cleaner tracks either).

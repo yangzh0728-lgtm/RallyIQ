@@ -1,0 +1,32 @@
+# train_v6 label additions (am7 videos only; qa6 never touched). key | t | label | side | reason | source
+# round B1: detections with no label inside labelled windows from base / ft1 re-detected tracks (review/unlab/r_NN.jpg)
+own_20260302_07 | 340.37 | not_a_hit | far | shuttle is with a player of the next court on the left, not ours | ft1
+own_20260302_07 | 545.96 | not_a_hit | far | between rallies, near player catches the shuttle | base
+own_20260302_07 | 548.85 | unsure_hit | far | far player's racket up as the shuttle comes down, near player not clearly ready | ft1
+own_20260310_01 | 306.22 | unsure_hit | near | near partner lunges at the net, shuttle not visible at the racket | base
+own_20260310_01 | 323.67 | hit | far | far reply to the serve (labelled 322.96): shuttle leaves the far racket at the net and climbs | base
+own_20260310_01 | 337.87 | hit | near | near lunge, shuttle at the racket low, then climbs to the far court | ft1
+own_20260310_01 | 338.95 | hit | far | far player lunges at the net and meets the shuttle | base
+own_20260310_01 | 383.85 | hit | near | near player meets the shuttle at head height, it climbs high to the far court | ft1
+own_20260310_01 | 400.73 | not_a_hit | near | same contact as the labelled 400.45; the shuttle is already rising at 400.53, detection 0.28 s late | ft1
+own_20260310_01 | 428.11 | hit | near | shuttle at the near player's racket head, then back up toward the far court (medium) | ft1
+own_20260310_01 | 441.50 | hit | near | near lunge to the right, shuttle at the extended racket then climbs (between labelled far 441.04 and near 442.46) | ft1
+own_20260310_01 | 442.02 | hit | far | far reply: shuttle leaves the far side flat toward the near court before the near hit at 442.46 | ft1
+own_20260310_01 | 464.65 | unsure_hit | far | far player dives at the net; the shuttle is out of the frame top, contact not visible | ft1
+own_20260310_01 | 467.13 | not_a_hit | near | the tracked shuttle is on the next court (left), a player there lunges at it | ft1
+own_20260320_0239 | 137.75 | unsure_hit | far | near player lunges, shuttle already far up on the right; cannot tell who touched it | base
+own_20260320_0239 | 138.37 | hit | near | near player jumps with the racket up at the shuttle (overhead), before the far reply at 138.89 | ft1
+own_20260320_0239 | 142.69 | hit | near | near player at the net meets the shuttle at the racket; it goes back over toward the far court | ft1
+own_20260320_0239 | 143.33 | hit | near | near player again at the net: shuttle comes back off his racket on the left (net exchange) | ft1
+own_20260320_0239 | 326.91 | not_a_hit | near | near lunge misses, shuttle falls past him to the floor | ft1
+own_20260320_0239 | 392.91 | unsure_hit | near | near partner reaches up as the shuttle passes at the net, contact unclear | ft1
+own_20260320_0239 | 399.38 | not_a_hit | near | between rallies, players walking; shuttle tossed at the back | base
+own_20260320_0239 | 401.52 | not_a_hit | near | near player taps the shuttle over to the far side between rallies (far players standing) | ft1
+own_20260320_0239 | 402.59 | not_a_hit | far | far player catches it | ft1
+own_20260324_0241 | 131.08 | hit | near | near girl's racket meets the shuttle at the net, it climbs to the far back (rally starts here: next labelled hit is the far 131.87) | base
+own_20260324_0241 | 137.79 | hit | far | far player overhead, racket up at the shuttle above the net | ft1
+own_20260324_0241 | 205.79 | not_a_hit | far | the tracked shuttle is with a player of the next court on the left | ft1
+own_20260324_0241 | 295.65 | hit | near | near girl's racket meets the shuttle above her head, it goes back to the far side | ft1
+own_20260324_0241 | 326.79 | unsure_hit | near | near boy picks the shuttle up / lifts it near the floor between rallies? cannot tell | base
+own_20260324_0241 | 332.55 | hit | near | near boy overhead swing, shuttle leaves above him toward the far court | ft1
+own_20260324_0245 | 324.39 | not_a_hit | far | near player scoops the shuttle up from the floor between rallies | ft1

@@ -26,12 +26,34 @@ def video_median(path):
 _init=T.ClipFrames.__init__
 def init(self,clip,L,use_bg,target_fps=30.0):
     _init(self,clip,L,use_bg,target_fps)
-    if use_bg and str(clip.video) in MED: self.median=MED[str(clip.video)]
+    if use_bg and str(clip.video)+'@'+clip.clip_id in MED: self.median=MED[str(clip.video)+'@'+clip.clip_id]
+    elif use_bg and str(clip.video) in MED: self.median=MED[str(clip.video)]
 T.ClipFrames.__init__=init
+SEGMED={}
+def seg_median(x):
+    """production background: the median of the calibration segment holding this flight (stage.segments_for)"""
+    import gzip
+    from rallyiq.perception.shuttle.stage import segments_for
+    from rallyiq.perception.shuttle.detector import HeatmapShuttleDetector
+    from rallyiq.contracts import CourtCalibration,VideoMeta
+    k=x['key']; ad=IDS5[k]
+    rd=lambda n: next((gzip.open(p,'rt').read() if p.endswith('gz') else open(p).read()) for p in (f'{ad}/{n}.json',f'{ad}/{n}.json.gz') if os.path.exists(p))
+    if k not in SEGMED:
+        meta=VideoMeta.model_validate_json(rd('probe')); segs=segments_for(meta,CourtCalibration.model_validate_json(rd('calibration')),'off')
+        p=B6/'ckpt/b'/f'segmed_{k}.npz'
+        if p.exists(): m=list(np.load(p)['m'])
+        else:
+            m=HeatmapShuttleDetector._medians(type('D',(),{'bg_mode':'concat','cfg':type('C',(),{'median_samples':120})(),'_prep_u8':staticmethod(HeatmapShuttleDetector._prep_u8)})(),Path(x['video']),segs)
+            np.savez(p,m=np.stack(m))
+        SEGMED[k]=(segs,[np.ascontiguousarray((mm*255+.5).astype(np.uint8).transpose(1,2,0)) for mm in m])
+    segs,m=SEGMED[k]; f=min(int(g) for g in x['labels'])
+    return m[next((i for i,s in enumerate(segs) if s.start<=f<=s.end),len(segs)-1)]
+IDS5={l.split()[0]:l.split()[-1].replace('~',os.path.expanduser('~')) for l in open('/Users/mac/Desktop/RallyIQ/train_v5/ids.txt')}
 def clips(items,own):
     out=[]
     for x in items:
-        if own and x['video'] not in MED: MED[x['video']]=video_median(x['video'])
+        if own and os.environ.get('SEGMED'): MED[x['video']+'@'+x['id']]=seg_median(x)
+        elif own and x['video'] not in MED: MED[x['video']]=video_median(x['video'])
         lab={int(f):(None if v is None else tuple(v)) for f,v in x['labels'].items()}
         out.append(T.TrainClip(x['id'],Path(x['video']),x['fps'],lab))
     return out
