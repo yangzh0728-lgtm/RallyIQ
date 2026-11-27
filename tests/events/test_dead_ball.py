@@ -1,4 +1,4 @@
-"""Dead-ball filter: off by default, model loads, isolated low-confidence hits go first."""
+"""Dead-ball filter: on by default (train_v7), model loads, isolated low-confidence hits go first."""
 from dataclasses import replace
 
 from rallyiq.events import dead_ball as DB
@@ -7,8 +7,8 @@ from rallyiq.events.pipeline import segment_events
 from rallyiq.events.synthetic import make_video
 
 
-def test_default_off_and_bundled_model_loads():
-    assert EventsConfig().dead_ball == "off"
+def test_default_on_and_bundled_model_loads():
+    assert EventsConfig().dead_ball == "auto"
     m = DB.get_model("auto")
     assert m is not None and list(m["features"]) == list(DB.FEATURES) and 0 < m["threshold"] < 1
 
@@ -30,5 +30,6 @@ def test_pipeline_runs_with_filter_on():
     v = make_video(n_rallies=2, seed=6)
     cfg = replace(EventsConfig(), hit_scorer="off")
     a = segment_events(v.shuttle, v.poses, cfg)
+    a = segment_events(v.shuttle, v.poses, replace(cfg, dead_ball="off"))
     b = segment_events(v.shuttle, v.poses, replace(cfg, dead_ball="auto"))
     assert sum(len(r.hits) for r in b) <= sum(len(r.hits) for r in a)

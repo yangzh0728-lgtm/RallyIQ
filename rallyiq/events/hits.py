@@ -414,33 +414,55 @@ def _alternating_subset(cands: list[Candidate], cfg: EventsConfig) -> list[Candi
     so a weak hit survives when it is needed between two strong hits by the
     other player, and a weak spurious hit is dropped when it would break the
     alternation. Strong candidates that do not fit are kept but flagged.
+
+    With ``cfg.alternation_flip_penalty`` > 0 a candidate may also enter on the other side's player when one is
+    near the shuttle at all (score ``>= alternation_flip_min_prox``), at that cost: in fast net exchanges the
+    nearest wrist at the contact often belongs to the player who just hit (train_v7: most confidently scored
+    true hits the pipeline lost were dropped here for "same side twice").
     """
     n = len(cands)
     if n < 2:
         return cands
-    w = [c.confidence - cfg.keep_threshold for c in cands]
-    best = [0.0] * n
-    prev: list[Optional[int]] = [None] * n
+    pen = cfg.alternation_flip_penalty
+    # states per candidate: (side key, weight, hand-over index or None)
+    states: list[list[tuple[Optional[str], float, Optional[int]]]] = []
+    for c in cands:
+        w = c.confidence - cfg.keep_threshold
+        st = [(_side_key(c), w, None)]
+        key = _side_key(c)
+        if pen > 0 and key is not None:
+            k = _other_side_alt(c, key)
+            if k is not None and c.prox[k].score >= cfg.alternation_flip_min_prox:
+                st.append((c.prox[k].pose.team_key, w - pen, k))
+        states.append(st)
+    best: dict[tuple[int, int], float] = {}
+    prev: dict[tuple[int, int], Optional[tuple[int, int]]] = {}
     for i in range(n):
-        hi = _side_key(cands[i])
-        best[i], prev[i] = w[i], None
-        for j in range(i):
-            hj = _side_key(cands[j])
-            if hi is not None and hi == hj:
-                continue
-            if best[j] + w[i] > best[i]:
-                best[i], prev[i] = best[j] + w[i], j
-    end = max(range(n), key=lambda i: best[i])
-    chosen = set()
-    k: Optional[int] = end
-    while k is not None:
-        chosen.add(k)
-        k = prev[k]
-    return [
-        c
-        for i, c in enumerate(cands)
-        if i in chosen or c.confidence >= cfg.ok_threshold
-    ]
+        for a, (hi, wi, _) in enumerate(states[i]):
+            best[(i, a)], prev[(i, a)] = wi, None
+            for j in range(i):
+                for b, (hj, _, _) in enumerate(states[j]):
+                    if hi is not None and hi == hj:
+                        continue
+                    v = best[(j, b)] + wi
+                    if v > best[(i, a)]:
+                        best[(i, a)], prev[(i, a)] = v, (j, b)
+    end = max(best, key=lambda s: best[s])
+    chosen: dict[int, int] = {}
+    s: Optional[tuple[int, int]] = end
+    while s is not None:
+        chosen[s[0]] = s[1]
+        s = prev[s]
+    out = []
+    for i, c in enumerate(cands):
+        if i in chosen:
+            k = states[i][chosen[i]][2]
+            if k is not None:
+                _hand_over(c, k)
+            out.append(c)
+        elif c.confidence >= cfg.ok_threshold:
+            out.append(c)
+    return out
 
 
 def _other_side_alt(c: Candidate, key: str) -> Optional[int]:
