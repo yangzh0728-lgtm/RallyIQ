@@ -1,0 +1,1776 @@
+{
+"own_20260310_01": [
+{
+"t": 11.03,
+"frame": 660,
+"side": "near",
+"label": "P1",
+"bbox": [
+997.5,
+497.4,
+1134.2,
+781.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 11.49,
+"frame": 688,
+"side": "far",
+"label": "P4",
+"bbox": [
+1214.3,
+510.9,
+1263.3,
+677.4
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 11.99,
+"frame": 718,
+"side": "near",
+"label": "P1",
+"bbox": [
+947.7,
+504.6,
+1094.9,
+802.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 12.65,
+"frame": 758,
+"side": "far",
+"label": "P2",
+"bbox": [
+1341.8,
+528.1,
+1503.8,
+703.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 13.76,
+"frame": 824,
+"side": "near",
+"label": "P3",
+"bbox": [
+335.8,
+420.2,
+596.3,
+778.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 14.08,
+"frame": 844,
+"side": "far",
+"label": "P4",
+"bbox": null,
+"src": "ambiguous: shuttle between far P4 and P2, label itself unsure"
+},
+{
+"t": 26.99,
+"frame": 1618,
+"side": "near",
+"label": "P3",
+"bbox": [
+800.6,
+473.8,
+1101.7,
+937.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 27.89,
+"frame": 1672,
+"side": "far",
+"label": "P2",
+"bbox": [
+1442.3,
+590.4,
+1561.8,
+716.0
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 29.08,
+"frame": 1742,
+"side": "near",
+"label": "P3",
+"bbox": [
+557.7,
+328.3,
+838.1,
+928.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 305.639,
+"frame": 18320,
+"side": "far",
+"label": null,
+"bbox": null,
+"src": "ambiguous: far pair overlap at the tape, cannot tell P1/P3"
+},
+{
+"t": 305.973,
+"frame": 18340,
+"side": "near",
+"label": "P2",
+"bbox": [
+765.1,
+538.7,
+913.4,
+766.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 307.01,
+"frame": 18402,
+"side": "far",
+"label": null,
+"bbox": [
+1263.6,
+522.3,
+1369.7,
+723.4
+],
+"src": "my pick: far right player, shuttle on his racket"
+},
+{
+"t": 308.68,
+"frame": 18502,
+"side": "near",
+"label": "P4",
+"bbox": [
+457.2,
+421.0,
+697.4,
+867.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 309.409,
+"frame": 18546,
+"side": "far",
+"label": "P3",
+"bbox": [
+1412.6,
+491.5,
+1495.4,
+671.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 310.744,
+"frame": 18626,
+"side": "near",
+"label": "P2",
+"bbox": [
+691.5,
+513.6,
+892.9,
+781.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 322.96,
+"frame": 19358,
+"side": "near",
+"label": null,
+"bbox": [
+952.0,
+484.5,
+1097.5,
+781.4
+],
+"src": "my pick: near server (light trousers), shuttle at his racket"
+},
+{
+"t": 335.802,
+"frame": 20128,
+"side": "near",
+"label": "P4",
+"bbox": [
+651.6,
+507.7,
+824.9,
+839.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 337.337,
+"frame": 20220,
+"side": "near",
+"label": "P4",
+"bbox": [
+538.6,
+522.9,
+769.3,
+893.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 339.156,
+"frame": 20328,
+"side": "far",
+"label": "P3",
+"bbox": [
+1532.8,
+524.6,
+1607.7,
+737.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 393.08,
+"frame": 23560,
+"side": "near",
+"label": null,
+"bbox": [
+793.9,
+528.3,
+878.7,
+769.3
+],
+"src": "my pick: near partner (light trousers) intercepts at the net"
+},
+{
+"t": 393.79,
+"frame": 23604,
+"side": "far",
+"label": "P3",
+"bbox": [
+1253.1,
+521.3,
+1342.2,
+698.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 394.29,
+"frame": 23634,
+"side": "near",
+"label": "P2",
+"bbox": [
+785.5,
+534.6,
+949.4,
+755.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 395.3,
+"frame": 23694,
+"side": "near",
+"label": "P2",
+"bbox": [
+760.0,
+518.7,
+916.6,
+759.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 400.45,
+"frame": 24002,
+"side": "near",
+"label": null,
+"bbox": [
+1113.8,
+482.9,
+1252.1,
+854.4
+],
+"src": "my pick: near player at the net, shuttle at his head height"
+},
+{
+"t": 412.86,
+"frame": 24746,
+"side": "far",
+"label": "P3",
+"bbox": [
+1269.8,
+503.5,
+1360.8,
+693.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 413.46,
+"frame": 24782,
+"side": "near",
+"label": "P2",
+"bbox": [
+785.2,
+545.1,
+1023.1,
+770.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 413.98,
+"frame": 24814,
+"side": "far",
+"label": null,
+"bbox": [
+1319.2,
+530.6,
+1430.8,
+704.9
+],
+"src": "my pick: far lunging player, shuttle at his racket"
+},
+{
+"t": 429.496,
+"frame": 25744,
+"side": "near",
+"label": "P4",
+"bbox": [
+974.0,
+490.9,
+1114.5,
+801.1
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 429.98,
+"frame": 25772,
+"side": "far",
+"label": null,
+"bbox": [
+1105.7,
+539.8,
+1189.6,
+687.0
+],
+"src": "my pick: far crouching player at the net, shuttle at racket"
+},
+{
+"t": 430.647,
+"frame": 25812,
+"side": "near",
+"label": "P2",
+"bbox": [
+625.3,
+536.2,
+767.8,
+835.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 431.648,
+"frame": 25872,
+"side": "far",
+"label": "P1",
+"bbox": [
+1099.2,
+518.4,
+1225.4,
+680.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 440.41,
+"frame": 26398,
+"side": "near",
+"label": "P2",
+"bbox": [
+901.0,
+494.9,
+1056.9,
+782.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 441.04,
+"frame": 26436,
+"side": "far",
+"label": null,
+"bbox": [
+1371.6,
+524.4,
+1550.1,
+722.8
+],
+"src": "my pick: far lunging player right, shuttle at racket"
+},
+{
+"t": 442.46,
+"frame": 26520,
+"side": "near",
+"label": null,
+"bbox": [
+948.0,
+535.5,
+1238.6,
+951.8
+],
+"src": "my pick: near light-trousers player drives"
+},
+{
+"t": 442.99,
+"frame": 26552,
+"side": "far",
+"label": "P1",
+"bbox": [
+1305.4,
+512.4,
+1375.5,
+660.1
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 465.76,
+"frame": 27918,
+"side": "near",
+"label": "P2",
+"bbox": [
+386.8,
+536.1,
+633.1,
+910.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 474.31,
+"frame": 28430,
+"side": "near",
+"label": "P2",
+"bbox": [
+621.2,
+493.1,
+761.6,
+852.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 474.79,
+"frame": 28458,
+"side": "far",
+"label": "P3",
+"bbox": [
+1190.9,
+514.8,
+1269.5,
+694.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 475.79,
+"frame": 28518,
+"side": "near",
+"label": "P4",
+"bbox": [
+997.6,
+537.2,
+1185.9,
+792.8
+],
+"src": "label id (v5 box)"
+}
+],
+"own_20260320_0239": [
+{
+"t": 135.75,
+"frame": 8136,
+"side": "near",
+"label": "P1",
+"bbox": [
+1105.6,
+537.2,
+1256.4,
+859.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 137.0,
+"frame": 8212,
+"side": "near",
+"label": "P1",
+"bbox": [
+1004.0,
+559.7,
+1090.1,
+814.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 138.89,
+"frame": 8324,
+"side": "far",
+"label": "P2",
+"bbox": null,
+"src": "ambiguous: hitter hidden behind the near player, label unsure"
+},
+{
+"t": 140.04,
+"frame": 8394,
+"side": "near",
+"label": "P3",
+"bbox": [
+793.1,
+501.1,
+1019.7,
+938.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 142.14,
+"frame": 8520,
+"side": "near",
+"label": "P3",
+"bbox": [
+611.3,
+523.9,
+822.9,
+943.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 145.28,
+"frame": 8708,
+"side": "near",
+"label": "P3",
+"bbox": [
+793.8,
+623.0,
+1196.9,
+1007.0
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 317.77,
+"frame": 19046,
+"side": "near",
+"label": "P2",
+"bbox": [
+781.1,
+567.6,
+1005.4,
+814.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 318.6,
+"frame": 19096,
+"side": "far",
+"label": "P1",
+"bbox": [
+1248.6,
+548.9,
+1450.4,
+739.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 318.97,
+"frame": 19118,
+"side": "near",
+"label": "P2",
+"bbox": [
+768.5,
+551.9,
+894.6,
+857.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 324.19,
+"frame": 19432,
+"side": "far",
+"label": "P3",
+"bbox": [
+1240.2,
+548.1,
+1383.0,
+731.0
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 389.36,
+"frame": 23338,
+"side": "near",
+"label": "P2",
+"bbox": [
+837.2,
+557.5,
+956.9,
+826.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 390.29,
+"frame": 23394,
+"side": "far",
+"label": "P1",
+"bbox": [
+1176.4,
+586.3,
+1354.0,
+731.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 396.68,
+"frame": 23776,
+"side": "near",
+"label": "P2",
+"bbox": [
+968.5,
+529.3,
+1149.2,
+840.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 397.61,
+"frame": 23832,
+"side": "far",
+"label": "P1",
+"bbox": [
+1530.0,
+529.4,
+1655.4,
+715.9
+],
+"src": "label id (v5 box)"
+}
+],
+"own_20260324_0241": [
+{
+"t": 131.87,
+"frame": 7904,
+"side": "far",
+"label": "P4",
+"bbox": [
+381.1,
+521.4,
+473.5,
+735.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 132.73,
+"frame": 7956,
+"side": "near",
+"label": "P3",
+"bbox": [
+694.1,
+652.8,
+1143.5,
+1004.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 134.87,
+"frame": 8084,
+"side": "far",
+"label": "P4",
+"bbox": [
+678.7,
+553.2,
+754.4,
+703.2
+],
+"src": "overruled: far girl at the net, shuttle at her racket (label P4 = far boy, too far)"
+},
+{
+"t": 135.75,
+"frame": 8136,
+"side": "near",
+"label": null,
+"bbox": [
+1378.3,
+473.3,
+1506.0,
+881.6
+],
+"src": "my pick: near girl jumping overhead"
+},
+{
+"t": 136.67,
+"frame": 8192,
+"side": "far",
+"label": "P4",
+"bbox": [
+707.9,
+556.1,
+816.0,
+699.9
+],
+"src": "overruled: far girl at the net, shuttle at her racket"
+},
+{
+"t": 137.39,
+"frame": 8234,
+"side": "near",
+"label": "P3",
+"bbox": [
+1133.8,
+501.8,
+1341.0,
+814.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 138.42,
+"frame": 8296,
+"side": "near",
+"label": "P1",
+"bbox": [
+1259.2,
+504.4,
+1521.9,
+963.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 139.07,
+"frame": 8336,
+"side": "far",
+"label": "P4",
+"bbox": [
+437.9,
+533.0,
+547.9,
+700.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 139.96,
+"frame": 8388,
+"side": "near",
+"label": "P3",
+"bbox": [
+473.7,
+553.5,
+825.0,
+916.4
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 140.69,
+"frame": 8432,
+"side": "far",
+"label": "P2",
+"bbox": [
+418.3,
+521.1,
+523.4,
+700.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 202.202,
+"frame": 12120,
+"side": "far",
+"label": "P4",
+"bbox": [
+511.5,
+521.4,
+624.2,
+714.1
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 203.12,
+"frame": 12174,
+"side": "near",
+"label": null,
+"bbox": [
+932.3,
+552.2,
+1063.2,
+790.9
+],
+"src": "my pick: near boy at the net"
+},
+{
+"t": 204.071,
+"frame": 12232,
+"side": "far",
+"label": "P4",
+"bbox": [
+716.3,
+569.7,
+858.6,
+713.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 204.822,
+"frame": 12276,
+"side": "near",
+"label": null,
+"bbox": [
+1135.9,
+544.8,
+1323.9,
+822.0
+],
+"src": "my pick: near boy lunges right to the shuttle"
+},
+{
+"t": 258.06,
+"frame": 15468,
+"side": "far",
+"label": null,
+"bbox": [
+405.7,
+527.4,
+477.9,
+731.6
+],
+"src": "my pick: far left player at the net, shuttle at racket"
+},
+{
+"t": 258.959,
+"frame": 15522,
+"side": "near",
+"label": "P1",
+"bbox": [
+711.5,
+566.2,
+907.7,
+823.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 261.895,
+"frame": 15698,
+"side": "far",
+"label": "P4",
+"bbox": [
+639.2,
+512.1,
+775.0,
+713.4
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 262.863,
+"frame": 15756,
+"side": "near",
+"label": null,
+"bbox": [
+1040,
+520,
+1120,
+810
+],
+"src": "nodet: near boy hidden behind the girl (no detection at the hit frame)"
+},
+{
+"t": 278.06,
+"frame": 16666,
+"side": "far",
+"label": "P2",
+"bbox": [
+598.2,
+530.1,
+684.9,
+712.1
+],
+"src": "overruled: far girl at the net beside the shuttle (label id mapped to the wrong far player)"
+},
+{
+"t": 278.58,
+"frame": 16698,
+"side": "near",
+"label": null,
+"bbox": [
+682.2,
+403.1,
+817.7,
+896.8
+],
+"src": "my pick: near girl jumping overhead"
+},
+{
+"t": 279.15,
+"frame": 16732,
+"side": "far",
+"label": "P2",
+"bbox": [
+472.7,
+541.1,
+598.2,
+698.4
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 280.08,
+"frame": 16788,
+"side": "near",
+"label": null,
+"bbox": [
+766.5,
+499.5,
+1036.6,
+1002.7
+],
+"src": "my pick: near girl, racket by the shuttle (medium)"
+},
+{
+"t": 281.23,
+"frame": 16856,
+"side": "far",
+"label": "P4",
+"bbox": [
+563.3,
+528.0,
+657.2,
+715.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 282.35,
+"frame": 16924,
+"side": "near",
+"label": null,
+"bbox": [
+1034.7,
+556.9,
+1112.9,
+772.8
+],
+"src": "my pick: near boy, shuttle at him"
+},
+{
+"t": 284.18,
+"frame": 17034,
+"side": "far",
+"label": null,
+"bbox": [
+516.5,
+503.3,
+592.0,
+674.5
+],
+"src": "my pick: far left partner, racket up at the shuttle"
+},
+{
+"t": 285.17,
+"frame": 17092,
+"side": "near",
+"label": null,
+"bbox": [
+868.4,
+584.1,
+956.5,
+796.7
+],
+"src": "my pick: near boy lifts"
+},
+{
+"t": 286.77,
+"frame": 17188,
+"side": "far",
+"label": null,
+"bbox": [
+584.5,
+515.0,
+647.9,
+669.0
+],
+"src": "my pick: far boy behind P4 swings overhead (detected, untracked)"
+},
+{
+"t": 287.1,
+"frame": 17208,
+"side": "near",
+"label": null,
+"bbox": [
+1028.6,
+552.1,
+1207.7,
+841.9
+],
+"src": "my pick: near boy low backhand"
+},
+{
+"t": 289.42,
+"frame": 17348,
+"side": "near",
+"label": null,
+"bbox": [
+1485.1,
+467.0,
+1643.4,
+849.8
+],
+"src": "my pick: near boy jumping overhead"
+},
+{
+"t": 289.82,
+"frame": 17372,
+"side": "far",
+"label": "P4",
+"bbox": [
+661.8,
+533.4,
+768.2,
+687.7
+],
+"src": "overruled: far boy, shuttle at his racket (label = far girl, 1 m away)"
+},
+{
+"t": 290.71,
+"frame": 17424,
+"side": "near",
+"label": "P1",
+"bbox": [
+993.5,
+571.6,
+1112.8,
+832.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 291.99,
+"frame": 17502,
+"side": "far",
+"label": "P2",
+"bbox": [
+622.5,
+508.9,
+707.4,
+672.1
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 292.86,
+"frame": 17554,
+"side": "near",
+"label": "P3",
+"bbox": [
+641.5,
+614.5,
+878.9,
+866.0
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 294.41,
+"frame": 17646,
+"side": "far",
+"label": null,
+"bbox": [
+577.2,
+518.1,
+670.7,
+717.7
+],
+"src": "my pick: far left player overhead"
+},
+{
+"t": 331.56,
+"frame": 19874,
+"side": "far",
+"label": "P4",
+"bbox": [
+413.3,
+527.3,
+494.4,
+734.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 331.96,
+"frame": 19898,
+"side": "near",
+"label": "P3",
+"bbox": [
+983.7,
+541.1,
+1256.3,
+914.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 333.42,
+"frame": 19984,
+"side": "far",
+"label": "P4",
+"bbox": [
+406.4,
+509.1,
+475.0,
+741.9
+],
+"src": "label id (v5 box)"
+}
+],
+"own_20260906_0622": [
+{
+"t": 81.915,
+"frame": 2454,
+"side": "near",
+"label": "P2",
+"bbox": [
+1096.1,
+318.7,
+1355.1,
+759.4
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 82.983,
+"frame": 2486,
+"side": "far",
+"label": "P1",
+"bbox": [
+1692.7,
+346.0,
+1840.0,
+561.7
+],
+"src": "overruled: far right player jumping overhead, shuttle at racket"
+},
+{
+"t": 83.416,
+"frame": 2500,
+"side": "near",
+"label": "P2",
+"bbox": [
+1003.5,
+247.8,
+1297.2,
+795.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 84.417,
+"frame": 2530,
+"side": "far",
+"label": null,
+"bbox": [
+1607.0,
+348.2,
+1673.9,
+558.3
+],
+"src": "my pick: far right partner overhead"
+},
+{
+"t": 223.86,
+"frame": 6708,
+"side": "far",
+"label": null,
+"bbox": [
+1679.0,
+408.7,
+1787.2,
+615.3
+],
+"src": "my pick: far right player lunges"
+},
+{
+"t": 226.759,
+"frame": 6796,
+"side": "far",
+"label": "P3",
+"bbox": [
+1529.2,
+348.9,
+1619.4,
+543.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 227.293,
+"frame": 6812,
+"side": "near",
+"label": "P2",
+"bbox": [
+490.0,
+334.1,
+636.2,
+706.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 228.361,
+"frame": 6844,
+"side": "far",
+"label": "P3",
+"bbox": [
+1509.2,
+384.8,
+1633.8,
+551.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 301.0,
+"frame": 9020,
+"side": "far",
+"label": "P1",
+"bbox": [
+1414.3,
+362.1,
+1523.7,
+590.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 301.77,
+"frame": 9044,
+"side": "near",
+"label": "P2",
+"bbox": [
+1078.8,
+378.6,
+1544.0,
+806.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 304.81,
+"frame": 9134,
+"side": "near",
+"label": "P2",
+"bbox": [
+963.8,
+311.2,
+1186.9,
+799.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 306.24,
+"frame": 9178,
+"side": "far",
+"label": "P3",
+"bbox": [
+1711.2,
+347.1,
+1860.9,
+582.1
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 307.21,
+"frame": 9206,
+"side": "near",
+"label": "P2",
+"bbox": [
+1046.3,
+307.7,
+1424.9,
+826.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 308.44,
+"frame": 9244,
+"side": "far",
+"label": null,
+"bbox": [
+1515,
+332,
+1636,
+522
+],
+"src": "nodet: far jumper hidden behind P1 (no detection at the hit frame)"
+},
+{
+"t": 309.41,
+"frame": 9272,
+"side": "near",
+"label": null,
+"bbox": [
+733.1,
+330.0,
+957.2,
+714.5
+],
+"src": "my pick: near left partner forehand"
+},
+{
+"t": 311.14,
+"frame": 9324,
+"side": "far",
+"label": "P3",
+"bbox": [
+1734.4,
+352.3,
+1839.8,
+559.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 312.14,
+"frame": 9354,
+"side": "near",
+"label": "P4",
+"bbox": [
+1263.1,
+300.8,
+1552.4,
+682.6
+],
+"src": "overruled: near blue-shirt player overhead reach (label id mapped to the standing partner)"
+},
+{
+"t": 369.74,
+"frame": 11080,
+"side": "near",
+"label": "P2",
+"bbox": [
+1000.4,
+328.4,
+1299.3,
+854.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 370.17,
+"frame": 11094,
+"side": "far",
+"label": "P3",
+"bbox": [
+1402.6,
+352.0,
+1593.7,
+598.4
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 371.17,
+"frame": 11124,
+"side": "near",
+"label": null,
+"bbox": [
+716.5,
+449.5,
+960.9,
+694.0
+],
+"src": "my pick: near left partner low reach"
+},
+{
+"t": 372.91,
+"frame": 11176,
+"side": "far",
+"label": "P1",
+"bbox": [
+1553.2,
+373.7,
+1623.3,
+546.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 373.41,
+"frame": 11190,
+"side": "near",
+"label": null,
+"bbox": [
+650.2,
+323.3,
+875.4,
+709.6
+],
+"src": "my pick: near left partner forehand"
+},
+{
+"t": 374.04,
+"frame": 11210,
+"side": "far",
+"label": "P3",
+"bbox": [
+1430.3,
+369.6,
+1574.6,
+596.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 375.18,
+"frame": 11244,
+"side": "near",
+"label": "P2",
+"bbox": [
+1190.4,
+387.7,
+1346.6,
+766.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 376.48,
+"frame": 11282,
+"side": "far",
+"label": "P1",
+"bbox": [
+1716.4,
+318.0,
+1820.3,
+554.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 379.01,
+"frame": 11358,
+"side": "far",
+"label": "P3",
+"bbox": [
+1427.5,
+361.9,
+1557.7,
+601.0
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 381.11,
+"frame": 11422,
+"side": "far",
+"label": "P1",
+"bbox": [
+1472.7,
+304.0,
+1596.8,
+558.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 382.28,
+"frame": 11456,
+"side": "far",
+"label": "P3",
+"bbox": [
+1418.1,
+368.7,
+1511.6,
+567.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 383.22,
+"frame": 11484,
+"side": "near",
+"label": "P2",
+"bbox": [
+1007.1,
+458.7,
+1224.9,
+764.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 754.153,
+"frame": 22602,
+"side": "far",
+"label": "P1",
+"bbox": [
+1398.0,
+351.9,
+1518.9,
+596.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 755.021,
+"frame": 22628,
+"side": "near",
+"label": "P4",
+"bbox": [
+1074.1,
+390.0,
+1260.6,
+763.7
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 756.122,
+"frame": 22660,
+"side": "far",
+"label": "P1",
+"bbox": [
+1423.4,
+360.5,
+1559.1,
+602.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 756.622,
+"frame": 22676,
+"side": "near",
+"label": "P2",
+"bbox": [
+626.3,
+318.2,
+883.2,
+732.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 757.523,
+"frame": 22702,
+"side": "far",
+"label": "P3",
+"bbox": [
+1540.3,
+418.2,
+1738.3,
+574.9
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 758.658,
+"frame": 22736,
+"side": "near",
+"label": "P4",
+"bbox": [
+1060.0,
+249.9,
+1281.5,
+826.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 758.991,
+"frame": 22746,
+"side": "far",
+"label": "P3",
+"bbox": [
+1724.0,
+365.3,
+1830.6,
+584.4
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1013.61,
+"frame": 30378,
+"side": "near",
+"label": "P2",
+"bbox": [
+989.5,
+303.2,
+1192.6,
+770.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1014.38,
+"frame": 30400,
+"side": "far",
+"label": "P1",
+"bbox": [
+1421.3,
+334.0,
+1508.8,
+558.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1014.68,
+"frame": 30410,
+"side": "near",
+"label": "P2",
+"bbox": [
+982.0,
+308.1,
+1196.9,
+807.6
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1015.38,
+"frame": 30430,
+"side": "far",
+"label": "P1",
+"bbox": [
+1401.4,
+326.7,
+1490.5,
+557.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1015.68,
+"frame": 30440,
+"side": "near",
+"label": "P2",
+"bbox": [
+943.7,
+309.2,
+1153.1,
+841.5
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1016.58,
+"frame": 30466,
+"side": "far",
+"label": "P1",
+"bbox": [
+1335.1,
+356.8,
+1409.6,
+556.1
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1016.88,
+"frame": 30476,
+"side": "near",
+"label": "P2",
+"bbox": [
+887.7,
+295.1,
+1144.5,
+852.0
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1017.58,
+"frame": 30496,
+"side": "far",
+"label": "P1",
+"bbox": [
+1292.9,
+387.5,
+1381.5,
+572.8
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1018.42,
+"frame": 30522,
+"side": "near",
+"label": "P2",
+"bbox": [
+1171.3,
+433.0,
+1435.5,
+818.3
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1019.89,
+"frame": 30566,
+"side": "far",
+"label": "P1",
+"bbox": [
+1410.7,
+357.6,
+1507.7,
+551.2
+],
+"src": "label id (v5 box)"
+},
+{
+"t": 1022.65,
+"frame": 30648,
+"side": "far",
+"label": null,
+"bbox": [
+1576.1,
+350.4,
+1711.4,
+588.6
+],
+"src": "my pick: far right partner overhead"
+}
+]
+}
