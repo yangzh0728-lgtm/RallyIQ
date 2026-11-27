@@ -173,7 +173,9 @@ def create_app(store: Store | None = None, start_worker: bool | None = None,
     store = store or Store()
     if start_worker is None:
         start_worker = os.environ.get("RALLYIQ_WORKER", "inprocess") != "external"
-    worker = Worker(store) if start_worker else None
+    from ..pipeline.profiles import config_from_env
+
+    worker = Worker(store, config=config_from_env()) if start_worker else None
     auth = auth or AuthConfig.from_env()
     auth_router, current_user = build_auth(store, auth)
     max_upload = int(os.environ.get("RALLYIQ_MAX_UPLOAD_MB", "4096")) << 20
