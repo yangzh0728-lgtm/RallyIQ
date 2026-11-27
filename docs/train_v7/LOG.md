@@ -51,3 +51,9 @@ Test set rule: the v6 fresh videos (0529_0005/0007/0009) are only evaluated at t
 - Changed hits in labelled windows (17 videos): +9 true hits, -7 not-a-hit rows, 0 true hits lost (review/final/diff/);
   fresh: review/final/fresh_diff/. qa6 0615 707.21 is a new detection with no label (looks like a real near forehand to me;
   qa6 not relabelled, so it counts as a false hit).
+
+## After I (extra, nothing shipped)
+- ft1 on top of the v7 rules: 0.824 (v7 0.860 with nested dead-ball models); ft1 only where the shipped detector is empty:
+  0.861 (+0.0002, CI [-0.008, +0.009]).
+- Nested retune of keep / ok / min-candidate thresholds under the v7 rules (36): 0.860 -> 0.856, CI [-0.009, -0.001]:
+  the shipped thresholds stay.

@@ -63,6 +63,10 @@ counts; the 100 dead-time labels; remaining issues.
   (0.814 on the v6 rows vs 0.798; 0.821 vs 0.793 with it).
 - qa6 untouched (one new qa6 detection looks like a real hit to me but stays counted as false).
 
+## After phase I
+
+ft1 on top of the new rules still loses (0.824); a nested threshold retune under the new rules is worse (0.856, CI below 0). Nothing more shipped.
+
 ## Remaining
 
 Missed hits with no candidate (detector / track) or a low score; 7 between-rally next-court rows; 4 doubles hitter errors.
