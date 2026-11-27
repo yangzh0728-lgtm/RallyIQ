@@ -81,13 +81,14 @@ class Clip:
         return off_court_views(self.cal_segments, cfg.court_view_min_share) if cfg.mask_off_court_views else []
 
     def run(self, cfg: EventsConfig):
-        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms, off_court=self.off_court(cfg))
+        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms, off_court=self.off_court(cfg), audio=getattr(self, "audio", None))
 
     def collect(self, cfg: EventsConfig, tol_frames: float) -> None:
         """Candidates per rally with features and labels (scorer off: rule confidences kept)."""
         sink: list = []
         rallies = segment_events(self.shuttle, self.poses, replace(cfg, hit_scorer="off"),
-                                 video_end_ms=self.duration_ms, collect=sink, off_court=self.off_court(cfg))
+                                 video_end_ms=self.duration_ms, collect=sink, off_court=self.off_court(cfg),
+                                 audio=getattr(self, "audio", None))
         by_id = {r.rally_id: {"start_ms": r.start_ms, "cands": [], "serve": None} for r in rallies}
         self.pred_rallies = [{"start_ms": self.offset + r.start_ms, "end_ms": self.offset + r.end_ms}
                              for r in rallies if r.end_ms > r.start_ms]

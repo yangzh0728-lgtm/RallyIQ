@@ -1,0 +1,91 @@
+# stroke types of the 88 fresh-set hits (review/strokes2/s_NN.jpg: contact frame and next-hit frame, flight blue->red)
+# rear camera (0529): depth is hard to read, so "sure" only where the flight shape is unambiguous
+# n | stroke | sure | reason
+0 | long_serve | true | near serve, shuttle climbs high and deep over the far court
+1 | short_serve | false | near serve, short low arc, far reply 0.55 s later
+2 | drop | false | far overhead after the apex, shuttle falls steeply to the near mid court
+3 | lift | true | near low forehand, shuttle climbs very high to the far back
+4 | clear | false | far reply high and deep to the near back court
+5 | short_serve | false | far serve, short flat arc just over the net
+6 | lift | false | far underarm, shuttle rises over the net to the near side
+7 | lift | true | near low forehand, very high steep climb
+8 | - | false | near forehand on the right, short rise over the net; push or net shot, depth unreadable
+9 | clear | false | near overhead from the back, long flight to the far back
+10 | short_serve | false | far serve, low arc to the near forecourt (near forehand 0.74 s later)
+11 | - | false | near forehand, short arc toward the net; push/net shot, depth unreadable
+12 | long_serve | true | far serve, shuttle climbs high to the near back where the near player jumps
+13 | smash | false | near jumping overhead, steep downward flight to the far player
+14 | clear | true | far reply climbs very high to the near back court, near overhead next
+15 | long_serve | true | far serve, very high to the near back court, near overhead next
+16 | - | false | near overhead from the back; trail falls steeply into the far half but depth unreadable (drop or smash)
+17 | - | false | far player at the net, long flat flight to the near side; drive or push
+18 | long_serve | false | far high serve, the near player lifts it 2.2 s later
+19 | lift | true | near lift from mid court, shuttle climbs very high
+20 | lift | true | near player sends the shuttle up high to the far back court
+21 | short_serve | false | far serve, short arc just over the net to the near player
+22 | push | false | near racket extended toward the net right after contact, flat short return
+23 | lift | true | far lift at the net, climbs very high to the near back
+24 | smash | false | near overhead, steep downward flight to the far mid court
+25 | long_serve | true | far high serve, near player answers overhead at the back
+26 | clear | false | near overhead from the back, long high flight to the far back
+27 | smash | true | far jump smash, fast straight flight down past the near player
+28 | clear | false | near overhead, high flight toward the far back (next hit not tracked)
+29 | - | false | far player at the net; flight toward the near right, net shot or push
+30 | lift | false | near forehand lunge, medium arc over the net to the far right
+31 | lift | false | near forehand, rising arc to the far side
+32 | lift | true | far player crouching at the net, shuttle climbs high to the near mid/back
+33 | drop | false | near overhead at the net area, short flight dropping just over the net
+34 | net_kill | true | far racket up at the net, shuttle goes steeply down into the near forecourt
+35 | short_serve | false | far low serve to the near forecourt, near player ready low
+36 | short_serve | false | near serve, short arc over the net to the far forecourt
+37 | clear | true | far player sends a long high flight to the near back, near overhead next
+38 | smash | true | near jumping overhead, fast straight steep flight to the far court
+39 | lift | false | far player meets the smash and sends it up
+40 | lift | false | near player returns the serve upward to the far side
+41 | smash | true | near overhead at full stretch, steep flight to the far mid court
+42 | lift | true | far player sends the shuttle high to the near back, near overhead next
+43 | smash | false | near jumping overhead, steep downward flight to the far side
+44 | lift | true | far lift from the net, climbs high to the near back
+45 | smash | false | near overhead; trail shows the next-court-looking steep drop right; depth unclear
+46 | short_serve | false | near serve, low arc to the far side
+47 | long_serve | false | far serve rising over the net to the near mid/back
+48 | lift | false | near lift from low, shuttle rises to the far side
+49 | smash | false | far overhead, steep flight down toward the near player
+50 | lift | false | near player meets the steep shot low on the left, shuttle goes up again
+51 | lift | false | near player at the front sends it high
+52 | smash | false | near overhead at full stretch, steep flight to the far court
+53 | - | false | far player meets it at the net; short exchange, type unreadable
+54 | short_serve | true | near short serve, far player waiting at the front
+55 | lift | true | near lift after the far net return, shuttle climbs very high
+56 | clear | false | far forehand, long arc over the near player to the near back right
+57 | lift | false | near forehand at the right, high arc to the far left back
+58 | - | false | near low forehand, short rise; push or net shot
+59 | net_shot | false | far player lunges at the net, shuttle turns back short
+60 | - | false | near player meets it low in front; track tangled, type unreadable
+61 | clear | false | far player returns the serve high to the near back left
+62 | lift | true | near lift from the left, shuttle climbs very high
+63 | clear | false | near overhead at full stretch, long high flight to the far side
+64 | drop | false | far player at the net, short flight down to the near forecourt, near player lunges
+65 | lift | false | near lunge, shuttle rises from low back toward the far side
+66 | net_shot | false | near player lunges at the net, short flight just over
+67 | long_serve | true | far high serve to the near back, near overhead next
+68 | clear | true | near overhead, long high flight to the far back
+69 | smash | false | far overhead, fast downward flight to the near left back
+70 | short_serve | false | far serve, short arc over the net to the near right
+71 | - | false | near forehand on the right, flight unreadable (track tangled)
+72 | short_serve | true | far low serve, short arc to the near forecourt
+73 | lift | false | near player lifts from low at the left
+74 | net_shot | false | near player at the net on the left, short flight back
+75 | lift | true | far lunge at the net, shuttle climbs high to the near back, near overhead next
+76 | smash | true | near jumping overhead, steep fast flight to the far court
+77 | lift | false | far player meets the smash low, shuttle rises over the net
+78 | lift | false | near player at the left sends it up
+79 | clear | false | far player at the net? long arc to the near back left
+80 | lift | true | near lunge near the floor, shuttle climbs very high
+81 | lift | true | far player at the net, very high arc to the near back right
+82 | smash | false | near overhead, downward flight to the far side
+83 | - | false | near forehand at the right, flight unreadable
+84 | long_serve | true | far high serve, near overhead next
+85 | smash | true | near jumping overhead, steep fast flight to the far side
+86 | block | false | far player meets the smash low, short return just over the net to the near right
+87 | net_shot | false | near forehand at the net, short flight back over

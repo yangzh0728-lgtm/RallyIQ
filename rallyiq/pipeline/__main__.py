@@ -21,6 +21,7 @@ from .worker import Worker
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m rallyiq.pipeline")
     ap.add_argument("--data", help="data dir (default $RALLYIQ_DATA or ./data)")
+    ap.add_argument("--profile", choices=["own", "broadcast"], help="config profile (default $RALLYIQ_PIPELINE_PROFILE); own = own-footage stroke residual")
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("analyze", help="import a video and run the pipeline synchronously")
     a.add_argument("video", type=Path)
@@ -37,7 +38,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     store = Store(args.data)
-    config = {"demo": True} if args.demo else {}
+    from .profiles import config_from_env
+
+    config = config_from_env({"demo": True} if args.demo else {}, args.profile)
 
     if args.cmd == "analyze":
         video_id, dest = store.create_video(args.video.name, args.video.suffix)

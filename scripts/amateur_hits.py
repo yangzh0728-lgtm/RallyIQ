@@ -23,6 +23,7 @@ import argparse
 import bisect
 import gzip
 import json
+import os
 import sys
 from dataclasses import fields, replace
 from pathlib import Path
@@ -118,6 +119,12 @@ class AmClip(LH.Clip):
         self.shuttle = shuttle_from_contract(sh)
         self.poses = poses_from_contract(self.players)
         self.match_format = self.players.match_format if self.players is not None else "singles"
+        # hit-sound onsets: ONSET_DIR/<key>.npz (train_v8) when present
+        od = os.environ.get("ONSET_DIR")
+        self.audio = None
+        if od and (Path(od).expanduser() / f"{key}.npz").exists():
+            from rallyiq.events.audio import Onsets
+            self.audio = Onsets.from_npz(Path(od).expanduser() / f"{key}.npz")
         cj = read_json(art, "calibration")
         self.cal_segments = calibration_segments(CourtCalibration.model_validate_json(cj) if cj else None)
         pos = [x for x in truth["labels"] if x["kind"] == "pos"]
