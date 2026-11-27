@@ -37,3 +37,21 @@
   extraction + numpy inference ~0.1 s per video minute. Own footage unaffected by construction (rules stay for profile own).
 - Repo changes reverted; code, weights and diff saved under train_v10/ckpt/unshipped_code/ for a future pre-registered test on
   new held-out broadcast matches.
+
+## 18:45 UTC follow-up 1: frame-time bug located
+Only in my TCN integration (seqhits.apply used t = frame*1000/fps with fps estimated from integer-ms steps, ~1% off ->
+~300 ms drift per 30 s). Shipped code: events/pipeline._fps_ms is only a per-frame duration (windows, quality, one-frame
+hit offset; 0.3 ms error); every absolute frame<->time conversion (contracts VideoMeta.t_ms/frame_at, strokes features,
+calibration tracker, web CorrectionPanel/corrections/Timeline/Workbench) uses the probe's exact fps. Nothing to fix in
+shipped code; no hit F1 changes. seqhits in ckpt/unshipped_code already interpolates frame->time from observed pairs.
+## 18:47 follow-up 2 pre-registered (PLAN.md), kf_bcast.py started.
+## 18:58 follow-up 2 result (harness, pre-registered): 43 matches (102 clips; one of 44 matches has no loadable clip)
+rules 0.7869, seq 0.8626, diff +0.0758, per-match CI [+0.0627, +0.0897]. Per fold thr/gap chosen inside: (0.4,.28) (0.2,.36)
+(0.5,.36) (0.3,.28) (0.3,.28). Held-out ShuttleSet test clips alone: rules 0.780, seq 0.876.
+## 19:03 production-path check (kf_export.py): prod 0.7856, diff -0.001 CI [-0.013, +0.011]: harness and shipped code disagree.
+Cause 1: segment_events masks the shuttle in off-court views before the model sees it (model trained on raw track) -> fixed
+(raw_shuttle). Still 0.785. Cause 2 (kf_sidecheck.py): time-only matches equal (prod tp_any 1683 vs harness 1678); the gap
+is side: hitter() fell back to any player / None when the nearest pose frame had no player on the side head's side.
+Fixed: nearest pose frame within 1 s that has a player on that side. -> prod 0.8112, diff +0.0244, CI [+0.0118, +0.0370].
+Remaining gap to the harness is side again (no player track near the hit), the same limit the rules path has.
+Final export: 3 seeds on all 102 clips, thr/gap (0.5, 0.2) chosen on pooled 5-fold OOF. Full suite: 486 passed, 12 skipped.

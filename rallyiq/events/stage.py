@@ -43,6 +43,7 @@ def run(ctx: StageContext) -> EventsResult:
         cfg,
         video_end_ms=float(meta.duration_ms),
         off_court=off,
+        frame_size=(meta.width, meta.height),
     )
     ctx.report(0.9)
     return events_to_contract(meta.video_id, rallies, players.match_format if players is not None else "singles")

@@ -52,6 +52,7 @@ def segment_events(
     collect: Optional[list] = None,
     off_court: Sequence[tuple[int, int]] = (),
     audio=None,
+    frame_size: Optional[tuple[int, int]] = None,
 ) -> list[RallySegment]:
     """``collect``: see ``hits.detect_hits``; entries become (rally_id, features, candidate, track point).
 
@@ -61,6 +62,7 @@ def segment_events(
     used only with ``cfg.mask_off_court_views``.
     """
     cfg = with_scorer_thresholds(cfg or EventsConfig())
+    raw_shuttle = shuttle  # the sequence model was trained on the unmasked track
     if cfg.mask_off_court_views and off_court:
         shuttle = [ShuttleObs(o.frame, o.t_ms) if _inside(o.frame, off_court) else o for o in shuttle]
     pose_index = PoseIndex(poses, cfg)
@@ -113,7 +115,14 @@ def segment_events(
         rallies = [r for r in rallies if not one_sided(r, poses, cfg.one_sided_rally_max_hits)]
     if cfg.min_no_hit_rally_ms > 0:
         rallies = [r for r in rallies if r.hits or r.end_ms - r.start_ms >= cfg.min_no_hit_rally_ms]
-    if cfg.dead_ball != "off":
+    seq_model = None
+    if cfg.hit_model != "rules" and frame_size is not None:
+        from . import seqhits as SH
+
+        seq_model = SH.get_model(cfg.hit_model)
+        if seq_model is not None:
+            SH.apply(rallies, raw_shuttle, poses, seq_model, 1000.0 / fps_ms, frame_size)
+    if cfg.dead_ball != "off" and seq_model is None:
         from . import dead_ball as DB
 
         DB.apply(rallies, poses, DB.get_model(cfg.dead_ball), fps_ms)

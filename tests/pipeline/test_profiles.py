@@ -1,4 +1,4 @@
-"""Pipeline profiles: own footage turns the stroke residual on; broadcast/unset leave defaults."""
+"""Pipeline profiles: own footage turns the stroke residual on; broadcast uses the sequence hit model; unset = defaults."""
 import json
 
 import pytest
@@ -10,7 +10,8 @@ def test_own_profile_turns_residual_on(monkeypatch):
     monkeypatch.delenv("RALLYIQ_PIPELINE_PROFILE", raising=False)
     monkeypatch.delenv("RALLYIQ_PIPELINE_CONFIG", raising=False)
     assert config_from_env() == {}
-    assert config_from_env(profile="broadcast") == {}
+    assert config_from_env(profile="broadcast") == {"events": {"hit_model": "seq"}}
+    assert "events" not in config_from_env(profile="own")
     assert config_from_env({"demo": True}, "own") == {"demo": True, "strokes": {"residual": "auto"}}
     monkeypatch.setenv("RALLYIQ_PIPELINE_PROFILE", "own")
     assert config_from_env()["strokes"]["residual"] == "auto"

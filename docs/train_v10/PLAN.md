@@ -61,3 +61,26 @@ run the test clips once with the chosen mode. Report both R2 and R2b; ship only 
 look at the test matches, stated as such.
 R2b outcome: on ShuttleSet train OOF the modes score r03 0.869, r10 0.867, unrestricted 0.863 -> r03 chosen, which is R2's
 mode, so the test result stays 0.815 vs 0.780, CI [-0.016, +0.069]: not shipped.
+
+## Follow-up 1: frame-time bug (finding)
+Source: rallyiq/events/pipeline._fps_ms = median of per-frame steps of the integer-ms shuttle timestamps -> 33 ms at
+29.97/30 fps (30.3 fps). Shipped code uses fps_ms only as a per-frame duration (window sizes, track quality, the one-frame
+hit offset), never to turn a frame index into an absolute time, so the error is 0.3 ms, not cumulative. Absolute
+conversions (VideoMeta.t_ms / frame_at, strokes, web CorrectionPanel / corrections / Timeline / Workbench, review scripts) use
+the probe's exact fps. The drift existed only in my v10 TCN integration (seqhits.apply computed t = frame * 1000 / fps from
+the rounded fps). No shipped fix needed; F1 numbers unaffected (no re-measure needed: no code path changes).
+
+## Follow-up 2 pre-registration (written before running)
+Broadcast TCN, grouped K-fold by match over all 44 ShuttleSet matches with artifacts (38 train + 6 test; 104 clips), 5 folds
+(matches assigned round-robin in sorted match-id order). Per fold: TCN config A trained on the other folds' clips only
+(2 seeds, 3000 steps); peak threshold / gap chosen by an inner 3-fold (by match) on the training matches only; integration
+fixed as chosen before on training data: peaks inside the rules pipeline's rallies +-0.3 s, side from the side head. Compare
+per held-out clip with the rules pipeline (LH metrics, +-3 frames same side). Per-match bootstrap (5,000) of the pooled F1
+difference over all 44 matches. Ship for the broadcast profile only if CI > 0, with tests and profile=own unchanged.
+
+### Follow-up 2, production-path check (added 19:05 UTC, after the harness result, before any change was kept)
+The harness decode is the pre-registered quantity. Before shipping I also ran the real segment_events(hit_model=<fold model>)
+on every held-out clip with the same per-fold models (ckpt/kf/fold*.npz), scored the same way (side = the side of the hitter
+player, as for the rules). Ship only if this production-path CI is also above 0. Two integration bugs were found by it and
+fixed to match the specification (not tuned): the model must read the unmasked shuttle track it was trained on, and the
+hitter must be the player on the side-head's side (search the nearest pose frames within 1 s), not any nearest player.

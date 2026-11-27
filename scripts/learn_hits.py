@@ -60,6 +60,7 @@ class Clip:
         self.cid, self.art, self.label, self.group = cid, art, label, group
         meta = json.loads((art / "probe.json").read_text(encoding="utf-8"))
         self.fps, self.duration_ms, self.video_id = float(meta["fps"]), float(meta["duration_ms"]), meta["video_id"]
+        self.frame_size = (int(meta["width"]), int(meta["height"]))
         self.offset = int(label["range_ms"][0])
         sh = ShuttleTrack.model_validate_json((art / "shuttle.json").read_text(encoding="utf-8"))
         pp = art / "players.json"
@@ -81,7 +82,7 @@ class Clip:
         return off_court_views(self.cal_segments, cfg.court_view_min_share) if cfg.mask_off_court_views else []
 
     def run(self, cfg: EventsConfig):
-        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms, off_court=self.off_court(cfg), audio=getattr(self, "audio", None))
+        return segment_events(self.shuttle, self.poses, cfg, video_end_ms=self.duration_ms, off_court=self.off_court(cfg), audio=getattr(self, "audio", None), frame_size=getattr(self, "frame_size", None))
 
     def collect(self, cfg: EventsConfig, tol_frames: float) -> None:
         """Candidates per rally with features and labels (scorer off: rule confidences kept)."""

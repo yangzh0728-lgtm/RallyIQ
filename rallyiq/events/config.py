@@ -110,6 +110,12 @@ class EventsConfig:
     # Dead-ball filter (events/dead_ball.py): "off", "auto" (bundled models/dead_ball.json) or a JSON path. Removes
     # isolated hits nobody answers (bouncing, scooping or tapping the shuttle over between rallies).
     dead_ball: str = "auto"
+    # Hit detector: "rules" (candidates + learned scorer + rally rules) or "seq" (bundled rally sequence model,
+    # events/seqhits.py, trained on ShuttleSet broadcast matches) / a model path. "seq" replaces each rally's hits by the
+    # model's peaks inside the rally (+-0.3 s) and needs the frame size (segment_events(frame_size=...)). Only the
+    # broadcast pipeline profile turns it on (train_v10: grouped 5-fold by match over 43 ShuttleSet matches, hit F1
+    # 0.787 -> 0.863, per-match CI [+0.063, +0.090]); on own footage it is 0.07 worse, so the default stays "rules".
+    hit_model: str = "rules"
     partner_swing_prox_margin: float = 0.3
     # Drop a rally whose hits (at most this many; none counts too) are all by one side: nobody answered
     # across the net, so it is a catch, pick-up or toss between points. 0 disables.
