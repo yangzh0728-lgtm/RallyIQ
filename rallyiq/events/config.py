@@ -107,6 +107,9 @@ class EventsConfig:
     # and the nearest wrist at the contact frame is then a coin toss (train_v6: 2 of the 4 errors on 102
     # hand-checked doubles hits, none broken). 0 = off.
     partner_swing_margin: float = 0.2
+    # Dead-ball filter (events/dead_ball.py): "off", "auto" (bundled models/dead_ball.json) or a JSON path. Removes
+    # isolated hits nobody answers (bouncing, scooping or tapping the shuttle over between rallies).
+    dead_ball: str = "off"
     partner_swing_prox_margin: float = 0.3
     # Drop a rally whose hits (at most this many; none counts too) are all by one side: nobody answered
     # across the net, so it is a catch, pick-up or toss between points. 0 disables.
