@@ -116,3 +116,50 @@ def test_export_matches_sklearn():
     m = PH.PoseHitModel(json.loads(json.dumps(PH.export_hgb(h, {"gap_threshold": 0.4}))))
     assert m.thresholds == {"gap_threshold": 0.4}
     assert np.abs(m.predict(X) - h.predict_proba(X)[:, 1]).max() < 1e-4
+
+
+class _ByPlayer:
+    """Stub pose model: p_swing = the first feature, which the patched window_features sets per player."""
+
+    def predict(self, X):
+        return np.asarray(X, float)[:, 0]
+
+
+def _doubles_hits(seed=4):
+    from rallyiq.events.players import PoseIndex
+
+    v = make_video(n_rallies=2, seed=seed, doubles=True)
+    cfg = replace(EventsConfig(), hit_scorer="off")
+    rallies = segment_events(v.shuttle, v.poses, cfg)
+    return v, rallies, PoseIndex(v.poses, cfg)
+
+
+def _partner_of(pid, poses):
+    team = {p.player_id: p.team for f in poses for p in f.players}
+    return next(q for q, t in team.items() if t == team[pid] and q != pid)
+
+
+def test_partner_swing_moves_hit_to_the_swinging_partner(monkeypatch):
+    v, rallies, idx = _doubles_hits()
+    h = next(h for r in rallies for h in r.hits if h.hitter_id and h.source != PH.SOURCE)
+    mate = _partner_of(h.hitter_id, v.poses)
+    swinger = {mate}
+    monkeypatch.setattr(PH, "window_features",
+                        lambda s, t, fm: [1.0 if s.bodies and s.bodies[0].player_id in swinger else 0.0])
+    # prox margin 1.0: the partner may stand anywhere; only `mate` swings
+    moved = PH.partner_swing(rallies, v.poses, idx, _ByPlayer(), 0.2, 1.0, frame_ms=1000.0 / v.fps)
+    assert moved >= 1 and h.hitter_id == mate and "hitter_from_swing" in h.reasons
+    # only hits of mate's team move, and only onto mate
+    assert all(x.hitter_id == mate for r in rallies for x in r.hits if "hitter_from_swing" in x.reasons)
+
+
+def test_partner_swing_needs_clear_margin_and_doubles(monkeypatch):
+    v, rallies, idx = _doubles_hits()
+    monkeypatch.setattr(PH, "window_features", lambda s, t, fm: [0.5])  # everyone swings the same
+    before = [h.hitter_id for r in rallies for h in r.hits]
+    assert PH.partner_swing(rallies, v.poses, idx, _ByPlayer(), 0.2, 1.0, frame_ms=1000.0 / v.fps) == 0
+    assert [h.hitter_id for r in rallies for h in r.hits] == before
+    s = make_video(n_rallies=1, seed=1)  # singles: no partners, nothing to do
+    sr = segment_events(s.shuttle, s.poses, replace(EventsConfig(), hit_scorer="off"))
+    from rallyiq.events.players import PoseIndex
+    assert PH.partner_swing(sr, s.poses, PoseIndex(s.poses, EventsConfig()), _ByPlayer(), 0.2, 1.0) == 0
