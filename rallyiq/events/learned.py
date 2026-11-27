@@ -44,6 +44,10 @@ EXTRA_FEATURES: tuple[str, ...] = (
     "toward_in", "away_out", "log_speed_ratio", "wrist_dist", "track_density",
     # pose-sequence swing model (pose_hits.py): best p_swing of the best player's side / the other side within 250 ms
     "p_swing_hitter", "p_swing_other",
+    # train_v8: fastest wrist (body spans / s) of the best player's side / the other side within 250 ms
+    "wv_hitter", "wv_other",
+    # train_v8: hit sound (audio.py): peak onset ratio, its offset, strong onsets around, audio present
+    "a_peak", "a_off", "a_count", "has_audio",
 )
 SWING_WINDOW_MS = 250.0
 # pose hit model the swing features read: "auto" = bundled models/pose_hits.json, or a JSON path. A scorer spec may
@@ -51,7 +55,7 @@ SWING_WINDOW_MS = 250.0
 SWING_MODEL = "auto"
 
 
-def _swing(poses: "PoseIndex", t_ms: float, side: Optional[str]) -> tuple[float, float]:
+def _swing(poses: "PoseIndex", t_ms: float, side: Optional[str], wrist: bool = False) -> tuple[float, float]:
     """(p_swing of ``side``, p_swing of the other side) from the bundled pose hit model; (0.5, 0.5) when unknown.
     The side series is built once per PoseIndex and cached on it."""
     from . import pose_hits as PH
@@ -72,8 +76,8 @@ def _swing(poses: "PoseIndex", t_ms: float, side: Optional[str]) -> tuple[float,
     for sd in ("near", "far"):
         key = (round(t_ms), sd)
         if key not in memo:
-            memo[key] = PH.swing_evidence(series, t_ms, sd, model, SWING_WINDOW_MS, frame_ms)[0] if series[sd].bodies else 0.5
-        out.append(memo[key])
+            memo[key] = PH.swing_evidence(series, t_ms, sd, model, SWING_WINDOW_MS, frame_ms) if series[sd].bodies else (0.5, 0.0)
+        out.append(min(memo[key][1], 20.0) / 20.0 if wrist else memo[key][0])
     near, far = out
     if side == "near":
         return near, far
@@ -133,6 +137,9 @@ def features(
     fr_ms = span_ms / max(min(len(pts) - 1, c.idx + 40) - max(0, c.idx - 40), 1)
     density = _clip(seen * fr_ms / 1000.0)
     sw_h, sw_o = _swing(poses, pt.t_ms, side) if swing else (0.5, 0.5)
+    wv_h, wv_o = _swing(poses, pt.t_ms, side, wrist=True) if swing else (0.0, 0.0)
+    au = getattr(poses, "_audio", None)
+    a_feat = au.features(pt.t_ms) if au is not None else (0.0, 0.0, 0.0, 0.0)
     return [
         c.turn_deg / 180.0,
         c.change,
@@ -168,6 +175,9 @@ def features(
         density,
         sw_h,
         sw_o,
+        wv_h,
+        wv_o,
+        *a_feat,
     ]
 
 
@@ -177,8 +187,9 @@ class HitScorer:
         if not set(names) <= set(ALL_FEATURES):
             raise ValueError("hit scorer was trained on a different feature set; retrain with scripts/learn_hits.py")
         self.cols = [ALL_FEATURES.index(n) for n in names]
-        self.uses_swing = any(n.startswith("p_swing") for n in names) or any(
-            n.startswith("p_swing") for m in spec.get("members", []) for n in (m.get("features") or []))
+        sw = ("p_swing", "wv_")
+        self.uses_swing = any(n.startswith(sw) for n in names) or any(
+            n.startswith(sw) for m in spec.get("members", []) for n in (m.get("features") or []))
         self.spec = spec
         # an ensemble lists its members (same features); each member has mean/std/layers or is a gbt
         self.members = [HitScorer({**m, "features": list(m.get("features") or names)}) for m in spec.get("members", [])]
@@ -200,6 +211,18 @@ class HitScorer:
     def predict(self, x: Sequence[Sequence[float]] | np.ndarray) -> np.ndarray:
         """``x``: rows in ``ALL_FEATURES`` order (or already in this model's own column order)."""
         x = np.asarray(x, float)
+        st = self.spec.get("audio_stack")
+        if st is not None and x.shape[-1] == len(ALL_FEATURES):
+            # train_v8 audio layer: re-score with the hit sound where the video has audio
+            if getattr(self, "_base", None) is None:
+                self._base = HitScorer({k: v for k, v in self.spec.items() if k != "audio_stack"})
+            base = self._base.predict(x)
+            p = np.clip(base, 1e-4, 1 - 1e-4)
+            w = np.asarray(st["w"], float)
+            ia = [ALL_FEATURES.index(n) for n in ("a_peak", "a_off", "a_count")]
+            z = w[0] + w[1] * np.log(p / (1 - p)) + x[..., ia] @ w[2:]
+            has = x[..., ALL_FEATURES.index("has_audio")] > 0
+            return np.where(has, 1.0 / (1.0 + np.exp(-z)), base)
         if "members" in self.spec:  # ensemble: mean probability of the members (each picks its own columns)
             return np.mean([m.predict(x) for m in self.members], axis=0)
         if x.shape[-1] == len(ALL_FEATURES) and len(self.cols) != len(ALL_FEATURES):

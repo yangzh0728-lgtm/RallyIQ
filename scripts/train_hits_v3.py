@@ -49,6 +49,9 @@ FEATURE_SETS = {
     "v2+all": FEATURES + GEOM + SWING,
     "v3": tuple(f for f in FEATURES if f not in DIR_FEATURES) + GEOM,
     "v3+sw": tuple(f for f in FEATURES if f not in DIR_FEATURES) + GEOM + SWING,
+    "v2+all+p": FEATURES + GEOM + SWING + ("wv_hitter", "wv_other"),
+    "v2+all+a": FEATURES + GEOM + SWING + ("a_peak", "a_off", "a_count", "has_audio"),
+    "v2+all+pa": FEATURES + GEOM + SWING + ("wv_hitter", "wv_other", "a_peak", "a_off", "a_count", "has_audio"),
     "v3-dens+sw": tuple(f for f in FEATURES if f not in DIR_FEATURES) + tuple(g for g in GEOM if g != "track_density") + SWING,
 }
 
@@ -77,6 +80,7 @@ def collect(a: argparse.Namespace) -> int:
                 rows.append(c)
             for c in rows:  # drop heavy members before pickling
                 c.shuttle = c.poses = c.players = None
+                c.audio = None
             pickle.dump(rows, open(p, "wb"))
             print(f"amateur msc={msc}: {len(rows)} clips in {time.time() - t0:.0f}s -> {p}", flush=True)
         p = out / f"ss_msc{msc}.pkl"

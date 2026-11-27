@@ -51,8 +51,11 @@ def segment_events(
     video_end_ms: Optional[float] = None,
     collect: Optional[list] = None,
     off_court: Sequence[tuple[int, int]] = (),
+    audio=None,
 ) -> list[RallySegment]:
     """``collect``: see ``hits.detect_hits``; entries become (rally_id, features, candidate, track point).
+
+    ``audio``: optional ``audio.Onsets`` of the video (hit-sound features for a scorer that uses them).
 
     ``off_court``: inclusive frame ranges where the camera does not show the court (``off_court_views``);
     used only with ``cfg.mask_off_court_views``.
@@ -61,6 +64,8 @@ def segment_events(
     if cfg.mask_off_court_views and off_court:
         shuttle = [ShuttleObs(o.frame, o.t_ms) if _inside(o.frame, off_court) else o for o in shuttle]
     pose_index = PoseIndex(poses, cfg)
+    if audio is not None:
+        pose_index._audio = audio  # type: ignore[attr-defined]
     scale = pose_index.global_height
     track = Track(usable_points(shuttle, cfg, scale))
     if video_end_ms is None:
