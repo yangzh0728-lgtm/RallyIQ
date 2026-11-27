@@ -756,6 +756,36 @@ class StyleResult:
     distributions: dict[str, list[Distribution]]
 
 
+# Stroke-mix shares whose sampling uncertainty the report states (train_v9: with 40-120 own shots per player the 95% interval
+# from resampling rallies is about +-10 points, as wide as most prototype ranges).
+CI_FEATURES = ("smash_pct", "net_pct", "clear_pct", "drop_pct", "lift_block_pct", "attack_pct", "defense_pct")
+
+
+def feature_intervals(rallies: list[list[_Ctx]], subject: str, doubles: bool = False, n_boot: int = 200,
+                      seed: int = 0, names: tuple[str, ...] = CI_FEATURES) -> dict[str, tuple[float, float]]:
+    """95% percentile intervals of ``names`` from resampling whole rallies with replacement (rallies are the
+    independent units; shots within a rally are not)."""
+    import random
+
+    if not rallies:
+        return {}
+    rng = random.Random(seed)
+    vals: dict[str, list[float]] = {k: [] for k in names}
+    for _ in range(n_boot):
+        smp = [rallies[rng.randrange(len(rallies))] for _ in rallies]
+        f = features(smp, subject, doubles)
+        for k in names:
+            v = f.get(k, (None, 0))[0]
+            if v is not None:
+                vals[k].append(v)
+    out = {}
+    for k, v in vals.items():
+        if len(v) >= max(20, n_boot // 2):
+            v.sort()
+            out[k] = (v[int(0.025 * (len(v) - 1))], v[int(0.975 * (len(v) - 1))])
+    return out
+
+
 def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: float, metric_ok: bool,
                    shared: dict[str, Metric]) -> StyleResult:
     """Style per player (singles) or team (doubles). ``shared`` holds existing metrics by key
@@ -777,12 +807,18 @@ def analyze_styles(events: EventsResult, players: PlayerTracks | None, fps: floa
     pre: dict[str, dict] = {}
     for s in subjects:
         feats = features(rallies, s, doubles)
+        ci = feature_intervals(rallies, s, doubles) if feats["smash_pct"][1] >= MIN_SHOTS else {}
         ms = []
         for name, (val, n) in feats.items():
             label, unit = FEATURES[name][0], FEATURES[name][1]
-            ms.append(_metric(f"{s}.style.{name}", label, val, unit, n, 60, 15,
-                              degrade=name in geo and not metric_ok,
-                              digits=2 if name == "flight_s" else 1))
+            m = _metric(f"{s}.style.{name}", label, val, unit, n, 60, 15,
+                        degrade=name in geo and not metric_ok,
+                        digits=2 if name == "flight_s" else 1)
+            if name in ci and m.value is not None:
+                lo, hi = ci[name]
+                txt = f"95% 区间 {lo:.0f}–{hi:.0f}%（按回合重抽样）"
+                m = m.model_copy(update={"note": f"{m.note}；{txt}" if m.note else txt})
+            ms.append(m)
         own_n = feats["smash_pct"][1]
         phases = phase_choices(rallies, s)
         used = tactics(rallies, s) if not doubles else []

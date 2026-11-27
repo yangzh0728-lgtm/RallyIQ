@@ -322,3 +322,18 @@ def test_unconfirmed_stroke_types_lower_confidence():
     stats = compute_match_stats(events.model_copy(update={"shots": human}), players, _cal())
     p1 = next(s for s in stats.styles if s.subject == "P1")
     assert p1.confidence == "medium" and (p1.note is None or "经过确认" not in p1.note)
+
+
+def test_style_shares_carry_a_rally_bootstrap_interval():
+    from rallyiq.report.style import _contexts, feature_intervals
+
+    events, players = _rallies(POWER)
+    stats = compute_match_stats(events, players, _cal())
+    keys = {m.key: m for p in stats.players for m in p.metrics}
+    m = keys["P1.style.smash_pct"]
+    assert m.note and "95% 区间" in m.note
+    rallies = _contexts(events, players, FPS)
+    ci = feature_intervals(rallies, "P1", n_boot=100)
+    lo, hi = ci["smash_pct"]
+    assert lo <= m.value <= hi
+    assert feature_intervals(rallies, "P1", n_boot=100) == ci  # seeded: same report every run
