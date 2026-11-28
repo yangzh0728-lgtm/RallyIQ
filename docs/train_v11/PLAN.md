@@ -37,3 +37,21 @@ and no gate drops.
 
 ## Anything else
 Only if the H/S results point to it, and pre-registered here before running.
+
+## Addendum 2026-11-28 ~08:00 UTC (sam: "增加训练内容"; written before any H/S/C result)
+- A (rescue courts): 0 rescued by me (LOG.md); CLICK_ME.md asks sam for ~10 min of corner clicks on 8 positions. Videos that
+  arrive in time are run and labelled exactly like the 8 and join the same tests; a list of which ones made it goes in
+  the report. If none arrive before the retrain starts, H/S/C run on the 8.
+- B (public data): no download (licences unclear or broadcast-only, see LOG.md / REPORT.md); nothing changes in H/S.
+- C (viewpoint augmentation, pre-registered): each of the 88 ShuttleSet train clips gets 2 synthetic copies: an exact
+  camera-rotation homography R = K Rot K^-1 (f = 0.9 x width; yaw U[-15, 15] deg, pitch U[-10, 10], roll U[-3, 3]) applied
+  to every image-space quantity (shuttle x/y, player boxes, keypoints, foot points, calibration: H_new = H_old R^-1, corners);
+  points leaving the image are dropped; then own-footage-like detection loss: bursts (start p = 0.03 per frame, length
+  U{2..10} frames) + independent drop 0.10 + Gaussian noise sigma = 2 px (1080p scale). Labels unchanged (same times / sides).
+  A rotation cannot move the camera lower (sam's cameras are low behind the baseline), so this covers orientation and detection
+  quality, not height; court-space re-projection of the shuttle needs its unknown height, so it is not attempted.
+  Arm C = H's recipe and own labels + the 176 augmented clips in the ShuttleSet train set. Same LOVO evaluation, same gates
+  and the same ship rule against the shipped baseline. If both H and C pass, the one with the higher pooled own F1 ships
+  (a post-hoc choice between two pre-registered arms, stated as such).
+- The stroke residual (S) does not use augmented ShuttleSet rows: it is an own-footage correction on top of the
+  ShuttleSet-trained court model, and adding broadcast rows would remove what it corrects.
