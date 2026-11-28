@@ -1,0 +1,107 @@
+/* Page-specific styles for profile; shared tokens and components live in ../styles.css. */
+
+/* ------------------------------------------------------------------ header: whose profile */
+.person-tabs.seg { flex-wrap: nowrap; gap: 2px; max-width: min(56vw, 760px); overflow-x: auto; scrollbar-width: none; }
+.person-tabs.seg::-webkit-scrollbar { display: none; }
+.person-tabs .icon { width: 14px; height: 14px; }
+.person-tabs .n { color: var(--muted); font-weight: 400; }
+.person-tabs .on .n { color: var(--text-2); }
+
+/* ------------------------------------------------------------------ shared by the tables */
+.profile .card-head { min-height: 24px; }
+.profile .table-scroll { margin: 0 -8px; }
+.profile th, .profile td { padding-left: 8px; padding-right: 8px; }
+.profile td { line-height: 1.45; }
+.profile td .small { margin-top: 2px; line-height: 1.45; }
+.profile .u { margin-left: 2px; font-size: 11px; font-weight: 400; color: var(--muted); }
+.profile td.muted .u { opacity: 0.8; }
+.profile .u.ghost { visibility: hidden; }
+.profile .card-foot { line-height: 1.6; max-width: 860px; }
+.profile .stat-tile .sub { font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------ recent changes */
+.change-list li.tagged::before { content: none; }
+.change-list .kind { flex: none; min-width: 64px; text-align: center; margin-top: 1.5px; }
+.change-list .kind.caution { color: var(--warn); background: rgba(245, 184, 61, 0.12); }
+.change-list li > span:last-child { min-width: 0; }
+
+/* ------------------------------------------------------------------ opponent habits */
+.habit-caveats { margin-bottom: 14px; padding: 10px 12px; }
+.habit-caveats > .icon { width: 14px; height: 14px; margin-top: 3px; color: var(--muted); }
+.habit-caveats .caveats { font-size: 12px; list-style: none; padding: 0; display: grid; gap: 2px; }
+.habit-caveats .caveats li + li { margin-top: 0; }
+.habit-table { min-width: 720px; }
+.habit-table tr.group th { padding-top: 14px; padding-bottom: 6px; border-bottom-color: var(--line); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
+.habit-table tbody:first-of-type tr.group th { padding-top: 10px; }
+.habit-table tr.group:hover th { background: transparent; }
+.habit-table tbody:not(:last-child) tr:last-child td { border-bottom: 1px solid var(--line); }
+.habit-table .outcome { font-weight: 600; }
+.habit-table .pbar { min-width: 200px; max-width: 260px; }
+.habit-table .pbar .bar { min-width: 64px; }
+.habit-table .pbar > span { flex: none; min-width: 104px; }
+.habit-table .pbar b { font-weight: 600; }
+.habit-table td:nth-child(1) { white-space: nowrap; }
+.habit-table td:nth-child(2) { white-space: nowrap; }
+.habit-table .evidence { gap: 4px; }
+.habit-table .evidence.counter { flex-wrap: nowrap; margin-left: 8px; }
+.habit-table .evidence.counter > .small { margin-right: 2px; }
+
+/* ------------------------------------------------------------------ training retests */
+.retest-table { min-width: 680px; }
+.retest-table .drill { font-weight: 600; }
+.retest-table td:first-child { min-width: 248px; max-width: 420px; }
+.retest-table td.num { font-weight: 600; white-space: nowrap; }
+.retest-table th:last-child, .retest-table td:last-child { padding-left: 28px; width: 216px; }
+.retest-table th.num { width: 96px; }
+.retest-table a.source { display: inline-flex; align-items: flex-start; gap: 5px; color: var(--text-2); }
+.retest-table a.source .icon { width: 13px; height: 13px; margin-top: 2px; color: var(--muted); }
+.retest-table a.source:hover { color: var(--accent); text-decoration: none; }
+.retest-table a.source:hover .icon { color: inherit; }
+.profile .result { white-space: nowrap; }
+.profile .result .icon { width: 14px; height: 14px; }
+.profile .result .delta { margin-left: 2px; font-weight: 500; }
+.profile .result.pending, .profile .result.not_measurable, .profile .result.unchanged { font-weight: 500; }
+
+/* ------------------------------------------------------------------ metric trends */
+.metric-table { min-width: 640px; }
+.metric-table td.name { font-weight: 500; min-width: 232px; }
+/* With many matches the table scrolls sideways; the metric names stay in place. */
+.metric-table th:first-child, .metric-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.metric-table tbody tr:hover td:first-child { background: linear-gradient(rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.018)), var(--surface); }
+.metric-table .metric-note { font-weight: 400; max-width: 30em; }
+.metric-table th.num, .metric-table td.num { white-space: nowrap; }
+.metric-table td.num { font-weight: 600; }
+.metric-table td.num.muted { font-weight: 500; }
+.metric-table .th-time { font-size: 10px; font-weight: 400; }
+.metric-table th:nth-last-child(3), .metric-table td:nth-last-child(3) { padding-left: 24px; width: 136px; }
+.metric-table th:nth-last-child(2), .metric-table td:nth-last-child(2) { width: 132px; white-space: nowrap; }
+.metric-table th:last-child, .metric-table td:last-child { width: 72px; }
+.trend-cell { display: inline-flex; align-items: center; gap: 6px; }
+.profile .trend { gap: 5px; white-space: nowrap; }
+.profile .trend.plain { color: var(--text-2); }
+.profile .trend.new, .profile .trend.insufficient { font-weight: 500; font-size: 12px; }
+.trend-cell .note-mark { width: 14px; height: 14px; }
+
+/* ------------------------------------------------------------------ matches */
+.match-list { display: grid; }
+.match-row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto auto; gap: 16px; align-items: center; padding: 12px 8px; margin: 0 -8px; border-bottom: 1px solid var(--line); border-radius: 8px; }
+.match-row:last-child { border-bottom: 0; }
+.match-row:hover { background: rgba(255, 255, 255, 0.02); }
+.match-row .video-thumb:hover { text-decoration: none; }
+.match-row .title { display: block; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match-row .title:hover { color: var(--accent); text-decoration: none; }
+.match-row .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.match-row .who { color: var(--text-2); }
+.match-row .who a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.match-row .who a:hover { color: var(--accent); text-decoration-color: currentColor; }
+.match-row .conds { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 420px; }
+.match-row .conds .chip { background: transparent; }
+.match-row .btn .icon { width: 14px; height: 14px; }
+
+@media (max-width: 1180px) {
+  .match-row { grid-template-columns: 84px minmax(0, 1fr) auto; }
+  .match-row .conds { grid-column: 2 / -1; grid-row: 2; justify-content: flex-start; max-width: none; margin-top: -6px; }
+}
+@media (max-width: 900px) {
+  .person-tabs.seg { max-width: 60vw; }
+}

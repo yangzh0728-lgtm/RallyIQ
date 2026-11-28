@@ -15,3 +15,11 @@ export function useClockPlaying(clock: PlaybackClock): boolean {
     () => clock.playing,
   );
 }
+
+/** The playback rate; the clock emits on setRate, so this also follows changes made while paused. */
+export function useClockRate(clock: PlaybackClock): number {
+  return useSyncExternalStore(
+    (cb) => clock.subscribe(cb),
+    () => clock.rate,
+  );
+}

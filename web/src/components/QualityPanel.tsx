@@ -24,17 +24,19 @@ export function QualityPanel({ videoId, refreshKey }: { videoId: string; refresh
   const wrongCourt = q.checks.find((c) => c.key === "court_choice" && c.status !== "ok");
   return (
     <div className="panel small quality">
-      <h3>
-        视频条件 <span className="muted">· {capabilityHeadline(q.capabilities)}</span>
-      </h3>
+      <div className="panel-head">
+        <h3>视频条件</h3>
+        <span className="muted">{capabilityHeadline(q.capabilities)}</span>
+      </div>
       {wrongCourt && <div className="notice warn">{wrongCourt.note}</div>}
       <div className="quality-summary">{q.summary}</div>
       <div className="quality-caps">
         {q.capabilities.map((c) => (
-          <div key={c.capability} className="row" title={c.reasons.join("\n") || undefined}>
+          <div key={c.capability} className="kv" title={c.reasons.join("\n") || undefined}>
             <span>{c.label}</span>
-            <span className="spacer" />
-            <StatusPill status={c.status} />
+            <span className="v">
+              <StatusPill status={c.status} />
+            </span>
           </div>
         ))}
       </div>
@@ -43,11 +45,12 @@ export function QualityPanel({ videoId, refreshKey }: { videoId: string; refresh
         <div className="quality-checks">
           {sortChecks(q.checks).map((c) => (
             <div key={c.key} className="quality-check">
-              <div className="row">
-                <span className="muted">{c.label}</span>
-                <span className="spacer" />
-                <span className="mono">{c.value ?? "—"}</span>
-                <StatusPill status={c.status} />
+              <div className="kv">
+                <span className="k">{c.label}</span>
+                <span className="v">
+                  <span className="mono">{c.value ?? "—"}</span>
+                  <StatusPill status={c.status} />
+                </span>
               </div>
               {c.note && <div className="muted note">{c.note}</div>}
             </div>

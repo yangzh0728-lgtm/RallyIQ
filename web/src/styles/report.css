@@ -1,0 +1,185 @@
+/* Page-specific styles for report; shared tokens and components live in ../styles.css. */
+
+/* ------------------------------------------------------------------ frame */
+.report [id^="sec-"] { scroll-margin-top: 16px; }
+.export-label { display: inline-flex; align-items: center; gap: 6px; margin-right: 2px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.head-icon { color: var(--text-2); }
+.section-intro { color: var(--muted); font-size: 12px; line-height: 1.65; margin: -6px 0 14px; text-wrap: pretty; }
+.notice > .icon { width: 14px; height: 14px; margin-top: 2px; }
+.report .who > .mono { color: var(--text-2); }
+
+/* ------------------------------------------------------------------ hero */
+.hero-top { gap: 8px 14px; }
+.hero-top .chip { color: var(--text); }
+.hero-fact { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.hero-fact .icon { width: 14px; height: 14px; }
+.hero-fact b { color: var(--text); font-weight: 600; }
+.hero-top .fingerprint { cursor: help; font-size: 11px; }
+
+.scoreboard { column-gap: 32px; }
+.sb-text { min-width: 0; }
+.sb-side .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-side .sub { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; }
+.sb-side.right .sub { justify-content: flex-end; }
+.sb-side .sub b { color: var(--text-2); font-weight: 600; }
+.sb-side .sub .who { gap: 5px; }
+.sb-side .sub .who .mono { margin-left: 2px; }
+.sb-score { min-width: 220px; }
+.sb-score .big > span { min-width: 1ch; }
+.sb-score .big.none { color: var(--muted); font-weight: 500; }
+.sb-score .big.none i { color: var(--line-strong); }
+.sb-line { font-size: 12px; color: var(--muted); }
+.sb-line.hint { max-width: 300px; line-height: 1.55; text-wrap: balance; }
+.sb-games { margin-top: 2px; }
+
+/* "more" rows and group headings: long sets of numbers start short and are grouped when opened */
+.more-row { display: flex; justify-content: center; margin-top: 12px; }
+.more-btn { color: var(--muted); }
+.more-btn .icon { width: 14px; height: 14px; transition: transform 0.15s; }
+.more-btn .icon.flip { transform: rotate(180deg); }
+.group-head, .card h3.group-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+.group-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.player-head + .group-head { margin-top: 0; }
+
+.metric .value small.pct { margin-left: 1px; }
+.metric .foot .n { margin-left: auto; }
+.metric .note { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.dist-list { display: grid; gap: 8px; }
+.metric-grid + .dist-list { margin-top: 14px; }
+.dist-list .dist { margin-top: 0; }
+.dist-list .dist.split + .dist.split { margin-top: -6px; }
+/* a count split between two doubles partners: one bar in both players' colours, counts at the ends */
+.dist.split { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 12px; }
+.split-label { flex: 1 1 130px; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; line-height: 1.4; }
+.split-label b { font-size: 13px; font-weight: 600; }
+.dist.split > .pill { flex: none; min-width: 80px; justify-content: center; }
+.split-row { flex: 4 1 280px; min-width: 0; display: grid; grid-template-columns: 30px 62px minmax(48px, 1fr) 62px 30px; gap: 8px; align-items: center; }
+.split-row .v { color: var(--muted); white-space: nowrap; }
+.split-row .v b { color: var(--text); font-weight: 600; }
+.split-row .v:nth-of-type(2) { text-align: right; }
+.split-row .who { gap: 5px; color: var(--text-2); }
+.split-row .who:last-child { justify-content: flex-end; }
+.split-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.split-bar i { display: block; height: 100%; min-width: 3px; border-radius: 4px; }
+.split-note { flex: 1 0 100%; }
+.dist-row > span:first-child { color: var(--text-2); }
+.dist-row > span:last-child b { color: var(--text); font-weight: 600; }
+.card-head + .dist { margin-top: -4px; }
+
+.caveat-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.caveat-foot.first { margin-top: 0; padding-top: 0; border-top: 0; }
+.status-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-2); }
+.status-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ------------------------------------------------------------------ AI coach */
+.coach .card-head { min-height: 32px; }
+.coach .notice { margin-bottom: 12px; }
+.coach-empty { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px dashed var(--line-strong); border-radius: var(--r); }
+.coach-empty .glyph { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--surface-3); color: var(--text-2); }
+.coach-empty b { font-size: 14px; font-weight: 600; }
+.coach-empty p { margin-top: 2px; color: var(--muted); font-size: 13px; line-height: 1.6; max-width: 720px; }
+/* meta row (kind, player, confidence) first, then the title on its own line so long titles never push the pills around */
+.insight-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.insight-head .who { font-size: 12px; color: var(--text-2); }
+.insight-head .pills { order: 2; margin-left: auto; display: inline-flex; gap: 6px; }
+.insight-head .title { order: 3; flex: 1 0 100%; font-size: 14px; line-height: 1.45; }
+.insight { padding-left: 16px; }
+.training.shot-advice { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); }
+.training.shot-advice > li { align-content: start; }
+.evidence > .small { margin-right: 2px; }
+.warn-line { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.5; color: var(--warn); }
+.warn-line .icon { width: 14px; height: 14px; margin-top: 2px; }
+.sub-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin: 22px 0 10px; }
+.sub-head h3 { margin: 0; font-size: 14px; }
+.sub-head .sub { font-size: 12px; color: var(--muted); }
+.training b { font-weight: 600; }
+.advice-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.advice-head .situation { color: var(--text-2); line-height: 1.5; padding-top: 2px; }
+.advice-head .pill { margin-top: 1px; }
+.training .drill-who { margin-right: 2px; vertical-align: baseline; }
+.training .evidence { margin-top: 2px; }
+
+/* ------------------------------------------------------------------ playing style */
+.style-head { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
+.style-head .sb-badge { width: 32px; height: 32px; border-radius: 9px; font-size: 12px; }
+.style-title { display: grid; gap: 1px; min-width: 0; }
+.style-who { font-size: 12px; color: var(--muted); }
+.style-primary { font-size: 13px; line-height: 1.6; color: var(--text-2); }
+.style-primary b { color: var(--text); font-weight: 600; }
+.style-scores { margin-top: 4px; }
+.style-scores .dist-row > span:last-child { color: var(--text); font-weight: 600; }
+.phase-list { display: grid; gap: 6px; }
+.phase-row { display: grid; grid-template-columns: 40px 44px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; font-size: 12px; line-height: 1.55; }
+.phase-row .kind { text-align: center; }
+.phase-row .shots { text-align: right; font-weight: 600; }
+.phase-row .mix { color: var(--text-2); }
+.phase-row .rec { white-space: nowrap; }
+.style-tactics td { white-space: nowrap; }
+.style-tactics td:first-child { white-space: normal; }
+.tc-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.style-list { color: var(--text-2); line-height: 1.7; }
+.style-list li::marker { color: var(--muted); }
+.style-evidence { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+/* ------------------------------------------------------------------ score flow */
+.flow-games { margin-bottom: 14px; }
+.flow-game .value i { font-style: normal; font-weight: 500; color: var(--muted); margin: 0 6px; }
+.flow-game .game-line { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.flow-wrap { width: 100%; overflow: hidden; }
+.flow-chart .grid { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
+.flow-chart .baseline { stroke: var(--line-strong); stroke-width: 1; shape-rendering: crispEdges; pointer-events: none; }
+.flow-chart .game-line { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.flow-chart .bar-mark { transition: opacity 0.12s; }
+.flow-chart .bar-mark:hover { opacity: 0.75; }
+.legend .key-dash { width: 0; height: 12px; border-left: 1px dashed var(--muted); margin: 0 3px; }
+
+/* ------------------------------------------------------------------ comparison */
+.duel-head { font-size: 14px; }
+.duel-who { gap: 10px; }
+.duel-who .sb-badge { width: 28px; height: 28px; border-radius: 8px; font-size: 11px; }
+.duel-group { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+.duel-group::before, .duel-group::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.duel-head + .duel-group { margin-top: 8px; }
+.compare-table .group-row td { padding: 14px 12px 6px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; border-bottom-color: var(--line-strong); }
+.compare-table .group-row:hover td { background: transparent; }
+.duel-row { border-radius: 6px; }
+.duel-row:hover { background: rgba(255, 255, 255, 0.018); }
+.duel-row .label { line-height: 1.35; }
+.cmp-label { font-size: 12px; color: var(--text-2); }
+.cmp-bar i.dim { opacity: 0.45; }
+.compare-table th .who { color: var(--text); font-weight: 600; }
+
+/* ------------------------------------------------------------------ rally log */
+.rally-note { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -4px 0 10px; font-size: 12px; color: var(--muted); }
+.rally-table th, .rally-table td { padding: 8px 12px; white-space: nowrap; }
+.rally-table th:first-child, .rally-table td:first-child { width: 40px; }
+.rally-len { display: grid; grid-template-columns: 20px 120px; gap: 10px; min-width: 0; }
+.rally-len .n { text-align: right; }
+.rally-len .len-track { display: block; }
+.rally-len .len-track i { max-width: none; }
+.rally-table .last-shot .who { gap: 8px; }
+.table-empty { padding: 16px 12px 4px; }
+.seg > button .dot { width: 6px; height: 6px; }
+
+/* ------------------------------------------------------------------ player / team cards & profile */
+.subject-section { display: grid; gap: 12px; min-width: 0; }
+.section-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 8px 4px 0; min-height: 40px; }
+.section-bar h2 { font-size: 15px; font-weight: 650; letter-spacing: -0.005em; }
+.section-bar .sub { font-size: 12px; color: var(--muted); }
+.section-bar .seg { flex-wrap: wrap; }
+.player-head .sub { font-size: 12px; color: var(--muted); }
+.memory-card .people-grid { margin: 0 0 16px; gap: 8px; max-width: 560px; }
+.people-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) 96px; gap: 12px; align-items: center; }
+.people-row input:not([type]) { width: 100%; }
+.people-cols { font-size: 11px; color: var(--muted); }
+.self-pick { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.self-pick.on { color: var(--text); }
+.memory-actions { gap: 8px 10px; }
+.memory-msg { margin-top: 12px; }
+.memory-msg:not(.bad) > .icon { color: var(--ok); }
+
+@media (max-width: 900px) {
+  .sb-side.right .sub { justify-content: flex-start; }
+  .phase-row { grid-template-columns: 40px 44px minmax(0, 1fr); }
+  .phase-row .rec { grid-column: 3; }
+}

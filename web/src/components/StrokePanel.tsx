@@ -25,32 +25,35 @@ export function StrokePanel({ shots, rally, rallyNo, clock }: Props) {
 
   return (
     <div className="panel small">
-      <div className="row" style={{ marginBottom: 6 }}>
-        <h3 style={{ margin: 0 }}>击球类型</h3>
+      <div className="panel-head">
+        <h3>击球类型</h3>
         <span className="spacer" />
-        <button className={scope === "all" ? "active" : ""} onClick={() => setScope("all")}>
-          整场
-        </button>
-        <button className={scope === "rally" ? "active" : ""} disabled={!rally} onClick={() => setScope("rally")}>
-          {rally ? `回合 ${rallyNo}` : "当前回合"}
-        </button>
+        <span className="seg" role="group" aria-label="范围">
+          <button className={scope === "all" ? "on" : ""} aria-pressed={scope === "all"} onClick={() => setScope("all")}>
+            整场
+          </button>
+          <button className={scope === "rally" ? "on" : ""} aria-pressed={scope === "rally"} disabled={!rally} onClick={() => setScope("rally")}>
+            {rally ? `回合 ${rallyNo}` : "当前回合"}
+          </button>
+        </span>
       </div>
       {!anyTyped && <div className="muted">还没有击球类型结果（重新分析后会出现）。</div>}
       {anyTyped && (
         <>
-          <div className="row" style={{ marginBottom: 8 }}>
-            <span className="muted">最近一拍</span>
-            <span className="spacer" />
-            {latest ? (
-              <>
-                <span className="dot" style={{ background: colorOf(latest.hitter) }} />
-                <span>{labelOf(latest.hitter)}</span>
-                <TypeChip shot={latest} />
-                <span className="muted mono">{formatMs(latest.t_ms)}</span>
-              </>
-            ) : (
-              <span className="muted">—</span>
-            )}
+          <div className="kv latest-shot">
+            <span className="k">最近一拍</span>
+            <span className="v">
+              {latest ? (
+                <>
+                  <span className="dot" style={{ background: colorOf(latest.hitter) }} />
+                  <span>{labelOf(latest.hitter)}</span>
+                  <TypeChip shot={latest} />
+                  <span className="muted mono">{formatMs(latest.t_ms)}</span>
+                </>
+              ) : (
+                <span className="muted">—</span>
+              )}
+            </span>
           </div>
           {latest?.stroke?.detail && (
             <div className="stroke-detail">
@@ -68,8 +71,8 @@ export function StrokePanel({ shots, rally, rallyNo, clock }: Props) {
           {stats.map((st) => {
             const max = Math.max(1, ...st.counts.map((c) => c.n));
             return (
-              <div key={st.player} style={{ marginBottom: 8 }}>
-                <div className="row">
+              <div key={st.player} className="stroke-player">
+                <div className="row nowrap">
                   <span className="dot" style={{ background: colorOf(st.player) }} />
                   <b>{labelOf(st.player)}</b>
                   <span className="spacer" />

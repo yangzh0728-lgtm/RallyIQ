@@ -1,6 +1,7 @@
 import { applyCorrections } from "./corrections";
 import { boundaryLinesM, CORNERS_M, homographyFrom4, projectCourtLines, projectLines } from "./court";
 import { generateMock, type MockAnalysis } from "./mock";
+import { DEMO_OPPONENT, DEMO_SELF, demoOpponentProfile, demoOpponentReport, demoPeople, demoSelfProfile } from "./mockProfile";
 import { mockQuality } from "./quality";
 import { mockCoach, mockStats } from "./report";
 import type { CoachReport, Correction, CorrectionIn, EventsResult, Job, MatchReport, OverlayData, Point, StageName, StageRun, Video, VideoQuality, HardExampleSummary, OpponentReport, PeopleAssignment, PersonSummary, PlayerProfile } from "./types";
@@ -451,10 +452,17 @@ const useMock =
   import.meta.env.VITE_USE_MOCK === "1" || (typeof location !== "undefined" && new URLSearchParams(location.search).has("mock"));
 export const api: Api = useMock ? createMockApi() : liveApi;
 
-/** Demo mode has no backend log: people can be named, but profiles need the real service. */
+/**
+ * Demo mode has no backend log: people can be named, but nothing can be written. Reading returns a
+ * synthetic profile (./mockProfile.ts) for the user and one opponent, so the profile page can be shown.
+ */
 function mockMemory(): Pick<Api, "getPeople" | "setPeople" | "commitMemory" | "withdrawMemory" | "listPeople" | "getProfile" | "getOpponent"> {
   const people = new Map<string, PeopleAssignment>();
-  const unavailable = () => Promise.reject(new Error("演示模式没有个人档案：连接后端后，确认过的比赛才会写入只追加的档案日志"));
+  const unavailable = () => Promise.reject(new Error("演示模式不能写入档案（档案页里的是合成示例）：连接后端后，确认过的比赛才会写入只追加的档案日志"));
+  // One clock for the session, so the demo dates do not move between calls.
+  const now = Date.now();
+  const later = <T,>(v: T) => new Promise<T>((resolve) => setTimeout(() => resolve(v), 100));
+  const unknown = (person: string) => Promise.reject(new Error(`404 演示档案里没有「${person}」`));
   return {
     getPeople: async (id) => people.get(id) ?? { video_id: id, people: {}, self_player: null },
     setPeople: async (id, p, self_player) => {
@@ -464,8 +472,11 @@ function mockMemory(): Pick<Api, "getPeople" | "setPeople" | "commitMemory" | "w
     },
     commitMemory: unavailable,
     withdrawMemory: unavailable,
-    listPeople: async () => [],
-    getProfile: unavailable,
-    getOpponent: unavailable,
+    listPeople: () => later(demoPeople(now)),
+    getProfile: (person) => {
+      if (!person || person === DEMO_SELF) return later(demoSelfProfile(now));
+      return person === DEMO_OPPONENT ? later(demoOpponentProfile(now)) : unknown(person);
+    },
+    getOpponent: (person) => (person === DEMO_OPPONENT ? later(demoOpponentReport(now)) : unknown(person)),
   };
 }
