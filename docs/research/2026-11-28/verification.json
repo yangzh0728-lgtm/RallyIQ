@@ -1,0 +1,447 @@
+[
+ {
+  "cluster": "ball",
+  "items": [
+   {
+    "name": "1. RacketVision (AAAI 2026, arXiv 2511.17045, OrcustD/RacketVision)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (LICENSE file: 'MIT License, Copyright (c) 2025 Linfeng Dong'; GitHub spdx MIT)",
+    "code_url": "https://github.com/OrcustD/RacketVision",
+    "weights": "Published on HF linfeng302/RacketVision-Models (checkpoints/: balltrack_best.pth 46.6MB, epoch_300.pth 411MB RTMDet, best_PCK_epoch_90.pth 107MB RTMPose, 3 crosslstm TrajPred .pth). No model card and no licence declared on the HF model repo, so the weights' terms are unstated. Only the GitHub code is MIT. HF flags all 6 files 'unsafe' (pickle imports). Pulled by source/download_checkpoints.py.",
+    "checked": "gh spdx=MIT (104 stars, pushed 2026-04-11). Read the LICENSE file. README gives the AAAI 2026 Oral badge and arXiv 2511.17045. WebSearch found an AAAI OJS listing (ojs.aaai.org article 37362) with the matching title; the 'Oral' label is only in the README and a bilibili post. Read the arXiv HTML. Table: badminton 461 games/461 clips/114,753 frames (totals 1,672 clips/435,179 frames). Racket = bbox + 5 keypoints (top/bottom/handle/left/right). Table 4 badminton PCK@0.2 = 82.1 single-sport, 88.5 multi-sport. Table 3 TrackNetV3 badminton mAP(@50): 57.8 (no BM, 1 frame), 67.7 (BM, 1 frame), 72.5 (BM, 4 frames), 83.1 (MS-TrackNetV3, BM, 4 frames). HF dataset card metadata has license: mit.",
+    "discrepancies": "Numbers match. 88.5 PCK is the multi-sport model (single-sport is 82.1). The arXiv page lists no venue; AAAI comes from the OJS listing and Oral is self-reported. Caveat for commercial use: the paper says the videos are sourced from 942 professional broadcasts on YouTube. The MIT tag on the HF dataset cannot grant rights to third-party broadcast footage, and the dataset card says nothing on copyright or terms. The weights carry no licence of their own."
+   },
+   {
+    "name": "2. WASB (BMVC 2023, arXiv 2311.05237, nttcom/WASB-SBDT)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (file is LICENSE.md, not LICENSE: 'MIT License, Copyright (c) 2023 NTT Communications Corporation'; GitHub spdx MIT)",
+    "code_url": "https://github.com/nttcom/WASB-SBDT",
+    "weights": "MODEL_ZOO.md links Google Drive weights for WASB and 6 baselines on 5 sports, including Badminton. No separate weights licence is stated. They were trained on the TrackNetV2 badminton dataset, whose terms the paper does not state.",
+    "checked": "gh spdx=MIT (212 stars, last push 2023-11-23, so inactive). Read LICENSE.md, README and MODEL_ZOO.md. README links the BMVC2023 proceedings (proceedings.bmvc2023.org/310). Read the arXiv PDF, Table 2 (tau=4px), badminton F1: WASB Step=1 93.1, Step=3 91.6, TrackNetV2 90.5, MonoTrack 90.9, ResTrackNetV2 89.4, BallSeg 79.9.",
+    "discrepancies": "93.1 is the Step=1 variant (Step=3 is 91.6). The arXiv abstract page lists no venue; BMVC comes from the README and proceedings link. The repo has not been updated since Nov 2023. Weight and dataset terms are unstated, so the weights fall under the MIT repo at best by implication."
+   },
+   {
+    "name": "3. BlurBall (arXiv 2509.18387, cogsys-tuebingen/blurball)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (LICENSE.md, but the copyright line is 'Copyright (c) 2023 NTT Communications Corporation', inherited from WASB with no Tuebingen line; GitHub spdx MIT)",
+    "code_url": "https://github.com/cogsys-tuebingen/blurball",
+    "weights": "README says weights for BlurBall, WASB, TrackNetV2, ResTrackNetV2, BallSeg, DeepBall(-Large) and Monotrack are on a Uni Tuebingen Nextcloud share. No licence is stated for the weights or for the 64k-frame table tennis dataset.",
+    "checked": "gh spdx=MIT (61 stars, pushed 2026-05-27). Read LICENSE.md and the README (venue: CVPRW 2026 CVSports; repo builds on WASB). Read the arXiv HTML, Table 2 (4px): TrackNetV3 F1 Front 93.74 -> Mid 95.93. Other rows also improve, e.g. WASB step1 95.58->96.00, TrackNetV2 90.37->91.61. BlurBall itself scores 96.52 (1-step) and 97.17 (1-step, threshold 0.7).",
+    "discrepancies": "The numbers are exact. The gain is on the authors' own table tennis dataset; the paper does not test badminton. TrackNetV3 is in the paper's table, but the repo's weight list does not include TrackNetV3. The supplement says the source videos are 'under a Creative Commons license' without naming the variant, which matters for commercial use."
+   },
+   {
+    "name": "4. TOTNet (arXiv 2508.09650, AugustRushG/TOTNet)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (LICENSE file: 'MIT License, Copyright (c) 2024 August'; GitHub spdx MIT)",
+    "code_url": "https://github.com/AugustRushG/TOTNet",
+    "weights": "The README has no pretrained-weight link; it only describes training from scratch. I could not check the GitHub Releases page (github.com HTML and the GitHub MCP were blocked), so 'no weights' rests on the README only.",
+    "checked": "gh spdx=MIT (64 stars, pushed 2026-03-27). Read the LICENSE file and README. The arXiv abstract names 3D convs, 'visibility-weighted loss, and occlusion augmentation'. The README shows --loss_function WBCE, --weighting_list 1 2 2 3 (visibility weights) and --occluded_prob.",
+    "discrepancies": "Not wrong, but incomplete: the README cites the published version, Computer Vision and Image Understanding (Elsevier) 2026, article 104657. Its TTA table tennis dataset is research-only, with commercial use and redistribution 'strictly prohibited'. The badminton data comes via WASB/TrackNet. The absence of weights in Releases is unverified."
+   },
+   {
+    "name": "5. TrackNetV5: NYCU (gino6178/TrackNetV5) and arXiv 2512.02789 (thaonan/TrackNetV5-SDK)",
+    "verdict": "partly",
+    "code_licence": "gino6178/TrackNetV5: no licence (spdx null; LICENSE and LICENSE.md return 404), so all rights are reserved by default. thaonan/TrackNetV5-SDK: no LICENSE file (spdx null); the README says 'proprietary software. All rights reserved by Shanghai Code Zero Sports Technology Co., Ltd... provided for technical exchange and academic study only.'",
+    "code_url": "https://github.com/gino6178/TrackNetV5 ; https://github.com/thaonan/TrackNetV5-SDK",
+    "weights": "gino6178: weights ARE published in the repo under releases/ (TrackNetV5_Lite_best.pt 10.2MB and TrackNetV5_best.pt 40.3MB, both return HTTP 200) with no licence, so they are not usable commercially without permission. thaonan SDK: README says 'Model weights and training datasets are proprietary assets of the company and are currently not open to the public'; no releases were checked (blocked).",
+    "checked": "gh metadata: gino6178 has 2 stars, pushed 2026-09-01; thaonan has 40 stars, pushed 2026-05-13. Read both READMEs. Project page (gino6178.github.io/TrackNetV5) and author-hosted PDF (people.cs.nycu.edu.tw/~yushuen/data/TracknetV5_26.pdf): Chang, Wang, Huang (NYCU). Table 1 gives TrackNetV5 F1 98.47 (Acc 97.37), Lite 98.06, V4 97.99, V3 97.64. arXiv 2512.02789 exists: Tang et al., 'Residual-Driven Spatio-Temporal Refinement and Motion Direction Decoupling', F1 0.9859 and Acc 0.9733 on the TrackNetV2 dataset, no venue listed.",
+    "discrepancies": "ICIP 2026 cannot be verified: it appears only in the repo's and project page's own BibTeX; the author-hosted PDF names no venue and a search found no ICIP listing. The repo's released checkpoints are retrained reproductions that the README says score F1 98.363 (Lite) and 98.331 (full), not the paper's 98.47. The project page links code to gino6178/project1, not this repo. The claim implies no weights for NYCU, but checkpoints are in the repo, unlicensed. The SDK README calls TrackNetV5 a 'tennis ball tracking algorithm' from a company; the paper's benchmark is the TrackNetV2 badminton dataset. These are two unrelated works with the same name."
+   }
+  ]
+ },
+ {
+  "cluster": "spot",
+  "items": [
+   {
+    "name": "AdaSpot (CVPR 2026, arXiv 2602.22073, arturxe2/AdaSpot)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (GitHub spdx_id=MIT; LICENSE file reads 'MIT License, Copyright (c) 2026 Artur Xarles')",
+    "code_url": "https://github.com/arturxe2/AdaSpot",
+    "weights": "Yes. The README links https://huggingface.co/arturxe/AdaSpot. The HF page exists with licence metadata 'mit', and the card lists small and large checkpoints for Tennis, FineDiving, FineGym, F3Set and SoccerNetBall. The README says each released checkpoint is a single seed, while the paper reports a mean over 3 seeds. MIT covers the weights, but the datasets they were trained on (e.g. SoccerNet, which needs an NDA) have their own terms. Weights trained on SoccerNet carry the most risk for commercial use.",
+    "checked": "Ran the gh search API for the spdx licence. Downloaded LICENSE and README from raw.githubusercontent (main branch). WebFetched the arXiv abstract page and PDF, and the HF model page. WebSearch found a CVPR 2026 openaccess.thecvf.com listing and a cvpr.thecvf.com/virtual/2026 poster page.",
+    "discrepancies": "The abstract says '+3.96 and +2.26 mAP@0 frames on Tennis and FineDiving', but the paper body (Sec 4.2) reportedly says +3.98 for Tennis, so the paper is inconsistent with itself. Tennis mAP@0 is AdaSpot-s 73.49 and AdaSpot-b 74.02, against the previous best E2E-Spot 800MF at 70.04. The arXiv page has no venue line. CVPR 2026 is confirmed only through the README and the CVF openaccess listing. The README's arXiv badge text says 2404.05392 (a copy-paste from T-DEED), but the badge links to 2602.22073. The paper does not evaluate badminton or ShuttleSet, so 'SOTA' does not carry over to RallyIQ's domain."
+   },
+   {
+    "name": "E2E-Spot (ECCV 2022, jhong93/spot)",
+    "verdict": "confirmed",
+    "code_licence": "BSD-3-Clause (GitHub spdx_id=BSD-3-Clause; LICENSE file has the 3-clause text, Copyright 2022 Hong, Zhang, Fisher, Gharbi, Fatahalian)",
+    "code_url": "https://github.com/jhong93/spot",
+    "weights": "Published in a separate repo, https://github.com/jhong93/e2e-spot-models. Its GitHub spdx is null (no detected licence) and it has only 2 stars, so the terms for the weights are unclear. Baseline features are on Google Drive.",
+    "checked": "Ran the gh search API. Downloaded LICENSE and README (main branch). The README says ECCV 2022 (with a bibtex entry) and has a 'Using your own data' section describing the custom format: class.txt (one class per line), {split}.json (entries with video, num_frames, num_events, events[{frame,label,comment}], fps, width, height), and pre-extracted frames at <frame_dir>/<video_id>/<frame_number>.jpg at about 224px high. Predictions use the same JSON format with a score field.",
+    "discrepancies": "None for the code. The repo was last pushed in Feb 2023, so it is unmaintained. The model-weights repo has no licence, which the claim does not mention. The ECCV venue rests on the README and bibtex only; I did not check it against the ECCV proceedings."
+   },
+   {
+    "name": "UMEG-Net (AAAI 2026, arXiv 2511.14186, LZYAndy/UMEG-Net)",
+    "verdict": "confirmed",
+    "code_licence": "None. GitHub spdx_id is null, and LICENSE and LICENSE.md both return 404 on the main branch, so the default is all rights reserved: no rights to use or modify the code commercially.",
+    "code_url": "https://github.com/LZYAndy/UMEG-Net",
+    "weights": "None published. The README describes only training. It says keypoint features 'will be uploaded soon' and links no checkpoints. The paper only says 'Code is publicly available'.",
+    "checked": "Ran the gh search API (7 stars, last pushed 2025-11-10, no description). Tried both LICENSE paths with curl. Read the README. WebFetched the arXiv abstract page (title 'Few-Shot Precise Event Spotting via Unified Multi-Entity Graph and Distillation', authors Liu, Jiang, Ma, Hou, Lin, Dong, with the code link) and read the PDF twice. Table 1 ShuttleSet F1_evt: E2E-Spot 200MF 35.6 / 800MF 42.7; T-DEED 200MF 33.8 / 800MF 30.7; UMEG-Net 49.2; UMEG-Net distill 59.1. For venue, the PDF carries an AAAI 2026 copyright footer and WebSearch found an ojs.aaai.org listing (article 37681). The OJS page itself returned bot-protection, so I could not read the volume.",
+    "discrepancies": "The numbers match the paper, but the baselines are picked by best variant: 42.7 is E2E-Spot 800MF (its 200MF scores 35.6), and 33.8 is T-DEED 200MF (its 800MF scores 30.7). The metric is F1_evt with a reported 1-frame tolerance, in the 100-clip few-shot training setting; that comes from a WebFetch summary and is not confirmed verbatim. 'Distilled 59.1' is the RGB visual student, which needs the keypoint teacher during training. The arXiv page itself has no venue line."
+   },
+   {
+    "name": "lRomul/ball-action-spotting (SoccerNet BAS 2023 winner)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (GitHub spdx_id=MIT; LICENSE file reads 'MIT License, Copyright (c) 2023 Ruslan Baikulov')",
+    "code_url": "https://github.com/lRomul/ball-action-spotting",
+    "weights": "Yes. The README says 'download model weights and predictions from Google Drive' (folder 1mIu62cIdsRn3W4o1E5vRR8V5Q1B6HHoz). No separate licence covers the weights. They were trained on SoccerNet, which needs an NDA, so they are of limited use for badminton.",
+    "checked": "Ran the gh search API (default branch master, 141 stars, description says 1st place solution). Downloaded LICENSE and README from the master branch. README line 123 says: 'combination of Gaussian filter and peak detection from SciPy ... standard deviation for Gaussian kernel 3.0, peak detection minimal height 0.2, and minimal distance between neighboring peaks 15 frames'. The README reports 86.47 mAP@1 on the challenge set.",
+    "discrepancies": "None. The claim leaves out the other post-processing parameters: height 0.2 and distance 15 frames, at 12.5 FPS input in that pipeline. The weights' licence terms are not stated. The repo has not been pushed since July 2023."
+   },
+   {
+    "name": "T-DEED (arXiv 2404.05392, arturxe2/T-DEED)",
+    "verdict": "confirmed",
+    "code_licence": "GPL-3.0 (GitHub spdx_id=GPL-3.0; LICENSE file is GNU GPL v3, 29 June 2007)",
+    "code_url": "https://github.com/arturxe2/T-DEED",
+    "weights": "Yes. The README links checkpoints in a Google Drive folder with no separate licence for the weights. Code derived from this repo inherits GPL-3.0 copyleft, which matters if RallyIQ distributes software built on it.",
+    "checked": "Ran the gh search API. Downloaded LICENSE (35 KB GPLv3 text) and README (main branch). WebSearch confirmed the arXiv ID 2404.05392 matches the title 'T-DEED: Temporal-Discriminability Enhancer Encoder-Decoder for Precise Event Spotting in Sports Videos' and found a CVPR 2024 Workshops (CVsports) openaccess listing. The README says it was used for 1st place in the 2024 SoccerNet Ball Action Spotting challenge.",
+    "discrepancies": "None on the licence; 'claimed GPL-3.0' is accurate. The venue is a CVPR 2024 workshop (CVsports), not the main conference. The direct arXiv abs fetch returned only body text, so I confirmed the ID-to-title match through search results."
+   }
+  ]
+ },
+ {
+  "cluster": "hitmisc",
+  "items": [
+   {
+    "name": "1. kwyoke/Badminton-hit-detection",
+    "verdict": "confirmed",
+    "code_licence": "None. GitHub spdx is null and LICENSE returns 404 on the default branch (master), so the code is all rights reserved by default.",
+    "code_url": "https://github.com/kwyoke/Badminton-hit-detection",
+    "checked": "GitHub search API (created 2022-11-11, last push 2022-12-09, 10 stars, spdx null). Fetched README.md from master; LICENSE was 404. The README says court, pose and shuttle coordinates over 14 consecutive frames go into a GRU with 3 classes: no hit, hit by near player, hit by far player. It lists annotated pro singles, amateur singles and amateur doubles datasets on Google Drive, with hit labels, shuttle coordinates and player bounding boxes.",
+    "discrepancies": "Minor points. The repo description says 'taken from the baseline' but the README stresses it is agnostic to camera angle, and its demos use different angles. The model was trained only on pro broadcast singles; the amateur sets mainly test generalisation. The pro set is built on the TrackNetV2 dataset, which has its own terms. There is no peer-reviewed paper, only a PDF project report. The README mAP numbers are in images and were not checked.",
+    "weights": "Yes. The README says pretrained GRU weights are in mm_weights/ and on Google Drive, and ResNet baseline weights are in resnet_data/ and on Drive. No licence is given, so they cannot be used commercially without the author's permission."
+   },
+   {
+    "name": "2. ZSHYC/BadmintonTrackNet",
+    "verdict": "confirmed",
+    "code_licence": "MIT (spdx MIT; the LICENSE file is MIT text). Its copyright line is 'Copyright (c) 2024 qaz812345', the upstream TrackNetV3 author, not ZSHYC.",
+    "code_url": "https://github.com/ZSHYC/BadmintonTrackNet",
+    "checked": "GitHub search API (MIT, 45 stars, created 2026-01-23, not a fork, last push 2026-08-09). Fetched LICENSE and README.md (in Chinese) from master. The README describes tracknet/events/ with kinematics.py and candidate_generator.py as kinematic rules detecting landing, hit and out_of_frame events. It describes BounceNet as a second-stage classifier that filters high-recall rule candidates and reclassifies them as landing, hit or none.",
+    "discrepancies": "The claim matches. Caveats: this is an unreviewed personal extension of TrackNetV3 with no paper or benchmark numbers for the event detector. The MIT notice names only the upstream author, so who holds copyright in the additions is unclear (MIT still grants rights). It is built for the TrackNetV3 / Shuttlecock Trajectory Dataset broadcast setting.",
+    "weights": "Not for BounceNet: ckpts/ is git-ignored and the README tells users to train it with tracknet.training.bouncenet. The TrackNetV3 backbone checkpoints are linked to the upstream qaz812345 Google Drive; no separate weights licence is stated (the upstream repo is MIT)."
+   },
+   {
+    "name": "3. Hsu, Yu & Cheng, Sensors 2024, doi 10.3390/s24134372",
+    "verdict": "partly",
+    "code_licence": "No code released. The paper links no code, and its data statement says 'Restrictions apply': data come from aidea-web.tw and need the authors' permission.",
+    "code_url": "",
+    "checked": "MDPI page: Sensors 24(13):4372, DOI 10.3390/s24134372, published 5 Jul 2024, authors Yi-Hua Hsu, Chih-Chang Yu, Hsu-Yung Cheng. PMC full text (PMC11244353): Table 1 has the header 'Precision | Recall | F1'. TrackNet alone at IoU 0.5 scores 0.588 / 0.936 / 0.723. 'HD-T (tuned) + SRA' scores 0.897 / 0.913 / 0.905. The SRA uses YOLOv7 swing (hit-action) detections to remove trajectory hits outside swing segments and to keep only one hit per swing.",
+    "discrepancies": "The title is shortened. The full title is 'Enhancing Badminton Game Analysis: An Approach to Shot Refinement via a Fusion of Shuttlecock Tracking and Hit Detection from Monocular Camera'. The abstract calls the 0.588 and 0.897 figures 'accuracy' while Table 1 calls them precision. Recall drops slightly, from 0.936 to 0.913. 'Swing gating rule' is our paraphrase of the SRA. Results cover only 1,582 rallies from 69 BWF broadcast videos, so they say nothing about amateur footage. The YOLOv7 swing detector was trained on the authors' own labelled data.",
+    "weights": "None published. Neither the YOLOv7 swing model nor the tuned TrackNet weights are released."
+   },
+   {
+    "name": "4. Decorte et al., Multi-Modal Hit Detection and Positional Analysis in Padel Competitions, CVPRW 2024",
+    "verdict": "confirmed",
+    "code_licence": "No code repository found; the CVF page has no code link. The dataset is public at cloud.ilabt.imec.be with no licence stated.",
+    "code_url": "",
+    "checked": "CVF open-access HTML page and PDF (CVsports, CVPR 2024 Workshops, pp. 3306-3314; authors Decorte, Pare, Vanhaeverbeke, Taelman, Slembrouck, Verstockt). The PDF says the hit detector is adapted from SED-net: 3 conv layers with max-pooling, 2 BiGRU layers, then time-distributed dense layers, on 40 log-Mel bins. It was evaluated with sed_eval event-based F1 using a '250ms collar or minimum overlap of 50%'. Average F1 was 92% (sd 1.6%) over 4 splits.",
+    "discrepancies": "The paper never uses the word 'CRNN', though the architecture is CRNN-style. The tolerance is a 250 ms collar OR 50% overlap, not 250 ms alone. 92% is an average over 4 splits and is not broken down per condition. Hit-to-player assignment accuracy is lower: 83.7% per player and 86.83% per team. This is padel, not badminton.",
+    "weights": "No trained weights were found to be published. The paper states only that the dataset and hit annotations are public, with no licence."
+   },
+   {
+    "name": "5. Cabado et al., Beyond the Premier, CVPRW 2024",
+    "verdict": "confirmed",
+    "code_licence": "No code link on the CVF page or in the PDF (per WebFetch). Unverifiable beyond that.",
+    "code_url": "",
+    "checked": "CVF open-access HTML page and PDF (CVsports, CVPR 2024 Workshops, pp. 3386-3398; Cabado, Cioppa, Giancola et al.). Table 3, row E2E-Spot rny008 gsm: SoccerNet tight/loose 61.82/74.05, CINFO tight/loose 19.56/30.32. The rny002 gsm row is 61.19 to 18.81.",
+    "discrepancies": "The figures are 61.82 to 19.56, so the rounding is fine. The target domain is the 'CINFO' set: single-camera, AI-piloted production of a Spanish non-professional league. The paper does not use the words 'amateur AI-camera' exactly, and the set appears small. A 'Challenge' checkpoint scores 21.40 tight on CINFO. The abstract's main conclusion is that broadcast editing quality is the biggest factor.",
+    "weights": "N/A. The paper evaluates existing pretrained SoccerNet models, and no new weights are released."
+   },
+   {
+    "name": "6. leggedrobotics/shuttle_detection (arXiv 2603.06691)",
+    "verdict": "confirmed",
+    "code_licence": "AGPL-3.0 (spdx AGPL-3.0; the LICENSE file is the full GNU AGPL v3 text). The README says AGPL is required because the code uses Ultralytics YOLOv8.",
+    "code_url": "https://github.com/leggedrobotics/shuttle_detection",
+    "checked": "GitHub search API (AGPL-3.0, 9 stars, last push 2026-03-04, default branch main). Fetched LICENSE and README from main. arXiv abs page: 'One-Shot Badminton Shuttle Detection for Mobile Robots' by Dipner, Talbot, Tuna, Cramariuc, Hutter (ETH Zurich RSL), v1 dated 4 Mar 2026. The paper's HTML links this repo and calls it 'Repository containing the best model and code'. The abstract reports a fine-tuned YOLOv8 with F1 0.86 in similar environments and 0.70 in unseen ones, on a 20,510-frame dataset.",
+    "discrepancies": "The README's Paper link ('https://arxiv.org/') and dataset link ('https://example.com') are placeholders; the real dataset is on a Google Drive link in the paper, with no licence. This is a per-frame shuttle detector for mobile robots, not hit detection or broadcast analysis. AGPL obligations, including network use, would apply to RallyIQ if it used this code or these weights in a hosted service.",
+    "weights": "Yes. runs/final-model/best.pt is a Git LFS file of about 134 MB (the LFS pointer was read, and media.githubusercontent.com served it). It sits in the AGPL-3.0 repo and is a fine-tune of Ultralytics YOLOv8, which is also AGPL, so in effect it is AGPL-licensed."
+   }
+  ]
+ },
+ {
+  "cluster": "track",
+  "items": [
+   {
+    "name": "1. GTA-Link (arXiv 2411.08216, sjc042/gta-link)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (LICENSE file says MIT, copyright 2024 Jiacheng Sun; GitHub spdx MIT)",
+    "code_url": "https://github.com/sjc042/gta-link",
+    "checked": "arXiv abs page: 'GTA: Global Tracklet Association for Multi-Object Tracking in Sports', Sun et al., submitted 12 Nov 2024, no venue listed. Paper Table 1 (arXiv HTML), SportsMOT test: Deep-EIoU 77.21 HOTA, Deep-EIoU+GTA 81.04 HOTA (AssA 67.63 to 74.51, IDF1 79.81 to 86.51). README describes an offline, model-agnostic post-processor: a splitter that runs DBSCAN on ReID embeddings within each tracklet, then a connector that merges tracklets by cosine distance. LICENSE fetched from raw.githubusercontent main. Repo has 94 stars, last pushed 2025-12-12.",
+    "discrepancies": "None in the claim itself. Unstated: it is an arXiv preprint with no peer-reviewed venue. The README gives no download link for the SportsMOT-trained OSNet ReID weights. The default path sports_model.pth.tar-60 matches the ReID checkpoint that Deep-EIoU distributes on Google Drive with no licence. So the code is MIT, but the weights needed to reproduce 81.04 have no licence.",
+    "weights": "Not published by this repo. The ReID checkpoint is expected from elsewhere (apparently Deep-EIoU's Google Drive, which has no licence terms)."
+   },
+   {
+    "name": "2. CAMELTrack (arXiv 2505.01257, TrackingLaboratory/CAMELTrack)",
+    "verdict": "partly",
+    "code_licence": "Apache-2.0 (LICENSE file is Apache 2.0 text; GitHub spdx Apache-2.0)",
+    "code_url": "https://github.com/TrackingLaboratory/CAMELTrack",
+    "checked": "arXiv abs page: Somers, Standaert, Joos, Alahi, De Vleeschouwer, submitted 2 May 2025, no venue listed. Paper Table 3, SportsMOT test: CAMELTrack 80.4 HOTA, the 'w/ keypoints' variant 80.3. DanceTrack test in the paper and the README: 66.1 HOTA without keypoints, 69.3 with keypoints, so +3.2. README weights table and Hugging Face model card (trackinglaboratory/CAMELTrack, card licence apache-2.0) both checked. Repo has 139 stars, last pushed 2026-11-10.",
+    "discrepancies": "The 80.4 SportsMOT score is the no-keypoint config. The released SportsMOT checkpoint (camel_bbox_app_kps_sportsmot.ckpt) is the keypoint variant, listed at 80.3. The paper's text also uses '+3.2% HOTA' for SportsMOT against prior SOTA (80.4 vs Deep-EIoU 77.2). Do not confuse that with the DanceTrack keypoint gain, which is arithmetically +3.2 from the table. No peer-reviewed venue is shown. The README says detector weights come from DiffMOT, a third party whose terms were not checked.",
+    "weights": "Published on Hugging Face (trackinglaboratory/CAMELTrack) and downloaded automatically. The model card says apache-2.0. Checkpoints exist per dataset (DanceTrack, SportsMOT, MOT17, PoseTrack, BEE24, and a joint 'global' model). Caution: these were trained on SportsMOT, DanceTrack and other benchmark data, which may carry non-commercial dataset terms (not verified here)."
+   },
+   {
+    "name": "3. Bridging the Gap: Doubles Badminton (arXiv 2508.13507, 100-heon/badminton_double_analysis)",
+    "verdict": "partly",
+    "code_licence": "None. No LICENSE, LICENSE.md or COPYING on main or master; GitHub spdx null; sidebar shows no licence. Default all-rights-reserved, so no grant for commercial use.",
+    "code_url": "https://github.com/100-heon/badminton_double_analysis",
+    "checked": "arXiv abs page: Seungheon Baek and Jinhyuk Yun, submitted 19 Aug 2025, 14 pages, cs.CV, no venue. arXiv HTML: a court ROI is built from four detected court-corner boxes to separate players from referees, umpires and spectators, so that part is confirmed. 0.6686 is in Table 2 ('Ours (ALL)', threshold 0.86). Pipeline: ViT-Pose, then ST-GCN contrastive embedding, a custom MOT, and a Transformer shot classifier. Repo README and GitHub page checked: best_court.pt is at top level, plus a model_stgcn_backbone_classifier folder (contents not listed). 3 stars, last pushed 2025-05-24.",
+    "discrepancies": "0.6686 is not a 'hitter accuracy'. It is the overall binary shot/not-shot frame accuracy on the combined doubles set. The paper does not define or report a separate correct-hitter metric; the hitter is just the highest-confidence of four players. Context: the YOLOv11x baseline gets 0.5941 on doubles; men's doubles is 0.7020 and women's 0.6389. Singles is 0.8617, where the YOLO baseline does better at 0.9876. The paper does not classify shot types (left as future work). Training data is ShuttleSet, which has its own terms.",
+    "weights": "The paper and README say ST-GCN backbone and Transformer classifier weights are in the GitHub repo. Only best_court.pt was directly seen. There is no licence, so there are no usage rights."
+   },
+   {
+    "name": "4. jasnwag/tennis_serve_dataset",
+    "verdict": "partly",
+    "code_licence": "LICENSE file text is CC BY 4.0 (copyright 2026, Wang et al.). GitHub spdx reports NOASSERTION because of the file's custom wording.",
+    "code_url": "https://github.com/jasnwag/tennis_serve_dataset",
+    "checked": "Read LICENSE and README from raw main. README: 5,966 serves from the 2024 US Open, 109 players, 113 matches. Pipeline is RTMDet, RTMPose, MotionBERT 3D lifting, then DTW alignment. Data is hosted on Google Drive. Key results table: 'Player ID (top 14) 99.2%, macro F1 0.992'. The paper PDF (cvbw2026.github.io/assets/papers/11.pdf) says a 200-tree Random Forest on 400-dim joint-angle feature vectors reached 99.2% 'among the 14 players with >=100 serves'. README cites CVPRW 2026. Repo has 15 stars, last pushed 2026-10-19.",
+    "discrepancies": "99.2% applies only to the 14 players with at least 100 serves, not all 109, using DTW-aligned serves and a Random Forest. Stating it as 'identifies players at 99.2%' overstates how general it is. The workshop PDF itself does not name its venue and does not address rights to the US Open broadcast footage the poses were derived from. CC BY 4.0 covers the authors' contribution but may not clear upstream broadcast rights. This is a dataset with no model, so 'weights' does not apply.",
+    "weights": "No model weights. Derived pose and angle data are on Google Drive under the repo's CC BY 4.0 LICENSE."
+   },
+   {
+    "name": "5. Deep-EIoU (no licence), Hybrid-SORT (MIT), MOTIP (Apache-2.0)",
+    "verdict": "confirmed",
+    "code_licence": "Deep-EIoU: none (no LICENSE at root on main or master; spdx null; sidebar shows no licence). HybridSORT: MIT (LICENSE file is MIT, copyright 2021 Yifu Zhang, inherited from ByteTrack; spdx MIT). MOTIP: Apache-2.0 (LICENSE file is Apache 2.0; spdx Apache-2.0).",
+    "code_url": "https://github.com/hsiangwei0903/Deep-EIoU ; https://github.com/ymzis69/HybridSORT ; https://github.com/MCG-NJU/MOTIP",
+    "checked": "gh search spdx fields; raw LICENSE fetches (HybridSORT on the master branch, MOTIP on main); Deep-EIoU GitHub page via WebFetch (files: Deep-EIoU/, detection/, embedding/, Readme.md, demo.mp4; no licence). Read the HybridSORT README model zoo and MOTIP docs/MODEL_ZOO.md.",
+    "discrepancies": "The claim gives no URL for MOTIP; I assumed the official MCG-NJU/MOTIP (CVPR 2025). The HybridSORT LICENSE copyright line names Yifu Zhang (ByteTrack), not the HybridSORT authors, but it is still MIT. Deep-EIoU builds on MIT projects (ByteTrack, BoT-SORT, torchreid) and has no licence of its own, so commercial reuse of its new code is not granted.",
+    "weights": "Deep-EIoU: detector and ReID weights on Google Drive, no terms stated. HybridSORT: YOLOX and ReID weights on Google Drive, mostly inherited from ByteTrack, BoT-SORT and Deep-OC-SORT, no separate weight licence. MOTIP: checkpoints as GitHub release assets (v0.1/v0.2), including SportsMOT (72.6 HOTA) and DanceTrack, presumably under the repo's Apache-2.0. Weights trained on SportsMOT or DanceTrack may inherit non-commercial dataset terms (not verified)."
+   }
+  ]
+ },
+ {
+  "cluster": "pose3d",
+  "items": [
+   {
+    "name": "RTMW (arXiv 2407.08634, open-mmlab/mmpose)",
+    "verdict": "confirmed",
+    "code_licence": "Apache-2.0 (GitHub spdx Apache-2.0; LICENSE file is Apache 2.0)",
+    "code_url": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose",
+    "checked": "arXiv abs page: title 'RTMW: Real-Time Multi-Person 2D and 3D Whole-body Pose Estimation', Jiang/Xie/Li, 11 Jul 2024. mmpose configs/wholebody_2d_keypoint/rtmpose/cocktail14/rtmw_cocktail14.md: rtmw-x 384x288 Whole AP 0.702, Foot AP 0.796 (Foot AR 0.888). configs/_base_/datasets/coco_wholebody.py defines left/right big_toe, small_toe, heel.",
+    "discrepancies": "Abstract credits 70.2 mAP to RTMW-l; the mmpose table lists RTMW-l 384x288 at 70.1 and RTMW-x at 70.2. The claim matches the repo table. The 6 foot points are big toe, small toe and heel per foot. Weight licence not stated separately (repo is Apache-2.0). Models were trained on 14 public datasets ('Cocktail14'); I did not check whether any of their licences restrict commercial use.",
+    "weights": "Published as direct .pth downloads at download.openmmlab.com (RTMW-x 384x288: rtmw-x_simcc-cocktail14_pt-ucoco_270e-384x288-f840f204_20231122.pth). No ONNX for RTMW-x 384x288 in the table; RTMW-l has ONNX. No separate weight licence."
+   },
+   {
+    "name": "GEM-X + SOMA-X (NVlabs)",
+    "verdict": "confirmed",
+    "code_licence": "NVlabs/gem-x: Apache-2.0 (spdx and LICENSE), but README badge says 'Apache 2.0 + exceptions': some hand-processing files are under OpenMDW-1.1, and ATTRIBUTIONS.md includes SAM License and MIT/BSD components. NVlabs/SOMA-X: Apache-2.0 (spdx and LICENSE).",
+    "code_url": "https://github.com/NVlabs/gem-x",
+    "checked": "GitHub spdx for both repos; LICENSE files; gem-x README, docs/PRETRAINED_MODELS.md and ATTRIBUTIONS.md. HF nvidia/GEM-X card: 'governed by the NVIDIA Open Model License Agreement'; 'This model is ready for commercial or non-commercial use'; use cases include 'Biomechanical analysis — study human movement for applications in sports, rehabilitation, and medicine.' HF nvidia/SOMA-X: apache-2.0, 'ready for commercial use'.",
+    "discrepancies": "'With contact' is an optional Contact/IK post-processing step (--postprocess) in the README; the HF card does not mention contact. Body Motion needs the 'original vitpose.pth' 2D observation model, and I did not check its weight terms. Hand Pose weights (nvidia/EgoHand-v1) are gated separately. The SOMA-X README says SMPL-Body was used to create the SMPL-to-SOMA topology correspondence, and SMPL/SMPL-X/MANO backends need separately licensed user-supplied files. The NVIDIA Open Model License terms themselves were not read.",
+    "weights": "HF nvidia/GEM-X (body_s240000.ckpt, motion native77) under NVIDIA Open Model License, not gated per card; SOMA assets on HF nvidia/SOMA-X under Apache-2.0."
+   },
+   {
+    "name": "SAM 3D Body (arXiv 2602.15989) + MHR",
+    "verdict": "confirmed",
+    "code_licence": "facebookresearch/sam-3d-body: custom 'SAM License' (Last Updated Nov 19 2025); GitHub spdx NOASSERTION. facebookresearch/MHR: Apache-2.0 (spdx and LICENSE).",
+    "code_url": "https://github.com/facebookresearch/sam-3d-body",
+    "checked": "arXiv abs: 'SAM 3D Body: Robust Full-Body Human Mesh Recovery', Yang et al., 17 Feb 2026; abstract says it 'supports auxiliary prompts, including 2D keypoints and masks'. Read full LICENSE: royalty-free grant to use, reproduce, distribute and modify, plus a patent licence covering 'sell'; no non-commercial clause. README says checkpoints and code are under SAM License. MHR README/LICENSE: Apache 2.0.",
+    "discrepancies": "The SAM License never says 'commercial' outright; commercial use is allowed because nothing prohibits it. Restrictions: no ITAR/military use, no reverse engineering, publications must acknowledge use, Meta may amend terms unilaterally, and derivatives must ship under the same licence. The mhr_model.pt bundled in the SAM 3D Body checkpoint folder comes with the SAM checkpoint, not under MHR's Apache licence.",
+    "weights": "HF facebook/sam-3d-body-dinov3 and facebook/sam-3d-body-vith, licence tag 'sam-license', gated (you must agree to share HF contact info / request access)."
+   },
+   {
+    "name": "Sapiens2 / Sapiens v1 (facebookresearch)",
+    "verdict": "confirmed",
+    "code_licence": "sapiens2: custom 'Sapiens2 License' in LICENSE.md (spdx NOASSERTION). sapiens v1: CC-BY-NC-4.0 (LICENSE file is 'Creative Commons Attribution-NonCommercial 4.0 International'; spdx NOASSERTION).",
+    "code_url": "https://github.com/facebookresearch/sapiens2",
+    "checked": "Read sapiens2 LICENSE.md. Section 1.b.vi forbids use '(ii) for biometric processing', and also (i) surveillance and (vi) inferring health or other sensitive information without consent. It adds a Meta audit/deletion right (1.c). Read sapiens v1 LICENSE header. sapiens2 README cites arXiv 2604.21681.",
+    "discrepancies": "Correct as stated. The Sapiens2 licence has no explicit non-commercial clause, but the biometric-processing ban, the no-health-inference clause and Meta's audit right are material risks for body-motion analytics. The README calls the file 'LICENSE.md', not LICENSE.",
+    "weights": "Sapiens2 on HF (facebook/sapiens2-pretrain-*, facebook/sapiens2-pose-0.4b to 5b, etc.) under the Sapiens2 License; I did not check whether they are gated. Sapiens v1 checkpoints on HF facebook/sapiens under CC-BY-NC-4.0."
+   },
+   {
+    "name": "GVHMR / PromptHMR / WHAM",
+    "verdict": "confirmed",
+    "code_licence": "GVHMR (zju3dv/GVHMR): custom ZJU licence, 'educational, research and non-profit purposes only ... prohibited for commercial use' (spdx NOASSERTION). PromptHMR (yufu-wang/PromptHMR): Meshcapade 'Non-Commercial Scientific Research Use Only' (spdx NOASSERTION). WHAM (yohanshin/WHAM): MIT (spdx and LICENSE).",
+    "code_url": "https://github.com/zju3dv/GVHMR ; https://github.com/yufu-wang/PromptHMR ; https://github.com/yohanshin/WHAM",
+    "checked": "Read all three LICENSE files. GVHMR docs/INSTALL.md requires SMPL and SMPL-X registration. PromptHMR README fetch_smplx.sh requires an SMPL login. WHAM README requires SMPL and SMPLify registration.",
+    "discrepancies": "GVHMR and PromptHMR also depend on SMPL/SMPL-X, which add their own non-commercial terms. PromptHMR's licence also bans incorporation in a commercial product or service and training models for commercial use. The GVHMR licence says commercial use requires emailing xwzhou@zju.edu.cn. WHAM's last push was Apr 2024.",
+    "weights": "GVHMR checkpoints on Google Drive ('By downloading, you agree to the corresponding licences'). PromptHMR checkpoints come via scripts under the non-commercial licence. WHAM checkpoints are fetched via a script, and the bundled SMPL files need registration. I did not inspect the separate terms for each weight set."
+   },
+   {
+    "name": "DETRPose and RF-DETR Keypoint",
+    "verdict": "confirmed",
+    "code_licence": "SebastianJanampa/DETRPose: Apache-2.0 (spdx and LICENSE). roboflow/rf-detr: Apache-2.0 (spdx and LICENSE). The rf-detr README says the base package and RF-DETR Keypoint are Apache 2.0, while Atto/Femto/Pico/XL/2XL detection are under PML 1.0 in rfdetr[plus].",
+    "code_url": "https://github.com/SebastianJanampa/DETRPose ; https://github.com/roboflow/rf-detr",
+    "checked": "GitHub spdx and LICENSE files. DETRPose README: arXiv 2506.13027, ECCV 2026; COCO val AP from 57.2 (N) to 73.3 (X). rf-detr README: 'keypoint detection (preview)', class RFDETRKeypointPreview, pretrained on COCO person keypoints, 71.8 AP50:95, 9.7 ms, 40.7M params, 576x576, licence Apache 2.0.",
+    "discrepancies": "Both use COCO's 17 body keypoints, with no heel or toe points, unlike RTMW. RF-DETR Keypoint is a single preview size. Avoid the PML-licensed rfdetr[plus] sizes for self-hosted commercial use.",
+    "weights": "DETRPose: .pth on GitHub releases and on HF (SebasJanampa/DETRPose_*_COCO); no separate weight licence seen. RF-DETR Keypoint Preview weights ship via the rfdetr package and are Apache 2.0 according to the README table."
+   }
+  ]
+ },
+ {
+  "cluster": "court",
+  "items": [
+   {
+    "name": "1. CourtKeyNet (paper, code, HF weights, dataset)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (the LICENSE file says MIT License, Copyright (c) 2025 Adithya N Raj; the GitHub spdx field is MIT)",
+    "code_url": "https://github.com/adithyanraj03/CourtKeyNet",
+    "weights": "Published on HF at Cracked-ANJ/CourtKeyNet. The card's metadata licence is mit. Files: pretrained/courtkeynet_base.safetensors and finetuned/courtkeynet_finetuned.safetensors (the card recommends the fine-tuned one). The card lists no restrictions beyond MIT and says the weights were trained on badminton and tennis court images.",
+    "checked": "ScienceDirect page S2666827026000496: the title, the authors (Adithya N Raj, Prethija G.) and Machine Learning with Applications vol. 24, 100884 (2026) all match. The repo's LICENSE file and spdx are MIT. The README documents the 4-corner heatmaps and three confidence signals: heatmap peak, heatmap entropy and a geometric-validity check (convexity, area, aspect ratio, corner order). On the HF card the fine-tuned model scores PCK 99.99% / IoU 99.67% and the pretrained base PCK 99.09% / IoU 94.33%. The dataset repo exists (spdx MIT), and its README says it merges two Roboflow Universe datasets released under CC BY 4.0: himani-jain/badmintonc and adwproj/shuttlecock-yu8ra.",
+    "discrepancies": "The 99.99/99.67 numbers come from the HF card, marked self-reported. The paper abstract gives no PCK or IoU numbers, and I did not read the full paper. The dataset repo calls itself MIT ('MIT license applies to all content') although its images come from CC BY 4.0 sources, so the CC BY attribution still applies and the MIT label does not replace it. I did not check the licence of the shuttlecock source dataset myself."
+   },
+   {
+    "name": "2. TVCalib (WACV 2023)",
+    "verdict": "confirmed",
+    "code_licence": "MIT (the LICENSE file says MIT License, Copyright (c) 2022 MM4SPA; spdx MIT)",
+    "code_url": "https://github.com/MM4SPA/tvcalib",
+    "weights": "The pretrained segmentation model is train_59.pt, downloaded from a tib.eu cloud link. No licence is stated for it, and it was trained on SoccerNet data. The link was unreachable from here.",
+    "checked": "arXiv 2207.11709 (Theiner, Ewerth): the abstract describes a differentiable objective that minimizes segment reprojection error to fit camera pose and focal length. The WACV 2023 version is listed on openaccess.thecvf.com. In the code, tvcalib/cam_modules.py has CameraParameterWLensDistDictZScore with kornia distortion coefficients, module.py has a separate lens-distortion optimizer, and the repo includes scripts/experiments_wacv23/run_lens_distortion_tvcalib.sh.",
+    "discrepancies": "Lens distortion is optional (appendix experiments, off unless enabled). It is not part of the core method in the abstract. The last push was in April 2024, so the repo is no longer active. The weights have no licence, and the claim does not mention this."
+   },
+   {
+    "name": "3. PnLCalib and No-Bells-Just-Whistles",
+    "verdict": "partly",
+    "code_licence": "PnLCalib: GPL-2.0-or-later (stated in both the LICENSE header and the README). NBJW: GPL-2.0 only ('version 2, June 1991', with no 'or later' clause). GitHub reports NOASSERTION for both.",
+    "code_url": "https://github.com/mguti97/PnLCalib ; https://github.com/mguti97/No-Bells-Just-Whistles",
+    "weights": "PnLCalib: the SV_*/MV_* files in GitHub Releases v1.0.0 are CC BY 4.0. The LICENSE file and README both say so, and the README explicitly allows commercial use with attribution, adding that the expired SoccerNet research agreement places no further restrictions. NBJW: weights are in Releases v1.0.0, but no licence is stated anywhere for them.",
+    "checked": "I read both LICENSE files and READMEs (the README licence section in PnLCalib's case), checked the spdx fields through the gh search API, and confirmed the release asset URLs respond with HTTP 200. The PnLCalib README says the paper was accepted to CVIU (2026-03-10 update) and added lens distortion optimization. NBJW is a CVPR 2024 Workshops paper.",
+    "discrepancies": "Calling PnLCalib 'GPL-2.0' is imprecise: it is GPL-2.0-or-later. NBJW is GPL-2.0-only. The claim does not mention that NBJW's weights have no stated licence. In PnLCalib, sn_calibration/ comes from SoccerNet and is included 'for evaluation purposes only'. The HRNet-derived model files remain under Microsoft's MIT licence. Copyleft applies if the code is distributed with the product."
+   },
+   {
+    "name": "4. DeepLSD, ScaleLSD, HAWP",
+    "verdict": "confirmed",
+    "code_licence": "All three are MIT according to their LICENSE files and GitHub spdx: DeepLSD (Copyright 2022 Rémi Pautrat), ScaleLSD (Copyright 2023 Nan Xue), HAWP (Copyright 2023 Nan Xue).",
+    "code_url": "https://github.com/cvg/DeepLSD ; https://github.com/ant-research/scalelsd ; https://github.com/cherubicXN/hawp",
+    "weights": "DeepLSD: deeplsd_wireframe.tar and deeplsd_md.tar from cvg-data.inf.ethz.ch, which the README says are MIT. The host was unreachable from here. ScaleLSD: hosted on HF at cherubicxn/scalelsd, whose card says apache-2.0, not MIT. The files are scalelsd-vitbase-v1/v2-train-sa1b.pt, and the names suggest training on SA-1B. HAWP: downloads.sh fetches the .pth files from cherubicXN/hawp-torchhub releases (HTTP 200). That repo has no licence (spdx null), and the README gives no licence for the weights.",
+    "checked": "I read each LICENSE file and spdx, plus the README weights sections, the ScaleLSD HF card and HAWP's downloads.sh.",
+    "discrepancies": "The code licences are correct. The weights are licensed differently: ScaleLSD's are Apache-2.0, and the SA-1B training data (by filename) has a research-oriented dataset licence, which may matter for commercial use. HAWP's weights have no explicit licence."
+   },
+   {
+    "name": "5. Good-Badminton and RallyOS",
+    "verdict": "partly",
+    "code_licence": "Good-Badminton: Apache-2.0 (the LICENSE file is Apache 2.0; spdx Apache-2.0). RallyOS: there is no LICENSE file (404 on main) and spdx is null, but the README says 'Licensed under the MIT License' and links to the missing file.",
+    "code_url": "https://github.com/yo-WASSUP/Good-Badminton ; https://github.com/nakuldagade/RallyOS",
+    "weights": "Good-Badminton: per its README, weights/yolo11s-ball.pt is Apache-2.0, and the RTMPose/RTMO/YOLOX ONNX files in Releases are under their upstream Apache-2.0. It depends on ultralytics>=8.0.0, which is AGPL-3.0, and the ball model is a YOLO11 model. RallyOS: models/yolo11n-pose.pt comes from Ultralytics (AGPL-3.0).",
+    "checked": "Good-Badminton: the changelog has '2026-06-23 增加自动球场边界检测' (auto court boundary detection added) and '2026-06-27 优化自动球场线检测' (auto court-line detection improved). badminton_analysis/court/reference.py defines BadmintonCourtReference, 'a standard badminton court model' (6.1 x 13.4 m with service lines), which detector.py uses to score line support. RallyOS: the README describes top-hat filtering, LSD and RANSAC template matching. I then read core/rallyos/calibration/court_lines.py, court_fit.py and template_fit.py.",
+    "discrepancies": "Good-Badminton is as claimed. Its workflow also asks for a user-chosen template image (a video frame) and has a manual 4-corner fallback. The Ultralytics AGPL dependency is a commercial-licensing risk. RallyOS: the code uses MORPH_TOPHAT plus cv2.HoughLinesP, not LSD. Court fitting enumerates every rectangle formed by line pairs and scores each against the sport templates, which is not RANSAC. template_fit.py says 'line segments + RANSAC ... will plug in' later. So the claim repeats the README rather than describing the code. 'No licence' is right at the file and spdx level, but the README asserts MIT, so the status is ambiguous rather than clearly unlicensed. It is a hackathon project with 2 stars."
+   },
+   {
+    "name": "6. Roboflow Universe BadmintonC (himani-jain/badmintonc)",
+    "verdict": "partly",
+    "code_licence": "n/a (dataset). The project page shows 'CC BY 4.0'.",
+    "code_url": "https://universe.roboflow.com/himani-jain/badmintonc",
+    "weights": "n/a",
+    "checked": "The project page shows owner Himani Jain, licence CC BY 4.0, and 2 classes, one of them 'court'. Version 6 (2023-03-14) has 2,536 images (train 1,879 / valid 369 / test 288). Version 1 has 1 image. Version 5 and the browse page could not be fetched (client error, robots).",
+    "discrepancies": "I could not confirm the 3,647-image count: no page I could reach shows it, and the latest version I found has 2,536. The annotation type is not stated (the export formats suggest bounding boxes or polygons, not corner keypoints), so the data may need re-annotation for corner detection. The claim says 'datasets' in the plural, but only this one was named and checked."
+   }
+  ]
+ },
+ {
+  "cluster": "stroke",
+  "items": [
+   {
+    "name": "TemPose-TF-ASF (arXiv 2605.02558)",
+    "verdict": "confirmed",
+    "code_licence": "none (no code released)",
+    "code_url": "",
+    "checked": "I read the arXiv abstract page and the full text at arxiv.org/html/2605.02558v3. The paper is by Liu and Lee, cs.CV, v1 on 2026-05-04 and v3 on 2026-06-24, with no venue given. Its body names ShuttleSet and says it uses 31 stroke classes. Table 2 gives TemPose-TF at 0.835 Acc / 0.742 Macro-F1 and TemPose-TF-ASF at 0.854 / 0.761. It gives BST-CG-AP at 0.838 / 0.723 and BST-CG-AP-ASF at 0.843 / 0.729. I found no code URL in the paper, and a web search for a GitHub repo found nothing.",
+    "discrepancies": "'+0.5 on BST-CG-AP' means +0.5 percentage points of accuracy, and Macro-F1 rises by 0.6 points. BST-CG-AP is a competing model that ASF was added to, not a benchmark or dataset. The abstract itself names neither ShuttleSet nor any numbers. The figures come from the paper body. The paper is an arXiv preprint only, with no peer-reviewed venue.",
+    "weights": "None published."
+   },
+   {
+    "name": "VideoBadminton (arXiv 2403.12385, qilimk/VideoBadminton)",
+    "verdict": "confirmed",
+    "code_licence": "No licence. LICENSE, LICENSE.md and LICENSE.txt all return 404 on main, and GitHub's spdx field is null. All rights are reserved by default.",
+    "code_url": "https://github.com/qilimk/VideoBadminton",
+    "checked": "The arXiv abstract gives the title 'Benchmarking Badminton Action Recognition with a New Fine-Grained Dataset' by Li et al., v1 in March 2024 and v2 in November 2024. The HTML v2 full text says 18 categories, 7,822 clips, 60fps and 1280x960, with the camera about 2m behind the baseline and about 4.5m high. The repo README model-zoo table gives SlowFast 82.80% top-1, 97.54% top-5 and 73.80% mean class accuracy. The repo has 38 stars and was last pushed on 2024-02-09.",
+    "discrepancies": "I confirmed the SlowFast 82.8% figure from the README only. I could not reach the paper's results table. The arXiv paper itself is licensed CC BY-NC-SA 4.0. The paper says the data is released 'for research purposes', and the dataset is hosted on Google Drive with no licence for the data. Commercial use is therefore not cleared.",
+    "weights": "Not published. The README's model links, such as [SlowFast](), are empty."
+   },
+   {
+    "name": "V-JEPA 2 (facebookresearch/vjepa2) and VideoMAE V2 (OpenGVLab/VideoMAEv2)",
+    "verdict": "partly",
+    "code_licence": "vjepa2 is MIT according to its LICENSE file and spdx field. Three dataset utility files are Apache-2.0 according to the README. VideoMAEv2 is MIT according to its LICENSE file (Copyright 2023 OpenGVLab) and spdx field.",
+    "code_url": "https://github.com/facebookresearch/vjepa2 ; https://github.com/OpenGVLab/VideoMAEv2",
+    "checked": "For V-JEPA 2, the README probe table lists ViT-L/16 on Diving48 at 89.0% with a downloadable probe checkpoint (diving48-vitl-256.pt). ViT-g/384 scores 90.2%. Checkpoints are on dl.fbaipublicfiles.com and in the HF collection, and the HF card facebook/vjepa2-vitl-fpc32-256-diving48 has licence metadata 'mit'. For VideoMAE V2, docs/MODEL_ZOO.md still says to fill in a Google Form to get the weights. The distilled ViT-S and ViT-B models link directly to HF. The README news entry for 2024-09-19 says all checkpoints moved to HF OpenGVLab/VideoMAE2. That HF repo shows no gating, and its licence metadata is apache-2.0.",
+    "discrepancies": "The V-JEPA 2 weights question is answered. The weights are public and labelled MIT on both the repo and HF. 'VideoMAE V2 weights by form' is outdated. Since September 2024 the weights are on an ungated HF repo labelled Apache-2.0, which differs from the repo's MIT. The form is still mentioned in MODEL_ZOO.md. 89.0% is an attentive-probe result on frozen features, not full fine-tuning. I did not check the licences of either model's pretraining data.",
+    "weights": "V-JEPA 2 weights are public with no gating, labelled MIT (dl.fbaipublicfiles.com and HF facebook/vjepa2-*). VideoMAE V2 weights are public on HF OpenGVLab/VideoMAE2, labelled Apache-2.0 and apparently ungated. The legacy Google Form route is still documented, and distilled ViT-S and ViT-B link directly."
+   },
+   {
+    "name": "ProtoGCN (CVPR 2025, firework8/ProtoGCN)",
+    "verdict": "confirmed",
+    "code_licence": "MIT, per the LICENSE file (Copyright 2024 Hongda Liu) and spdx MIT.",
+    "code_url": "https://github.com/firework8/ProtoGCN",
+    "checked": "The GitHub description reads '[CVPR 2025 Highlight]'. The README links the CVF open-access CVPR 2025 paper, arXiv 2411.18941, and a bibtex entry with pages 29248-29257. The repo has 166 stars and was last pushed in August 2025. The LICENSE file is MIT. The README links checkpoints on Google Drive and on HF firework8/ProtoGCN, whose metadata says mit.",
+    "discrepancies": "None on the stated facts. The README says the code is based on PYSKL, and I did not check PYSKL's licence. The checkpoints are trained on NTU RGB+D, Kinetics-Skeleton and FineGYM. NTU's dataset terms may limit commercial use of the trained weights, but I did not verify this.",
+    "weights": "Published on Google Drive and HF firework8/ProtoGCN. HF metadata says MIT, and no separate weights licence is given."
+   },
+   {
+    "name": "BadminSense (CHI 2026, arXiv 2603.21825, taizhouchen/BadminSense_Dataset)",
+    "verdict": "partly",
+    "code_licence": "There is no LICENSE file (404) and GitHub's spdx is null. The README alone states CC BY-NC-ND 4.0 for 'all materials'. This is a dataset licence, and no code is released.",
+    "code_url": "https://github.com/taizhouchen/BadminSense_Dataset",
+    "checked": "The arXiv abstract gives Chen et al., March 2026, DOI 10.1145/3772318.3790998. The paper's HTML version and the HKSYU repository both confirm CHI '26 in Barcelona. The paper body says 12 amateur players (5 beginner, 5 intermediate, 2 advanced) and 848 valid strokes, augmented to 2,544. It covers 4 overhead stroke types. Quality ratings are 5-point Likert scores from 21 advanced players, with 7 raters per stroke. The README confirms 848 samples, IMU plus audio plus GIF clips, and the BY-NC-ND licence text.",
+    "discrepancies": "The licence comes only from README wording, not from a LICENSE file or spdx field. The claim omits that the data is smartwatch IMU and audio, not match video, and covers only 4 overhead strokes. The abstract calls the players 'experienced amateur', but 5 of the 12 are beginners. NC-ND rules out commercial use and derivatives for RallyIQ.",
+    "weights": "None published. The repo contains only the dataset, on Google Drive, 14 GB."
+   },
+   {
+    "name": "MultiSenseBadminton (Sci Data 2024, dailyminiii/MultiSenseBadminton)",
+    "verdict": "partly",
+    "code_licence": "The LICENSE file contains MIT text (Copyright 2023 Minwoo Seong) plus a note that it modifies ActionNet code by J. DelPreto. Because of that extra text, GitHub's spdx field shows NOASSERTION, not MIT.",
+    "code_url": "https://github.com/dailyminiii/MultiSenseBadminton",
+    "checked": "DOAJ and Nature list Scientific Data vol. 11 (2024), DOI 10.1038/s41597-024-03144-z, and the article is CC BY 4.0. The dataset has 7,763 swings from 25 players. Nature's text confirms Moticon foot-pressure insoles with 16 pressure sensors and a 6-axis IMU each. The code availability statement points to this GitHub repo. The data is on figshare, DOI 10.6084/m9.figshare.c.6725706.v1.",
+    "discrepancies": "'MIT' is accurate for the LICENSE text, but GitHub reports NOASSERTION, and part of the code derives from ActionNet, whose licence I did not check. The figshare dataset licence is unverifiable because the figshare API was blocked and the DOI fetch failed. The article does not state a data licence. The repo is mostly a README plus preprocessing code, last pushed in May 2024.",
+    "weights": "No trained model weights are published. The repo has only code and a link to the figshare data."
+   }
+  ]
+ },
+ {
+  "cluster": "llm",
+  "items": [
+   {
+    "name": "1. TennisExpert (arXiv 2603.13397)",
+    "verdict": "confirmed",
+    "code_licence": "None. No LICENSE/LICENSE.md/LICENSE.txt on main (404) and GitHub spdx is null, so the default is all rights reserved.",
+    "code_url": "https://github.com/LZYAndy/TennisExpert",
+    "weights": "The README links model weights on Google Drive (drive.google.com/drive/folders/1GkLHT6tyFb874HcEEmIu0S47wYzzbhkN) with no licence. They are a fine-tune of Qwen3-VL-8B. The paper's ethics section limits the TennisVL dataset to academic research and prohibits commercial use. The dataset gives YouTube URLs, though the README also links clip videos on Drive.",
+    "checked": "Read the arXiv abs page (Liu et al., submitted 11 Mar 2026, v2 17 Mar) and the arxiv.org/html Table 2: TennisExpert CIDEr 43.71 vs Gemini-3-Pro zero-shot 10.11. Short-term memory is a FIFO window with K=4 (the current rally plus the previous 4). Long-term memory holds cumulative per-match player statistics. Checked repo metadata through gh (18 stars, pushed 2026-06-22) and the raw LICENSE paths.",
+    "discrepancies": "None in the numbers. Note that K=4 means the current rally plus 4 previous ones, so 5 in all (the README's inference example uses --window-size 5). The abstract gives no numbers, so the CIDEr figures come only from the HTML table. Commercial use is blocked by the missing code licence, the unlicensed weights and the dataset's academic-only terms."
+   },
+   {
+    "name": "2. MADR multi-agent debate badminton retrieval (NYCU)",
+    "verdict": "confirmed",
+    "code_licence": "No code released. The project page yixiang1120.github.io/MADR-project-page links only the paper. The author's GitHub has only the project-page repo, with no licence.",
+    "code_url": "",
+    "weights": "None published. MADR appears to use off-the-shelf LLM agents plus a Qwen3-Embedding 4B retriever with re-ranking.",
+    "checked": "Fetched the NYCU PDF: 'From Alignment to Reason: Multi-Agent Debate for Tactical Badminton Video Retrieval' by Yi-Xiang Zhang and Yu-Shuen Wang (NYCU). MADR stands for Multi-Agent Dialectic Reasoning. Offense and Defense Analyst agents debate, and a Verification Agent does a sentence-level 'Fact Check' against the game log. Table 2 gives Hit@1 of 55.65% for the full method (Qwen3-Embedding 4B + re-rank) and 40.00% without debate. The project page says it is a CVPR 2026 Findings paper.",
+    "discrepancies": "Minor: the paper calls the agent a 'Verification Agent' and labels the step 'Fact Check' only in the figure. The 55.65% is the best configuration (Qwen3-Embedding 4B with re-ranking), not every configuration. The venue (CVPR 2026 Findings) comes only from the project page."
+   },
+   {
+    "name": "3. BADGE (arXiv 2406.18116)",
+    "verdict": "confirmed",
+    "code_licence": "MIT. The LICENSE file reads 'MIT License, Copyright (c) 2024 江尚軒', and GitHub spdx is MIT.",
+    "code_url": "https://github.com/AndyChiangSH/BADGE",
+    "weights": "Not applicable. There are no trained weights: the method calls the OpenAI APIs gpt-4-turbo-2024-04-09 and gpt-3.5-turbo-0125.",
+    "checked": "Checked the arXiv abs page (Chiang, Chao, Wang, Wang, Peng, submitted 26 Jun 2024). The abstract says GPT-4 performed best with CSV input and Chain-of-Thought, and that GPT-4's scores, compared with human judges, show a tendency to prefer GPT-4-generated reports. The repo README and GitHub description say it was presented at the IJCAI 2024 Workshop IT4PSS. Repo has 8 stars and was last pushed in Jul 2024.",
+    "discrepancies": "'Self-preference bias' is a fair reading of the paper, but the paper only says there is a 'tendency to prefer' GPT-4 reports, so it is not a formally measured bias. The venue is a workshop, and arXiv lists no venue. The work is small-scale and text-only (match data to report), with no video analysis."
+   },
+   {
+    "name": "4. DoublesEval (arXiv 2608.24439)",
+    "verdict": "partly",
+    "code_licence": "Not part of the claim. Found github.com/Chengjt1999/DoublesEval: its LICENSE file is Apache-2.0 and spdx is Apache-2.0, but the README says only 'Code will be soon available.' The repo was created 2026-08-22 and has 0 stars. The paper gives no URL, so the link is inferred from the first author's name.",
+    "code_url": "https://github.com/Chengjt1999/DoublesEval",
+    "weights": "None. The method is a zero-shot evaluation of 4 open-source VLMs, and TacticCheck is test-time only with no parameter updates.",
+    "checked": "Checked the arXiv abs page ('DoublesEval: Diagnosing Multi-Agent Tactical Reasoning in VLMs via Professional Doubles Badminton', Cheng and Li, submitted 25 Aug 2026) and the arxiv.org/html tables. In Table 2, zero-shot overall accuracy ranges from 27.57% to 32.30% across Qwen2.5-VL, Qwen3-VL, VideoLLaMA3 and Molmo2. Table 3 gives TacticCheck gains of +7.63, +8.20, +7.13 and +7.83. The data is 60 rallies from 4 BWF Super 750/1000 doubles matches, about 9.6K instances.",
+    "discrepancies": "The claim matches the tables, but the paper contradicts itself. The body text gives the zero-shot range as 28.65-32.35% and the TacticCheck gain as 6.55-7.83 points, which do not match Tables 2 and 3. Treat the exact figures as uncertain. The sample is small (4 matches, 60 rallies), only open-source VLMs were tested, and no code is released yet despite the licence file."
+   },
+   {
+    "name": "5. CourtSI (arXiv 2603.09896)",
+    "verdict": "confirmed",
+    "code_licence": "Apache-2.0. The LICENSE file is Apache License 2.0 and GitHub spdx is Apache-2.0.",
+    "code_url": "https://github.com/Visionary-Laboratory/CourtSI",
+    "weights": "Yes. The model Charlie019/CourtSI-Qwen3-VL-8B is on HF with safetensors files and an apache-2.0 card tag. The datasets Charlie019/CourtSI-1M (card tag apache-2.0, apparently not gated), CourtSI-Bench and CourtSI-Ext are on HF.",
+    "checked": "Checked the arXiv abs page ('Stepping VLMs onto the Court: Benchmarking Spatial Intelligence in Sports', Yang et al., submitted 10 Mar 2026): 1M+ QA pairs, a 3,686-pair benchmark, 25 VLMs evaluated, and +23.5 points after fine-tuning Qwen3-VL-8B. Checked repo metadata through gh (73 stars) and the raw LICENSE file. Fetched the HF dataset and model cards for their licence tags.",
+    "discrepancies": "None in the stated facts. Caveats: the README says the semi-automatic data engine is not open-sourced. The HF dataset card has no note on the copyright of the source broadcast frames, so an apache-2.0 tag may not clear the underlying video rights. The fine-tuned model also inherits Qwen3-VL's licence, which is Apache-2.0 and was not checked here. CourtSI covers spatial QA, not rally analytics."
+   },
+   {
+    "name": "6. TennisTV (arXiv 2509.15602)",
+    "verdict": "partly",
+    "code_licence": "Not claimed. A GitHub repo N0ahWater/TennisTV exists with no licence and no README (404), and is not confirmed to be official.",
+    "code_url": "",
+    "weights": "Not applicable. It is a benchmark of 2,527 questions, 8 tasks and 17 MLLMs, and no model was trained.",
+    "checked": "Checked the arXiv abs page ('TennisTV: Do Multimodal Large Language Models Understand Tennis Rallies?', Bao and Zhang, v1 19 Sep 2025, v5 16 Apr 2026). Checked the arxiv.org/html Table 1 in v1 through v5. v2 shows GPT-4.1 at 46.2 and human at 89.0. v3, v4 and v5 (current) show GPT-4.1 at 45.1 and human at 89.2. v1 shows GPT-4.1 at 45.0 with no human row.",
+    "discrepancies": "The figures 46.2% and 89.0% come from the superseded v2 only. The current version (v5) reports GPT-4.1 at 45.1% and human at 89.2%. GPT-4.1 is best in every version, and the roughly 44-point gap to humans holds. Cite v5 numbers, or say the figures are from v2."
+   }
+  ]
+ }
+]
