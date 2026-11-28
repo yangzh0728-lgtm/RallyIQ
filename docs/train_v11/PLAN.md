@@ -55,3 +55,9 @@ Only if the H/S results point to it, and pre-registered here before running.
   (a post-hoc choice between two pre-registered arms, stated as such).
 - The stroke residual (S) does not use augmented ShuttleSet rows: it is an own-footage correction on top of the
   ShuttleSet-trained court model, and adding broadcast rows would remove what it corrects.
+
+## Scope change 2026-11-28 08:07 UTC (sam: separate threads for tracking / strokes / hitter attribution)
+- This thread: data expansion (own + public, on the T7) and hit detection (scorer, sequence model, dead-ball, alternation,
+  broadcast TCN). S (stroke residual) is handed to the strokes thread unrun; its labels are published in
+  /Volumes/T7/RallyIQ_training/DATA_INDEX.md. H and C (hit scorer) proceed as pre-registered.
+- FineBadminton (pre-registration to follow before any FineBadminton result) will target the hit models only.

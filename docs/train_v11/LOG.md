@@ -68,3 +68,42 @@
   loss: ~55-75% of the original. Loader check (learn_hits.load_clips + collect): candidates and recall ceiling unchanged in
   kind (st02_set1: 15/17/14 candidates, ceiling 9/10 in all three). Calibration consistency: H_new maps the moved corners
   back to (0,0)/(6.1,0)/(6.1,13.4)/(0,13.4) exactly.
+
+## Storage (sam's rule 2026-11-28: all local data on the T7)
+- T7 layout: /Volumes/T7/RallyIQ_training/{videos, datasets, cache, ckpt, train_v11}. Copied with rsync, md5 checked
+  (videos) / diff -r (other folders), then the Desktop folders were replaced by symlinks: src -> videos/train_v11_src,
+  review/labels/courts/aug/cand/rescue -> train_v11/<same>. runs/ and ckpt/ move after the running jobs finish.
+  Code (git worktree repo/) and small text (PLAN/LOG/scripts) stay on the Desktop.
+- FineBadminton: dataset card + file list in /Volumes/T7/datasets/FineBadminton (KB); the 43 GB download itself was refused
+  twice by this machine's auto-mode permission classifier; script ready: fetch_finebadminton.sh (resumable, manifest).
+
+## Unattended operation (2026-11-28 08:10 UTC)
+- Runner: /Volumes/T7/RallyIQ_training/queue/runner.py (nohup; jobs.json / state.json; logs in /Volumes/T7/RallyIQ_training/logs).
+  Queued: v11_H_retrain, v11_C_retrain (need labels/amateur_v11_train.json, written by me after the final label check).
+- Archive copy of train_v3..v10 data (not repo/) to /Volumes/T7/RallyIQ_training/archive/ (logs/archive.log); Desktop untouched.
+- RESUME CHECKLIST: read this LOG, queue/state.json, logs/*.log, runs/E,F/run.log, collect_*.log, FineBadminton download.log,
+  click/clicks.json (sam's court clicks).
+- External survey (ckpt/external_survey.md, copy in /Volumes/T7/RallyIQ_training/EXTERNAL.md): ranked 1) audio onset feature
+  (already tested in v8: no gain), 2) TrackNetV3 tracker (tracking thread's scope), 3) AdaSpot fine-tune (CUDA only). Nothing
+  new to run on this Mac for hit detection from it right now.
+- yt-dlp 2026.10.26 (Homebrew) already installed. HeartFlow CC BY videos (3 chosen, licence re-checked 2026-11-28 08:20 UTC):
+  download and helper script both refused by auto mode; sam has the one-line command. DATASETS.md has the attribution rows.
+- Zenodo 14677727 (hit-event clips, CC BY 4.0, 14.5 GB) downloading via ~/Desktop/RallyIQ/fetch_dataset.sh.
+
+## DECISIONS (one line each: chose / instead of / why)
+- Videos: 8 with a verifiable court / instead of 10 with guessed courts / a wrong court corrupts both pre-labels and features.
+- Long videos: first 600 s labelled (0623 later re-run in full, 885 s) / instead of whole files / keeps the review load ~200-430 rows per video.
+- Review split: one agent per <= 21 sheets, each sees only its sheets + items, never prior labels / instead of one reviewer per video / parallel and independent; the 10% second pass is a separate agent that sees one row at a time.
+- Gap / missed hits: refined on finer sheets (-0.3..+0.3 s) before use; unrefined ones become unsure_hit (ignored) / instead of using rough times / scoring tolerance is 0.25 s.
+- Rescue (A): stopped after 6 close checks failed; asked sam for clicks (CLICK_ME.md) / instead of guessing courts / same reason as above.
+- Public data (B): no VideoBadminton / Drone_BD (no licence); FineBadminton (Apache-2.0 card) and Zenodo 14677727 (CC BY 4.0) downloaded / licence first.
+- Augmentation (C): camera-rotation homography + detection loss only / instead of court-space re-projection / shuttle height is unknown, rotation is exact.
+- S (stroke residual): handed to the strokes thread unrun / scope change from sam.
+- HeartFlow pilot: 3 videos (~4 h; Tokyo Badcox, Tokyo Ahiru-dan, Vancouver ERSC = 3 venues) / instead of 5 / smallest set that spans venues; scale up only if they help hit F1.
+- Folder move: option A, frozen rounds v3..v10 one at a time (verify sha1 per subtree, keep subtrees that contain symlinks on the Desktop), train_v11 data last after its jobs finish / instead of moving everything / exFAT has no symlinks; code and git stay on APFS.
+- Runner caps: 2 CPU jobs + 1 GPU job; my nohup jobs keep OMP threads 1-3 / Mac is shared with other threads.
+- 2026-11-28 ~08:30 UTC (usage limit): 0623 labelled (440 lines, all 435 rows); refine + 10% pass-2 agent for 0623 running.
+  7698 pipeline still running (runs/F). NEXT ON RESUME: harvest labels/raw/own_20260906_0623.refine.txt + labels/pass2/,
+  run scripts/agree.py; when 7698 finishes: items -> sheets -> 2 label agents -> refine -> pass2; then build
+  labels/amateur_v11_train.json (v6_newids + convert.py of all 8) -> the runner starts v11_H/C retrains automatically;
+  evaluate with scripts/tune.py (cfg: v3b vs scorer_dir ckpt/lovo_H / lovo_C) + tboot, fresh with labels/fresh_d.json.
