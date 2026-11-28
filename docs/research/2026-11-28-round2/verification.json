@@ -1,0 +1,572 @@
+[
+ {
+  "topic": "audio",
+  "file": "/tmp/claude-0/-home-user/b8ae9930-87df-5663-af9e-aa30a1da687c/scratchpad/r2/audio.md",
+  "top": [
+   {
+    "name": "DSP onset stack: librosa SuperFlux onsets + scipy zero-phase band-pass and adaptive median+k*MAD threshold (template: tennis-hit-clipper)",
+    "url": "https://github.com/librosa/librosa ; https://github.com/jhsgumban/tennis-hit-clipper",
+    "licence": "librosa ISC; scipy BSD; tennis-hit-clipper MIT (GitHub metadata)",
+    "claim": "No published badminton accuracy. tennis-hit-clipper uses a 1.5-8 kHz band-pass, 10 ms RMS, a rolling median + k*MAD threshold over 8 s (k=6) and a 250 ms refractory period. The same energy-peak approach reached P/R 0.98/0.95-1.00 with onset error <=0.2 ms on TT Sounds, but with the microphone only 0.5-2 m away.",
+    "plug_in": "New rallyiq/audio/onsets.py: ffmpeg to 48 kHz stereo PCM, sosfiltfilt band-pass of about 1.5-10 kHz, RMS + SuperFlux envelope, MAD threshold, 120 ms refractory period. Each onset gets t_ms, SNR, band ratios and GCC-PHAT ITD. This is the first audio candidate stream and needs no training."
+   },
+   {
+    "name": "Huang & Cox et al., Improved Detection of Ball Hit Events in a Tennis Game Using Multimodal Information (AVSP 2011)",
+    "url": "https://www.isca-archive.org/avsp_2011/huang11_avsp.pdf",
+    "licence": "Paper only; no code or data released",
+    "claim": "Australian Open 2008 women's doubles, 4 clips, 1086 hits. F-score: audio-only (MFCC-GMM + timing) 73.5-77.3, video-only (ball trajectory velocity change) 67.6-70.6, fused 77.0-84.2. The gain comes mainly from precision. Audio is accepted within a Gaussian window of +/-8 frames around each visual hit, plus an inter-hit timing prior. The paper notes about 30 ms of racket-to-microphone delay.",
+    "plug_in": "The fusion rule for hits.py/learned.py: look up the nearest audio onset within +/-max(25 ms, 1 frame) of each visual candidate after the per-video offset and distance correction, then add aud_match/aud_dt/aud_snr/aud_court_p features. It is also the main external evidence for the expected gain."
+   },
+   {
+    "name": "Ebenezer et al., Detection of Audio-Video Synchronization Errors via Event Detection (ICASSP 2021, tennis hits)",
+    "url": "https://arxiv.org/abs/2104.10116",
+    "licence": "arXiv paper page says CC BY-NC-SA 4.0 (paper only); no code or data released",
+    "claim": "About 6 h of tennis video (about 504k frames) with simulated A/V offsets. Separate audio and visual networks detect racket-ball hits; an audio hit with no matching visual hit nearby flags a sync error. The abstract says 'high accuracy' but gives no numbers.",
+    "plug_in": "Per-video offset self-calibration (rallyiq/audio/sync.py): match confident visual hits (real frame PTS + d/343 m/s speed-of-sound delay) to audio onsets, grid-search the offset over +/-500 ms, and refine with the median residual. Require at least 8 pairs and a residual MAD of 10 ms or less, otherwise fall back to the container start_time. Fit drift on 120 s windows."
+   },
+   {
+    "name": "PretrainedSED (Schmid et al., ICASSP 2025): frame-level sound-event-detection transformers plus low-complexity frame_mn06/frame_mn10",
+    "url": "https://github.com/fschmid56/PretrainedSED",
+    "licence": "MIT (LICENSE read); checkpoints in the same repo's GitHub Release with no separate licence; pre-trained on AudioSet (YouTube-derived, legal review advised for commercial use)",
+    "claim": "AudioSet Strong frame-level pre-training. The README reports about 46 PSDS1 in the DESED setup (41.8 without a sequence model). frame_mn06 has 1.62M parameters and frame_mn10 3.83M.",
+    "plug_in": "Optional stage 2: fine-tune frame_mn06 as a 2-class 'our-court hit vs other' head on 0.5 s windows around each onset. Labels are self-supervised: onsets matched to confident visual hits are positives; onsets during our court's idle gaps between rallies (neighbouring courts still playing) are negatives."
+   },
+   {
+    "name": "PANNs (Kong et al., TASLP 2020) + panns_inference",
+    "url": "https://github.com/qiuqiangkong/audioset_tagging_cnn ; https://zenodo.org/records/3987831",
+    "licence": "Code MIT (both repos); weights on Zenodo CC BY 4.0 (attribution required); AudioSet training data caveat",
+    "claim": "Cnn14 AudioSet mAP 0.431 (16 kHz version 0.438). The sound-event-detection model Cnn14_DecisionLevelMax (mAP 0.385) gives frame-wise output over 527 classes. AudioSet has no badminton class; the closest are Whack/Slap/Tap/Clicking/Squeak.",
+    "plug_in": "Second-stage onset classifier features: Cnn14 embedding (PCA to 16 dims) plus the max frame-wise probability of Whack/Slap/Tap/Squeak/Speech within +/-250 ms of each onset. These feed the per-video logistic regression that separates our court's hits from cross-talk, and the hit scorer."
+   },
+   {
+    "name": "Baughman et al., Detection of Tennis Events from Acoustic Data (ACM MMSports 2019, IBM)",
+    "url": "https://shiqiang.wang/papers/AB_MMSports2019.pdf",
+    "licence": "Paper only; no code or data released",
+    "claim": "6568 one-second clips (1.83 h) from US Open Series pro matches. Peak detection followed by a CNN on MFCC+delta+delta-delta over 6 event classes (hit, feet, applause, announcer, ...) gives F1 92.39%. Point start P/R 84/82%, point end 77/77%.",
+    "plug_in": "Template for a peak-centred second-stage classifier and its negative classes (shoe squeak/feet, voices, crowd), feeding the cross-talk and noise rejection step."
+   },
+   {
+    "name": "TT Sounds: Sound-Based Spin Estimation in Table Tennis (Gossard et al., arXiv 2409.11760)",
+    "url": "https://github.com/cogsys-tuebingen/tt_sounds",
+    "licence": "README declares CC BY-NC 4.0 for the dataset files; no LICENSE file in the repo; research reference only, not usable commercially",
+    "claim": "3396 racket bounces plus 777 table, 290 floor and 1239 other sounds; Zoom H4n microphone at 44.1 kHz, 0.5-2 m away. A 10 kHz zero-phase high-pass with 1 ms energy frames against an exponential moving average gives P/R 0.98/1.00 and 0.09 ms onset error (0.98/0.95 and 0.2 ms with speech noise). A CNN on 15 ms windows classifies surface and spin.",
+    "plug_in": "Design reference only: zero-phase filtering plus a 1 ms energy baseline for sub-ms onset timing, and a 15 ms window classifier for hit vs floor vs other. The data cannot be used to train a commercial model."
+   },
+   {
+    "name": "Synchformer (Iashin et al., ICASSP 2024)",
+    "url": "https://github.com/v-iashin/Synchformer",
+    "licence": "MIT (LICENSE read); checkpoints hosted on a3s.fi with no separate licence",
+    "claim": "Treats the offset as a classification over roughly +/-2 s with about 0.2 s class spacing. Acc@1 / Acc@1+-1 class: 86.6/99.6 on LRS3; 43.8/60.2 (VGGSound-trained) and 47.2/67.4 (AudioSet-trained) on VGGSound-Sparse.",
+    "plug_in": "Optional sanity check only, for when event cross-correlation fails or the estimated offset exceeds +/-200 ms (bad edit or transcode). Too coarse for the 8-16 ms precision RallyIQ needs."
+   }
+  ],
+  "verify": {
+   "items": [
+    {
+     "name": "DSP onset stack: librosa SuperFlux onsets + scipy zero-phase band-pass and adaptive median+k*MAD threshold (template: tennis-hit-clipper)",
+     "verdict": "partly",
+     "licence_checked": "librosa: ISC (LICENSE.md read, plus GitHub spdx). scipy: BSD-3-Clause (GitHub spdx, LICENSE.txt header). tennis-hit-clipper: MIT (LICENSE read, Copyright (c) 2026 John Hel Gumban; GitHub spdx MIT). librosa.onset.onset_strength has lag and max_size parameters and cites Boeck & Widmer, so SuperFlux is supported.",
+     "corrections": "I read tennis-hit-clipper's detect_hits.py and config.toml. (1) The threshold is a piecewise-constant median + k*MAD over non-overlapping 8 s chunks, not a rolling window. (2) The README says the default k is 6, but the shipped config.toml sets threshold_k = 8.0. It also applies an absolute floor, min_amp = 0.03, which the claim leaves out. (3) The code resamples to 22,050 Hz mono, not the 16 kHz the README states. The filter is a 4th-order Butterworth applied with filtfilt in (b, a) form, so it is zero-phase but not SOS. (4) The 1.5-8 kHz band, the 10 ms RMS envelope and the 250 ms refractory period (find_peaks distance) are correct. (5) The repo uses neither librosa nor SuperFlux and publishes no accuracy figures for any sport. It was created on 2026-11-06, has 0 stars, and its README clone URL points to a different user (jsgumban) that does not exist. Treat it as a hobby template, not validated prior art. (6) Calling TT Sounds 'the same energy-peak approach' is a stretch. The TT Sounds code uses 1 ms frame energy against a moving or decaying average (decay 0.9, threshold x3), not a band-pass with 10 ms RMS and a MAD threshold. I could not verify the TT Sounds P/R and timing numbers (see that item)."
+    },
+    {
+     "name": "Huang & Cox et al., Improved Detection of Ball Hit Events in a Tennis Game Using Multimodal Information (AVSP 2011)",
+     "verdict": "confirmed",
+     "licence_checked": "The PDF exists at the ISCA archive URL; I read it via WebFetch because curl was blocked. The authors are Huang, Cox, Yan, de Campos, Windridge, Kittler and Christmas (UEA and Surrey). The paper does not mention any code or data release.",
+     "corrections": "The numbers match. The dataset is Australian Open 2008 women's doubles: 4 clips of 37.07, 33.48, 37.56 and 13.40 min, with 316+250+385+135 = 1086 hits. Audio training data came from a different match (Wimbledon 2008 men's singles). Audio-only LR+Timing F = 73.47-77.30, using 39-D MFCC, GMMs with 3-8 components, a likelihood ratio, and 30 ms frames with 20 ms overlap. Visual-only F = 67.64-70.61. Audio LR+Visual+Timing F = 77.04-84.21; without timing it is 76.84-82.68. Minor corrections: (a) The 30 ms delay is a hypothetical example: 'if the microphone is 10m away, the delay is about 30 ms'. It is not a measured value. (b) The paper says t may vary within ±8 frames of t0 but does not say whether these are audio frames (about 100 Hz, so ±80 ms) or video frames (50 fps, so ±160 ms). (c) Against video-only, the gain is mostly precision (about 60 rising to 77-85, while recall falls slightly). Against audio-only, both precision and recall rise. Adding timing lowers recall."
+    },
+    {
+     "name": "Ebenezer et al., Detection of Audio-Video Synchronization Errors via Event Detection (ICASSP 2021, tennis hits)",
+     "verdict": "confirmed",
+     "licence_checked": "The arXiv 2104.10116 abstract page shows CC BY-NC-SA 4.0. That licence covers the paper text only. The page has no code or dataset link. The comment field reads 'To be published in ICASSP 2021'.",
+     "corrections": "The content matches: 504,300 frames, about 6 h of tennis, simulated sync errors, separate video and audio networks for the ball-hit event, an error flagged when the audio event has no visual event in the nearby interval, and only 'high accuracy' in the abstract. Commercial flag: web search returned two US patents, US11336935B1 'Detecting audio-video desynchronization' and US11659217B1 'Event based audio-video sync detection'. The paper PDF is hosted on cdn.amazon.science, so these are likely Amazon patents on this method. The proxy blocked the patent pages, so I could not read the assignee or claims. Get a freedom-to-operate review before shipping sync.py's event-matching offset estimation."
+    },
+    {
+     "name": "PretrainedSED (Schmid et al., ICASSP 2025): frame-level sound-event-detection transformers plus low-complexity frame_mn06/frame_mn10",
+     "verdict": "partly",
+     "licence_checked": "MIT (LICENSE read, Copyright (c) 2024 Florian Schmid; GitHub spdx MIT). The README names ICASSP'25 (arXiv 2409.09546). config.py loads checkpoints from the GitHub release v0.0.1. A range request for frame_mn06_strong_1.pt returned HTTP 206, so it is downloadable. The README's name 'frame_mn06.pt' returns 404. I found no separate licence for the weights. The other transformer checkpoints derive from upstream models with their own terms: nttcslab/m2d and audiossl (ATST-F) are 'Other'/NOASSERTION. frame_mn builds on EfficientAT, which is MIT.",
+     "corrections": "The parameter counts (frame_mn06 1.62M, frame_mn10 3.83M) are correct. The benchmark attribution is wrong. The 'around 46' PSDS1 is AudioSet Strong: the README reports val/psds1_macro_averaged of about 46 for ATST-F, and student models score 45.4-46.5. It is not DESED. The 41.8 PSDS1 'without a sequence model' is the ATST-F teacher on AudioSet Strong. The README's DESED baseline-setup numbers are 42.7-51.1 (ATST-F and BEATs). The README gives no PSDS or other metrics for frame_mn06 or frame_mn10."
+    },
+    {
+     "name": "PANNs (Kong et al., TASLP 2020) + panns_inference",
+     "verdict": "confirmed",
+     "licence_checked": "Both repos carry LICENSE.MIT, which I read, and GitHub spdx MIT. The panns_inference copy has a boilerplate copyright line, 'Google, Inc. angularjs.org'. Zenodo record 3987831 (v3, open access) is CC BY 4.0, read via WebFetch. Its files include Cnn14_mAP=0.431.pth (327 MB), Cnn14_16k_mAP=0.438.pth (359 MB) and Cnn14_DecisionLevelMax_mAP=0.385.pth (327 MB).",
+     "corrections": "The numbers match the README: Cnn14 0.431, Cnn14_16k 0.438 (trained by a later code version) and DecisionLevelMax 0.385, the best of the framewise SED models. The README's headline is Wavegram-Logmel-CNN at 0.439. The AudioSet label CSV has 527 classes and none for badminton. Whack/thwack, Slap/smack, Tap, Clicking and Squeak all exist. 'Thump, thud' and 'Smash, crash' could also serve as features. The AudioSet (YouTube) training-data caveat remains."
+    },
+    {
+     "name": "Baughman et al., Detection of Tennis Events from Acoustic Data (ACM MMSports 2019, IBM)",
+     "verdict": "confirmed",
+     "licence_checked": "The PDF exists at shiqiang.wang; I read it via WebFetch because curl was blocked. Authors: Baughman, Morales, Reiss, Greco, Hammer and Wang (IBM), MMSports '19, Nice. The paper makes no public code or data release statement.",
+     "corrections": "The figures match: 6,568 one-second sounds totalling 1.83 h from US Open Series hard-court matches. Features are 25-band MFCC on 20 ms frames plus delta and acceleration. Peak detection is a slope sign change. The CNN reaches F1 92.39%. Point start P/R is 84/82% and point end 77/77%. The classes listed are Announcer, Applause, Feet, Hit, Nonplay and Out, although the text elsewhere says '7 different labels'."
+    },
+    {
+     "name": "TT Sounds: Sound-Based Spin Estimation in Table Tennis (Gossard et al., arXiv 2409.11760)",
+     "verdict": "partly",
+     "licence_checked": "The README says 'All files in this dataset ... published under ... CC BY-NC 4.0' and bars commercial use. The repo has no LICENSE file (404) and an empty GitHub spdx, so the src/ code has no licence and is all rights reserved by default. The arXiv title is 'Sound-Based Spin Estimation in Table Tennis: Dataset and Real-Time Classification Pipeline' (v2, 2025-09-19; authors Gossard, Schmalzl, Ziegler, Zell). The README still uses the v1 title. The data link on cloud.cs.uni-tuebingen.de is blocked by the proxy, so download is not verified.",
+     "corrections": "Confirmed: 3396 racket bounces across 10 racket configurations, plus 777 table, 290 floor and 1239 other sounds; 15 ms extracted samples; an 80/20 split. Unverifiable, because the arXiv HTML/PDF and mirrors were blocked or the WebFetch budget was exhausted: the Zoom H4n, 44.1 kHz, 0.5-2 m distance, 10 kHz zero-phase high-pass, P/R 0.98/1.00 with 0.09 ms error, and 0.98/0.95 with 0.2 ms under speech noise. The repo's detector.py has 1 ms frame-energy detectors (moving average, and decay average with decay 0.9 and threshold x3) but no high-pass filter. Re-check these numbers against the v2 paper before citing them."
+    },
+    {
+     "name": "Synchformer (Iashin et al., ICASSP 2024)",
+     "verdict": "confirmed",
+     "licence_checked": "MIT (LICENSE read, Copyright (c) 2024 Vladimir Iashin; GitHub spdx MIT). Checkpoints are linked on a3s.fi, which the proxy blocks (403), so I could not verify download. I found no separate weight licence. Upstream feature extractors are AST (BSD-3-Clause) and Motionformer (LICENSE file is Apache-2.0; GitHub spdx blank).",
+     "corrections": "The README table matches: LRS3 86.6/99.6, VGGSound-trained on VGGSound-Sparse 43.8/60.2, AudioSet-trained on VGGSound-Sparse 47.2/67.4. The metric is Acc@1 / Acc@1 ±1 class. The README mentions a 21-class head and offsets of ±2.0 s, which fits 0.2 s spacing. Caveat: the LRS3 checkpoint is trained on LRS3 (TED), which has a research-oriented licence. The other checkpoints are trained on YouTube-derived VGGSound and AudioSet, so commercial use needs legal review. The README also has a sync-ability model (AudioSet, Acc@1 73.5, AUROC 0.83)."
+    }
+   ]
+  }
+ },
+ {
+  "topic": "rally",
+  "file": "/tmp/claude-0/-home-user/b8ae9930-87df-5663-af9e-aa30a1da687c/scratchpad/r2/rally.md",
+  "top": [
+   {
+    "name": "Smashers (single fixed camera squash: serve configuration -> rallies -> rally-point score reconstruction)",
+    "url": "https://github.com/dakshinsiva/smashers",
+    "licence": "Code MIT (LICENSE read); uses YOLO11-pose (Ultralytics AGPL-3.0), so port only the rule logic and keep RTMO",
+    "claim": "Author self-test on 2 games: detected server matched the video in 11 of 12 rally starts checked; player identity 93% (phone) / 97% (CCTV); serve-box alternation check held in every applicable case. No ball tracking needed.",
+    "plug_in": "Port squash/rallies.py to badminton geometry (RTMO foot points + homography). Serve configuration = server near-static inside a service court with the receiver in the diagonal court for >=0.4 s. This gives a serve anchor {time, server, left/right court}. split_long_rallies cuts merged segments at serve configurations seen in quiet moments. The first hit after an anchor is forced to 'serve'. Winner of rally k = server of rally k+1, and service-court parity checks the score."
+   },
+   {
+    "name": "BadmintonStudio (amateur badminton auto-editor, multimodal rally segmentation)",
+    "url": "https://github.com/balabooooo/BadmintonStudio",
+    "licence": "Code MIT (LICENSE read); depends on YOLO26/YOLO26-pose (Ultralytics AGPL-3.0)",
+    "claim": "Single-clip rally F1@IoU0.5 0.781 -> 0.800 with shuttle speed added; LOCO weights did not generalise. Measured in-rally hit gap p80 1.19 s / p99 3.25 s, with typically >=4 s and no hits between rallies. Audio reliability gate pushed the audio weight 0.95 -> 0.03 in a noisy multi-court hall.",
+    "plug_in": "Add split_by_hit_gaps (split where our-court hit gap > ~4 s, with >=2 hits on each side) and end = last hit + 0.9 s as a correction layer after current segmentation. Add audio onsets (1.8-7.8 kHz spectral flux) matched one-to-one to RTMO wrist-swing peaks as a second hit-candidate source for the GBM scorer: this recovers low-camera misses and rejects adjacent-court sounds. Keep the court-polygon admission for players."
+   },
+   {
+    "name": "MyBreakPoint vision research: amateur tennis point segmenter (TCN with in-play/start/end heads)",
+    "url": "https://github.com/FroostySnoowman/mybreakpoint-vision-research",
+    "licence": "All rights reserved (LICENSE read: reading/research evaluation only, no use or copy); ideas only",
+    "claim": "42 phone videos, 1,351 serves, 4-fold CV: 91.9% of points kept whole, 52.4% of dead time removed. Unseen 20-min doubles match: 42/42 serves kept whole, 54.6% dead time removed. Short-segment x3 weighting and per-video threshold rescale each worth roughly 1-3 points.",
+    "plug_in": "Reimplement the design (not the code) as RallyIQ's learned coarse segmenter. 10 Hz inputs: TrackNetV3 conf/speed, RTMO our-court player speed, far/net/near banded frame differences, in-model log-mel. Dilated TCN with in-play/start/end heads. The start head doubles as a serve anchor, fused with the Smashers-style rule. Short-segment weighting targets the service faults and one-shot rallies that get merged."
+   },
+   {
+    "name": "RallyArb + tennis bounce/hit cross-viewpoint benchmark (arXiv 2610.38042, 2026)",
+    "url": "https://github.com/David-dsv/tennis-bounce-hit-benchmark",
+    "licence": "Data CC BY 4.0, evaluator code MIT (both LICENSE files read); source videos not licensed; RallyArb arbitration code only on request from the authors",
+    "claim": "8 clips, 345 events. Phone/court-level pooled bounce/hit F1: E2E-Spot (broadcast weights) 0.130/0.154, T-DEED 0.000/0.000, rule-based RallyArb 0.831/0.594, leave-one-clip-out fine-tuned E2E-Spot 0.603/0.510, zero-shot VLM 0.525/0.475 (~0.1 s timing error).",
+    "plug_in": "Add the ball-to-nearest-wrist distance / player-box-height feature (real contacts <=0.51, phantom >=0.90) to the GBM hit scorer. Use its alternation DP decoder, rewritten for badminton as near/far hitter alternation. Adopt its evaluation protocol (greedy 1-1 matcher, tolerance round(0.15*fps), per-camera-type reporting). Its LOCO result argues for labelling ~10 RallyIQ amateur videos to fine-tune the hit scorer."
+   },
+   {
+    "name": "MonoTrack: shuttle trajectory reconstruction from monocular badminton video (CVPRW 2022)",
+    "url": "https://github.com/jhwang7628/monotrack",
+    "licence": "Adobe Research License: noncommercial research only (LICENSE read); reimplement from paper, do not reuse code or weights",
+    "claim": "Broadcast TrackNetV2 data, 3 singles test matches. HitNet F1 0.866; HitNet + DP constraints P 94.9% / R 94.3% / F1 0.946; shot segmentation ~90%. 3D reconstruction synthetic error 8.0 cm, real end-to-end reprojection 23-37 px. No landing error reported.",
+    "plug_in": "Decode GBM hit candidates with its DP constraints: first hit = serve from the anchor, near/far alternation, >=0.5 s spacing. For landing, fit a gravity + quadratic-drag 3D model after the last hit, using DLT from 4 court corners + 2 net-post tops, extrapolate to z=0, and use the fit residual as in/out confidence."
+   },
+   {
+    "name": "yuroc0598/rally (fixed-camera amateur tennis dead-time removal: frozen V-JEPA 2.1 + TCN)",
+    "url": "https://github.com/yuroc0598/rally",
+    "licence": "No LICENSE file = all rights reserved (ideas only); its V-JEPA 2/2.1 dependency (facebookresearch/vjepa2) is MIT with some Apache-2.0 parts",
+    "claim": "Leave-one-session-out over 7 videos (47.6 min): P 0.703 / R 0.789 / F1 0.744 / IoU 0.592 (keep-all baseline F1 0.553). 51/85 points >=80% kept. Boundary MAE 3.2 s start / 1.8 s end.",
+    "plug_in": "In multi-court halls, crop/mask our court with the existing homography and add region-pooled (whole/near-half/far-half) frozen V-JEPA 2 features as an extra TCN input channel. Treat it as a coarse in-play signal only: its 2-3 s boundary error means serve anchors and hit sequences must fix the boundaries."
+   },
+   {
+    "name": "tennis-vision (score-grammar decoder + score-delta reconciler)",
+    "url": "https://github.com/philippdubach/tennis-vision",
+    "licence": "Code MIT (LICENSE read); upstream yastrebksv/TennisProject has no LICENSE (all rights reserved); F3ED weights separately licensed",
+    "claim": "Rule-based hit detector F1 0.824 on a hand-labelled fixture; bounce filters remove 21-27% of false bounces. Broadcast only; no overall rally or score accuracy reported.",
+    "plug_in": "Encode badminton rules (21-point rally scoring, winner serves, service-court parity) as a state machine and Viterbi-decode the inferred server/winner sequence to fill missed serves. When a user enters the final or key scores, reconcile the auto rally list against them. Gate LLM-report score claims on chain consistency."
+   },
+   {
+    "name": "Kopania et al., Automatic Shuttlecock Fall Detection System in or out of a Court (Sensors 2022)",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9655598",
+    "licence": "Article CC BY; no code; annotations on Google Drive with no stated licence (treat as all rights reserved)",
+    "claim": "15 cameras (14 low at ~1 m along the lines), 150 fps: correct in/out decision in 62% of cases, ~18 s per decision. Court detection 97.7%; 81% of visible shuttles tracked within 12 px. Data: 52 sequences / 20,788 frames from the 2022 World Senior Championships.",
+    "plug_in": "Sets expectations: a single 30-60 fps low camera should output IN / OUT / CANNOT CONFIRM with a distance-to-line abstain band, not line calls. Borrow its cheap touchdown-frame cue (trajectory direction change + Laplacian blur drop) and use landing only for tactical heatmaps and grounded tendencies in the LLM report."
+   }
+  ],
+  "verify": {
+   "items": [
+    {
+     "name": "Smashers (single fixed camera squash: serve configuration -> rallies -> rally-point score reconstruction)",
+     "verdict": "confirmed",
+     "licence_checked": "Read LICENSE on raw.githubusercontent (main): MIT, Copyright (c) 2026 Dakshin Raj Siva. GitHub spdx is MIT. requirements.txt and pyproject.toml depend on ultralytics>=8.3, and squash/detect.py calls `from ultralytics import YOLO` (AGPL-3.0 unless you hold an Ultralytics enterprise licence). There are no releases or weights in the repo. Porting only the rule logic in squash/rallies.py is fine under MIT if you keep the copyright notice.",
+     "corrections": "Repo exists: 2 stars, last push 2026-10-15. The README Accuracy section confirms the numbers, with one scoping fix. The 11-of-12 rally-start server match was measured on the CCTV game only, not across both games. Identity is 93% (2-class, phone) and 97% (3-class, CCTV) per detection under grouped CV, and 99-100% per tracklet. The serve-box alternation check held in every applicable case in both games. There is no ball tracking. It is the author's self-check, with small n and no independent ground truth. The rules in squash/rallies.py match the plug-in description. SERVE_MIN_S = 0.4 s, raised to max(0.4, 4/fps_eff). split_long_rallies only looks inside rallies >= LONG_RALLY_S, from t_start+4 s to t_end-3 s, with the previous 1 s below ACT_PLAY. reconstruct_score does winner(k) = server(k+1) and treats same server + same box as a let. The squash logic uses a 15-point end rule (score 14) and box-alternation geometry, so it must be rewritten for badminton's 21-point and even/odd service-court rules, not copied."
+    },
+    {
+     "name": "BadmintonStudio (amateur badminton auto-editor, multimodal rally segmentation)",
+     "verdict": "confirmed",
+     "licence_checked": "Read LICENSE: MIT, Copyright (c) 2026 BadmintonStudio. GitHub spdx is MIT. requirements.txt lists ultralytics>=8.3 (AGPL-3.0) and faster-whisper. The README says yolo26n.pt and yolo26n-pose.pt are not committed and are auto-downloaded via ultralytics, but the packaged Windows build includes the YOLO weights and ffmpeg. So the shipped package carries the AGPL weights, plus an ffmpeg build of unchecked licence.",
+     "corrections": "Repo exists: 4 stars, pushed 2026-11-21. All numbers match the README. Rally F1@0.5 0.781 -> 0.800 with shuttle-candidate speed is from ONE clip (clip2). The README itself calls it 'LOCO-pending, single-sample evidence', and the feature is off by default. 'LOCO did not generalise' refers to fusion-weight calibration on clip1-3 (scripts/calibrate_weights.py). In-rally hit gap is p80 1.19 s / p99 3.25 s, and between rallies there are typically >= 4 s with no hits. split_by_hit_gaps needs >= 2 hits on each side. end = last hit + 0.9 s (hit_tail_seconds), start = first hit - 1.2 s. The audio band is spectral flux at 1800-7800 Hz. The reliability gate took the weight 0.95 -> 0.03 on the noisy venue; another section reports reliability 0.04 -> weight 0.023 on the same kind of footage. All of this is evidence from the author's own few clips, not a benchmark."
+    },
+    {
+     "name": "MyBreakPoint vision research: amateur tennis point segmenter (TCN with in-play/start/end heads)",
+     "verdict": "confirmed",
+     "licence_checked": "Read LICENSE: 'Copyright (c) 2026 Break Point Technologies, LLC. All rights reserved... published for reading and research evaluation only. No license is granted to copy, modify, distribute, sublicense, or use any part... in any other software, product, service or publication'. GitHub spdx is NOASSERTION. Footage, labels, trained weights and tuned decode values are withheld (README Reproducing section). Ideas only; do not copy code.",
+     "corrections": "Repo exists: 0 stars, pushed 2026-11-19. Sole-author report, not peer reviewed. README and docs/results.md confirm: 42 videos, 1,351 labelled serves, 4-fold CV, 91.9% of points kept whole with held-fold decode re-selection (91.9-92.4% over 3 seeds; the original non-nested selection gave 94.2%), and 52.4% dead time removed (seed 0). On the new 20-min college doubles match: 42/42 serves whole, 54.6% dead time removed (time-weighted). That match had NO audio. The ablation sizes are 1.3 and 3.5 points, not 1-3. Without the short-segment weighting the score is 92.9% vs 94.2% (1.3 points). Without the per-video threshold rescale it is 90.7% vs 94.2% (3.5 points). Both are measured against the non-nested 94.2% baseline. Design details confirmed in docs/methodology.md: 10 steps/s, banded motion features (top/mid/bottom of a 64x36 thumbnail), log-mel front end inside the model (64 mels, 25 ms / 10 ms), 10 dilated residual blocks (about 15 s context each side), 3 heads (in play / start / end), segments <= 4 s weighted 3x (--short-boost 3)."
+    },
+    {
+     "name": "RallyArb + tennis bounce/hit cross-viewpoint benchmark (arXiv 2610.38042, 2026)",
+     "verdict": "partly",
+     "licence_checked": "Root LICENSE is absent (404), and GitHub spdx is NOASSERTION. Read LICENSE-DATA: CC BY 4.0, (c) 2026 David Soeiro-Vuong. It covers the GT sidecars, POLICY.md, replay fixtures (ball centres + 17-kp poses), frozen preds and the manifest. Source videos are explicitly NOT covered and not included. Read LICENSE-CODE: MIT (eval/*.py, annotation/*.py). RallyArb itself lives in the CourtSide-CV repository, which the README calls 'proprietary at the time of this release'. I found no statement that the code is available on request, in the repo or on the arXiv abstract page. Upstream spotter weights and code are not included. The SOURCES.md provenance of the amateur clips is unknown, with no recorded consent.",
+     "corrections": "arXiv 2610.38042 exists. Title: 'Can Event Detectors Leave the Broadcast Camera? Evidence from Tennis'. Authors: David Soeiro-Vuong and Andre-Louis Rochet. v1 dated 2026-10-29. RallyArb is the method name, not the paper title. 8 clips and 345 events (165 B / 180 H) confirmed. I recomputed the phone/court-level pooled bounce/hit F1 from the released per-clip reports in eval/expected and eval/baselines/expected (rally-only view, clips felix, hard_pro_40s, grass_am_40s). Every figure matches exactly: E2E-Spot rny008 0.130/0.154, T-DEED 0.000/0.000, RallyArb 0.831/0.594, LOCO E2E-Spot rny002 0.603/0.510, Gemini 3.8 Flash 0.525/0.475. The 'zero-shot VLM' is Gemini only; Qwen3-VL-235B scored 0.142/0.232. The ~0.1 s VLM contact-timing offset appears in the arXiv abstract. Caveats: (1) 2 of the 3 phone/court-level clips (felix, hard_pro_40s) are dev clips on which RallyArb's constants were fixed. On the only held-out phone clip (grass_am_40s) RallyArb scores 0.842/0.556. (2) On fixed elevated cameras E2E-Spot (0.667/0.824) and LOCO (0.794/0.921) beat RallyArb. (3) LOCO fine-tuning failed on the grazing phone clip felix (0.200/0.261), which the abstract also says. That weakens the 'label ~10 videos' argument for low phone angles. (4) The ball-to-wrist/box-height thresholds (<=0.51 real, >=0.90 phantom) do not appear anywhere in the released repo, and I could not open the full paper, so they are UNVERIFIED. Matcher confirmed: greedy 1-1 over both classes, tolerance round(0.15*fps), excluded tags applied after matching."
+    },
+    {
+     "name": "MonoTrack: shuttle trajectory reconstruction from monocular badminton video (CVPRW 2022)",
+     "verdict": "confirmed",
+     "licence_checked": "Read LICENSE: 'ADOBE RESEARCH LICENSE'. It allows noncommercial research purposes only and excludes 'development of commercial products'; derivatives must keep the noncommercial limit. The template line reads 'Copyright © <YEAR>, Adobe Inc.'. GitHub spdx is NOASSERTION. Repo has 61 stars, last push 2023-07-27. Reimplementing from the paper is the right course; do not reuse code or any weights.",
+     "corrections": "Confirmed from the CVF open-access PDF (Table 1, Table 2, Fig. 7 text) and ar5iv. Data: TrackNetV2, 26 singles matches, 3 test matches (~12k frames). HitNet (All): R 78.1 / P 97.2 / F1 0.866. HitNet+optimization: R 94.3 / P 94.9 / F1 0.946. The '~90% shot segmentation' is Table 1 'acc.' = 89.7%, an IoU-style |G∩Ĝ|/|G∪Ĝ| hit-set metric, not per-frame accuracy. HitNet alone scores 76.4% on it, and the text separately reports 86.3%. Synthetic 3D error is 8.0 cm WITH priors (14.9 cm without). Real-match reprojection end-to-end: 37.1 / 28.8 / 23.3 px. With ground-truth tracking and hits it is 8.1-9.8 px. No landing-position error is reported; only an out-of-court distance penalty term. DP constraints confirmed: no two hits within 0.5 s, adjacent hits from different players, about 1 hit per second of rally."
+    },
+    {
+     "name": "yuroc0598/rally (fixed-camera amateur tennis dead-time removal: frozen V-JEPA 2.1 + TCN)",
+     "verdict": "confirmed",
+     "licence_checked": "No LICENSE, LICENSE.md, LICENSE.txt, LICENCE or COPYING (all 404). GitHub license is null and pyproject.toml has no licence field, so it is all rights reserved by default. pyproject also depends on ultralytics>=8.3 (AGPL) and timm; PersonViT is used for identity. facebookresearch/vjepa2: GitHub spdx MIT, LICENSE read (MIT, Meta). The README License section says three files (randaugment.py, randerase.py, worker_init_fn.py) are Apache-2.0, and an APACHE-LICENSE file exists. V-JEPA 2.1 checkpoints (including vjepa2_1_vitb_dist_vitG_384.pt) are linked from dl.fbaipublicfiles.com.",
+     "corrections": "Repo exists: 0 stars, pushed 2026-09-03. All numbers match the README Results section. Leave-one-recording-session-out over 7 videos / 47.6 min: P 0.703, R 0.789, F1 0.744, IoU 0.592. Keep-whole-video baseline: F1 0.553. Points >= 80% kept: 51/85. Boundary MAE: 3.2 s start / 1.8 s end, measured against labels only accurate to about 1 s. The 7 videos come from only 4 recording sessions, as the README notes. Features are 5 Hz decode, 16-frame clips, pooled every 0.5 s by court region (whole/far/near/spatial variation) into 128 features. The TCN sees about 50 s of context each side. The author says about 30% of kept output is dead time, so treating it as a coarse in-play signal only is right."
+    },
+    {
+     "name": "tennis-vision (score-grammar decoder + score-delta reconciler)",
+     "verdict": "partly",
+     "licence_checked": "Read LICENSE: MIT, Copyright (c) 2026 Philipp Dubach. GitHub spdx is MIT. yastrebksv/TennisProject: GitHub license null, no LICENSE or LICENSE.md on main or master, so all rights reserved, and the README confirms 'Upstream has no LICENSE'. F3ED: the F3Set/F3Set repo has NO licence file (spdx null). Its weights are therefore unlicensed (all rights reserved), not 'separately licensed'. The weights are not in tennis-vision either (third_party/ is gitignored except the TennisProject patches).",
+     "corrections": "Repo exists: 12 stars, pushed 2026-05-01. Broadcast only. 'F1 0.824 on a hand-labeled fixture' and 'filters trim 21-27% of false bounces' (dedup 9-12% + court-locality 12-15%) are in the README and blog. REFUTED: 'no overall rally or score accuracy reported'. docs/PIPELINE_BENCHMARKS.md reports results on TenniSet V006 (28 GT points). (1) The SAME rule-based shot detector scores F1 0.29 (P 0.50, R 0.21) there; the blog reports 0.50 from an earlier run. The 0.824 fixture figure does not generalise. (2) Rally matching: F3ED + bounce-projection matches 18/28 GT points (64%), and rule-based matches 9/28. (3) Winner correct is 10/18 (56%), BELOW a naive 'always top' baseline (14/18, 78%). (4) The grammar decoder 'recovers 90%+ of true score sequence' from about 70% per-cell OCR. Its grammar decodes OCR'd scoreboard transitions; it does not Viterbi-decode inferred server/winner sequences. That part of the plug-in is new work, not a port."
+    },
+    {
+     "name": "Kopania et al., Automatic Shuttlecock Fall Detection System in or out of a Court (Sensors 2022)",
+     "verdict": "partly",
+     "licence_checked": "PMC9655598 article page (via WebFetch): 'open access article distributed under the terms and conditions of the Creative Commons Attribution (CC BY) license'. Sensors 22(21):8098, doi:10.3390/s22218098, authors Kopania, Nowisz, Przelaskowski. The data-availability statement points to a shared Google Drive folder with no stated licence, so treating it as all rights reserved is right. I found no code release; the paper links only annotations, image sets and demo videos.",
+     "corrections": "Confirmed: 15 cameras (14 around the court on tripods about 1 m above the ground, plus 1 wide view), 150 fps, 'correct decision in 62% of cases' (no denominator given), court detection 97.7%, shuttle visibility detection 94%, position within 12 px for 81% of visible shuttles. The 18 s is the AVERAGE operator-verified decision time (range 7-25 s), not a fully automatic pipeline time. WRONG: 'from the 2022 World Senior Championships'. The paper says only that the 52 frame sets / 20,788 frames were 'collected during the tournaments' and selected 'from recorded movies', with no event or year. The World Senior Championships in Katowice was the 2019 BWF event (the paper cites 'World Seniors Championships 2019'), used for the 211-challenge single-court decision table. No 2022 WSC data is mentioned. I could not download the PDF myself; PMC and NCBI are blocked to curl, so I checked via WebFetch only."
+    }
+   ]
+  }
+ },
+ {
+  "topic": "lowlabel",
+  "file": "/tmp/claude-0/-home-user/b8ae9930-87df-5663-af9e-aa30a1da687c/scratchpad/r2/lowlabel.md",
+  "top": [
+   {
+    "name": "Kienzle et al. physically grounded synthetic-to-real (table tennis, CVPRW 2025 best paper) + Uplifting Table Tennis (WACV 2026)",
+    "url": "https://arxiv.org/abs/2504.19863 ; https://arxiv.org/abs/2511.20250 ; https://github.com/KieDani/SpinAndTrajectoryTableTennis ; https://github.com/KieDani/UpliftingTableTennis",
+    "licence": "Code GPL-3.0 (LICENSE.txt read). Data and weights are hosted on the Augsburg mediastore with no licence stated, so treat as all rights reserved.",
+    "claim": "Trained with no real labels: physics simulation plus targeted 2D-noise augmentation. 92% spin classification and 2D reprojection error of 0.19% of the image diagonal on real broadcast video. The code gives the full recipe: camera distance 7-17 m, pitch 30-70 deg, focal length 0.6-2.0x, frame rate 20-65 fps, 8 px jitter, 5% false detections, 5% missed detections, motion-blur offset, and hit and bounce times computed from the simulation.",
+    "plug_in": "Swap the table-tennis simulator for a shuttle drag ODE (dv/dt = g - C|v|v, C ~ U[0.18, 0.30] per m) and project into random low-tripod baseline or side cameras. Train a trajectory-only hit detector whose probability becomes an extra GBM feature, or use it to add low-camera positives to the GBM. Reimplement rather than copy the GPL code."
+   },
+   {
+    "name": "MonoTrack (CVPRW 2022): shuttle trajectory reconstruction from monocular badminton video",
+    "url": "https://arxiv.org/abs/2204.01899 ; https://github.com/jhwang7628/monotrack",
+    "licence": "Adobe Research License (LICENSE read): noncommercial research only, explicitly excluding commercial product development",
+    "claim": "HitNet F1 is 0.866; adding DP constraints (hits at least 0.5 s apart, alternating sides, a rally of D seconds has about D hits) raises it to 0.946 (recall 94.3%, precision 94.9%) with no new labels. Shuttle tracking accuracy 88.6% vs 84.0% for TrackNetV2. In the code the drag coefficient starts at C = 0.2 per m and is fitted per shot in [0, 0.4], with 30 integration substeps per frame.",
+    "plug_in": "Use the DP constraints as hit post-processing and as a consistency filter for pseudo-labels. Fit the drag ODE between consecutive hit candidates and treat residual spikes as hits the low-camera turn-point detector missed. Ideas only; the code cannot ship."
+   },
+   {
+    "name": "TT4D (ACM MM 2026): large-scale auto-labelling pipeline with physics filters (table tennis)",
+    "url": "https://arxiv.org/abs/2605.01234 ; https://github.com/Nimsi123/tt4d",
+    "licence": "Repo CC BY-NC-SA 4.0 (LICENSE read); the vendored Kienzle lifting model is GPL-3.0; the 57 GB dataset has no licence stated and its sources are YouTube videos",
+    "claim": "714,664 clips go in and 211,534 come out valid. Filters: reprojection error at most 20% of the table diagonal, ODE-fit deviation at most 30 cm, a valid event sequence, ball visibility of at least 50%. Hit timing F1 0.83 and bounce F1 0.92 from a lifting network trained only on synthetic data. Training uses empirical occlusion run-length augmentation.",
+    "plug_in": "Template for turning unlabelled amateur uploads into pseudo-labelled training data: run the current pipeline, then keep a rally only if its reprojection residual, drag-ODE residual and hit-event sequence all pass. Log rejections per filter to find weak stages. Design only, since the licence is noncommercial."
+   },
+   {
+    "name": "SST: semi-supervised training for soccer player and ball detection (Vandeghen et al., CVPRW 2022)",
+    "url": "https://arxiv.org/abs/2204.06859 ; https://github.com/rvandeghen/SST",
+    "licence": "Code BSD-3-Clause (LICENSE read). Weights on Google Drive have no licence stated. SoccerNet-v3 needs a signed agreement.",
+    "claim": "Validation mAP with 1% labels goes from 18.1 to 26.2; with 10% labels from 39.5 to 43.7, then 45.1 after a second round with fine-tuning. Test mAP goes from 51.0 to 52.3. Best setting is a double threshold with tau_l = 0.9 and tau_h = 1.0; detections between them are ignored in the loss. The student is fine-tuned on real labels at the end.",
+    "plug_in": "Apply the double threshold and ignore band to TrackNet heatmap peaks and GBM hit candidates, also requiring drag-ODE consistency. Train the student, then fine-tune it on the small set of real low-camera labels. The code can be used commercially."
+   },
+   {
+    "name": "Towards Active Learning for Action Spotting in Football Videos (Giancola et al., CVPRW 2023)",
+    "url": "https://arxiv.org/abs/2304.04220",
+    "licence": "No public code found",
+    "claim": "Entropy sampling reaches 90% of full-data performance with 16% of the data, vs 45% for random sampling (NetVLAD++ on SoccerNet-v2); on SoccerNet-ball it needs 8% vs 23%. Selection is by clip, and max-pooling frame scores within a clip works better than mean. The budget per step grows 1% -> 2% -> 5% -> 10%.",
+    "plug_in": "Rank rally clips by the maximum hit-probability entropy plus DP-constraint conflicts, physics-residual spikes with no hit candidate, and TrackNet/InpaintNet disagreement. Stratify by venue and camera position and send the top clips for labelling on the same budget schedule."
+   },
+   {
+    "name": "Badminton shuttle aerodynamics parameter set (Cohen et al., New J. Phys. 2015; ETH ANYmal, Sci. Robotics 2025; Humanoid badminton arXiv 2511.11218; Monocular Badminton Speed Estimation arXiv 2611.00031)",
+    "url": "https://core.ac.uk/download/47088083.pdf ; https://arxiv.org/abs/2505.22974 ; https://arxiv.org/abs/2511.11218 ; https://arxiv.org/abs/2611.00031",
+    "licence": "Papers only. No code for ANYmal. The humanoid repo is a project page with no LICENSE. Code for the speed-estimation paper is not yet released and its data is available on request.",
+    "claim": "Aerodynamic length L = 4.6 m (feather 4.04 m, plastic 4.48 m), Cd = 0.65-0.68, terminal velocity 6.7 m/s, flip oscillation about 102 ms, settling about 0.3 s (Cohen). ETH measured L = 4.1 m; the humanoid paper uses L = 3.4; a free-fall fit gives terminal velocity 6.97 +/- 1.13 m/s. A monocular drag fit constrained to cross the net plane cuts median speed error from 13.3% to 8.6% on 51 smartphone shots; a gravity-only fit is about 37% off.",
+    "plug_in": "Sample C = 1/L from U[0.18, 0.30] per m for the synthetic generator. Use the net-plane constraint and a soft-L1 image residual (a = 4 px) as the plausibility filter for pseudo-labels. Model the noise as in ANYmal: miss rate and position error as linear functions of distance and image angular velocity, fitted on real low-camera TrackNet output."
+   },
+   {
+    "name": "TENT test-time entropy minimisation / BN statistics re-estimation (ICLR 2021), plus CoTTA (CVPR 2022)",
+    "url": "https://github.com/DequanWang/tent ; https://github.com/qinenergy/cotta",
+    "licence": "Both MIT (LICENSE files read)",
+    "claim": "CIFAR-10-C severity 5 mean error: 43.5% unadapted, 20.4% after re-estimating BN statistics only, 18.6% with TENT; motion blur 34.8% -> 14.2% -> 13.7%. CoTTA adds augmentation-averaged pseudo-labels, an EMA teacher and stochastic weight restore for long-running domain drift.",
+    "plug_in": "TrackNetV3 uses nn.BatchNorm2d (confirmed in model.py). Per video, run the first 200-500 frames in train mode to update only the BN running stats, then run inference in eval mode. Optionally update the BN affine parameters with a drag-ODE consistency loss and roll back if the loss rises."
+   },
+   {
+    "name": "TFD: Temporal Feature Distillation for label-efficient precise event spotting (Xu, Wei, Wells, Aryal, arXiv 2607.10998)",
+    "url": "https://arxiv.org/abs/2607.10998 ; https://anonymous.4open.science/r/TFD-8535",
+    "licence": "Not stated (anonymous review repository); treat as all rights reserved",
+    "claim": "With 10% labels, mAP at delta = 1 frame is 80.19 on Tennis (E2E-Spot 64.38, T-DEED 36.69) and 50.29 on FSPerf (+4.54 over ASTRM). Teacher is an EMA of the student (decay 0.9995). Cosine distance is taken on backbone features. The distillation weight is held at 0 for 5 epochs, then ramped up over 10.",
+    "plug_in": "Only relevant if hit detection moves to an end-to-end video spotter: distil on all unlabelled amateur video, label only about 10% of clips, and reuse the warm-up schedule."
+   }
+  ],
+  "verify": {
+   "items": [
+    {
+     "name": "Kienzle et al. physically grounded synthetic-to-real (table tennis, CVPRW 2025 best paper) + Uplifting Table Tennis (WACV 2026)",
+     "verdict": "partly",
+     "licence_checked": "Read LICENSE.txt in both repos: GPL-3.0 (GitHub spdx GPL-3.0 for both, 29 and 52 stars). Neither README gives a licence for the mediastore data or weights, and nothing in the repos states one, so 'no licence stated' holds. mediastore.rz.uni-augsburg.de and kiedani.github.io are blocked by the proxy, so I could not confirm the downloads work. The WACV repo also relies on the BlurBall dataset (Tuebingen cloud, separate terms) and TTHQ, whose videos come from YouTube. hubconf.py pulls a zip from mediastore.",
+     "corrections": "Confirmed: the 2504.19863 abstract gives 92.0% spin accuracy and 0.19% of the image diagonal, with no real data used in training. The CVPRW README says it won the CVSports best paper award, and the WACV README says WACV 2026. REFUTED: the recipe and the headline numbers come from different codebases, and two of the values are wrong. (1) The 7-17 m distance, 0.6-2.0x focal length and 20-65 fps ranges are in UpliftingTableTennis uplifting/data.py (WACV). The CVPRW code behind 92%/0.19% (SpinAndTrajectoryTableTennis synthetictabletennis/data.py) samples distance 10-15 m and focal 0.8-2.5x at a fixed FPS of 50, and has no false-detection or missed-detection augmentation. (2) '8 px jitter, 5% false detections' are the config.py defaults, but train.py's argparse overrides them: randomize_std=2 px, randdet_prob=0.00 (no false detections), randmiss_prob=0.05, tablemiss_prob=0.05, blur_strength=0.4. The README training command passes none of these, so the 2 px and 0% values apply. The CVPRW best run also used 2 px, blur 0.4 and stop 0.5. (3) The 30-70 deg value is the polar angle theta from vertical (z = d*cos(theta)), so the camera elevation is 20-60 deg above horizontal, not a pitch. (4) WACV train.py chooses the final model.pt on a real labelled validation set (val_real spin F1 and trajectory metric), so real labels are used for model selection. CVPRW selects on synthetic validation. Confirmed: hit and bounce times come from the simulation (hits.npy/bounces.npy, _count_hits). Plug-in note: these cameras sit 7-17 m away and elevated, far from a low tripod, so the ranges cannot be reused as they are."
+    },
+    {
+     "name": "MonoTrack (CVPRW 2022): shuttle trajectory reconstruction from monocular badminton video",
+     "verdict": "confirmed",
+     "licence_checked": "Read LICENSE: Adobe Research License, noncommercial research only. It states that 'Noncommercial research purposes do not include commercial licensing or distribution, development of commercial products', and derivative works must stay noncommercial. GitHub spdx is NOASSERTION (61 stars, last push 2023-07). The copyright line still has the <YEAR> placeholder.",
+     "corrections": "Checked against ar5iv 2204.01899 Table 1. HitNet (All) without optimisation: recall 78.1, precision 97.2, F1 0.866. With DP optimisation: recall 94.3, precision 94.9, F1 0.946. Precision falls slightly while recall rises. The 0.866 baseline uses shuttle, pose and court features. The paper's constraints, quoted: 'a rally lasting D seconds has approximately D hits', hits at least half a second apart, hits alternating between players. Tracking accuracy is 88.6% vs 84.0% for TrackNetV2. Code (rally_reconstructor.py): Cg=0.2, bounds (0, 0.4), substeps=30, all confirmed. Code details the claim misses: the DP caps hits at 1.2 per second (T=int(1.2*N//fps)) with D=fps//2. The integrator uses dt=fr_adjust/(fps*substeps) with fr_adjust=30/fps, so time is rescaled unless the video is 30 fps. Fitted C values from this code are only physically meaningful at 30 fps. The paper gives no numeric C_d."
+    },
+    {
+     "name": "TT4D (ACM MM 2026): large-scale auto-labelling pipeline with physics filters (table tennis)",
+     "verdict": "confirmed",
+     "licence_checked": "Read LICENSE: CC BY-NC-SA 4.0 (spdx NOASSERTION). README: 'Except where otherwise noted' the repo is CC BY-NC-SA. src/ball_uplifting/LICENSE.txt is GPL-3.0 (Kienzle). The vendored TrackNetV3 is MIT, and TT3D and 4DHumans are also vendored. SMPL models are MPI-licensed and require registration, and SAM3 is gated on Hugging Face. The dataset section states no licence. The project website (docs/) is CC BY-SA 4.0, but that covers the website only. video_links.txt lists 3,581 YouTube videos. people.eecs.berkeley.edu is blocked by the proxy, so the 57 GB zip could not be checked.",
+     "corrections": "From the arXiv 2605.01234 PDF and the code: 714,664 scoreboard clips went in. 405,769 gameplay clips succeeded and 371,733 calibrations succeeded. 211,534 came out valid (29.6%). Rejection counts: human position 67,442 (the largest), not enough segments 47,823, reprojection 30,937, ODE fit 9,736, ball visibility 4,261. The claim leaves out the human-pose filters, which reject the most. Thresholds: reprojection at most 0.2 of the table diagonal (rtt_utils/constants.py MAX_NEURAL_REPROJECTION_THRESHOLD=0.2). The ODE rule is 'max Euclidean distance 30 cm' in the main text, but code and Table SM1 use the maximum per-segment RMSE at most 0.3 m. Ball visibility of at least 0.5 applies in code only when a point has fewer than 4 segments. Hit F1 is 0.83 and bounce F1 is 0.92 at +/-2 frames, and the paper does not clearly say which dataset these come from. The lifting net is trained only on synthetic data (2.6M rallies), but the checkpoint was chosen on the real TTST validation set. The occlusion run-length masking is described (Fig. SM3) without numeric values. Venue: ACM MM '26."
+    },
+    {
+     "name": "SST: semi-supervised training for soccer player and ball detection (Vandeghen et al., CVPRW 2022)",
+     "verdict": "partly",
+     "licence_checked": "Read LICENSE: BSD-3-Clause, Copyright (c) 2022 Renaud Vandeghen (spdx BSD-3-Clause, last push 2024-02). The README links the pretrained model on Google Drive with no licence. drive.google.com is blocked by the proxy, so I could not check the download. The model is torchvision Faster R-CNN R50-FPN with an ImageNet-pretrained backbone. The README assumes 'you have the rights to use SoccerNetv3'.",
+     "corrections": "Confirmed from the arXiv PDF: validation mAP 18.1 -> 26.2 at 1% and 39.5 -> 43.7 at 10%, then 45.1 after a second round. Test mAP 51.0 -> 52.3. The student is fine-tuned on labelled data only. REFUTED: the best setting does not ignore detections between the thresholds. The best is Param 3 ('progressive doubt', tau_l=0.9, tau_h=1), which weights detections in [tau_l, tau_h) by score, linearly from 0 at tau_l to 1 at tau_h. Param 2 is the variant that ignores them (zero loss). The repo's threshold.py defaults to parametrization=3, tl=0.9, th=1.0. Param 2 with tau_h=1.0 would skip nearly every pseudo-labelled image (code: skip if max score < tau_h). Also, the 43.7 at 10% is Param 3; Params 1 and 2 both reached 44.3 there. Params 2 and 3 are comparable at 5%, 10% and 100%. The BSD code is usable commercially, but the released weights (trained on SoccerNet-v3) have no licence."
+    },
+    {
+     "name": "Towards Active Learning for Action Spotting in Football Videos (Giancola et al., CVPRW 2023)",
+     "verdict": "confirmed",
+     "licence_checked": "No code link in the paper (ar5iv full text). A GitHub search for 'active learning action spotting' and 'ActiveLearning SoccerNet' returned nothing. DOI 10.1109/cvprw59228.2023.00538, and the CVF open-access page is CVPR2023W/CVSports.",
+     "corrections": "From ar5iv 2304.04220 Table 3: Entropy (EM) reaches 90% of final performance with 16% of the data vs 45% for random (NetVLAD++, SoccerNet-v2). SoccerNet-ball: 8% vs 23%. The private FWWC19-header set: 12% vs 35%. The abstract instead says 'one-third of the dataset'. Clip-level top-k selection is confirmed. On pooling, the authors say max 'appears to work better', but Table 6 is mixed: max wins on SoccerNet-v2 and SoccerNet-ball, mean wins on FWWC19-header (AULC 34.81 vs 33.92). The budget runs 1% per step, then 2% after 15% of the data, 5% after 25%, and 10% after 40%, which cuts 100 steps to 30. EM beats UM on SoccerNet-v2, but UM has slightly higher AULC on SoccerNet-ball and header."
+    },
+    {
+     "name": "Badminton shuttle aerodynamics parameter set (Cohen et al., New J. Phys. 2015; ETH ANYmal, Sci. Robotics 2025; Humanoid badminton arXiv 2511.11218; Monocular Badminton Speed Estimation arXiv 2611.00031)",
+     "verdict": "partly",
+     "licence_checked": "Papers only. The humanoid repo (Humanoid-Badminton/Humanoid-Whole-Body-Badminton-via-Multi-Stage-Reinforcement-Learning) is a GitHub Pages site with no LICENSE file. Its README says 'All code will be released soon.' ANYmal has no code link, but it does deposit data at Zenodo DOI 10.5281/zenodo.15242151 (licence not checked). The speed-estimation paper says 'code ... will be made publicly available' and that data is available from the authors on request (raw video withheld). core.ac.uk is blocked by curl, so I read it via WebFetch.",
+     "corrections": "Cohen (NJP 17, 063001) confirmed: lambda about 4.6 m generic, 4.04 m feather, 4.48 m plastic. Cd is 0.65+/-0.05 (feather) and 0.68+/-0.05 (plastic). U_inf is about 6.7 m/s. Wrong: '102 ms flip oscillation' is the model's prediction for one shot (measured 92 ms; another shot predicted 183 ms, measured 168 ms). The flip itself takes about 20 ms. '0.3 s settling' is the model's estimate at U about 20 m/s, while measured alignment took 130-180 ms ('about one hundred milliseconds'). ANYmal: L = 4.1 m measured, confirmed. The noise model is regressed as linear in shuttle distance and the robot's angular velocity, plus an in-FOV factor. It is not a function of the shuttle's image angular velocity, and no coefficients are given. Humanoid: 'L used in our work is 3.4', with no units, confirmed. Speed estimation: 6.97+/-1.13 m/s from 17 free falls, but the paper's own model uses v_T = 6.70 m/s. Median error 13.3% -> 8.6% on 51 shots, selected from 76 by a 25 px stereo-residual gate, against a stereo-based reference rather than radar. Gravity-only is 36.7% free and 35.2% net-plane. Soft-L1 with a = 4 px, confirmed. U[0.18, 0.30] for C maps to L between 3.3 and 5.6 m, which covers every value above."
+    },
+    {
+     "name": "TENT test-time entropy minimisation / BN statistics re-estimation (ICLR 2021), plus CoTTA (CVPR 2022)",
+     "verdict": "confirmed",
+     "licence_checked": "Read both LICENSE files. TENT: MIT, Copyright (c) 2021 Dequan Wang and Evan Shelhamer (spdx MIT). CoTTA: MIT, Copyright (c) 2021 Qin Wang, with TENT's MIT text appended. That appended text is why GitHub shows NOASSERTION. CoTTA's README says its Cityscapes->ACDC segmentation code (a separate OneDrive download based on Segformer) is non-commercial. The classification code in the repo is MIT.",
+     "corrections": "The numbers match the TENT README example table (WRN-28-10 RobustBench, CIFAR-10-C severity 5): mean 43.5/20.4/18.6, motion blur 34.8/14.2/13.7. These are README example values, which the README calls 'explanation, not reproduction'. They are not the ICLR paper's tables. TENT's 'norm' (norm.py) puts the BN layers in train mode (momentum 0.1, test batch 200), so each test batch is normalised with its own statistics. It is not a one-off re-estimation followed by eval mode, so the proposed 'warm up running stats, then eval' is a different variant. CoTTA code confirmed: EMA teacher (mt_alpha 0.99), 32-augmentation averaging only when anchor confidence < 0.9, and stochastic restore. TrackNetV3 (qaz812345/TrackNetV3, master/model.py) uses nn.BatchNorm2d in Conv2DBlock, confirmed. InpaintNet has no BN (Conv1D + LeakyReLU), and TrackNet has no dropout. BN adaptation therefore affects only TrackNet."
+    },
+    {
+     "name": "TFD: Temporal Feature Distillation for label-efficient precise event spotting (Xu, Wei, Wells, Aryal, arXiv 2607.10998)",
+     "verdict": "confirmed",
+     "licence_checked": "The paper links https://anonymous.4open.science/r/TFD-8535 and states no licence. anonymous.4open.science is blocked by the proxy, so I could not open the repo. Treating it as all rights reserved is right.",
+     "corrections": "From the arXiv PDF: 10% labels, mAP at delta=1 on Tennis: TFD (ViT-S) 80.19 vs E2E-Spot 64.38 (listed as 'E2E-200') vs T-DEED 36.69. FSPerf (figure skating) 50.29 vs ASTRM 45.75 (+4.54). The teacher is an EMA of the student. The paper gives a base EMA decay of 0.9995 and a fast EMA of 0.99 without clearly saying which one the teacher uses. The loss is cosine distance on l2-normalised backbone (TGS-enhanced ViT) features, not projection-head outputs. Schedule: 5 supervised warm-up epochs, then a cosine ramp of lambda from 0 to 1 over 10 epochs, held at 1 to epoch 50. The PDF extraction listed authors as Hao Xu, Sam Wells, Xinyu Wei, Sunil Aryal, so the claim may have Wells and Wei swapped."
+    }
+   ]
+  }
+ },
+ {
+  "topic": "tactics",
+  "file": "/tmp/claude-0/-home-user/b8ae9930-87df-5663-af9e-aa30a1da687c/scratchpad/r2/tactics.md",
+  "top": [
+   {
+    "name": "sarah-agrawal/rallyiq: per-shot outcome model for pro singles (winner / error / continues)",
+    "url": "https://github.com/sarah-agrawal/rallyiq",
+    "licence": "Code: no LICENSE file (GitHub API returns null; LICENSE, LICENSE.md and LICENSE.txt all 404), so all rights reserved. Data: ShuttleSet/ShuttleSet22 (CoachAI-Projects repo-root MIT).",
+    "claim": "Tested on 19 unseen ShuttleSet matches (16,049 shots). The XGBoost + causal Transformer ensemble reaches winner AUC 0.841, error AUC 0.653 and log loss 0.329 (base rate 0.377). Uses only features known at hit time. Predicting the rally winner from each shot reached only 52% (50% when 6 or more shots from the end), so the project switched to per-shot outcomes.",
+    "plug_in": "Rebuild the same design in our own code (do not copy the repo) as RallyIQ's xPoint GBM. Use features RallyIQ can measure: homography positions, contact height, stroke-type probabilities and tempo. Pretrain on ShuttleSet, then calibrate on amateur point-winner labels with isotonic regression. Aggregate P(winner) and P(error) by opponent, zone and stroke to find where the opponent loses points. Note the name clash for trademark purposes."
+   },
+   {
+    "name": "Offline RL for Badminton Tactical Decision-Making (PolyU, EAAI vol 164, 2026)",
+    "url": "https://github.com/Wenminggong/Offline_RL_for_Badminton",
+    "licence": "MIT (LICENSE file read: 'Copyright (c) 2024 文名工'). Trained on ShuttleSet + ShuttleSet22.",
+    "claim": "A Bradley-Terry preference model learns a per-stroke reward from rally winner-vs-loser comparisons, with rally-preference accuracy 0.9692 in-distribution and 0.9539 out-of-distribution (unseen players). A hybrid-action CQL policy scores average estimated reward 0.8703 vs 0.7254 for the behaviour policy and 0.8482 for BC (94 matches, 5,416 rallies). Win rate is not reported.",
+    "plug_in": "Gives per-shot credit from rally win/loss labels alone, so it works with amateur matches where only point winners are known. Its state (both players' positions, incoming shot type and landing) is available from TrackNet, RTMO and the homography. The report can list each player's most and least valuable shots with clips. The CQL policy can suggest a better shot for a given situation, but only where the data covers that situation well and labelled as a statistical preference from pro data."
+   },
+   {
+    "name": "TactiPlay: rally-level tactical parsing and video-anchored review for amateur badminton (HKUST, arXiv 2607.27125)",
+    "url": "https://arxiv.org/abs/2607.27125",
+    "licence": "No code, data or taxonomy released and no licence stated, so it is a design reference only.",
+    "claim": "A taxonomy built from 304 annotations by 3 national-level players: 3 domains (technical execution, positioning and recovery, tactical choices) with 17 descriptors. Its geometric hit detector gets P 0.71 / R 0.72 on amateur video. GPT-4.1 extracts issues as JSON with court-coordinate evidence. In a 16-player user study it drew 79 vs 44 reflection entries against a stats-only baseline, with better concreteness, actionability and appropriateness. The authors did not validate whether each diagnosis was correct.",
+    "plug_in": "Use as the output schema for RallyIQ's LLM report. Four topics (losing patterns, winning patterns, tactical awareness, technical execution), subtopics ranked by frequency, each linked to a clip. Add what TactiPlay lacks: RallyIQ's grounding checks, requiring event IDs, counts and confidence intervals for every claim."
+   },
+   {
+    "name": "RallyTemPose: next-stroke prediction from pose and court position (ITU Copenhagen, CVPRW 2024)",
+    "url": "https://github.com/MagnusPetersenIbh/RallyTemPose",
+    "licence": "MIT (LICENSE file read: 'Copyright (c) 2023 MagnusPetersenIbh'). The README does not mention released weights.",
+    "claim": "Next-stroke type (10 classes) Top-1/2/3: 54.3 / 77.3 / 92.5% on ShuttleSet and 62.8 / 83.5 / 93.1% on BadmintonDB. Inputs are HRNet pose, homography court positions, player embeddings, stroke history and BERT text embeddings of stroke types. No shuttle data is needed.",
+    "plug_in": "Its inputs match what RallyIQ already produces (RTMO COCO-17 can replace HRNet; homography coordinates exist). Train on ShuttleSet and fine-tune on amateur data to build the opponent-tendency model, i.e. what the opponent plays from a given position, plus a predictability score from the distribution's entropy. Treat it as stage 2, after a shrinkage-based frequency model, because one amateur match is too little data."
+   },
+   {
+    "name": "CoachAI+ Badminton Environment / RallyNetv2 (NYCU, Sloan SSAC paper 20251430)",
+    "url": "https://github.com/KuangDW/CoachAI-Plus",
+    "licence": "CoachAI-Plus repo: no LICENSE file (API null; LICENSE files 404 on main and master), so all rights reserved. The earlier RallyNet code in wywyWang/CoachAI-Projects is MIT (repo root).",
+    "claim": "RallyNet to RallyNetv2: landing DTW 0.6449 to 0.2983, shot-type CTC 26.54 to 8.35, movement DTW 0.3424 to 0.1934, simulated-vs-real win-rate MAE 9.5% to 7.4%. Analysis modules: win rate by tactic category (full-court pressure / defensive counterattack / four-corner), top-4 winning and losing state-action pairs, and a shot-by-shot momentum and pace plot.",
+    "plug_in": "Reimplement the tactic-category win rates and top winning/losing state-action pairs on RallyIQ's own events as report sections. Player-vs-player simulation needs many matches per player, so keep it as a later long-term scouting feature."
+   },
+   {
+    "name": "DShuttleNet: badminton doubles dataset with coordination metrics (arXiv 2610.14016)",
+    "url": "https://arxiv.org/abs/2610.14016",
+    "licence": "Data is on Kaggle (DOI 10.34740/kaggle/dsv/16097938). Licence not verified: Kaggle is blocked by the proxy and the fetched page showed no licence. No code released.",
+    "claim": "58 BWF doubles matches, 4,483 rallies and 54,141 shots, with positions of all 4 players and the shuttle per stroke. Includes 6 point-loss reasons with the responsible player, plus the CCEI and TLAI coordination metrics. The TSCVAE baseline reaches shot-type accuracy 0.504.",
+    "plug_in": "For the doubles report: use CCEI (court-coverage efficacy) and TLAI (threat-load asymmetry) to show which opponent to target and where their coverage has gaps. Use the loss-reason taxonomy for doubles point attribution. Do not train commercial models on it until the licence is verified."
+   },
+   {
+    "name": "BadmintonVision (BMC Sports Sci Med Rehabil 2026)",
+    "url": "https://github.com/liangyongjie51/BadmintonVision",
+    "licence": "Code: MIT (LICENSE file read, with a note that broadcast footage is excluded; the API shows NOASSERTION because of that note). Article: CC BY-NC-ND 4.0. Data available on request.",
+    "claim": "mAP@0.5 of 0.941 with self-supervised pretraining plus a temporal model, on match-level splits (5,865 world-championship rally clips). Defines tactical metrics: path efficiency, base recovery time, centre-court occupancy, direction changes, stroke-type Shannon entropy and Markov transition matrices.",
+    "plug_in": "Compute these metrics directly from RTMO foot tracks, the homography and stroke sequences for the movement and predictability sections of the report. The weights are trained on broadcast video, so only the metric definitions are useful."
+   },
+   {
+    "name": "arXiv 2606.15992 Player Disjoint Multi-Task Tennis Stroke Analysis from Monocular Pose Sequences (requested check)",
+    "url": "https://arxiv.org/abs/2606.15992",
+    "licence": "Paper text CC BY 4.0 (v1 HTML header). No code released: v2 says code will be published after publication, and v1 says 'on Kaggle' without a link. Videos cannot be shared.",
+    "claim": "Yes, it detects hit timing from pose only: MediaPipe pose with weighted wrist/elbow/shoulder speed peaks (0.5 / 0.3 / 0.2), plus composite and BiGRU variants. F1 85.65% at ±100 ms and mean timing error 80.6 ms on 206 impact events. Cameras mostly behind the baseline, resampled to 30 fps. Direction and posture-quality classification are near chance.",
+    "plug_in": "Add the RTMO wrist-speed peak as an extra feature in RallyIQ's hit scorer to recover hits where the shuttle is occluded in front of the player. Do not use it alone: it misses fast badminton wrist snaps at 30 fps, triggers on fakes and partner swings, and 80 ms is too coarse. Implement it from the paper's description."
+   }
+  ],
+  "verify": {
+   "items": [
+    {
+     "name": "sarah-agrawal/rallyiq: per-shot outcome model for pro singles (winner / error / continues)",
+     "verdict": "confirmed",
+     "licence_checked": "GitHub search API returns license null for the repo (0 stars, last push 2026-10-07, default branch main). Raw LICENSE, LICENSE.md and LICENSE.txt all return 404 on main, so all rights are reserved. I read the CoachAI-Projects root LICENSE: MIT, 'Copyright (c) 2022 Wei-Yao Wang'. There is no separate LICENSE in the ShuttleSet/ subfolder, and the ShuttleSet README only asks for citation. The rallyiq README itself says 'Data: ShuttleSet / ShuttleSet22, CoachAI, MIT License'.",
+     "corrections": "All numbers match both the README and data/metrics.json. Ensemble: winner AUC 0.8407, error AUC 0.6534, log loss 0.3294. Test set: 19 matches, 16,049 shots, with 75 matches for training; 94 matches, 7,622 rallies and 81,403 shots in total after removing 8 duplicate matches. The 0.377 is the base-rate log loss (0.3771), not a probability. Rally-winner framing: 0.519 overall, 0.501 at 6 or more shots from the end, 0.618 on the final shot. Class shares are continues 90.7%, winner 3.2%, error 6.1%, so calibration matters. Caveats: a single-author hobby repo, not peer reviewed. 'The shot chosen' is an input feature, so RallyIQ's stroke-classifier errors will feed straight into the model. The name is identical to the product."
+    },
+    {
+     "name": "Offline RL for Badminton Tactical Decision-Making (PolyU, EAAI vol 164, 2026)",
+     "verdict": "confirmed",
+     "licence_checked": "I read the LICENSE file: 'MIT License / Copyright (c) 2024 文名工'. The GitHub API spdx is MIT and the README says MIT. Paper: Liu, Tao and Huang (PolyU AAE), Engineering Applications of Artificial Intelligence 164 (2026) 113395, DOI 10.1016/j.engappai.2025.113395, '© 2025 Published by Elsevier Ltd.' (read from the author PDF on the wenminggong.github.io repo). The repo ships the raw data in data/shuttle.",
+     "corrections": "All numbers match Tables 2, 4 and 5: 94 matches, 5,416 rallies, BT_Rally RP accuracy 0.9692 ID and 0.9539 OOD, CQL 0.8703, behaviour policy 0.7254, BC 0.8482. Caveats: (1) The reward figures are in-distribution 'integrated rallies'. OOD figures are CQL 0.8679, behaviour 0.7273, BC 0.8581. CQL's std is ±0.0786, so its lead over BC (±0.0042) is within one std. (2) Policies are scored with the same learned reward model (myopic evaluation); no real win rate. (3) The test set is only 8 matches / 582 rallies, and 'OOD' means at least one player was unseen. (4) This undermines the plug-in: non-terminal rally-preference accuracy is only 0.5908 ID / 0.6843 OOD. With the final shot removed, the reward is close to chance, so per-shot credit for mid-rally shots is weak. (5) The paper says applicability to amateur matches 'remains unvalidated'. (6) The action also includes the intended landing position and the player's movement position after the shot."
+    },
+    {
+     "name": "TactiPlay: rally-level tactical parsing and video-anchored review for amateur badminton (HKUST, arXiv 2607.27125)",
+     "verdict": "partly",
+     "licence_checked": "Read the arXiv PDF via WebFetch. It gives no code, data or taxonomy release URL and no licence. I could not check the arXiv abs-page licence for the paper text because the fetch budget ran out and arxiv.org is blocked to curl.",
+     "corrections": "Confirmed: authors from HKUST (Xiaojuan Ma's group) plus SYSU, PolyU and HKU. 304 annotated issues from 7 amateur match videos (~8 min each). 3 national-level players. 3 domains and 17 descriptors. GPT-4.1 outputs JSON issues with court-coordinate evidence. 16 participants (within-subjects). 79 vs 44 reflection entries. A 4-topic report (E1-E4) with subtopics ranked by frequency, star ratings and linked clips. The paper says diagnosis correctness was 'not systematically validate[d]'. Corrections: (1) Concreteness improved significantly only for technical execution and positioning/recovery, not for tactical choices. Actionability and appropriateness were significant across all categories. (2) The hit detector's P 0.71 / R 0.72 is on '564 hits', and the paper does not say they came from amateur video. (3) 79 vs 44 has no significance test. (4) Hitter ID was only 77.9% and stroke classification needed manual correction, so the pipeline was not fully automatic. (5) The taxonomy is published in the paper's Figure 1 with operational definitions, just not as a separate file. The baseline was modelled on commercial tools such as Shanyu AI."
+    },
+    {
+     "name": "RallyTemPose: next-stroke prediction from pose and court position (ITU Copenhagen, CVPRW 2024)",
+     "verdict": "confirmed",
+     "licence_checked": "I read the LICENSE file: 'MIT License / Copyright (c) 2023 MagnusPetersenIbh'; the API spdx is MIT. The repo contains only run.py, Models/, Utils/, README.md and LICENSE (GitHub code search). Neither the README nor the CVPRW paper mentions weights or a licence.",
+     "corrections": "Numbers match Table 2 of the CVPRW 2024 paper (Ibh, Graßhof, Hansen, ITU; pp. 3376-3385): ShuttleSet 54.3 / 77.3 / 92.5 and BadmintonDB 62.8 / 83.5 / 93.1, with 10 classes for both. Inputs confirmed: HRNet, homography feet positions, player embeddings, stroke history and BERT stroke descriptions; no shuttle data. Caveats: (1) On BadmintonDB the plain Transformer beats it at Top-2 (85.4 vs 83.5), and the authors note overfitting on that smaller set. (2) There are no weights and no data. run.py loads Data/shuttleset/2d_poses_shuttleset_cont.pkl, labels and positions pickles, which are absent (404), so poses must be re-extracted from ShuttleSet broadcast videos that ShuttleSet does not distribute. (3) Player-ID embeddings do not carry over to new amateur players. (4) There is no requirements file."
+    },
+    {
+     "name": "CoachAI+ Badminton Environment / RallyNetv2 (NYCU, Sloan SSAC paper 20251430)",
+     "verdict": "confirmed",
+     "licence_checked": "GitHub search API returns license null. LICENSE, LICENSE.md and LICENSE.txt return 404 on both main and master; the README exists on master, the default branch. I read the CoachAI-Projects root LICENSE: MIT (Copyright (c) 2022 Wei-Yao Wang). The RallyNet/ subfolder has no LICENSE of its own (404). The SSAC PDF (read via WebFetch) has no licence, code URL or data statement.",
+     "corrections": "The SSAC PDF ('Paper 20251430') Table 1 matches the claim: landing DTW 0.6449 to 0.2983, CTC 26.5384 to 8.3533, movement DTW 0.3424 to 0.1934, and overall win-rate MAE 9.5% to 7.4%. However, the repo's RallyNetv2/README reports different numbers (RallyNet 0.6263 / 17.9273 / 0.3446 vs RallyNetv2 0.3695 / 8.9367 / 0.2380), so cite the SSAC paper specifically. The win-rate check also includes only Carolina Marin's 4 matchups (mean diff 0.1081 to 0.0525). Tactics confirmed: 3 Level-1 tactics plus 'No tactic', with Four-Corner split into 5 sub-tactics. The rule definitions are fully written out in Evaluation_Modules_Demo/README.md, so they can be reimplemented without copying code. 'Top four winning/losing states and actions' is stated in the repo README (the SSAC example shows only the top one). The momentum plot uses the Shot Influence model, and pace is shot speed divided by Δt, signed by whether the shot is hit above the net. The SSAC page lists the paper under the SSAC26 section; the year is not confirmed in the PDF."
+    },
+    {
+     "name": "DShuttleNet: badminton doubles dataset with coordination metrics (arXiv 2610.14016)",
+     "verdict": "partly",
+     "licence_checked": "Read the arXiv PDF via WebFetch. It says 'Dataset is available at: https://doi.org/10.34740/kaggle/dsv/16097938' and gives no licence or code URL. Kaggle, the DataCite API and doi.org are all blocked to curl, so the dataset licence is still unverifiable. I also found an unlinked GitHub repo, b34731962/DShuttleNet (created 2026-05-04). It has no licence: API null, LICENSE 404, and the README says 'License: [Add appropriate license information]', so all rights are reserved. It contains src/analysis/ccei_analysis.py and tlai_analysis.py but no data CSVs.",
+     "corrections": "Numbers confirmed: 58 BWF World Tour doubles matches from 2022-2025 (24 MD, 24 WD, 10 XD), 4,483 rallies and 54,141 shots. Each stroke has x,y for all 4 players and the shuttle; 9 shot types. 6 loss reasons (Grounded within Boundaries, Judgment Error, Net Fault, Failed Return, Out of Bounds, Faults), each with the responsible player. TSCVAE accuracy 0.5041 (F1 0.2951); authors from NYCU and others. Corrections: (1) 'No code released' is not accurate: analysis code exists in the unlinked, unlicensed repo above, which calls TLAI 'Threat Level Awareness Index'. (2) CCEI is binary per moment (1 if either teammate is within R of the pivot point (30.5, 34.5), with R = 0.9 or 1.5 m), so it is too coarse to show where coverage gaps are without extra work. TLAI = |TL1 - TL2| / (TL1 + TL2) over Voronoi zones with weights 2^(-d/3.35)."
+    },
+    {
+     "name": "BadmintonVision (BMC Sports Sci Med Rehabil 2026)",
+     "verdict": "confirmed",
+     "licence_checked": "I read the LICENSE file: MIT, 'Copyright (c) 2025 The BadmintonVision Authors', plus a note that the broadcast footage is not covered. The API spdx is NOASSERTION, and CITATION.cff says MIT. The article (PMC13595539; BMC Sports Sci Med Rehabil 18:434, 8 Sep 2026, DOI 10.1186/s13102-026-02073-1) is 'licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License'. Data: 'available from the corresponding author upon reasonable request'. The repo also says it ships derived, non-identifying trajectories and transition counts.",
+     "corrections": "0.941 is confirmed as the SSL + MotionFormer result on the match-level split: baseline YOLOv12m 0.806, with SSL 0.885, frame-level split 0.956. The repo README's table labels 0.941 as 'Detection (YOLOv12m)', which is inconsistent with the paper. 5,865 clips from BWF World Championships 2019-2025 confirmed, but the tactical analyses used only 147 clips (movement) and 70 (stroke sequences). Metrics confirmed. The paper defines Shannon entropy and Markov matrices formally but gives no formal definition of centre-court occupancy or base recovery time; the repo's metrics.py does (base = trajectory centroid, centre = middle 50%, direction change > 90°). Weights: the paper says they are released via the repo, but the repo (last push 2026-06-10) has only placeholder URLs in download_weights.sh and says 'released upon publication'. They are not downloadable as far as I could tell; the Releases page was blocked. Because the code is MIT, the metric code itself could be reused with notice, not only the definitions."
+    },
+    {
+     "name": "arXiv 2606.15992 Player Disjoint Multi-Task Tennis Stroke Analysis from Monocular Pose Sequences (requested check)",
+     "verdict": "confirmed",
+     "licence_checked": "The v1 HTML header (v1, 14 Jun 2026) says 'License: CC BY 4.0'. The latest PDF text states no licence, and I could not read the abs-page licence for v2 (fetch budget). Code: v2 says 'will be released in a public repository upon publication'; v1 says 'available on Kaggle' with no link. Videos: v2 says 'We cannot share the original videos.'",
+     "corrections": "The numbers are only in the later version; v1 has no detection evaluation and no composite or BiGRU variants. Latest version: MediaPipe Pose Landmarker (13 of 33 keypoints), speed weights 0.5 / 0.3 / 0.2. Composite detector F1 0.8565 at ±100 ms with mean timing error 80.6 ms, on 206 'frozen consensus' events from 6 validation segments (drawn from 226 proposals). BiGRU actually has the higher F1 (0.8611, 84.1 ms); the fixed-threshold control is 0.8241 / 85.1 ms. Cameras are mostly behind the baseline, with source video at 30-60 fps resampled to 30 fps. Direction scores 43.9% (majority 61.3%, chance 33.3%) and posture 52.1% (majority 63.4%, chance 50%); stroke type, at 74.3%, is also below its 76.7% majority baseline. The title is hyphenated ('Player-Disjoint'). Results are for tennis, not badminton."
+    }
+   ]
+  }
+ },
+ {
+  "topic": "doublesdata",
+  "file": "/tmp/claude-0/-home-user/b8ae9930-87df-5663-af9e-aa30a1da687c/scratchpad/r2/doublesdata.md",
+  "top": [
+   {
+    "name": "Ding et al. drone top/back-view doubles dataset (Drone_BD_ControlArea, MTAP 2023)",
+    "url": "https://github.com/Ning-D/Drone_BD_ControlArea (paper: https://arxiv.org/abs/2305.04247)",
+    "licence": "No LICENSE file in the repo and no data licence in the paper, so all rights reserved. Data is on Google Drive.",
+    "claim": "College-club men's doubles: 39 games, 1,347 rallies, two DJI Air 2S drones (top and back view) at 4K30. Labels are 4-player boxes and court XY plus per-frame shuttle status (Flying/Hit/Fault/Drop/Misjudge) for the hit and drop samples used, 12,658 of them hits. Control-area model L1 is 0.094.",
+    "plug_in": "It is the only public amateur doubles dataset with per-frame hit labels and 4-player identity. With written permission it would be an evaluation set for GBM hit recall on doubles and for deciding which of the two same-side players hit. Without permission, only its 5-state shuttle labelling format can be copied."
+   },
+   {
+    "name": "Mendeley: A Video-Based Frame-Level Dataset of Badminton Player Movements for Motion Analysis (2026-06)",
+    "url": "https://data.mendeley.com/datasets/3sp4xntp34",
+    "licence": "CC BY 4.0 (dataset page, DOI 10.17632/3sp4xntp34.1)",
+    "claim": "884 videos from smartphones and digital cameras in indoor courts, covering matches and practice from several angles, stored as frame folders. Some clips were downloaded from YouTube (count not given). No action labels and no accuracy figures.",
+    "plug_in": "An unlabelled, commercially usable pool of amateur phone footage for TrackNetV3/hit-scorer pseudo-label self-training and RTMO test-time adaptation. The YouTube-sourced clips must be removed first, and there is no audio."
+   },
+   {
+    "name": "RacketDB (VISAPP 2025)",
+    "url": "https://huggingface.co/datasets/muhabdulhaq/racketdb (info: https://github.com/muhabdulhaq/racketdb)",
+    "licence": "Hugging Face tag is cc-by-4.0. The GitHub repo has no LICENSE, the paper itself is CC BY-NC-ND 4.0, and the source videos (Ding drone set) are unlicensed, so ownership of the frames needs confirming.",
+    "claim": "22,682 back-view drone frames from 27 amateur men's doubles games and 119 rallies, with 16,045 boxes of one class (racket). Test mAP50 / mAP50:95: YOLOv8 0.78/0.47, Faster R-CNN R50 0.78/0.47; a COCO-pretrained detector scores 0.63/0.39.",
+    "plug_in": "Train a racket detector and add shuttle-to-racket distance and racket-speed features to the GBM hit scorer, to recover low-camera hits where turn points are weak. In doubles, the racket nearest the shuttle picks the hitter on the same side. Needs perspective augmentation because the source view is a high drone."
+   },
+   {
+    "name": "DShuttleNet (arXiv 2610.14016, 2026-10)",
+    "url": "https://www.kaggle.com/datasets/anonymousay58dki/dshuttlenet (paper: https://arxiv.org/abs/2610.14016)",
+    "licence": "CC BY-NC-SA 4.0 (Kaggle licenseName). Annotations only, about 35.7 MB, no code.",
+    "claim": "58 professional BWF doubles matches (10 mixed), 4,483 rallies, 54,141 shots from a fixed camera at 30fps 720p. Labels: hitter ID and timestamp, shuttle and 4-player court coordinates, 9 shot types, forehand/backhand, hit height, and 6 point-loss reasons naming the responsible player. TSCVAE shot accuracy 0.504 (F1 0.295).",
+    "plug_in": "Research-only doubles priors: how hitters rotate within a side (for a hitter-attribution DP/HMM), shot-type distribution for the stroke GBM, and point-loss and coverage fields as grounding templates for the LLM report. It has no video and cannot go into shipped weights."
+   },
+   {
+    "name": "ETH One-Shot Badminton Shuttle Detection for Mobile Robots (arXiv 2603.06691, 2026-03)",
+    "url": "https://github.com/leggedrobotics/shuttle_detection (paper: https://arxiv.org/abs/2603.06691)",
+    "licence": "Code is AGPL-3.0 (README LICENSE section). The dataset licence is not stated (data on Google Drive), so all rights reserved.",
+    "claim": "20,510 frames from a low stationary robot-view camera (Basler, 60fps, 1920x1200) at 5 indoor/outdoor sites with 11 backgrounds. Shuttle boxes are graded easy/medium/hard. YOLOv8 F1 is 0.86 in similar settings and 0.70 in unseen ones; recall per site ranges 0.14 to 0.89; recall drops below about 20 px; mixup raised recall from 0.68 to 0.78; auto-labelling was 85.7% correct.",
+    "plug_in": "The viewpoint closest to RallyIQ's low tripod. With permission it would be a new-venue and small-shuttle stress test for TrackNetV3. Without it, copy the auto-label, CVAT-fix, difficulty-grading workflow and add mixup plus background negatives. Keep the AGPL code out of the product."
+   },
+   {
+    "name": "BMT-BENCH (ICIP 2024)",
+    "url": "https://par.nsf.gov/servlets/purl/10568965 (data: Google Drive link in paper; code: https://github.com/ziangshi/BMT_BENCH_baseline_repo)",
+    "licence": "Not stated in the paper and no LICENSE in the repo, so all rights reserved.",
+    "claim": "2,005 serve-to-point rally clips from a fixed camera about 2 m behind the baseline at about 4.5 m height, 1280x960 at 60fps. Labels: rally start/end, which player scored, shot-level stroke types, and shuttle boxes on a labelled subset. The paper reports video-generation scores (IVRNN PSNR 35.81, FVD 967), not detection accuracy.",
+    "plug_in": "An external evaluation set for rally segmentation, inferring which player scored, and shuttle detection from a behind-baseline 60fps camera that sits about 3 m higher than RallyIQ's. Needs a licence request first."
+   },
+   {
+    "name": "Baek & Yun, Bridging the Gap: Doubles Badminton Analysis with Singles-Trained Models (arXiv 2508.13507; Signal Processing: Image Communication 2026)",
+    "url": "https://github.com/100-heon/badminton_double_analysis (paper: https://arxiv.org/abs/2508.13507)",
+    "licence": "No LICENSE file, so all rights reserved. The doubles data is small and not released as a dataset.",
+    "claim": "Pose model (ST-GCN + Transformer) trained on ShuttleSet singles and tested on 2 BWF doubles finals (2,974 shot/not-shot frames): accuracy 0.669 (F1 0.710) on doubles vs 0.862 on singles. A YOLOv11x baseline gets 0.594 on doubles vs 0.988 on singles.",
+    "plug_in": "Measures the singles-to-doubles drop that RallyIQ's ShuttleSet-trained GBM probably shares, so doubles need their own recall/precision tracking. Per-player pose-sequence shot/not-shot classification could be a second hit-candidate signal from RTMO keypoints."
+   },
+   {
+    "name": "Roboflow Universe badminton CC BY subsets (e.g. shuttle-tesmk/badminton_players, badminton_shuttle_label_v4.1)",
+    "url": "https://universe.roboflow.com/shuttle-tesmk/badminton_players ; https://universe.roboflow.com/shuttle-tesmk/badminton_shuttle_label_v4-1",
+    "licence": "CC BY 4.0 on these two project pages. Other projects (badyfriends shuttlecock, court-keypoint sets) did not show a licence when fetched. The licence is self-declared by the uploader, so the source footage is unverified.",
+    "claim": "Small player/shuttle/court-point detection sets; image counts were not shown. A third party reports YOLOv8n trained on the badyfriends set (3,067 images) reaching mAP50 0.764 and recall 0.719.",
+    "plug_in": "Low-value supplements for court-keypoint and player-box detectors. Snapshot each page's licence at download time and use only projects that are clearly self-recorded and CC BY or public domain."
+   }
+  ],
+  "verify": {
+   "items": [
+    {
+     "name": "Ding et al. drone top/back-view doubles dataset (Drone_BD_ControlArea, MTAP 2023)",
+     "verdict": "confirmed",
+     "licence_checked": "GitHub search API gives license.spdx_id null. raw.githubusercontent LICENSE, LICENSE.md and LICENSE.txt all return 404 on main and master. The README has no licence section; it links Google Drive folders for Study_Videos/datacsv and All_videos, plus processed data and pretrained weights, and says 'The dataset will be fully released soon'. The arXiv v3 text names no licence; it has an ethics approval (AHNU-ET2022042) with signed participant consent. So all rights reserved is correct. I could not test the Drive links (Google Drive is not reachable from this sandbox).",
+     "corrections": "The paper (arXiv 2305.04247v3) confirms: 39 games, 1,347 rallies, 11 college-club players in 14 pairs, 2-vs-2 men's doubles, two DJI Air 2S drones (top and back view), 4K 3840x2160 at 30fps. Shuttle status classes are Frying[sic]/Hit/Fault/Drop/Misjudge. There are 12,658 hit samples and 796 drop samples. The full model's L1 is 0.094 on 'All', with 0.085 on hit/control and 0.238 on drop/non-control. Notes: (1) The README's table says player boxes and shuttle location are labelled for the TOP-view camera only; the back view has no labels. (2) Shuttle positions exist only for the hit/drop samples, and for drops only when the shuttle lands in the opponent's court. The README tells users to run TrackNet for per-frame positions, so 'per-frame hit labels' means event frames, not dense tracks. (3) The README marks pose as not included. (4) I did not check whether it is the 'only' such amateur doubles set."
+    },
+    {
+     "name": "Mendeley: A Video-Based Frame-Level Dataset of Badminton Player Movements for Motion Analysis (2026-06)",
+     "verdict": "confirmed",
+     "licence_checked": "Fetched the data.mendeley.com/datasets/3sp4xntp34 page. Licence CC BY 4.0, DOI 10.17632/3sp4xntp34.1, version 1, published 22 June 2026. Contributors are Khandakar, Jisan, Rahman and Anis of Daffodil International University. The fetched Files section was empty (possibly rendered by JavaScript), so I could not confirm the files can be downloaded or how large they are.",
+     "corrections": "Confirmed: 884 videos from smartphones and digital cameras plus public YouTube videos, indoor courts, matches and practice, several viewing angles, frames stored in folders named after each source video. There are no labels ('frame-level organization' only) and no accuracy figures. The page gives no YouTube clip count and no frame rate. I found no per-folder provenance list, so removing the YouTube clips may not be possible without manual review. The CC BY 4.0 label cannot cover the third-party YouTube content. Frames have no audio."
+    },
+    {
+     "name": "RacketDB (VISAPP 2025)",
+     "verdict": "confirmed",
+     "licence_checked": "The HF dataset page muhabdulhaq/racketdb shows licence tag cc-by-4.0, no gating, and an EMPTY README card. Its total size is 247 GB, and the viewer is broken because the zip spans multiple disks. GitHub muhabdulhaq/racketdb has spdx null and LICENSE 404. The SciTePress PDF says 'Paper published under CC license (CC BY-NC-ND 4.0)', © 2025 SCITEPRESS, and gives no dataset licence. The README says the source videos come from the Ding et al. paper and asks users to cite it. The Ding repo has no licence, so ownership of the frames is unresolved, as the claim says.",
+     "corrections": "The paper confirms: 22,682 images (16,608/2,899/3,175), 16,045 racket boxes (12,343/1,923/1,779), one class, back-view DJI Air 2S drone footage of men's doubles at 4K30, 27 games, 119 rallies (83/18/18). Table 5 gives YOLOv8 0.78/0.47 and FRCNN-R50 0.78/0.47. The paper does not explicitly label Table 5 as test-split results. The 'COCO-pretrained detector' with 0.63/0.39 is YOLOv5 pretrained on COCO, using its tennis-racket class (Table 6). Practical issue: the HF download is a 247 GB split zip. The README also links a second HF repo, muhabdulhaq/ordb."
+    },
+    {
+     "name": "DShuttleNet (arXiv 2610.14016, 2026-10)",
+     "verdict": "confirmed",
+     "licence_checked": "The Kaggle API (api/v1/datasets/view/anonymousay58dki/dshuttlenet) gives licenseName 'CC BY-NC-SA 4.0', totalBytes 35,703,706 (about 35.7 MB) and lastUpdated 2026-05-05. The paper cites it as DOI 10.34740/kaggle/dsv/16097938 and states no licence itself. Separately, there is a GitHub repo b34731962/DShuttleNet (created 2026-05-04, about 20 MB, spdx null, no LICENSE; the README says '[Add appropriate license information]'). It holds analysis code: data pipeline, feature engineering, CCEI/TLAI analysis and main.ipynb. Its data/*.csv files are not on main.",
+     "corrections": "The paper confirms 58 matches (24 men's, 24 women's, 10 mixed), 4,483 rallies and 54,141 shots, from BWF fixed-camera footage at 30fps 1280x720. Labels: hitter, timestamp, 9 shot types, forehand/backhand, hitting height, x/y for 4 players and the shuttle, and 6 point-loss reasons plus the responsible player. TSCVAE shot accuracy is 0.5041 and F1 0.2951. Corrections: (1) 'No code' holds only for the Kaggle package. A GitHub repo with the same name and matching dates has unlicensed analysis code, though I did not confirm it belongs to the authors. (2) The per-type shot counts in Table 5 sum to 54,120, 21 short of the stated 54,141. (3) Kaggle says the source is BWF Super 350+ tournaments, annotated by professional players. Neither source mentions video, so I could not confirm it is absent (the API files list was empty)."
+    },
+    {
+     "name": "ETH One-Shot Badminton Shuttle Detection for Mobile Robots (arXiv 2603.06691, 2026-03)",
+     "verdict": "confirmed",
+     "licence_checked": "GitHub search API gives spdx AGPL-3.0. The LICENSE file is the GNU AGPL v3 text, and the README License section says AGPL-3.0 'due to the use of Ultralytics YOLOv8'. The paper (v2 HTML) says dataset and code are 'available open-source through our project website', and its supplementary table puts the dataset on Google Drive. It states no dataset licence, so all rights reserved is correct. The repo README's dataset link is a placeholder (https://example.com) and its Paper link is just https://arxiv.org/, so I could not confirm the data can be downloaded.",
+     "corrections": "Confirmed: 20,510 frames, Basler acA1920-144uc with 8mm lens, 60fps, 1920x1200, stationary camera, 5 locations and 11 backgrounds (indoor/urban/outdoor), easy/medium/hard grading. F1 is 0.86 in similar settings and 0.70 in unseen ones. Recall by location ranges 0.141 to 0.892; recall by background ranges 0.443 to 0.999. Recall drops below about 20px (precision below about 15px). Mixup raised recall from 0.68 to 0.78 with precision unchanged. Auto-labelling: 85.7% correct, 8.3% needed minor fixes, 5.9% needed manual correction. The paper does not give the camera height, so 'low' is unverified."
+    },
+    {
+     "name": "BMT-BENCH (ICIP 2024)",
+     "verdict": "confirmed",
+     "licence_checked": "The par.nsf.gov PDF has no licence or terms statement; it only calls the data 'publicly accessible' and 'open-source and ongoing'. It gives a Google Drive folder link, which I did not test because Drive is unreachable here. GitHub ziangshi/BMT_BENCH_baseline_repo has spdx null and LICENSE 404. Its README only lists the SVG-LP, IVRNN, RVD_diffusion, FutureGAN and RetroGAN baselines. 'Open-source' with no licence is ambiguous, so asking for a licence first is right.",
+     "corrections": "The paper confirms ICIP 2024 (Shi, Xiao, Yan, Sun, Ku, Hui). It has 2,005 clips from a camera (The Imaging Source DFK 37AUX273) about 2m behind the baseline, about 4.5m high and tilted 30 degrees, at 1280x960 and 60fps. Labels are rally start/end, score and stroke types, with the scoring player coded red (far) or blue (near). A 'Labeled' subset has shuttle boxes, but its size is not given. IVRNN scores PSNR 35.8143 and FVD 967.39; there are no detection metrics. Caveats: the 2,005 figure is described as un-annotated clips, so it is unclear how many clips carry stroke or score labels. The red/blue near/far coding suggests singles play."
+    },
+    {
+     "name": "Baek & Yun, Bridging the Gap: Doubles Badminton Analysis with Singles-Trained Models (arXiv 2508.13507; Signal Processing: Image Communication 2026)",
+     "verdict": "confirmed",
+     "licence_checked": "GitHub 100-heon/badminton_double_analysis has spdx null and LICENSE 404 on main and master, so all rights reserved is correct. The README says the repo holds training code, architectures and pre-trained weights for the ST-GCN and the Transformer classifier; I could not list files to check the weights. The arXiv paper uses the arXiv perpetual non-exclusive licence. It does not say the doubles annotations are released; data points only to ShuttleSet.",
+     "corrections": "The numbers match arXiv v1. Doubles set: 2 BWF finals (Swiss Open 2025 men's doubles, 1,698 frames; All England 2022 women's doubles, 1,276 frames), 2,974 balanced shot/not-shot frames. Pose model (ViT-Pose, then a contrastively pretrained ST-GCN, then a Transformer): singles accuracy 0.8617 (F1 0.8975), doubles 0.6686 (F1 0.7104). YOLOv11x: singles 0.9876, doubles 0.5941 (F1 0.5899). Caveats: (1) The paper calls the doubles set a 'validation set', and reports each result at its own accuracy-optimal threshold (0.86 for doubles vs 0.50 for singles), so the doubles figures are optimistic. (2) I could not confirm the 'Signal Processing: Image Communication 2026' venue; no journal reference turned up in the arXiv page or in search."
+    },
+    {
+     "name": "Roboflow Universe badminton CC BY subsets (e.g. shuttle-tesmk/badminton_players, badminton_shuttle_label_v4.1)",
+     "verdict": "partly",
+     "licence_checked": "universe.roboflow.com/shuttle-tesmk/badminton_players/dataset/ shows Licence CC BY 4.0. It is an Object Detection project in workspace 'Shuttle' with no description ('A description for this project has not been published yet'), and no image count or class list could be extracted. I could NOT verify the licence on badminton_shuttle_label_v4-1: my WebFetch attempts on it were all refused because the shared fetch budget was exhausted, and curl to roboflow is blocked by the proxy. I did not check the badyfriends or court-keypoint project pages.",
+     "corrections": "CC BY 4.0 is confirmed for badminton_players only. The v4.1 licence and the third-party YOLOv8n figures for the badyfriends set (3,067 images, mAP50 0.764, recall 0.719) are unverified: I found no source for them. Search shows the badyfriends project at universe.roboflow.com/badyfriends/badminton-shuttlecock-dv7zr. Both shuttle-tesmk pages give no description, so nothing shows the footage is self-recorded. That supports treating the licences as self-declared and keeping a dated snapshot of each page at download time."
+    }
+   ]
+  }
+ }
+]
