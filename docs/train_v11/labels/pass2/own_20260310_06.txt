@@ -1,0 +1,13 @@
+# n | label | t | side | hitter | stroke | sure | reason
+3 | gap_hit | 4.4 | far | P2 | lift | unsure:hit | at 4.42 P2 lunges low at the net with the shuttle rising vertically above his racket; at 4.77 it comes down high toward P1, who reaches it at head height at 5.12 (likely a second contact ~5.15 by P1)
+15 | not_a_hit | 17.367 | - | - | - | sure | shuttle falling high near the ceiling, P1 standing still with racket down, P2 upright; no swing
+22 | hit | 27.2 | near | P1 | long_serve | unsure:stroke | rally start, shuttle at P1's racket low at 0, then rises over the net and is still climbing at +0.4 (short vs long unclear)
+38 | not_a_hit | 42.443 | - | - | - | sure | P2 bends and picks the shuttle up from the floor; P1 walking
+48 | not_a_hit | 52.236 | - | - | - | sure | detection stays fixed at waist height beside P1 who stands relaxed; no swing
+68 | not_a_hit | 73.523 | - | - | - | sure | between rallies, P2 bent over pushing the shuttle along the floor toward P1
+78 | not_a_hit | 86.77 | - | - | - | unsure:hit | P2 standing upright with racket down; shuttle drops onto P1's head/shoulder area while he bends, no rally exchange
+87 | not_a_hit | 98.132 | - | - | - | sure | P1 walking and P2 standing, no play; detections on the scoreboard and near the net post
+95 | not_a_hit | 107.207 | - | - | - | sure | P2 drops/bounces the shuttle from his hand to the floor, P1 relaxed
+108 | hit | 125.28 | near | P1 | clear | unsure:stroke | P1 overhead with racket high at -0.2 and follows through at 0; shuttle then travels high to the left toward the far court
+113 | hit | 129.65 | far | P2 | unknown | unsure:stroke | shuttle falls steeply onto P2 at head height at 0, leaves flat to the right toward P1 at +0.2 with P2's arm following through
+116 | not_a_hit | 157.941 | - | - | - | sure | spectator close to the camera; detection is a shirt logo

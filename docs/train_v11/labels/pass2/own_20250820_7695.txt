@@ -1,0 +1,24 @@
+# n | label | t | side | hitter | stroke | sure | reason
+43 | hit | 89.16 | near | P2 | lift | unsure:stroke | shuttle descends to P2's racket at 0, rises high toward far court at +0.2/+0.4
+50 | unsure_hit | 97.69 | near | P2 | long_serve | unsure:hit | shuttle at P2's extended hand at -0.2/0, rises high at +0.2; racket hidden, P1 standing upright, could be a feed/toss back rather than a serve
+59 | not_a_hit | 118.495 | - | - | - | sure | shuttle on the floor at P1's feet, scooped up with the racket into his hand (pickup)
+62 | hit | 125.15 | far | P1 | short_serve | sure | P1 holds shuttle in serve stance at 0, shuttle rises gently over the net toward near at +0.2/+0.4
+69 | unsure_hit | 130.44 | far | P1 | unknown | unsure:hit | shuttle arrives at P1's chest at 0 but afterwards detections drop/rise near his body, no clear outgoing path; racket low
+72 | gap_none | 135.29 | - | - | - | sure | P2 scoops the shuttle off the floor with the racket and picks it up (between rallies)
+98 | hit | 179.45 | far | P1 | unknown | unsure:stroke | shuttle descends onto P1's raised racket at 0 (overhead), not tracked afterwards
+123 | not_a_hit | 216.4 | - | - | - | sure | P2 is holding the shuttle in his hand at shoulder height, no swing
+135 | hit | 238.83 | near | P2 | short_serve | sure | shuttle at P2's racket low in front at 0, rises to just above the net and peaks at +0.4
+145 | hit | 259.8 | far | P1 | net_shot | unsure:stroke | shuttle comes down to P1 at 0, then rises and flattens toward the near court at +0.2/+0.4
+154 | not_a_hit | 271.13 | - | - | - | sure | between rallies, players relaxed, shuttle passed low from P2 to P1's hand
+155 | not_a_hit | 271.92 | - | - | - | sure | between rallies, P2 holding/dropping the shuttle by his body, no rally
+164 | hit | 284.07 | far | P1 | short_serve | sure | rally start, P1 in serve stance, shuttle at his racket at 0, travels low just over the net and flattens by +0.4
+172 | hit | 296.52 | near | P2 | lift | unsure:stroke | shuttle descends to P2's racket at about waist height at 0, then rises high toward the far court at +0.2/+0.4
+189 | gap_none | 315.91 | - | - | - | unsure:hit | zoomed-out view, shuttle high at top of frame descending; no visible contact in the panels
+196 | not_a_hit | 326.065 | - | - | - | sure | both players at the net handing the shuttle over, no play
+201 | hit | 334.85 | near | P2 | unknown | unsure:stroke | P2 overhead swing at -0.2, shuttle above him at 0 then travels toward P1 and descends by +0.4
+203 | gap_none | 336.5 | - | - | - | sure | shuttle sliding low along the floor and passed back to P1's hand between rallies
+209 | gap_none | 348.73 | - | - | - | unsure:hit | shuttle descends to P1's head height at 349.24 near rally end; no visible swing, likely lands
+221 | hit | 368.8 | near | P2 | smash | unsure:stroke | P2 reaches high overhead, shuttle reverses at 0..+0.1 and reaches P1 descending within 0.4 s
+222 | unsure_hit | 369.18 | far | P1 | unknown | unsure:hit | P2's shot arrives at P1's head height at 0 and continues straight down to the floor at +0.4; no clear direction change
+227 | not_a_hit | 374.44 | - | - | - | sure | players walking toward camera after the rally, shuttle carried/bounced by P1's racket
+228 | not_a_hit | 374.724 | - | - | - | sure | players walking off after the rally, shuttle carried by P1's racket

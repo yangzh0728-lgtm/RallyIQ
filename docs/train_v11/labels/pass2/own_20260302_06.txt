@@ -1,0 +1,12 @@
+# n | label | t | side | hitter | stroke | sure | reason
+3 | hit | 8.02 | near | P1 | short_serve | unsure:stroke | P1 (girl) at the front service line holds the shuttle at 0, it then rises gently over the net toward P2 at the far net by +0.4; receivers in ready stance
+16 | hit | 23.83 | near | P1 | lift | unsure:stroke | shuttle arrives from the far left to the girl's (P1 box) racket on her right side at 0, reverses and rises high toward the far court at +0.2/+0.4; P3 (boy) is away to the right
+19 | hit | 26.33 | near | P1 | lift | unsure:hitter | shuttle falls near the net between P2 (far, at the net) and the girl P1, turns at about +0.05 and rises high up-left; direction suggests the near girl, but P2 is also reaching there
+31 | not_a_hit | 34.384 | - | - | - | sure | players standing/walking between rallies; detection near a far player's head, no play
+48 | hit | 68.55 | far | P2 | drive | unsure:stroke | shuttle turns near the far-left player (P2) just before 0 and travels flat/slightly rising to the right where the near girl intercepts it at about +0.3
+59 | hit | 83.46 | near | P1 | lift | unsure:stroke | shuttle comes in from the far court to the near boy's (P1) racket at waist height at 0, then rises high toward the far court
+77 | not_a_hit | 105.723 | - | - | - | unsure:hit | near players relaxed (walking, rackets down); small detections around the far players, no rally exchange visible
+80 | hit | 112.9 | far | P2 | drive | unsure:stroke | shuttle comes in to P2 (far left) at 0 and leaves to the right on a flat path above the net tape
+97 | hit | 130.13 | near | P1 | clear | unsure:stroke | near boy P1 overhead with racket raised at 0; shuttle reached his racket just before 0 and then rises up-left toward the far court (not a downward smash)
+98 | unsure_hit | 131.05 | far | P4 | unknown | unsure:hit | shuttle still high above P4 at +0.2 while P4 raises his racket; the contact would be after +0.2 and is blocked by a spectator at +0.4
+108 | hit | 147.93 | near | P3 | drive | sure | shuttle comes flat to the near girl's (P3 box) raised racket at 0, then fast and flat back to the far P4 by +0.4

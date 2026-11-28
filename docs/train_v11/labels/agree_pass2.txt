@@ -1,0 +1,1 @@
+{'rows': 119, 'decided': 97, 'hit_agree': 97, 'both_hit': 51, 't_close': 51, 'side_agree': 51, 'hitter_n': 51, 'hitter_agree': 51, 'stroke_n': 46, 'stroke_agree': 38, 'either_unsure': 22, 'stroke_sure_n': 22, 'stroke_sure_agree': 22}

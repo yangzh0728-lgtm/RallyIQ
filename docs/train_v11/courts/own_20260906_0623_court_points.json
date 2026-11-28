@@ -1,0 +1,86 @@
+{
+ "near_doubles_long_service/left_doubles_sideline": [
+  127.8,
+  712.2
+ ],
+ "near_doubles_long_service/left_singles_sideline": [
+  148.7,
+  730.4
+ ],
+ "near_doubles_long_service/centre_line": [
+  343.7,
+  899.0
+ ],
+ "near_short_service/left_doubles_sideline": [
+  810.5,
+  609.9
+ ],
+ "near_short_service/left_singles_sideline": [
+  851.9,
+  617.5
+ ],
+ "near_short_service/centre_line": [
+  1166.9,
+  675.0
+ ],
+ "near_short_service/right_singles_sideline": [
+  1749.3,
+  781.3
+ ],
+ "near_short_service/right_doubles_sideline": [
+  1908.6,
+  810.4
+ ],
+ "far_short_service/left_doubles_sideline": [
+  1146.7,
+  559.6
+ ],
+ "far_short_service/left_singles_sideline": [
+  1187.5,
+  563.6
+ ],
+ "far_short_service/centre_line": [
+  1471.8,
+  591.9
+ ],
+ "far_short_service/right_singles_sideline": [
+  1902.2,
+  634.9
+ ],
+ "far_short_service/right_doubles_sideline": [
+  2002.8,
+  644.9
+ ],
+ "far_doubles_long_service/left_doubles_sideline": [
+  1346.9,
+  529.5
+ ],
+ "far_doubles_long_service/left_singles_sideline": [
+  1384.0,
+  532.1
+ ],
+ "far_doubles_long_service/centre_line": [
+  1630.8,
+  548.7
+ ],
+ "far_doubles_long_service/right_singles_sideline": [
+  1968.3,
+  571.5
+ ],
+ "far_baseline/left_doubles_sideline": [
+  1376.5,
+  525.1
+ ],
+ "far_baseline/left_singles_sideline": [
+  1412.7,
+  527.4
+ ],
+ "far_baseline/centre_line": [
+  1653.0,
+  542.7
+ ],
+ "far_baseline/right_singles_sideline": [
+  1977.0,
+  563.3
+ ]
+}

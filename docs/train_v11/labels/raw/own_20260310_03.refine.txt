@@ -1,0 +1,19 @@
+# n | label | t | side | hitter | stroke | sure | reason
+0 | hit | 5.75 | far | none | lift | unsure:t,stroke | far player (no box) lunging with racket extended at 5.6-5.8, shuttle at his racket ~5.75, trail at 6.0/6.2 rises up-left from his racket toward the near side; near hits again at 7.45
+1 | hit | 39.57 | far | P1 | lift | unsure:hitter | serve arrives at far player at net height 39.4-39.5, at his racket ~39.55, racket swung up by 39.65, shuttle high at 39.85-39.95; near smashes at 40.65
+2 | hit | 38.83 | near | P2 | short_serve | unsure:stroke | P2 serve stance at 38.7, at 38.9 shuttle just off his racket with trail from it, flat over the net toward the far player by 39.1-39.3
+3 | hit | 61.15 | near | P3 | drop | unsure:stroke | shuttle descends onto P3 at 60.9, at his overhead racket at 61.1, leaves rising toward far at 61.3/61.5; far player then lunges at the net
+4 | hit | 72.05 | far | P1 | net_shot | unsure:stroke | serve descends to far P1's racket at 72.0, at 72.2/72.4 trail rises from him back over the net; near lunges at the net at 73.2
+5 | hit | 97.30 | near | none | unknown | unsure:stroke | near player at the left frame edge (no box), shuttle at him descending at 97.25, then rises from him toward the far court at 97.45/97.65
+6 | hit | 193.55 | near | P2 | clear | unsure:stroke | P2 in overhead preparation with shuttle descending at 193.3/193.5 (at racket height at 193.5), follow-through at 193.7; far player later smashes a high shuttle
+7 | hit | 195.32 | near | P2 | block | unsure:stroke | far smash at 194.94 travels to P2 (195.14), P2 lunges with racket low and shuttle at racket at 195.34, P2 bent over at 195.54
+8 | hit | 232.42 | near | P2 | drop | unsure:t,stroke | P2 in overhead preparation at 232.25-232.3 with shuttle descending above; contact occluded by a spectator 232.35-232.6, P2 in follow-through at 232.65; far then plays at the net
+9 | hit | 244.35 | near | P2 | clear | unsure:stroke | shuttle descends onto P2 at 244.1, P2 swings overhead at 244.3, follow-through looking up at 244.5; shuttle later high over the far court
+10 | hit | 270.05 | near | P2 | unknown | unsure:hit,hitter,stroke | P2 leaps back with racket up, shuttle at the racket head ~270.0-270.05, then flies fast down-left to the floor on his own side (270.15-270.3) - mis-hit, rally ends 270.35; box P2 at 269.9, relabelled P3/P4 later
+11 | hit | 314.07 | near | P2 | drop | unsure:stroke | shuttle descends to P2's raised racket at 314.0, P2 follow-through at 314.2, shuttle moves toward the far court at 314.4; far player lunges at the net
+12 | hit | 322.18 | near | P1 | short_serve | unsure:stroke | P1 in serve stance 321.85-322.05, follow-through at 322.25 with trail leaving his racket rising toward far, crossing at 322.45
+13 | hit | 323.65 | near | P1 | lift | unsure:stroke | shuttle descends from far to P1's low racket at 323.6, trail rises away from him at 323.8 and toward far P3 at 324.0
+14 | hit | 324.70 | far | P3 | net_shot | unsure:stroke | shuttle descends past P3's right to his low lunging racket 324.55-324.65, rises slowly from him at 324.75-324.8; near lunges at 325.0
+15 | hit | 328.38 | near | P1 | smash | unsure:stroke | P1 jumps with racket back at 328.25-328.3, shuttle descending to his racket, swings through ~328.35-328.4, follow-through 328.45-328.5; far player ends down at the net
+16 | hit | 327.03 | far | P3 | lift | unsure:t,stroke | far P3 low at the net with shuttle at his racket at 327.02, standing at 327.22; near P1 looks up and retreats for an overhead
+17 | hit | 350.22 | far | P3 | lift | sure | serve descends slowly to far P3's low lunging racket 349.9-350.15, at racket ~350.2, racket swung up at 350.25 and shuttle rising high at 350.35; near waits under it

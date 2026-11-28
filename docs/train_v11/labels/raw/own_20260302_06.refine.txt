@@ -1,0 +1,3 @@
+# n | label | t | side | hitter | stroke | sure | reason
+0 | hit | 47.17 | far | P4 | smash | unsure:stroke | far-left player in P4 box (not P2) jumps with racket up at 47.05-47.15, shuttle at racket ~47.15, then moves fast right/down across the far side 47.2-47.5
+1 | hit | 101.68 | near | P1 | drive | unsure:stroke | shuttle descends to P1's racket at waist height at 101.65 (cyan at racket), at 101.85 trail leaves P1 flat/up-left toward P4 on the far side

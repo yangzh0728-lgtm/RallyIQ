@@ -1,0 +1,2 @@
+# n | label | t | side | hitter | stroke | sure | reason
+0 | not_a_hit | 372.40 | - | - | - | unsure:hit | not play: P1 juggles the shuttle above his head 371.6-371.9, then taps it at ~372.0 low toward the near court where it falls to the floor ~372.4; P2 never reacts and walks away - looks like passing the shuttle between rallies

@@ -1,0 +1,123 @@
+# n | label | t | side | hitter | stroke | sure | reason
+0 | hit | 2.87 | far | P2 | unknown | unsure:stroke | rally start; shuttle beside P2 at 0, then rises and travels right toward P1 at +0.2/+0.4; serve type unclear (far player tiny)
+1 | hit | 3.42 | near | P1 | unknown | unsure:stroke | shuttle arrives at P1 at 0; P1 racket raised with shuttle at racket at +0.2; shuttle moving back left toward far side at +0.4
+2 | hit | 4.20 | far | P2 | lift | unsure:stroke | [fix by Claude after refine: one high arc from P2 at ~4.20 to P1 overhead at 5.5; contact at 4.20 seen on refine frames] at row time shuttle is mid-air moving left toward P2 (3.52-4.12); P2's return should follow ~4.1-4.2 but contact not visible
+3 | gap_hit | 4.77 | far | P2 | unknown | unsure:hit | 4.42 shuttle next to P1 (possible P1 touch), 4.77 detections at P2, 5.12 shuttle high descending to P1 who hits overhead at 5.47; exact exchange unclear
+4 | hit | 5.50 | near | P1 | unknown | unsure:stroke | P1 overhead swing at 0 with shuttle coming down, shuttle leaves at +0.2 and is already near P2 at +0.4 (fast, smash/drive-like)
+4 | missed_hit | 5.95 | far | P2 | unknown | unsure:hit | shuttle reaches P2 at 5.87 and next descends from P2's side to P1 at 6.66, so P2 returns ~5.9-6.0
+5 | hit | 6.92 | near | P1 | lift | unsure:stroke | shuttle descends from far side to P1's low racket at 0 (P1 crouched underhand), shuttle up high at +0.2/+0.4
+6 | not_a_hit | 7.44 | - | - | - | unsure:hit | P2 standing, not swinging; detections are a shuttle at the right edge by the neighbouring court; P2's return of #5 not visible
+7 | hit | 8.75 | near | P1 | push | unsure:stroke | shuttle descends at P1's raised racket at 0, at +0.2 already over toward P2 at net height moving left
+8 | unsure_hit | 9.10 | far | P2 | unknown | unsure:hit | shuttle reaches P2 at net height at -0.2/0 then drops vertically to the floor in front of P2; cannot tell if P2 touched it (rally ends)
+9 | not_a_hit | 9.48 | - | - | - | sure | shuttle falling vertically to the floor near P2 (end of rally); cyan at P1's head at +0.2 is a false detection
+10 | not_a_hit | 10.56 | - | - | - | unsure:hit | rally over: P1 upright with racket down, no swing; detections beside P1 belong to the lunging player on the neighbouring court
+11 | gap_none | 11.36 | - | - | - | sure | between rallies: P1 standing, P2 bends to pick up shuttle at 11.52; high detections are not our shuttle
+12 | not_a_hit | 12.16 | - | - | - | sure | P2 picks up the shuttle and tosses it, P1 relaxed: between rallies
+13 | not_a_hit | 12.51 | - | - | - | sure | P2 handling/tossing shuttle, P1 relaxed facing away
+14 | gap_none | 16.81 | - | - | - | sure | both players standing; detections at top/right are the neighbouring court
+15 | not_a_hit | 17.37 | - | - | - | sure | P1 standing, no swing; P2 picking shuttle near his feet
+16 | not_a_hit | 19.99 | - | - | - | sure | P1 walking with racket down; shuttle rising to the right away from him (neighbouring court/toss)
+17 | not_a_hit | 20.69 | - | - | - | sure | shuttle comes from the right (neighbouring court side) past P1 toward P2; nobody swings
+18 | not_a_hit | 21.12 | - | - | - | sure | same shuttle lands on the floor at +0.2, P2 bends to pick it up; between rallies
+19 | not_a_hit | 22.56 | - | - | - | sure | P2 holding/juggling shuttle at chest, P1 relaxed
+20 | not_a_hit | 22.86 | - | - | - | sure | P2 sends shuttle back to P1 with easy underhand flick between rallies; P1 not in stance
+21 | not_a_hit | 23.96 | - | - | - | sure | P1 catches the returned shuttle at his hand
+22 | hit | 27.20 | near | P1 | short_serve | unsure:stroke | serve: shuttle at P1's low racket at 0, rises toward far court at +0.2/+0.4; P2 returns 0.86 s later (short serve timing, looks high from low camera)
+23 | hit | 28.08 | far | P2 | lift | unsure:stroke | shuttle at P2 at 0, high at +0.2; comes down to P1's overhead ~1.4 s later
+24 | gap_none | 28.89 | - | - | - | sure | shuttle in high flight from P2 down to P1 overhead (29.05-29.38)
+25 | hit | 29.58 | near | P1 | smash | unsure:stroke | P1 overhead swing at -0.2 with shuttle at racket; at 0 shuttle already moving down toward P2 side
+26 | hit | 30.05 | far | P2 | block | unsure:hit | P2 tiny; detection near P2 29.8-30.4; P1 then rushes to the net and shuttle drops near the net at 30.8-31.0, so P2 played short here
+27 | hit | 31.00 | near | P1 | net_shot | unsure:stroke | P1 lunges, shuttle at racket near floor at 0, bumps up slightly at +0.2 and stays low (probably into net; rally ends 31.5)
+28 | gap_none | 33.47 | - | - | - | sure | P2 bouncing/tossing shuttle before serving, P1 walking
+29 | not_a_hit | 33.97 | - | - | - | sure | P2 tossing shuttle up/down at himself, P1 walking, not in receive stance
+30 | not_a_hit | 34.32 | - | - | - | sure | P2 holding shuttle at chest, P1 walking to position
+31 | gap_hit | 35.60 | far | P2 | unknown | unsure:hit | P2's serve not seen clearly; at 35.76 shuttle high near P1 and P1 returns at ~36.15
+32 | unsure_hit | 36.17 | near | P1 | unknown | unsure:hit | [fix by Claude: full frames 35.4-37.0 show the near player walking with racket down; detections may be the neighbouring court] shuttle comes down to P1's right at head height at 0, travels flat left toward P2 at +0.2/+0.4
+33 | unsure_hit | 36.80 | far | P2 | unknown | unsure:hit | [fix by Claude: full frames 35.4-37.0 show the near player walking with racket down; detections may be the neighbouring court] shuttle at P2's racket at 0, flat toward P1 at +0.2/+0.4
+34 | hit | 37.40 | near | P1 | unknown | unsure:hit | shuttle reaches P1 at head height at -0.2; swing not clearly seen; P2 hits next at 38.8 so P1 must have returned
+35 | hit | 38.80 | far | P2 | lift | unsure:stroke | shuttle at P2's racket at 0, rises toward P1 at +0.2/+0.4
+36 | hit | 39.95 | near | P1 | lift | unsure:stroke | shuttle comes down at P1's right while he is low at -0.2/0, rises to the upper left at +0.2/+0.4
+37 | gap_none | 41.17 | - | - | - | sure | P1's shot lands near P2 (dot on floor at 40.91), players relax, P2 picks up shuttle at 41.93
+38 | not_a_hit | 42.44 | - | - | - | sure | P2 bending to pick up shuttle, P1 walking
+39 | not_a_hit | 43.91 | - | - | - | sure | P1 walking; detections at the right are the neighbouring court
+40 | gap_none | 44.85 | - | - | - | sure | P1 standing relaxed; trails at top right belong to the neighbouring court
+41 | not_a_hit | 45.80 | - | - | - | sure | P1 standing relaxed; detections at the neighbouring court
+42 | gap_none | 46.66 | - | - | - | sure | P1 standing relaxed; detections near ceiling/neighbour
+43 | not_a_hit | 47.53 | - | - | - | sure | both players standing, no swing
+44 | gap_none | 48.67 | - | - | - | sure | players walking then taking ready stance at 48.9-49.4; no contact seen
+45 | not_a_hit | 49.82 | - | - | - | unsure:hit | P1 walking/turning, no swing; detections at right edge (neighbour)
+46 | not_a_hit | 50.63 | - | - | - | unsure:hit | P1 standing upright, detections at his head/right side, no swing
+47 | not_a_hit | 51.04 | - | - | - | unsure:hit | players standing; scattered low detections across the court, no swing
+48 | not_a_hit | 52.24 | - | - | - | sure | shuttle low by the floor beside P1, P1 relaxed
+49 | not_a_hit | 55.64 | - | - | - | unsure:hit | P2 and P1 standing; shuttle mid-court near a person on the adjacent court moving toward P1; P2 not swinging
+50 | unsure_hit | 56.55 | near | P1 | unknown | unsure:hit | shuttle comes down to P1's right shoulder and rises up-left afterwards, but P1 looks upright with no clear swing
+51 | gap_hit | 58.30 | far | P2 | unknown | unsure:hit | P2 appears to swing/lunge at 58.29-58.89; shuttle later comes down to P1 at 59.3-59.5
+52 | hit | 59.55 | near | P1 | unknown | unsure:stroke | shuttle descends to P1's right at chest height at 0, rises up-left at +0.2/+0.4 as P1 moves
+53 | gap_none | 60.29 | - | - | - | unsure:hit | shuttle in a high arc 59.8-60.8, then falls in front of P1 (#54)
+54 | hit | 61.15 | near | P1 | lift | unsure:stroke | shuttle falls in front of P1 near the net at 0, rises at +0.2/+0.4 as P1 lunges
+55 | unsure_hit | 61.84 | far | P2 | unknown | unsure:hit | P1 then lunges deep to the net; detections at top right are next to a neighbouring-court player smashing; P2 contact not visible
+56 | hit | 62.30 | near | P1 | net_shot | unsure:stroke | P1 in deep lunge with racket at the floor at -0.2/0; shuttle not seen at racket, next appears near P2
+57 | hit | 63.10 | far | P2 | net_shot | unsure:stroke | shuttle near P2 at net height at -0.2/0; P1 then lunges to the net
+58 | hit | 64.30 | near | P1 | lift | sure | P1 lunges at the net, shuttle at its lowest at 0, rises vertically at +0.2/+0.4
+59 | hit | 65.65 | far | P2 | smash | unsure:stroke | shuttle comes down to P2 high at -0.2/0, then travels fast to P1's head height by +0.4
+60 | hit | 66.12 | near | P1 | drive | unsure:stroke | shuttle at P1's right at head height at 0, moves left fast toward P2 by +0.4
+61 | hit | 66.85 | far | P2 | lift | sure | shuttle at P2 at 0, rising at +0.2/+0.4
+62 | hit | 67.80 | near | P1 | smash | unsure:stroke | P1 overhead, shuttle descends into racket at 0, flat and fast toward P2 at +0.2/+0.4
+63 | hit | 68.65 | far | P2 | net_shot | unsure:stroke | shuttle descends to P2's racket at 0, travels low toward P1 at +0.2/+0.4; P1 lifts from low next
+64 | hit | 69.65 | near | P1 | lift | sure | shuttle descends to P1's low racket at 0, high at +0.4
+65 | hit | 70.45 | far | P2 | unknown | unsure:stroke | P2 arm extended at -0.2, shuttle travels from P2's side into the net tape at 0/+0.2 and drops at +0.4 (rally ends)
+66 | gap_none | 71.56 | - | - | - | sure | shuttle falls from the net to the floor (70.98-71.75); rally over
+67 | not_a_hit | 72.51 | - | - | - | sure | P2 picks up/holds shuttle between rallies
+68 | not_a_hit | 73.52 | - | - | - | sure | P2 pushes shuttle along the floor toward P1 between rallies
+69 | hit | 78.48 | near | P1 | long_serve | sure | serve contact at P1's waist at 0, shuttle rising high at +0.2/+0.4, arm follow-through high
+70 | hit | 79.88 | far | P2 | smash | unsure:stroke | shuttle descends to P2 at 0, P2 in overhead pose ~79.8, shuttle at P1 by 80.13
+71 | hit | 80.25 | near | P1 | lift | unsure:stroke | shuttle reaches P1 at +0.2 and rises up-left at +0.4
+72 | hit | 81.25 | far | P2 | net_shot | unsure:stroke | shuttle descends to P2's low racket (lunge) at 0, rises at +0.2 and drops near the net; P1 rushes in
+73 | hit | 82.30 | near | P1 | lift | unsure:stroke | shuttle falls near the net at 0, rises high at +0.2 while P1 lunges with racket extended
+74 | gap_hit | 83.10 | far | P2 | unknown | unsure:hit | P1's lift high to P2 (82.64), P2 lunging at 83.05, P1 then runs forward to lift at 84.3
+75 | hit | 84.32 | near | P1 | lift | sure | shuttle descends to P1's racket at 0, high at +0.2
+76 | hit | 85.42 | far | P2 | lift | unsure:stroke | shuttle at P2's low racket at 0, high over P1 heading deep at +0.2/+0.4; P1 does not play it
+77 | not_a_hit | 86.49 | - | - | - | sure | P1 standing, no swing; detections at his head and at the neighbouring court
+78 | not_a_hit | 86.77 | - | - | - | sure | P1 turning toward the shuttle, P2 upright; rally over
+79 | not_a_hit | 87.29 | - | - | - | unsure:hit | P1 bending to pick up the shuttle with his racket
+80 | not_a_hit | 88.20 | - | - | - | sure | P1 scoops up the shuttle and sends it back to P2 between rallies
+81 | gap_none | 89.07 | - | - | - | sure | shuttle sent back to P2 between rallies (88.55-89.59)
+82 | not_a_hit | 89.94 | - | - | - | sure | P2 catches the returned shuttle; P1 walking
+83 | hit | 95.00 | near | P1 | unknown | unsure:hit | rally start; P1 arm raised high with racket by the detection at -0.2, shuttle moving away at 0; posture unlike a short serve
+84 | unsure_hit | 95.53 | far | P2 | unknown | unsure:hit | P2 receives around here but is tiny; detections only around P1
+85 | not_a_hit | 96.70 | - | - | - | sure | P1 preparing an overhead; contact at ~97.2 (#86)
+86 | hit | 97.20 | near | P1 | clear | unsure:stroke | P1 overhead swing at 0/+0.2, shuttle high moving left at +0.2/+0.4
+87 | not_a_hit | 98.13 | - | - | - | sure | shuttle in flight to P2, P2 not yet hitting
+88 | unsure_hit | 98.80 | far | P2 | lift | unsure:hit | P2 crouched low with shuttle at knee height at 0; no clear trajectory afterwards
+89 | not_a_hit | 103.39 | - | - | - | sure | P1 bouncing shuttle on racket while waiting
+90 | gap_none | 104.30 | - | - | - | sure | P1 juggling/picking up shuttle, P2 standing
+91 | not_a_hit | 105.22 | - | - | - | sure | P1 walking, shuttle passed around between rallies
+92 | not_a_hit | 106.04 | - | - | - | sure | P2 juggling shuttle, P1 walking
+93 | not_a_hit | 106.52 | - | - | - | sure | P2 juggling shuttle, P1 walking
+94 | not_a_hit | 106.86 | - | - | - | sure | P2 dropping/juggling shuttle, P1 walking
+95 | not_a_hit | 107.21 | - | - | - | sure | P2 lets shuttle drop to the floor, P1 standing
+96 | not_a_hit | 110.56 | - | - | - | unsure:hit | P1 in serve stance, shuttle not yet struck (detections at his head are false); serve at ~111.1 (#97)
+97 | hit | 111.12 | near | P1 | short_serve | unsure:stroke | P2 in receive stance; shuttle leaves P1 low and flat toward the net at +0.2/+0.4
+98 | hit | 111.63 | far | P2 | push | unsure:stroke | shuttle at P2's extended racket at 0; arcs back to P1 by ~112.7
+99 | not_a_hit | 112.16 | - | - | - | unsure:hit | P1 moving; shuttle still arcing toward him (descends at +0.2/+0.4); detections at P1's right are the neighbour
+100 | hit | 112.75 | near | P1 | lift | unsure:stroke | shuttle descends to P1's racket at 0, high moving left at +0.2/+0.4
+101 | hit | 113.95 | near | P1 | unknown | unsure:stroke | shuttle comes down at P1's right at +0.2 and rises at +0.4
+101 | missed_hit | 113.60 | far | P2 | unknown | unsure:hit | P2 arm raised at -0.2/0 with shuttle high on his side after P1's lift; back at P1 by 113.9
+102 | not_a_hit | 117.65 | - | - | - | sure | P1 picks shuttle off the floor and tosses it
+103 | gap_none | 119.96 | - | - | - | sure | P1 and P2 standing relaxed; trails at top right are the neighbouring court
+104 | not_a_hit | 120.59 | - | - | - | sure | P1 standing relaxed with racket down, no swing; detections near him / neighbouring court
+105 | hit | 123.20 | near | P1 | short_serve | unsure:stroke | serve from P1, shuttle rises toward far side at +0.2/+0.4; P2 returns 0.7 s later
+106 | hit | 123.90 | far | P2 | lift | unsure:stroke | detections at P2 at 0, rising high at +0.2; P1 then plays overhead
+107 | not_a_hit | 124.47 | - | - | - | sure | P1 preparing overhead; contact at ~125.25 (#108)
+108 | hit | 125.25 | near | P1 | clear | unsure:stroke | P1 overhead swing at -0.2/0, shuttle high moving toward P2 at +0.2/+0.4
+109 | hit | 126.20 | far | P2 | drop | unsure:stroke | shuttle at P2's head height at 0, descends toward the net at +0.2/+0.4 while P1 lunges forward
+110 | hit | 126.75 | near | P1 | lift | sure | shuttle descends to P1's extended racket at 0 (lunge), high at +0.2
+111 | not_a_hit | 127.04 | - | - | - | sure | shuttle rising from P1's lift, P2 not yet hitting; later detections at right are the neighbour
+112 | hit | 128.70 | near | P1 | unknown | unsure:stroke | P1 arms up at +0.2 and overhead swing at +0.4 (contact ~128.7); P2's return before this not visible
+113 | hit | 129.65 | far | P2 | smash | unsure:stroke | shuttle descends to P2 at -0.2/0, flat/down toward P1 at +0.2
+114 | gap_none | 155.90 | - | - | - | sure | no play on our court; a person stands near the camera
+115 | not_a_hit | 157.61 | - | - | - | sure | spectator near camera gesturing; no play
+116 | not_a_hit | 157.94 | - | - | - | sure | spectator near camera; no play
+117 | not_a_hit | 161.33 | - | - | - | sure | players on side/other court, nobody hitting on our court
+118 | gap_none | 165.84 | - | - | - | sure | no rally on our court; only other courts active
+119 | not_a_hit | 169.07 | - | - | - | sure | detections from other courts; no play on our court

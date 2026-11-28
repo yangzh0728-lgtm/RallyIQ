@@ -1,0 +1,2 @@
+# n | label | t | side | hitter | stroke | sure | reason
+0 | hit | 217.45 | far | P1 | lift | unsure:stroke | shuttle at P1's racket at 217.40 (estimate -0.1), gone by 217.50 rising toward P2; trail at 217.6-217.8 leaves P1's racket upward toward near court; P2 had just served (follow-through pose at 217.2)
