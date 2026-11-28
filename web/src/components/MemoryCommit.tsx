@@ -12,7 +12,16 @@ export function MemoryCommit({ videoId, playerIds }: { videoId: string; playerId
   useEffect(() => {
     api.getPeople(videoId).then(setA, (e: Error) => setMsg({ ok: false, text: e.message }));
   }, [videoId]);
-  if (!a) return null;
+  if (!a)
+    return (
+      <section className="card memory-card">
+        <div className="card-head">
+          <Icon name="database" className="head-icon" />
+          <h2>写入个人档案</h2>
+        </div>
+        {msg ? <div className="notice bad">读取球员名单失败：{msg.text}</div> : <p className="section-intro">正在读取球员名单…</p>}
+      </section>
+    );
 
   const setName = (pid: PlayerId, name: string) => setA({ ...a, people: { ...a.people, [pid]: name } });
   const named = playerIds.filter((p) => (a.people[p] ?? "").trim());

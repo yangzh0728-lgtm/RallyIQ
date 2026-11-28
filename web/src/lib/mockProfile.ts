@@ -7,6 +7,7 @@
 // change sentences and the retest rows cannot disagree with each other.
 //
 // Everything here is a pure function of ``now`` (ms since epoch).
+import { generateMock } from "./mock";
 import type {
   Distribution,
   Habit,
@@ -20,13 +21,15 @@ import type {
   ProfileMetric,
   ProfileVideo,
   RetestResult,
+  ShotEvent,
+  ShotType,
   Status,
 } from "./types";
 
 export const DEMO_SELF = "我";
 export const DEMO_OPPONENT = "小林";
 /** First line of every demo profile and opponent report. */
-export const DEMO_NOTICE = "演示数据：以下档案为合成示例，连接后端后会换成你确认过的真实比赛";
+const DEMO_NOTICE = "演示数据：以下档案为合成示例，连接后端后会换成你确认过的真实比赛";
 
 // Thresholds of rallyiq/memory/profile.py.
 const FLAT_REL = 0.1;
@@ -404,13 +407,27 @@ function habit(condition: string, outcome: string, hits: number, n: number, evid
 }
 
 /**
- * Evidence points at the opponent's (P2) own shots in the demo singles clip, so every timecode opens a
- * real moment of the 75 s video and the stroke shown there is the one the habit names.
+ * Evidence is picked from the opponent's (P2) own shots in the demo singles clip by stroke type, so every
+ * timecode opens a real moment of the 75 s video and the stroke shown there is the one the habit names.
  */
-const shot = (n: number, t_ms: number): HabitEvidence => ({ video_id: "demo", shot_id: `s${String(n).padStart(4, "0")}`, t_ms });
+function demoEvidence() {
+  const all = generateMock("demo").events.shots;
+  const typed = all.filter((s) => s.hitter === "P2" && s.shot_type);
+  const pick = (keep: (s: ShotEvent, prev: ShotEvent | undefined) => boolean): HabitEvidence[] =>
+    typed
+      .filter((s) => keep(s, all[all.indexOf(s) - 1]))
+      .slice(0, 5)
+      .map((s) => ({ video_id: "demo", shot_id: s.shot_id, t_ms: s.t_ms }));
+  const is = (...types: ShotType[]) => (s: ShotEvent) => !!s.shot_type && types.includes(s.shot_type);
+  /** The opponent's replies to one of our strokes in the same rally, split by whether they were ``reply``. */
+  const after = (ours: ShotType, reply: ShotType, same: boolean) =>
+    pick((s, prev) => !!prev && prev.rally_id === s.rally_id && prev.hitter === "P1" && prev.shot_type === ours && (s.shot_type === reply) === same);
+  return { pick, is, after };
+}
 
 export function demoOpponentReport(now: number): OpponentReport {
   const events = opponentEvents(now);
+  const { pick, is, after } = demoEvidence();
   const typeCounts: Record<string, number> = {
     杀球: 82, 挑球: 49, 放网: 44, 高远球: 41, 吊球: 35, 发网前球: 31, 平抽: 22, 推球: 19, 勾对角: 12, 发后场球: 9, 扑球: 8,
   };
@@ -430,13 +447,13 @@ export function demoOpponentReport(now: number): OpponentReport {
     typed_shots: typed,
     distributions,
     habits: [
-      habit("发球时", "发网前球", typeCounts["发网前球"], typeCounts["发网前球"] + typeCounts["发后场球"], [shot(17, 32_900)], []),
-      habit("在后场击球时", "杀球", 76, 152, [shot(13, 22_300), shot(15, 24_633), shot(19, 35_500), shot(30, 56_100), shot(35, 67_267)], [shot(24, 48_800)]),
-      habit("在前场击球时", "挑球", 49, 116, [shot(10, 18_000), shot(18, 34_133), shot(28, 53_733), shot(34, 65_233)], [shot(4, 5_100), shot(6, 7_300), shot(22, 46_333)]),
+      habit("发球时", "发网前球", typeCounts["发网前球"], typeCounts["发网前球"] + typeCounts["发后场球"], pick(is("short_serve")), pick(is("long_serve"))),
+      habit("在后场击球时", "杀球", 76, 152, pick(is("smash")), pick(is("clear", "drop"))),
+      habit("在前场击球时", "挑球", 49, 116, pick(is("lift")), pick(is("net_shot", "cross_net", "net_kill"))),
     ],
     next_shot: [
-      habit("我方发网前球之后", "挑球", 21, 33, [shot(10, 18_000), shot(34, 65_233)], [shot(2, 2_833)]),
-      habit("我方推球之后", "挑球", 5, 11, [shot(28, 53_733)], [shot(6, 7_300), shot(39, 72_233)]),
+      habit("我方发网前球之后", "挑球", 21, 33, after("short_serve", "lift", true), after("short_serve", "lift", false)),
+      habit("我方推球之后", "挑球", 5, 11, after("push", "lift", true), after("push", "lift", false)),
     ],
     caveats: [
       `${DEMO_NOTICE}。视频证据都指向示例单打里这位对手（P2）的击球。`,

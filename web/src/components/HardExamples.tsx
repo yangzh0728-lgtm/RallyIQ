@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import type { ConditionGroup, HardExampleSummary } from "../lib/types";
+import type { HardExampleSummary } from "../lib/types";
 import { Empty, Icon } from "./ui";
 
 const CONDITION_ZH: Record<string, string> = {
@@ -12,7 +12,6 @@ const VALUE_ZH: Record<string, string> = {
 };
 const MODULE_ZH: Record<string, string> = { hits: "击球", rallies: "回合", players: "球员", strokes: "类型" };
 
-export const groupLabel = (g: ConditionGroup) => `${CONDITION_ZH[g.condition] ?? g.condition}：${VALUE_ZH[g.value] ?? g.value}`;
 
 /** Corrections marked "记为难例", grouped by the conditions they happened under (README: 每周挑出最弱的场景). */
 export function HardExamples() {
@@ -24,7 +23,6 @@ export function HardExamples() {
   const url = api.hardExamplesUrl();
   const hasData = !error && !!s && s.total > 0;
   // Bars compare the listed conditions with each other; the percentage beside them is the real rate.
-  const maxRate = s ? Math.max(0, ...s.weakest.map((g) => g.hit_error_rate ?? 0)) : 0;
   return (
     <section className="card hard-card">
       <div className="card-head">
@@ -108,7 +106,7 @@ export function HardExamples() {
                               <div className="pbar">
                                 <span className="rate mono">{(g.hit_error_rate * 100).toFixed(1)}%</span>
                                 <div className="bar">
-                                  <i style={{ width: `${maxRate > 0 ? (g.hit_error_rate / maxRate) * 100 : 0}%` }} />
+                                  <i style={{ width: `${Math.min(1, g.hit_error_rate) * 100}%` }} />
                                 </div>
                               </div>
                             )}

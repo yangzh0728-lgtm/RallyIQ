@@ -62,7 +62,7 @@ export function JobBadge({ job: initial, onDone }: { job: Job | null; onDone?: (
   return (
     <div className="job-badge" title={job.error ?? undefined}>
       <div className="job-line">
-        <span className={`pill mono ${JOB_PILL[job.state] ?? ""}`}>{`${JOB_LABEL[job.state] ?? job.state}${job.state === "running" ? ` · ${pct}%` : ""}`}</span>
+        <span className={`pill mono ${JOB_PILL[job.state] ?? ""}`}>{`${JOB_LABEL[job.state] ?? job.state}${job.state === "running" || ((job.state === "failed" || job.state === "cancelled") && pct > 0) ? ` · ${pct}%` : ""}`}</span>
         {note && <span className="muted small ellipsis">{note}</span>}
       </div>
       {active && (

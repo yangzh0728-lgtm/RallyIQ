@@ -458,7 +458,7 @@ export const api: Api = useMock ? createMockApi() : liveApi;
  */
 function mockMemory(): Pick<Api, "getPeople" | "setPeople" | "commitMemory" | "withdrawMemory" | "listPeople" | "getProfile" | "getOpponent"> {
   const people = new Map<string, PeopleAssignment>();
-  const unavailable = () => Promise.reject(new Error("演示模式没有个人档案：连接后端后，确认过的比赛才会写入只追加的档案日志"));
+  const unavailable = () => Promise.reject(new Error("演示模式不能写入档案（档案页里的是合成示例）：连接后端后，确认过的比赛才会写入只追加的档案日志"));
   // One clock for the session, so the demo dates do not move between calls.
   const now = Date.now();
   const later = <T,>(v: T) => new Promise<T>((resolve) => setTimeout(() => resolve(v), 100));

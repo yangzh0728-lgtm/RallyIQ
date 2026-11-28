@@ -1,7 +1,7 @@
-import { useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { PlaybackClock } from "../lib/clock";
 import { formatMs } from "../lib/corrections";
-import { useClockMs, useClockPlaying } from "../lib/useClock";
+import { useClockMs, useClockPlaying, useClockRate } from "../lib/useClock";
 import { colorOf } from "../lib/players";
 import { SHOT_TYPE_COLOR, SHOT_TYPE_ZH, typeLabel } from "../lib/strokes";
 import type { Rally, ShotEvent } from "../lib/types";
@@ -54,11 +54,7 @@ function rulerTicks(v0: number, v1: number): { major: { ms: number; label: strin
 export function Timeline(p: Props) {
   const t = useClockMs(p.clock);
   const playing = useClockPlaying(p.clock);
-  // The clock emits on setRate, so the speed switch follows it (including rate changes made elsewhere).
-  const rate = useSyncExternalStore(
-    (cb) => p.clock.subscribe(cb),
-    () => p.clock.rate,
-  );
+  const rate = useClockRate(p.clock);
   const [zoomRally, setZoomRally] = useState(false);
   const sel = p.rallies.find((r) => r.rally_id === p.selectedRallyId);
   const zoomed = zoomRally && !!sel;

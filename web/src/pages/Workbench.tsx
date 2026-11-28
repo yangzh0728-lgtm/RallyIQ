@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CorrectionPanel, StatusPill } from "../components/CorrectionPanel";
 import { HeatmapPanel } from "../components/HeatmapPanel";
 import { JobDetail, useJob } from "../components/JobProgress";
@@ -265,12 +265,35 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
   );
   const [showKeys, setShowKeys] = useState(false);
 
+  // The button that holds focus because it was clicked, as opposed to reached with Tab (see the Space shortcut).
+  const clickedButton = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      clickedButton.current = e.target instanceof Element ? e.target.closest("button") : null;
+    };
+    const onFocus = (e: FocusEvent) => {
+      if (e.target !== clickedButton.current) clickedButton.current = null;
+    };
+    window.addEventListener("mousedown", onDown, true);
+    window.addEventListener("focusin", onFocus);
+    return () => {
+      window.removeEventListener("mousedown", onDown, true);
+      window.removeEventListener("focusin", onFocus);
+    };
+  }, []);
+
   // Keyboard shortcuts.
   useEffect(() => {
     if (!clock || !events) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === " " && e.target instanceof HTMLButtonElement) {
+        // Reached with the keyboard: Space activates the focused button, as usual.
+        if (e.target !== clickedButton.current) return;
+        // Left focused by a mouse click: Space is play / pause, and must not click the button again on key-up.
+        e.target.blur();
+      }
       const t = clock.ms;
       const frameMs = 1000 / fps;
       const shotNear = (dir: 1 | -1) => (dir > 0 ? events.shots.find((x) => x.t_ms > t + 1) : [...events.shots].reverse().find((x) => x.t_ms < t - 1));
@@ -561,10 +584,11 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
               </button>
             </div>
             <div className="divider" />
-            <a className="btn block" href={reportHref} title="回合、跑动、覆盖、得失分统计和 AI 教练点评（基于修正后的数据）">
+            <a className="btn block" href={reportHref}>
               <Icon name="report" />
               查看赛后报告
             </a>
+            <p className="hint report-hint">回合、跑动、覆盖、得失分统计和 AI 教练点评（基于修正后的数据）。</p>
           </div>
         </aside>
 
@@ -617,7 +641,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
           <Icon name="keyboard" className="lg" />
           <h2>快捷键</h2>
           <span className="spacer" />
-          <button className="ghost small" onClick={onClose}>
+          <button className="ghost small" autoFocus onClick={onClose}>
             关闭
             <kbd>Esc</kbd>
           </button>

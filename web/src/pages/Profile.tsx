@@ -118,7 +118,7 @@ export function Profile({ person }: { person: string | null }) {
   );
 
   return (
-    <Page className="wide profile" header={<PageHeader crumbs={[{ label: "工作区" }]} title={person ? `${person} 的档案` : "我的档案"} actions={switcher || undefined} />}>
+    <Page className="wide profile" header={<PageHeader crumbs={[{ label: "比赛库", href: "#/" }]} title={person ? `${person} 的档案` : "我的档案"} actions={switcher || undefined} />}>
       {error ? (
         <section className="card">
           <Empty icon="user" title="档案加载失败">
@@ -459,7 +459,10 @@ function TrendCell({ m, d }: { m: ProfileMetric; d: number }) {
 
 function MetricCard({ profile }: { profile: PlayerProfile }) {
   const { videos, metrics } = profile;
-  const dates = videos.map((v) => shortDate(v.recorded_at));
+  // Month / day is enough while every match is from this year; otherwise the year has to be shown.
+  const years = new Set(videos.filter((v) => valid(v.recorded_at)).map((v) => new Date(v.recorded_at).getFullYear()));
+  const withYear = years.size > 1 || (years.size === 1 && !years.has(new Date().getFullYear()));
+  const dates = videos.map((v) => shortDate(v.recorded_at, withYear));
   // With many matches the table is wider than the card: start at the newest matches and the trend columns.
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -478,7 +481,7 @@ function MetricCard({ profile }: { profile: PlayerProfile }) {
             <tr>
               <th>指标</th>
               {videos.map((v, i) => (
-                <th key={v.video_id} className="num mono" title={v.filename ?? v.video_id}>
+                <th key={v.video_id} className="num mono" title={`${fullDate(v.recorded_at)} · ${v.filename ?? v.video_id}`}>
                   {dates[i]}
                   {dates.indexOf(dates[i]) !== dates.lastIndexOf(dates[i]) && <div className="th-time">{clock(v.recorded_at)}</div>}
                 </th>

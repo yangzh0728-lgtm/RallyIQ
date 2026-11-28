@@ -326,7 +326,7 @@ export function Home() {
               原因见上方的提示，后端恢复后刷新页面即可。
             </Empty>
           ) : (
-            <div className="video-list" aria-busy="true" aria-label="加载中…">
+            <div className="video-list" role="status" aria-busy="true" aria-label="正在加载视频列表">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="video-row skeleton">
                   <span className="skel thumb" />

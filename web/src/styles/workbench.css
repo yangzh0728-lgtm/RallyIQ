@@ -34,6 +34,7 @@
 .export-list button { justify-content: flex-start; gap: 10px; }
 .export-list .fmt { min-width: 38px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-2); text-align: left; }
 .export-list .what { font-weight: 400; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+.panel .report-hint { margin-top: 8px; }
 
 /* transport + timeline */
 .tl-wrap { display: grid; gap: 4px; }

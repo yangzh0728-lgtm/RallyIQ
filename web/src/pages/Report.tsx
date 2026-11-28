@@ -241,6 +241,7 @@ export function Report({ videoId }: { videoId: string }) {
 
   const hasStyles = (report?.stats.styles?.length ?? 0) > 0;
   const hasTeams = layout.teamPlans.length > 0;
+  const hasPlayers = layout.playerPlans.length > 0;
   const hasCompare = !!report && compareRows(report.stats.players).length > 0;
   const hasRallies = (report?.stats.rallies?.length ?? 0) > 0;
   const tabs = useMemo(
@@ -253,10 +254,10 @@ export function Report({ videoId }: { videoId: string }) {
         { id: "sec-compare", label: "双方对比", show: hasCompare },
         { id: "sec-rallies", label: "逐回合", show: hasRallies },
         { id: "sec-teams", label: "队伍数据", show: hasTeams },
-        { id: "sec-players", label: "球员数据", show: true },
+        { id: "sec-players", label: "球员数据", show: hasPlayers },
         { id: "sec-profile", label: "写入档案", show: true },
       ].filter((t) => t.show),
-    [hasStyles, hasCompare, hasRallies, hasTeams],
+    [hasStyles, hasCompare, hasRallies, hasTeams, hasPlayers],
   );
   const [activeTab, goTab] = useSectionNav(
     tabs.map((t) => t.id),
@@ -553,7 +554,9 @@ export function Report({ videoId }: { videoId: string }) {
       {hasTeams && (
         <SubjectSection id="sec-teams" title="队伍数据" hint="两人的站位、轮转、分工和打法特征" plans={layout.teamPlans} tab={teamTab} onTab={setTeamTab} focus={focusKey} />
       )}
-      <SubjectSection id="sec-players" title="球员数据" hint="每位球员的指标与分布" plans={layout.playerPlans} tab={playerTab} onTab={setPlayerTab} focus={focusKey} />
+      {hasPlayers && (
+        <SubjectSection id="sec-players" title="球员数据" hint="每位球员的指标与分布" plans={layout.playerPlans} tab={playerTab} onTab={setPlayerTab} focus={focusKey} />
+      )}
 
       <div id="sec-profile">
         <MemoryCommit videoId={videoId} playerIds={stats.players.map((p) => p.player_id)} />
