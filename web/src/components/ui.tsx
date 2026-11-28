@@ -68,9 +68,9 @@ export function Icon({ name, className = "", style }: { name: IconName; classNam
 export function BrandMark() {
   return (
     <span className="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6.5 17.5 13 5M6.5 17.5 19 11M6.5 17.5l10-11" />
-        <circle cx="6" cy="18" r="2.6" fill="currentColor" stroke="none" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8.6 12.9 11.6 3.6C15.4 4.4 19.6 8.6 20.4 12.4L11.1 15.4M9.8 14.2 16.8 7.2" />
+        <circle cx="7.2" cy="16.8" r="3.4" fill="currentColor" stroke="none" />
       </svg>
     </span>
   );

@@ -1,1 +1,57 @@
 /* Page-specific styles for workbench; shared tokens and components live in ../styles.css. */
+
+.wb-loading { color: var(--muted); text-align: center; padding: 40px 20px; }
+.wb .panel-head > .icon { color: var(--muted); }
+.wb .panel-head .pill { height: 18px; padding: 0 7px; }
+.wb .kv > .muted { font-size: 12px; }
+
+/* left column */
+.wb-tools { display: grid; gap: 8px; }
+.wb-tools .hint, .panel .hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.quality .kv { min-height: 24px; }
+.seg.scope { display: flex; margin-bottom: 10px; }
+.seg.scope > button { flex: 1; justify-content: center; }
+.panel-foot { display: grid; gap: 2px; margin-top: 10px; }
+.latest-shot { margin-bottom: 8px; }
+.stroke-player { margin-bottom: 10px; }
+.stroke-player b { font-weight: 600; }
+.evidence-rows { display: grid; margin-top: 4px; }
+.evidence-rows .kv { min-height: 22px; }
+
+/* stage toolbar */
+.stage-bar .range-value { min-width: 34px; text-align: right; color: var(--text-2); }
+.stage-bar .toggle:disabled { opacity: 0.4; }
+.legend-line { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--shuttle); }
+.legend-line.dashed { border-top-style: dashed; opacity: 0.7; }
+
+/* right column */
+.btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.panel .kv + .btn-row { margin-top: 8px; }
+.shot-empty { padding: 4px 6px; }
+.shot-edit .seg > button:disabled { opacity: 1; cursor: default; }
+.stroke-box select.grow { flex: 1; min-width: 0; }
+.export-list { display: grid; gap: 6px; }
+.export-list button { justify-content: flex-start; gap: 10px; }
+.export-list .fmt { min-width: 38px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-2); text-align: left; }
+.export-list .what { font-weight: 400; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+
+/* transport + timeline */
+.tl-wrap { display: grid; gap: 4px; }
+.step-btns { display: inline-flex; }
+.step-btns button:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+.step-btns button:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; margin-left: -1px; }
+.tl { display: grid; grid-template-columns: 34px minmax(0, 1fr); row-gap: 2px; }
+.tl-ruler i { position: absolute; bottom: 2px; width: 1px; height: 4px; background: var(--line-strong); }
+.tl-lanes { display: grid; grid-template-rows: 34px 32px; align-items: center; font-size: 11px; color: var(--muted); user-select: none; }
+.tl.zoomed .timeline { height: 76px; }
+.tl.zoomed .tl-lanes { grid-template-rows: 34px 42px; }
+
+/* shortcut help */
+.keys-modal table td { padding: 9px 4px; }
+.keys-modal .keys-cell { white-space: nowrap; width: 132px; }
+.keys-modal .card-head { margin-bottom: 6px; }
+.keys-modal button kbd { margin-left: 2px; }
+
+/* The second divider sits before the opacity slider; when the bar wraps it would start a line, so drop it. */
+.stage-bar .toggle ~ .sep { display: none; }
+.stage-bar label.range { margin-left: 6px; }

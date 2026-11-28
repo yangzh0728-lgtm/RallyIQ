@@ -22,14 +22,18 @@ export function MiniMap({ overlay, clock }: { overlay: OverlayData; clock: Playb
   }
   return (
     <div className="panel">
-      <h3>球场小地图</h3>
+      <div className="panel-head">
+        <h3>球场小地图</h3>
+        <span className="spacer" />
+        <span className="muted small">实时站位 · 近 2 秒轨迹</span>
+      </div>
       <CourtView height={220}>
         {[...trails].map(([id, d]) => (
           <path key={id} d={d} fill="none" stroke={colorOf(id)} strokeWidth={0.06} opacity={0.6} />
         ))}
         {frame?.players.map((p, i) =>
           p.foot_court ? (
-            <circle key={p.player_id ?? i} cx={p.foot_court[0]} cy={p.foot_court[1]} r={0.22} fill={colorOf(p.player_id)} stroke="#000" strokeWidth={0.04} opacity={p.interpolated ? 0.5 : 1} />
+            <circle key={p.player_id ?? i} cx={p.foot_court[0]} cy={p.foot_court[1]} r={0.22} fill={colorOf(p.player_id)} stroke="rgba(0,0,0,0.7)" strokeWidth={0.05} opacity={p.interpolated ? 0.5 : 1} />
           ) : null,
         )}
       </CourtView>

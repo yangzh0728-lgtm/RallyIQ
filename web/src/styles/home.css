@@ -1,1 +1,133 @@
-/* Page-specific styles for home; shared tokens and components live in ../styles.css. */
+/* Page-specific styles for home; shared tokens and components live in ../styles.css.
+ * Also holds the small extras of the pieces that belong to this page group:
+ * job progress (badge + detail card), the hard-examples card and the sign-in screen.
+ */
+
+/* ------------------------------------------------------------------ shared extras */
+/* Scoped to this page group so nothing leaks into the other pages. */
+.upload-msgs .notice > .icon, .job-card .notice > .icon, .auth-card .notice > .icon { margin-top: 1px; }
+
+/* ------------------------------------------------------------------ library: upload card */
+.upload-card { gap: 20px 28px; }
+.upload-main { display: flex; flex-direction: column; min-width: 0; }
+.upload-main .dropzone { flex: 1; min-height: 196px; }
+.dropzone:focus-visible { outline: none; border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dropzone.busy { cursor: progress; }
+.dropzone .formats { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 8px; }
+.dropzone .formats .chip { background: transparent; color: var(--muted); border-color: var(--line-strong); }
+.upload-progress { width: 100%; max-width: 420px; display: grid; gap: 8px; text-align: left; }
+.upload-progress b { font-size: 13px; }
+.upload-progress .pct { font-weight: 600; }
+.upload-progress .bar { height: 6px; }
+
+.upload-flow { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding-left: 28px; border-left: 1px solid var(--line); }
+.upload-flow .eyebrow { line-height: 22px; }
+.upload-flow .pipeline { flex: 1; align-content: space-between; }
+.pipeline .step b { display: flex; align-items: baseline; gap: 6px; }
+.pipeline .idx { font-style: normal; font-size: 11px; font-weight: 600; color: var(--muted); }
+.pipeline .step > div:last-child { min-width: 0; padding-top: 1px; }
+.pipeline span { display: block; line-height: 1.45; }
+
+.upload-msgs { grid-column: 1 / -1; display: grid; gap: 8px; }
+.upload-msgs .notice + .notice { margin-top: 0; }
+.upload-error { display: flex; gap: 8px; align-items: flex-start; }
+.upload-error > .icon { margin-top: 1px; }
+
+/* ------------------------------------------------------------------ library: video list */
+.search-field { position: relative; display: inline-flex; align-items: center; }
+.search-field > .icon { position: absolute; left: 10px; color: var(--muted); pointer-events: none; }
+.search-field input[type="search"] { padding-left: 32px; min-width: 240px; }
+.search-field input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin: 0 0 0 6px; cursor: pointer; opacity: 0.85;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none' stroke='%23aab3bf' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M3.5 3.5l7 7M10.5 3.5l-7 7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.search-field input[type="search"]::-webkit-search-cancel-button:hover { opacity: 1; }
+
+/* Rows bleed 8px into the card padding so their content lines up with the card head; the hairline stays inset. */
+.video-list { margin: -4px -8px -8px; }
+.video-row { grid-template-columns: 84px minmax(0, 1fr) 76px 200px 136px; position: relative; border-bottom: 0; }
+.video-row:not(:last-child)::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: 0; height: 1px; background: var(--line); }
+.video-row .info { min-width: 0; }
+/* one line, cut with an ellipsis, so a wrapped line never starts with a separator dot */
+.video-row .meta { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video-row .meta span + span::before { margin-left: 6px; }
+.video-row .video-thumb:hover { text-decoration: none; }
+.video-thumb .play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.5); color: var(--text); opacity: 0; transition: opacity 0.12s; }
+.video-thumb .play .icon { width: 18px; height: 18px; }
+.video-row:hover .video-thumb .play, .video-thumb:focus-visible .play { opacity: 1; }
+.video-row .dur { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 13px; }
+.video-row .dur .icon { width: 14px; height: 14px; color: var(--muted); }
+.video-row .actions { align-items: center; }
+
+.video-row.skeleton:hover { background: transparent; }
+.skel { display: block; height: 10px; border-radius: 5px; background: var(--surface-3); animation: pulse 1.6s ease-in-out infinite; }
+.skel.thumb { width: 84px; height: 52px; border-radius: 8px; }
+.skel-lines { display: grid; gap: 10px; }
+
+/* ------------------------------------------------------------------ job progress */
+.job-line { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 20px; }
+.job-line .pill { flex: none; }
+/* a job in progress wears the accent, in the list badge and in the detail card alike */
+.job-badge .bar { height: 4px; border-radius: 2px; }
+.job-badge .bar > i { background: var(--accent); }
+
+/* width: the card is a flex item with auto margins in the workbench, which would shrink it to its content */
+.job-card { width: 100%; padding: 24px; }
+.job-head { display: flex; align-items: flex-end; gap: 16px; }
+.job-title { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.job-title h2 { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+.job-title .status-dot { width: 8px; height: 8px; }
+.job-title .status-dot.succeeded { background: var(--ok); }
+.job-title .status-dot.failed { background: var(--bad); }
+.job-title .status-dot.running { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+.job-pct { flex: none; font-size: 40px; line-height: 1; font-weight: 650; letter-spacing: -0.03em; }
+.job-pct small { font-size: 15px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 2px; }
+.job-total { margin-top: 14px; }
+.job-card .stages { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+.stage-row { position: relative; }
+.stage-row:not(:last-child)::before { content: ""; position: absolute; left: 11.5px; top: 28px; bottom: -10px; width: 1px; background: var(--line-strong); }
+.stage-row .step .icon { width: 14px; height: 14px; }
+.stage-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; line-height: 20px; }
+.stage-row .name { font-weight: 500; }
+.stage-row.pending .name, .stage-row.skipped .name { color: var(--text-2); font-weight: 400; }
+.stage-row.skipped .step { border-style: dashed; }
+.stage-row .bar { height: 4px; border-radius: 2px; }
+.job-error { margin-top: 16px; }
+.job-retry { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* ------------------------------------------------------------------ hard examples */
+.hard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.hard-card h3 { margin-top: 20px; }
+.hard-card .empty p, .videos-card .empty p { text-wrap: balance; }
+.hard-table .cond-value { font-weight: 600; margin-left: 8px; }
+.hard-table .pbar { min-width: 160px; max-width: 240px; }
+.hard-table .rate { min-width: 48px; font-weight: 600; }
+
+/* ------------------------------------------------------------------ sign-in */
+.auth-points p { margin: 0; min-width: 0; padding-top: 1px; }
+.auth-points span { line-height: 1.5; }
+.auth-card input { font-size: 14px; font-weight: 400; color: var(--text); }
+.auth-title { display: grid; gap: 6px; margin-bottom: 6px; }
+.auth-title p { font-size: 13px; }
+.auth-card button.primary { margin-top: 4px; font-size: 14px; }
+.auth-switch { text-align: center; }
+.auth-card .auth-brand-compact { display: none; justify-content: flex-start; margin: 0 0 12px; padding: 0; font-size: 18px; }
+/* decoration: the court drawn large with hairlines instead of the thumbnail's 1-unit stroke */
+.auth-brand .auth-court {
+  stroke-width: 0.28; width: 560px; right: -120px; bottom: -150px; opacity: 0.26;
+  -webkit-mask-image: linear-gradient(to top left, #000 32%, transparent 88%); mask-image: linear-gradient(to top left, #000 32%, transparent 88%);
+}
+
+@media (max-width: 1180px) {
+  .video-row { grid-template-columns: 84px minmax(0, 1fr) 68px 172px 136px; gap: 12px; }
+  .video-row .meta .opt { display: none; }
+}
+@media (max-width: 900px) {
+  .upload-flow { padding-left: 0; border-left: 0; padding-top: 16px; border-top: 1px solid var(--line); }
+  .video-row { grid-template-columns: 84px minmax(0, 1fr); gap: 8px 12px; }
+  .video-row .dur { display: none; }
+  .video-row .job-badge { justify-content: stretch; max-width: 240px; }
+  .video-row .meta .opt { display: inline; }
+  .search-field input[type="search"] { min-width: 160px; }
+  .auth-card .auth-brand-compact { display: flex; }
+}

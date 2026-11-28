@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CorrectionPanel, StatusPill } from "../components/CorrectionPanel";
 import { HeatmapPanel } from "../components/HeatmapPanel";
 import { JobDetail, useJob } from "../components/JobProgress";
@@ -6,6 +6,7 @@ import { MiniMap } from "../components/MiniMap";
 import { QualityPanel } from "../components/QualityPanel";
 import { StrokePanel } from "../components/StrokePanel";
 import { Timeline } from "../components/Timeline";
+import { Empty, Icon, Page, PageHeader, VideoTabs, type Crumb } from "../components/ui";
 import { VideoStage } from "../components/VideoStage";
 import { api, type MatchFormatSetting } from "../lib/api";
 import { PlaybackClock } from "../lib/clock";
@@ -15,6 +16,8 @@ import { download, exportCsv, exportJson } from "../lib/export";
 import { courtAt, DEFAULT_LAYERS, frameIndexAt, type Layers } from "../lib/overlay";
 import { colorOf, labelOf } from "../lib/players";
 import { playerIdsFor, type Correction, type CorrectionOp, type EventsResult, type Job, type OverlayData, type Point, type Video } from "../lib/types";
+
+const CRUMBS: Crumb[] = [{ label: "比赛库", href: "#/" }];
 
 export function Workbench({ videoId, startMs = null }: { videoId: string; startMs?: number | null }) {
   const [video, setVideo] = useState<Video | null>(null);
@@ -39,38 +42,91 @@ export function Workbench({ videoId, startMs = null }: { videoId: string; startM
     );
   };
 
-  if (loadError) return <Centered>无法加载视频：{loadError}</Centered>;
-  if (!video) return <Centered>加载中…</Centered>;
+  if (loadError)
+    return (
+      <Shell video={null}>
+        <Failed title="无法加载视频">{loadError}</Failed>
+      </Shell>
+    );
+  if (!video)
+    return (
+      <Shell video={null}>
+        <Loading>加载中…</Loading>
+      </Shell>
+    );
   if (!jobId)
     return (
-      <Centered>
-        <div className="row">
-          <span>这个视频还没有分析任务。</span>
-          <button className="primary" onClick={start}>
-            开始分析
-          </button>
-        </div>
-        {startError && <p className="error small">启动失败：{startError}</p>}
-      </Centered>
+      <Shell video={video}>
+        <section className="card">
+          <div className="empty">
+            <span className="glyph">
+              <Icon name="sparkles" className="lg" />
+            </span>
+            <b>这个视频还没有分析任务</b>
+            <p className="small">开始后会依次完成球场标定、球员与羽毛球跟踪、回合与击球识别，完成后在这里回放和纠错。</p>
+            <button className="primary" onClick={start}>
+              <Icon name="play" />
+              开始分析
+            </button>
+            {startError && <p className="error small">启动失败：{startError}</p>}
+          </div>
+        </section>
+      </Shell>
     );
-  if (!job) return <Centered>{jobError ? `任务状态获取失败：${jobError}` : "获取任务状态…"}</Centered>;
+  if (!job)
+    return (
+      <Shell video={video}>{jobError ? <Failed title="任务状态获取失败">{jobError}</Failed> : <Loading>获取任务状态…</Loading>}</Shell>
+    );
   if (job.state !== "succeeded")
     return (
-      <>
+      <Shell video={video}>
         <JobDetail job={job} onRetry={start} />
-        {startError && <p className="error small" style={{ textAlign: "center" }}>启动失败：{startError}</p>}
-      </>
+        {startError && (
+          <p className="error small" style={{ textAlign: "center" }}>
+            启动失败：{startError}
+          </p>
+        )}
+      </Shell>
     );
   return <Analysis key={job.job_id} video={video} startMs={startMs} onRerun={(j: Job) => setJobId(j.job_id)} />;
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
+/** Page frame for everything shown before the analysis desk is ready. */
+function Shell({ video, children }: { video: Video | null; children: ReactNode }) {
   return (
-    <main className="page">
-      <div className="card">{children}</div>
-    </main>
+    <Page
+      className="narrow"
+      header={<PageHeader crumbs={CRUMBS} title={video?.filename ?? "分析工作台"} center={video && <VideoTabs videoId={video.video_id} active="workbench" />} />}
+    >
+      {children}
+    </Page>
   );
 }
+
+function Loading({ children }: { children: ReactNode }) {
+  return (
+    <section className="card wb-loading" role="status">
+      {children}
+    </section>
+  );
+}
+
+function Failed({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="card" role="alert">
+      <Empty icon="alert" title={title}>
+        {children}
+      </Empty>
+    </section>
+  );
+}
+
+const LAYER_TOGGLES = [
+  ["skeleton", "骨架"],
+  ["shuttle", "羽毛球"],
+  ["court", "球场线"],
+  ["bbox", "检测框"],
+] as const;
 
 function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number | null; onRerun: (job: Job) => void }) {
   const [overlay, setOverlay] = useState<OverlayData | null>(null);
@@ -268,8 +324,18 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
     } else download(`${video.video_id}_shots.csv`, exportCsv(events), "text/csv");
   };
 
-  if (error) return <Centered>加载分析结果失败：{error}</Centered>;
-  if (!overlay || !events || !clock) return <Centered>加载分析结果…</Centered>;
+  if (error)
+    return (
+      <Shell video={video}>
+        <Failed title="加载分析结果失败">{error}</Failed>
+      </Shell>
+    );
+  if (!overlay || !events || !clock)
+    return (
+      <Shell video={video}>
+        <Loading>加载分析结果…</Loading>
+      </Shell>
+    );
 
   const firstFrame = overlay.frames[frameIndexAt(overlay.frames, 0)]?.frame ?? 0;
   const court = courtAt(overlay.court, firstFrame) ?? overlay.court[0];
@@ -277,247 +343,303 @@ function Analysis({ video, startMs, onRerun }: { video: Video; startMs: number |
   const reviewRallies = events.rallies.filter((r) => r.status === "needs_review" && r.source === "model").length;
   const reviewTypes = events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status !== "ok").length;
   const toggle = (k: keyof Omit<Layers, "opacity">) => setLayers((l) => ({ ...l, [k]: !l[k] }));
+  const setAi = (ai: boolean) => setLayers((l) => (l.ai === ai ? l : { ...l, ai }));
   const meta = overlay.video;
+  const clipAvailable = !!api.clipUrl(video.video_id, "x");
+  const reportHref = `#/videos/${encodeURIComponent(video.video_id)}/report`;
 
   return (
-    <div className="wb">
-      <aside className="wb-left">
-        <div className="panel small">
-          <h3 title={video.filename} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {video.filename}
-          </h3>
-          <Stat label="规格">
-            {meta.width}×{meta.height} · {Math.round(meta.fps)}fps{meta.variable_frame_rate ? "（可变帧率）" : ""}
-          </Stat>
-          <Stat label="回合 / 击球">
-            {events.rallies.length} / {events.shots.length}
-          </Stat>
-          <Stat label="待复核 回合 / 击球">
-            <span style={{ color: reviewShots + reviewRallies ? "var(--warn)" : undefined }}>
-              {reviewRallies} / {reviewShots}
-            </span>
-          </Stat>
-          <Stat label="击球类型 待复核 / 不可判定">
-            <span style={{ color: reviewTypes ? "var(--warn)" : undefined }}>
-              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "needs_review").length} /{" "}
-              {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "undeterminable").length}
-            </span>
-          </Stat>
-          <Stat label="已做修正">{corrections.length}</Stat>
-          <div className="row" style={{ marginTop: 6 }}>
+    <>
+      <PageHeader
+        dense
+        crumbs={CRUMBS}
+        title={video.filename}
+        center={<VideoTabs videoId={video.video_id} active="workbench" />}
+        actions={
+          <>
+            <span className="pill outline">{overlay.match_format === "doubles" ? "双打 · 4 人" : "单打 · 2 人"}</span>
             <button
+              className={reviewQueue.length ? "primary" : ""}
               disabled={!reviewQueue.length}
               title="跳到当前时间之后下一个待复核的回合、击球或击球类型（快捷键 n，Shift+N 往回）"
               onClick={() => nextReview(1)}
             >
-              {reviewQueue.length ? `下一个待复核（剩 ${reviewQueue.length}）` : "没有待复核项"}
+              <Icon name="flag" />
+              {reviewQueue.length ? `下一个待复核 · ${reviewQueue.length}` : "没有待复核项"}
             </button>
-            <span className="spacer" />
-            <button className="small" title="快捷键（?）" onClick={() => setShowKeys(true)}>
-              快捷键
+            <button className="ghost icon-btn" title="快捷键（?）" aria-label="快捷键" onClick={() => setShowKeys(true)}>
+              <Icon name="keyboard" />
             </button>
-          </div>
-          <div className="row">
-            <span className="muted">比赛类型</span>
-            <span className="spacer" />
-            <span className="pill">{overlay.match_format === "doubles" ? "双打 · 4 人" : "单打 · 2 人"}</span>
-            <select
-              value={formatSetting ?? "auto"}
-              disabled={formatSetting === null}
-              title="自动识别不对时手动指定；会从球员识别开始重新分析"
-              onChange={(e) => void changeFormat(e.target.value as MatchFormatSetting)}
-            >
-              <option value="auto">自动识别</option>
-              <option value="singles">强制单打</option>
-              <option value="doubles">强制双打</option>
-            </select>
-          </div>
-          <div className="row">
-            <span className="muted">球场标定</span>
-            <span className="spacer" />
-            {court ? <StatusPill status={court.status} /> : <span className="pill needs_review">未标定</span>}
-            {overlay.court.length > 1 && <span className="muted">{overlay.court.length} 段</span>}
-          </div>
-          <button style={{ marginTop: 8, width: "100%" }} className={calibrating ? "active" : ""} onClick={() => setCalibrating((c) => !c)}>
-            {calibrating ? "取消点选" : "球场线不对？手动点选四角"}
-          </button>
-          {calibrating && <div className="muted" style={{ marginTop: 4 }}>按 {CORNER_NAMES.join(" → ")} 的顺序点击外框四角；提交后会从标定开始重新分析。</div>}
-          {!!court?.other_courts?.length && (
-            <>
-              <div className="muted" style={{ marginTop: 8 }}>
-                画面里还有 {court.other_courts.length} 块场地（虚线框），它们的球员和球已被排除。
+          </>
+        }
+      />
+      <div className="wb">
+        <aside className="wb-left">
+          <div className="panel">
+            <div className="panel-head">
+              <h3>分析概览</h3>
+            </div>
+            <div className="mini-stats">
+              <div className="mini-stat">
+                <b>{events.rallies.length}</b>
+                <span>回合</span>
               </div>
+              <div className="mini-stat">
+                <b>{events.shots.length}</b>
+                <span>击球</span>
+              </div>
+              <div className={`mini-stat${reviewQueue.length ? " warn" : ""}`} title="还需要人工看一眼的回合、击球和击球类型">
+                <b>{reviewQueue.length}</b>
+                <span>待复核</span>
+              </div>
+              <div className="mini-stat" title="已做修正">
+                <b>{corrections.length}</b>
+                <span>已修正</span>
+              </div>
+            </div>
+            <Stat label="规格">
+              {meta.width}×{meta.height} · {Math.round(meta.fps)}fps{meta.variable_frame_rate ? "（可变帧率）" : ""}
+            </Stat>
+            <Stat label="待复核 回合 / 击球">
+              <span className={reviewShots + reviewRallies ? "warn-text" : undefined}>
+                {reviewRallies} / {reviewShots}
+              </span>
+            </Stat>
+            <Stat label="击球类型 待复核 / 不可判定">
+              <span className={reviewTypes ? "warn-text" : undefined}>
+                {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "needs_review").length} /{" "}
+                {events.shots.filter((s) => s.stroke?.source === "model" && s.stroke.status === "undeterminable").length}
+              </span>
+            </Stat>
+            <div className="kv">
+              <span className="k">比赛类型</span>
+              <span className="v">
+                <select
+                  className="small"
+                  value={formatSetting ?? "auto"}
+                  disabled={formatSetting === null}
+                  title="自动识别不对时手动指定；会从球员识别开始重新分析"
+                  onChange={(e) => void changeFormat(e.target.value as MatchFormatSetting)}
+                >
+                  <option value="auto">自动识别</option>
+                  <option value="singles">强制单打</option>
+                  <option value="doubles">强制双打</option>
+                </select>
+              </span>
+            </div>
+            <div className="kv">
+              <span className="k">球场标定</span>
+              <span className="v">
+                {overlay.court.length > 1 && <span className="muted">{overlay.court.length} 段</span>}
+                {court ? <StatusPill status={court.status} /> : <span className="pill needs_review">未标定</span>}
+              </span>
+            </div>
+            <div className="divider" />
+            <div className="wb-tools">
+              <button className={`block${calibrating ? " active" : ""}`} onClick={() => setCalibrating((c) => !c)}>
+                <Icon name="target" />
+                {calibrating ? "取消点选" : "球场线不对？手动点选四角"}
+              </button>
+              {calibrating && <p className="hint">按 {CORNER_NAMES.join(" → ")} 的顺序点击外框四角；提交后会从标定开始重新分析。</p>}
+              {!!court?.other_courts?.length && (
+                <>
+                  <p className="hint">画面里还有 {court.other_courts.length} 块场地（虚线框），它们的球员和球已被排除。</p>
+                  <button
+                    className={`block${choosingCourt ? " active" : ""}`}
+                    onClick={() => {
+                      setCalibrating(false);
+                      setChoosingCourt((c) => !c);
+                    }}
+                  >
+                    <Icon name="swap" />
+                    {choosingCourt ? "取消选择" : "分析的不是这块场地？换一块"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          <QualityPanel videoId={video.video_id} />
+          <HeatmapPanel overlay={overlay} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} courtStatus={court?.status} />
+          <StrokePanel shots={events.shots} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} clock={clock} />
+        </aside>
+
+        <section className="wb-center">
+          <div className="stage-bar">
+            <div className="seg" role="group" aria-label="画面" title="原画 / AI 标注切换">
+              <button className={layers.ai ? "on" : ""} aria-pressed={layers.ai} onClick={() => setAi(true)}>
+                AI 标注
+              </button>
+              <button className={layers.ai ? "" : "on"} aria-pressed={!layers.ai} onClick={() => setAi(false)}>
+                原画
+              </button>
+            </div>
+            <span className="sep" />
+            {LAYER_TOGGLES.map(([k, label]) => (
+              <button key={k} className={`toggle${layers[k] ? " on" : ""}`} aria-pressed={layers[k]} disabled={!layers.ai} onClick={() => toggle(k)}>
+                {label}
+              </button>
+            ))}
+            <button
+              className={`toggle${layers.abstract ? " on" : ""}`}
+              aria-pressed={layers.abstract}
+              disabled={!layers.ai}
+              title="隐藏原视频画面，只在深色背景上显示识别元素"
+              onClick={() => toggle("abstract")}
+            >
+              纯抽象
+            </button>
+            <span className="sep" />
+            <label className="range">
+              透明度
+              <input type="range" min={0.2} max={1} step={0.05} value={layers.opacity} onChange={(e) => setLayers((l) => ({ ...l, opacity: Number(e.target.value) }))} />
+              <span className="mono range-value">{Math.round(layers.opacity * 100)}%</span>
+            </label>
+            <span className="spacer" />
+            <div className="legend" title="球：实线=检测，虚线=插值">
+              {playerIdsFor(overlay.match_format).map((id) => (
+                <span key={id}>
+                  <span className="dot" style={{ background: colorOf(id) }} />
+                  {labelOf(id)}
+                </span>
+              ))}
+              <span>
+                <i className="legend-line" />
+                球 · 检测
+              </span>
+              <span>
+                <i className="legend-line dashed" />
+                球 · 插值
+              </span>
+            </div>
+          </div>
+          <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} choosingCourt={choosingCourt} onCourtChosen={onCalibrated} />
+        </section>
+
+        <aside className="wb-right">
+          <MiniMap overlay={overlay} clock={clock} />
+          <CorrectionPanel
+            rally={rally}
+            rallyNo={rally ? rallyNo(rally.rally_id) : null}
+            shots={rallyShots}
+            selectedShotId={selShot}
+            onSelectShot={seekShot}
+            clock={clock}
+            fps={fps}
+            submit={submit}
+            busy={busy}
+            hardExample={hardExample}
+            setHardExample={setHardExample}
+            corrections={corrections}
+            error={actionError}
+            matchFormat={events.match_format ?? overlay.match_format}
+          />
+          <div className="panel">
+            <div className="panel-head">
+              <Icon name="download" />
+              <h3>导出</h3>
+            </div>
+            <div className="export-list">
+              <button className="block" onClick={() => void doExport("json")}>
+                <span className="fmt">JSON</span>
+                <span className="what">含原始预测和修正</span>
+              </button>
+              <button className="block" onClick={() => void doExport("csv")}>
+                <span className="fmt">CSV</span>
+                <span className="what">逐拍</span>
+              </button>
               <button
-                style={{ marginTop: 4, width: "100%" }}
-                className={choosingCourt ? "active" : ""}
+                className="block"
+                disabled={!rally || !api.clipUrl(video.video_id, rally.rally_id)}
+                title={clipAvailable ? "导出当前回合的视频片段（前后各留 1 秒）" : "演示模式没有原视频"}
                 onClick={() => {
-                  setCalibrating(false);
-                  setChoosingCourt((c) => !c);
+                  const url = rally && api.clipUrl(video.video_id, rally.rally_id);
+                  if (url) window.location.href = url;
                 }}
               >
-                {choosingCourt ? "取消选择" : "分析的不是这块场地？换一块"}
+                <span className="fmt">MP4</span>
+                <span className="what">{rally ? `第 ${rallyNo(rally.rally_id)} 回合片段` : "回合片段（先播放到某个回合）"}</span>
               </button>
-            </>
-          )}
-        </div>
-        <QualityPanel videoId={video.video_id} />
-        <HeatmapPanel overlay={overlay} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} courtStatus={court?.status} />
-        <StrokePanel shots={events.shots} rally={rally} rallyNo={rally ? rallyNo(rally.rally_id) : null} clock={clock} />
-      </aside>
-
-      <section className="wb-center">
-        <div className="controls">
-          <button className={layers.ai ? "active" : ""} onClick={() => toggle("ai")} title="原画 / AI 标注切换">
-            {layers.ai ? "AI 标注" : "原画"}
-          </button>
-          {(
-            [
-              ["skeleton", "骨架"],
-              ["shuttle", "羽毛球"],
-              ["court", "球场线"],
-              ["bbox", "检测框"],
-            ] as const
-          ).map(([k, label]) => (
-            <label key={k}>
-              <input type="checkbox" checked={layers[k]} disabled={!layers.ai} onChange={() => toggle(k)} />
-              {label}
-            </label>
-          ))}
-          <label title="隐藏原视频画面，只在深色背景上显示识别元素">
-            <input type="checkbox" checked={layers.abstract} disabled={!layers.ai} onChange={() => toggle("abstract")} />
-            纯抽象
-          </label>
-          <label>
-            透明度
-            <input type="range" min={0.2} max={1} step={0.05} value={layers.opacity} onChange={(e) => setLayers((l) => ({ ...l, opacity: Number(e.target.value) }))} />
-          </label>
-          <span className="spacer" />
-          <span className="legend">
-            {playerIdsFor(overlay.match_format).map((id) => (
-              <span key={id} className="row" style={{ gap: 4 }}>
-                <span className="dot" style={{ background: colorOf(id) }} />
-                {labelOf(id)}
-              </span>
-            ))}
-            <span className="row" style={{ gap: 4 }}>
-              <span className="dot" style={{ background: "#facc15" }} />球：实线=检测，虚线=插值
-            </span>
-          </span>
-        </div>
-        <VideoStage overlay={overlay} videoUrl={api.videoFileUrl(video.video_id)} clock={clock} layers={layers} calibrating={calibrating} onCalibrated={onCalibrated} choosingCourt={choosingCourt} onCourtChosen={onCalibrated} />
-      </section>
-
-      <aside className="wb-right">
-        <MiniMap overlay={overlay} clock={clock} />
-        <CorrectionPanel
-          rally={rally}
-          rallyNo={rally ? rallyNo(rally.rally_id) : null}
-          shots={rallyShots}
-          selectedShotId={selShot}
-          onSelectShot={seekShot}
-          clock={clock}
-          fps={fps}
-          submit={submit}
-          busy={busy}
-          hardExample={hardExample}
-          setHardExample={setHardExample}
-          corrections={corrections}
-          error={actionError}
-          matchFormat={events.match_format ?? overlay.match_format}
-        />
-        <div className="panel">
-          <h3>赛后报告</h3>
-          <div className="muted small" style={{ marginBottom: 6 }}>回合、跑动、覆盖、得失分统计和 AI 教练点评（基于修正后的数据）。</div>
-          <a href={`#/videos/${encodeURIComponent(video.video_id)}/report`}>
-            <button className="primary" style={{ width: "100%" }}>查看赛后报告 →</button>
-          </a>
-        </div>
-        <div className="panel">
-          <h3>导出</h3>
-          <div className="row">
-            <button onClick={() => void doExport("json")}>JSON（含原始预测和修正）</button>
-            <button onClick={() => void doExport("csv")}>CSV（逐拍）</button>
+            </div>
+            <div className="divider" />
+            <a className="btn block" href={reportHref} title="回合、跑动、覆盖、得失分统计和 AI 教练点评（基于修正后的数据）">
+              <Icon name="report" />
+              查看赛后报告
+            </a>
           </div>
-          <div className="row" style={{ marginTop: 6 }}>
-            <button
-              disabled={!rally || !api.clipUrl(video.video_id, rally.rally_id)}
-              title={api.clipUrl(video.video_id, "x") ? "导出当前回合的视频片段（前后各留 1 秒）" : "演示模式没有原视频"}
-              onClick={() => {
-                const url = rally && api.clipUrl(video.video_id, rally.rally_id);
-                if (url) window.location.href = url;
-              }}
-            >
-              {rally ? `第 ${rallyNo(rally.rally_id)} 回合片段（MP4）` : "回合片段（先播放到某个回合）"}
-            </button>
-          </div>
-        </div>
-      </aside>
+        </aside>
 
+        <footer className="wb-timeline">
+          <Timeline
+            durationMs={meta.duration_ms}
+            rallies={events.rallies}
+            shots={events.shots}
+            clock={clock}
+            selectedRallyId={selRally}
+            selectedShotId={selShot}
+            fps={fps}
+            rallyNo={rallyNo}
+            onSelectRally={(id) => {
+              const r = events.rallies.find((x) => x.rally_id === id);
+              if (r) clock.seek(r.start_ms);
+            }}
+            onSelectShot={seekShot}
+          />
+        </footer>
+      </div>
       {showKeys && <ShortcutHelp onClose={() => setShowKeys(false)} />}
-      <footer className="wb-timeline">
-        <Timeline
-          durationMs={meta.duration_ms}
-          rallies={events.rallies}
-          shots={events.shots}
-          clock={clock}
-          selectedRallyId={selRally}
-          selectedShotId={selShot}
-          fps={fps}
-          rallyNo={rallyNo}
-          onSelectRally={(id) => {
-            const r = events.rallies.find((x) => x.rally_id === id);
-            if (r) clock.seek(r.start_ms);
-          }}
-          onSelectShot={seekShot}
-        />
-      </footer>
-    </div>
+    </>
   );
 }
 
-function Stat({ label, children }: { label: string; children: React.ReactNode }) {
+function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="row">
-      <span className="muted">{label}</span>
-      <span className="spacer" />
-      <span className="mono">{children}</span>
+    <div className="kv">
+      <span className="k">{label}</span>
+      <span className="v mono">{children}</span>
     </div>
   );
 }
 
-const SHORTCUTS: [string, string][] = [
-  ["空格", "播放 / 暂停"],
-  ["← / →", "上一帧 / 下一帧"],
-  ["j / k", "上一拍 / 下一拍"],
-  ["[ / ]", "上一个 / 下一个回合"],
-  ["n / Shift+N", "下一个 / 上一个待复核项"],
-  ["?", "显示或关闭这个面板"],
+const SHORTCUTS: [string[], string][] = [
+  [["空格"], "播放 / 暂停"],
+  [["←", "→"], "上一帧 / 下一帧"],
+  [["j", "k"], "上一拍 / 下一拍"],
+  [["[", "]"], "上一个 / 下一个回合"],
+  [["n", "Shift+N"], "下一个 / 上一个待复核项"],
+  [["?"], "显示或关闭这个面板"],
 ];
 
 function ShortcutHelp({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="card modal" role="dialog" aria-label="快捷键" onClick={(e) => e.stopPropagation()}>
-        <div className="row" style={{ marginBottom: 8 }}>
-          <h2 style={{ margin: 0 }}>快捷键</h2>
+      <div className="card modal keys-modal" role="dialog" aria-modal="true" aria-label="快捷键" onClick={(e) => e.stopPropagation()}>
+        <div className="card-head">
+          <Icon name="keyboard" className="lg" />
+          <h2>快捷键</h2>
           <span className="spacer" />
-          <button className="small" onClick={onClose}>
+          <button className="ghost small" onClick={onClose}>
             关闭
+            <kbd>Esc</kbd>
           </button>
         </div>
         <table>
           <tbody>
-            {SHORTCUTS.map(([k, v]) => (
-              <tr key={k}>
-                <td>
-                  <kbd>{k}</kbd>
+            {SHORTCUTS.map(([keys, what]) => (
+              <tr key={what}>
+                <td className="keys-cell">
+                  {keys.map((k, i) => (
+                    <span key={k}>
+                      {i > 0 && <span className="muted"> / </span>}
+                      <kbd>{k}</kbd>
+                    </span>
+                  ))}
                 </td>
-                <td>{v}</td>
+                <td>{what}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="muted small">在输入框里打字时快捷键不生效。</p>
+        <p className="card-foot">在输入框里打字时快捷键不生效。</p>
       </div>
     </div>
   );

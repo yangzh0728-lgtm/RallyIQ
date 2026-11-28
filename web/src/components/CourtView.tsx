@@ -11,7 +11,8 @@ export function CourtView({ children, height = 300 }: { children?: ReactNode; he
   return (
     <svg
       viewBox={`${-PAD} ${-PAD} ${COURT_W + PAD * 2} ${COURT_L + PAD * 2}`}
-      style={{ height, display: "block", margin: "0 auto", background: "#173326", borderRadius: 6 }}
+      className="court-svg"
+      style={{ height }}
     >
       <g transform={`translate(0 ${COURT_L}) scale(1 -1)`}>
         {children}

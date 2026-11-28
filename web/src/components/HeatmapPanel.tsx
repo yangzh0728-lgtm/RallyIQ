@@ -29,9 +29,10 @@ export function HeatmapPanel({ overlay, rally, rallyNo, courtStatus }: Props) {
 
   return (
     <div className="panel">
-      <h3>跑位热力图</h3>
-      <div className="row" style={{ marginBottom: 8 }}>
-        <select value={sel} onChange={(e) => setSel(e.target.value as PlayerId | TeamId)}>
+      <div className="panel-head">
+        <h3>跑位热力图</h3>
+        <span className="spacer" />
+        <select className="small" value={sel} aria-label="球员或队伍" onChange={(e) => setSel(e.target.value as PlayerId | TeamId)}>
           {ids.map((p) => (
             <option key={p} value={p}>
               {labelOf(p)}
@@ -44,12 +45,14 @@ export function HeatmapPanel({ overlay, rally, rallyNo, courtStatus }: Props) {
               </option>
             ))}
         </select>
-        <select value={scope} onChange={(e) => setScope(e.target.value as "rally" | "all")}>
-          <option value="all">整段视频</option>
-          <option value="rally" disabled={!rally}>
-            当前回合{rallyNo ? ` #${rallyNo}` : ""}
-          </option>
-        </select>
+      </div>
+      <div className="seg scope" role="group" aria-label="范围">
+        <button className={scope === "all" ? "on" : ""} aria-pressed={scope === "all"} onClick={() => setScope("all")}>
+          整段视频
+        </button>
+        <button className={scope === "rally" ? "on" : ""} aria-pressed={scope === "rally"} disabled={!rally} onClick={() => setScope("rally")}>
+          当前回合{rallyNo ? ` #${rallyNo}` : ""}
+        </button>
       </div>
       <CourtView height={280}>
         {heat.counts.map((row, r) =>
@@ -68,18 +71,16 @@ export function HeatmapPanel({ overlay, rally, rallyNo, courtStatus }: Props) {
           ),
         )}
       </CourtView>
-      <div className="small" style={{ display: "grid", gap: 2, marginTop: 8 }}>
-        <div className="row">
-          <span className="muted">样本</span>
-          <span className="spacer" />
-          <span className="mono">
+      <div className="small panel-foot">
+        <div className="kv">
+          <span className="k">样本</span>
+          <span className="v mono">
             {heat.samples} 帧 · {seconds.toFixed(1)} 秒
           </span>
         </div>
-        <div className="row">
-          <span className="muted">{who.length > 1 ? "两人合计跑动" : "跑动距离"}</span>
-          <span className="spacer" />
-          {reliable ? <span className="mono">{heat.distanceM.toFixed(1)} m</span> : <span className="pill needs_review">标定未确认，不显示米</span>}
+        <div className="kv">
+          <span className="k">{who.length > 1 ? "两人合计跑动" : "跑动距离"}</span>
+          <span className="v">{reliable ? <span className="mono">{heat.distanceM.toFixed(1)} m</span> : <span className="pill needs_review">标定未确认，不显示米</span>}</span>
         </div>
         <div className="muted">{heat.samples < overlay.video.fps * 5 ? "样本太少，仅供参考。" : "基于自动足点估计，未经人工复核。"}</div>
       </div>
